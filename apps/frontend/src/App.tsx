@@ -1,36 +1,20 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useMemo, useState } from 'react';
+import { CssBaseline } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import { AppRouter } from './app/router';
+import { makeTheme } from './theme/theme';
 
-function App() {
-  const [count, setCount] = useState(0)
+import { CommandPalette } from './shared/ui/CommandPalette';
+
+export default function App() {
+  const [mode] = useState<'light' | 'dark'>('dark'); // или 'light', или потом привяжем к настройкам
+  const theme = useMemo(() => makeTheme(mode), [mode]);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AppRouter />
+      <CommandPalette />
+    </ThemeProvider>
+  );
 }
-
-export default App
-console.log('APP RENDER');

@@ -188,6 +188,7 @@ export function ProjectWorkspacePage() {
     loadMaps,
     currentMapId,
     setCurrentMapId,
+    setCurrentProjectId,
     deleteMap,
 
     markersByMapId,
@@ -270,9 +271,10 @@ export function ProjectWorkspacePage() {
   // load project data
   useEffect(() => {
     if (!pid) return;
+    setCurrentProjectId(pid);
     loadMaps(pid);
     loadNotes(pid);
-  }, [pid, loadMaps, loadNotes]);
+  }, [pid, setCurrentProjectId, loadMaps, loadNotes]);
 
   // sync URL mapId -> store currentMapId, and if no mapId -> redirect to first map
   useEffect(() => {

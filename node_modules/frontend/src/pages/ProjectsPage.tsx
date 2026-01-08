@@ -113,19 +113,18 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 function dataUrlBytesApprox(dataUrl: string): number {
-  // data:[mime];base64,xxxx  -> bytes ~= base64_length * 3/4 (минус паддинг, но нам достаточно оценки)
   const comma = dataUrl.indexOf(',');
   const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
   return Math.floor((b64.length * 3) / 4);
 }
 
 type CompressOptions = {
-  maxSidePx: number;       // 1280..2560
+  maxSidePx: number;
   mime: 'image/jpeg' | 'image/webp';
-  qualityStart: number;    // 0..1
-  qualityMin: number;      // 0..1
-  qualityStep: number;     // 0..1
-  targetBytes: number;     // например 2_200_000
+  qualityStart: number;
+  qualityMin: number;
+  qualityStep: number;
+  targetBytes: number;
 };
 
 async function compressImageToDataUrl(file: File, opts: CompressOptions): Promise<string> {
@@ -135,9 +134,7 @@ async function compressImageToDataUrl(file: File, opts: CompressOptions): Promis
   const srcW = img.naturalWidth || img.width;
   const srcH = img.naturalHeight || img.height;
 
-  if (!srcW || !srcH) {
-    throw new Error('Invalid image dimensions');
-  }
+  if (!srcW || !srcH) throw new Error('Invalid image dimensions');
 
   const scale = Math.min(1, opts.maxSidePx / Math.max(srcW, srcH));
   const dstW = Math.max(1, Math.round(srcW * scale));
@@ -150,20 +147,16 @@ async function compressImageToDataUrl(file: File, opts: CompressOptions): Promis
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('Cannot get 2D context');
 
-  // чуть улучшаем качество downscale в браузерах, где это поддерживается
-  // (не везде типы TS знают эти поля)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const anyCtx = ctx as any;
   if ('imageSmoothingEnabled' in anyCtx) anyCtx.imageSmoothingEnabled = true;
   if ('imageSmoothingQuality' in anyCtx) anyCtx.imageSmoothingQuality = 'high';
 
-  // Заполняем фоном (на случай PNG с прозрачностью)
+  // PNG transparency -> make it solid (neutral black works well under blur)
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, dstW, dstH);
-
   ctx.drawImage(img, 0, 0, dstW, dstH);
 
-  // Подбираем quality так, чтобы уложиться в targetBytes
   let q = opts.qualityStart;
   let out = canvas.toDataURL(opts.mime, q);
 
@@ -172,7 +165,6 @@ async function compressImageToDataUrl(file: File, opts: CompressOptions): Promis
     out = canvas.toDataURL(opts.mime, q);
   }
 
-  // Если всё ещё слишком большой — уменьшаем размер ещё на шаг и повторяем (1 раз)
   if (dataUrlBytesApprox(out) > opts.targetBytes) {
     const scale2 = 0.85;
     const dstW2 = Math.max(1, Math.round(dstW * scale2));
@@ -248,22 +240,15 @@ export function ProjectsPage() {
   };
 
   const hasBgImage = Boolean(bg.imageDataUrl);
-
   const bgFilters = `blur(${bg.blurPx}px) brightness(${bg.brightnessPct}%) contrast(${bg.contrastPct}%)`;
 
   const patchBg = (partial: Partial<ProjectsBgSettings>) => {
     setBg((prev) => {
-      const next: ProjectsBgSettings = {
-        ...prev,
-        ...partial,
-      };
-
+      const next: ProjectsBgSettings = { ...prev, ...partial };
       next.blurPx = clamp(next.blurPx, 0, 20);
       next.brightnessPct = clamp(next.brightnessPct, 50, 150);
       next.contrastPct = clamp(next.contrastPct, 50, 150);
-
       if (!next.imageDataUrl) next.enabled = false;
-
       return next;
     });
   };
@@ -311,6 +296,7 @@ export function ProjectsPage() {
         style={{ display: 'none' }}
       />
 
+      {/* Background */}
       {bg.enabled && bg.imageDataUrl && (
         <Box
           aria-hidden
@@ -327,6 +313,7 @@ export function ProjectsPage() {
         />
       )}
 
+      {/* Edge fade / vignette */}
       {bg.enabled && bg.imageDataUrl && (
         <Box
           aria-hidden
@@ -347,10 +334,39 @@ export function ProjectsPage() {
         />
       )}
 
+      {/* Content */}
       <Box sx={{ position: 'relative', zIndex: 2 }}>
         <Container sx={{ py: 3 }}>
+          {/* Brand header */}
+          <Box sx={{ mb: 2.5 }}>
+            <Typography
+              variant="h3"
+              sx={(theme) => ({
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+                lineHeight: 1.05,
+                color: theme.palette.text.primary,
+                textShadow: bg.enabled ? '0 1px 10px rgba(0,0,0,0.25)' : 'none',
+              })}
+            >
+              Campaigner
+            </Typography>
+            <Typography
+              variant="subtitle1"
+              sx={(theme) => ({
+                mt: 0.5,
+                maxWidth: 720,
+                color: theme.palette.text.secondary,
+                textShadow: bg.enabled ? '0 1px 10px rgba(0,0,0,0.18)' : 'none',
+              })}
+            >
+              Среда для создания интерактивных карт вашего мира
+            </Typography>
+          </Box>
+
+          {/* Top row: title + actions */}
           <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-            <Typography variant="h4">Проекты</Typography>
+            <Typography variant="h5">Проекты</Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Tooltip title="Фон экрана проектов">
@@ -365,22 +381,93 @@ export function ProjectsPage() {
             </Box>
           </Box>
 
-          <List dense>
+          <List sx={{ display: 'grid', gap: 1.25 }}>
             {projects.map((p) => (
               <ListItemButton
                 key={p.id}
                 onClick={() => nav(`/projects/${p.id}`)}
-                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                sx={(theme) => ({
+                  // превращаем list item в "панель"
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1.5,
+                  alignItems: 'stretch',
+                  gap: 1.5,
+
+                  // тёмный градиент + лёгкий блик
+                  background:
+                    theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, rgba(22,24,28,0.92) 0%, rgba(14,16,20,0.92) 55%, rgba(10,12,16,0.92) 100%)'
+                      : 'linear-gradient(135deg, rgba(25,28,36,0.92) 0%, rgba(18,20,26,0.92) 55%, rgba(12,14,18,0.92) 100%)',
+
+                  // рамка/стекло
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.20)',
+                  backdropFilter: 'blur(6px)',
+
+                  // плавность
+                  transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease',
+
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 14px 40px rgba(0,0,0,0.28)',
+                    borderColor: 'rgba(255,255,255,0.14)',
+                  },
+
+                  '&:active': {
+                    transform: 'translateY(-1px)',
+                  },
+                })}
               >
                 <ListItemText
-                  primary={p.name}
+                  primary={
+                    <Typography
+                      sx={{
+                        // чуть крупнее и "красивее": можно дать заголовкам serif (IBM Plex Serif уже подключен)
+                        fontFamily: '"IBM Plex Serif", ui-serif, Georgia, serif',
+                        fontWeight: 700,
+                        fontSize: '1.15rem',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {p.name}
+                    </Typography>
+                  }
                   secondary={
-                    <>
-                      <Typography component="span" variant="caption" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        [{SYSTEM_LABELS[p.system] || p.system}]
+                    <Box sx={{ mt: 0.35, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                      <Typography
+                        component="div"
+                        sx={{
+                          fontSize: '0.9rem',
+                          color: 'rgba(255,255,255,0.78)',
+                        }}
+                      >
+                        <Box
+                          component="span"
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            px: 1,
+                            py: 0.25,
+                            mr: 1,
+                            borderRadius: 999,
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.02em',
+                            color: 'rgba(255,255,255,0.9)',
+                            background:
+                              'linear-gradient(90deg, rgba(120,140,255,0.22) 0%, rgba(80,200,255,0.12) 100%)',
+                            border: '1px solid rgba(255,255,255,0.10)',
+                          }}
+                        >
+                          {SYSTEM_LABELS[p.system] || p.system}
+                        </Box>
+
+                        <Box component="span" sx={{ color: 'rgba(255,255,255,0.65)' }}>
+                          {p.path}
+                        </Box>
                       </Typography>
-                      {p.path}
-                    </>
+                    </Box>
                   }
                 />
 
@@ -388,11 +475,21 @@ export function ProjectsPage() {
                   <IconButton
                     edge="end"
                     size="small"
-                    onClick={(ev) => {
-                      ev.preventDefault();
-                      ev.stopPropagation();
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       setDeletingProject(p);
                       setDeleteOpen(true);
+                    }}
+                    sx={{
+                      alignSelf: 'center',
+                      color: 'rgba(255,255,255,0.7)',
+                      border: '1px solid rgba(255,255,255,0.10)',
+                      backgroundColor: 'rgba(0,0,0,0.15)',
+                      '&:hover': {
+                        color: 'rgba(255,255,255,0.9)',
+                        backgroundColor: 'rgba(0,0,0,0.28)',
+                      },
                     }}
                   >
                     <DeleteIcon fontSize="small" />
