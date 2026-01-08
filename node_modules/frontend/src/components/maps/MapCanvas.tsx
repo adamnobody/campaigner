@@ -189,7 +189,7 @@ export function MapCanvas(props: {
                 gap: 1,
                 p: 0.5,
                 borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.9)',
+                bgcolor: 'rgba(82, 82, 82, 0.91)',
                 boxShadow: 2,
                 backdropFilter: 'blur(4px)'
               }}

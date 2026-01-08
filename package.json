@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev -w apps/backend\" \"npm:dev -w apps/frontend\"",
+    "dev:clean": "vite --force",
     "build": "npm run build -w apps/frontend",
     "start": "npm run build -w apps/frontend && npm run start -w apps/backend",
     "doctor": "node scripts/doctor.mjs"
