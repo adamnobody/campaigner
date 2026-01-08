@@ -1,14 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, IconButton, Tooltip, Typography } from '@mui/material';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { Box, IconButton, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import LabelIcon from '@mui/icons-material/Label';
 import LabelOffIcon from '@mui/icons-material/LabelOff';
-import PolylineIcon from '@mui/icons-material/Polyline';
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
-
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
 import type { MarkerDTO } from '../../app/api';
 import { MarkerPin } from '../markers/MarkerPin';
@@ -18,15 +14,11 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
 
-const toSvgPoints = (points: { x: number; y: number }[]) => {
-  return points.map(p => `${p.x * 100},${p.y * 100}`).join(' ');
-};
-
-const getPolygonCentroid = (points: { x: number; y: number }[]) => {
-  let x = 0, y = 0;
-  points.forEach(p => { x += p.x; y += p.y; });
-  return { x: x / points.length, y: y / points.length };
-};
+function dist2(a: { x: number; y: number }, b: { x: number; y: number }) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy;
+}
 
 export function MapCanvas(props: {
   mapId: string;
@@ -37,11 +29,12 @@ export function MapCanvas(props: {
 
   onMapClick: (pos: { x: number; y: number }) => void;
 
-  onAreaCreated?: (area: { points: { x: number; y: number }[]; center: { x: number; y: number } }) => void;
-
   onMarkerClick: (marker: MarkerDTO, e: React.MouseEvent) => void;
   onMarkerDoubleClick: (marker: MarkerDTO, e: React.MouseEvent) => void;
   onMarkerContextMenu?: (marker: MarkerDTO, e: React.MouseEvent) => void;
+
+  onMarkerMoveEnd: (markerId: string, pos: { x: number; y: number }) => void | Promise<void>;
+  onMarkerMove?: (markerId: string, pos: { x: number; y: number }) => void;
 }) {
   const {
     mapId,
@@ -49,57 +42,130 @@ export function MapCanvas(props: {
     showLabels,
     onToggleLabels,
     onMapClick,
-    onAreaCreated,
     onMarkerClick,
     onMarkerDoubleClick,
-    onMarkerContextMenu
+    onMarkerContextMenu,
+    onMarkerMoveEnd,
+    onMarkerMove
   } = props;
 
   const src = useMemo(() => `/api/maps/${mapId}/file`, [mapId]);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
+  const suppressNextClickRef = useRef(false);
 
-  const handleClick = useCallback(
+  const dragRef = useRef<{
+    markerId: string | null;
+    pointerId: number | null;
+    startClient: { x: number; y: number } | null;
+    lastPos: { x: number; y: number } | null;
+    dragging: boolean;
+  }>({
+    markerId: null,
+    pointerId: null,
+    startClient: null,
+    lastPos: null,
+    dragging: false
+  });
+
+  const clientToNormPos = useCallback((clientX: number, clientY: number) => {
+    const el = contentRef.current;
+    if (!el) return null;
+
+    const rect = el.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+
+    // rect уже “визуальный” (после zoom/pan), поэтому деление на rect.width/height даёт корректные 0..1
+    const x = clamp01(px / rect.width);
+    const y = clamp01(py / rect.height);
+    return { x, y };
+  }, []);
+
+  const handleMapClick = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
 
-      const el = contentRef.current;
-      if (!el) return;
-
-      const rect = el.getBoundingClientRect();
-      const px = e.clientX - rect.left;
-      const py = e.clientY - rect.top;
-
-      const x = clamp01(px / rect.width);
-      const y = clamp01(py / rect.height);
-
-      if (isDrawing) {
-        setCurrentPoints(prev => [...prev, { x, y }]);
-      } else {
-        onMapClick({ x, y });
+      // подавляем клик, который браузер генерит после drag
+      if (suppressNextClickRef.current) {
+        suppressNextClickRef.current = false;
+        return;
       }
+
+      const pos = clientToNormPos(e.clientX, e.clientY);
+      if (!pos) return;
+
+      onMapClick(pos);
     },
-    [onMapClick, isDrawing]
+    [clientToNormPos, onMapClick]
   );
 
-  const handleFinishDrawing = () => {
-    if (currentPoints.length < 3) {
-      alert('Нужно минимум 3 точки для области');
-      return;
-    }
-    const center = getPolygonCentroid(currentPoints);
-    onAreaCreated?.({ points: currentPoints, center });
-    
-    setIsDrawing(false);
-    setCurrentPoints([]);
-  };
+  const handleMarkerPointerDown = useCallback((markerId: string, e: React.PointerEvent) => {
+    if (e.button !== 0) return;
 
-  const handleCancelDrawing = () => {
-    setIsDrawing(false);
-    setCurrentPoints([]);
-  };
+    e.stopPropagation();
+    e.preventDefault();
+
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+
+    dragRef.current.markerId = markerId;
+    dragRef.current.pointerId = e.pointerId;
+    dragRef.current.startClient = { x: e.clientX, y: e.clientY };
+    dragRef.current.lastPos = null;
+    dragRef.current.dragging = false;
+  }, []);
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const st = dragRef.current;
+      if (!st.markerId || st.pointerId !== e.pointerId || !st.startClient) return;
+
+      const thresholdPx = 4;
+      const movedEnough = dist2(st.startClient, { x: e.clientX, y: e.clientY }) >= thresholdPx * thresholdPx;
+
+      const pos = clientToNormPos(e.clientX, e.clientY);
+      if (!pos) return;
+
+      if (movedEnough) st.dragging = true;
+      if (!st.dragging) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      st.lastPos = pos;
+      onMarkerMove?.(st.markerId, pos);
+    },
+    [clientToNormPos, onMarkerMove]
+  );
+
+  const endDragIfAny = useCallback(
+    async (e: React.PointerEvent) => {
+      const st = dragRef.current;
+      if (!st.markerId || st.pointerId !== e.pointerId) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      const markerId = st.markerId;
+      const wasDragging = st.dragging;
+      const finalPos = st.lastPos;
+
+      // если реально тянули — подавим следующий click по карте
+      if (wasDragging) suppressNextClickRef.current = true;
+
+      // reset state
+      dragRef.current.markerId = null;
+      dragRef.current.pointerId = null;
+      dragRef.current.startClient = null;
+      dragRef.current.lastPos = null;
+      dragRef.current.dragging = false;
+
+      if (!wasDragging || !finalPos) return;
+
+      await onMarkerMoveEnd(markerId, finalPos);
+    },
+    [onMarkerMoveEnd]
+  );
 
   return (
     <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -107,11 +173,12 @@ export function MapCanvas(props: {
         minScale={0.1}
         maxScale={8}
         wheel={{ step: 0.1 }}
-        panning={{ disabled: isDrawing, velocityDisabled: true }} 
+        panning={{ velocityDisabled: true }}
         doubleClick={{ disabled: true }}
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
+            {/* Toolbar */}
             <Box
               sx={{
                 position: 'absolute',
@@ -127,72 +194,41 @@ export function MapCanvas(props: {
                 backdropFilter: 'blur(4px)'
               }}
             >
-              {!isDrawing ? (
-                <>
-                  <Tooltip title="Приблизить">
-                    <IconButton size="small" onClick={() => zoomIn()}>
-                      <AddIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Отдалить">
-                    <IconButton size="small" onClick={() => zoomOut()}>
-                      <RemoveIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Сброс вида">
-                    <IconButton size="small" onClick={() => resetTransform()}>
-                      <CenterFocusStrongIcon />
-                    </IconButton>
-                  </Tooltip>
-                  
-                  <Box sx={{ width: 1, bgcolor: 'divider', mx: 0.5 }} />
+              <Tooltip title="Zoom in">
+                <IconButton size="small" onClick={() => zoomIn()}>
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
 
-                  <Tooltip title={showLabels ? 'Скрыть подписи' : 'Показать подписи'}>
-                    <IconButton size="small" onClick={onToggleLabels}>
-                      {showLabels ? <LabelOffIcon /> : <LabelIcon />}
-                    </IconButton>
-                  </Tooltip>
+              <Tooltip title="Zoom out">
+                <IconButton size="small" onClick={() => zoomOut()}>
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
 
-                  <Tooltip title="Рисовать область (Area)">
-                    <IconButton size="small" color="primary" onClick={() => setIsDrawing(true)}>
-                      <PolylineIcon />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              ) : (
-                <>
-                  <Box sx={{ display: 'flex', alignItems: 'center', px: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                      Рисование... ({currentPoints.length})
-                    </Typography>
-                  </Box>
-                  <Tooltip title="Завершить (Enter)">
-                    <IconButton size="small" color="success" onClick={handleFinishDrawing}>
-                      <CheckIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Отмена (Esc)">
-                    <IconButton size="small" color="error" onClick={handleCancelDrawing}>
-                      <CloseIcon />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              )}
+              <Tooltip title="Reset view">
+                <IconButton size="small" onClick={() => resetTransform()}>
+                  <CenterFocusStrongIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <Box sx={{ width: 1, bgcolor: 'divider', mx: 0.5 }} />
+
+              <Tooltip title={showLabels ? 'Скрыть подписи' : 'Показать подписи'}>
+                <IconButton size="small" onClick={onToggleLabels}>
+                  {showLabels ? <LabelOffIcon fontSize="small" /> : <LabelIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
             </Box>
 
-            <Box
-              sx={{
-                width: '100%',
-                height: '100%',
-                bgcolor: '#e0e0e0',
-                position: 'relative',
-                cursor: isDrawing ? 'crosshair' : 'default'
-              }}
-            >
+            <Box sx={{ width: '100%', height: '100%', bgcolor: '#e0e0e0', position: 'relative' }}>
               <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }}>
                 <Box
                   ref={contentRef}
-                  onClick={handleClick}
+                  onClick={handleMapClick}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={endDragIfAny}
+                  onPointerCancel={endDragIfAny}
                   sx={{ width: '100%', height: '100%', position: 'relative' }}
                 >
                   <img
@@ -207,43 +243,7 @@ export function MapCanvas(props: {
                     }}
                     draggable={false}
                   />
-                  <svg
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      pointerEvents: 'none',
-                      overflow: 'visible'
-                    }}
-                  >
-                    {markers.map(m => {
-                      if (!m.points || m.points.length === 0) return null;
-                      return (
-                        <polygon
-                          key={`poly-${m.id}`}
-                          points={toSvgPoints(m.points)}
-                          fill={m.color}
-                          fillOpacity={0.25}
-                          stroke={m.color}
-                          strokeWidth={0.2}
-                          strokeDasharray="1 0.5"
-                        />
-                      );
-                    })}
-                    {isDrawing && currentPoints.length > 0 && (
-                      <polyline
-                        points={toSvgPoints(currentPoints)}
-                        fill="none"
-                        stroke="red"
-                        strokeWidth={0.3}
-                        strokeLinecap="round"
-                      />
-                    )}
-                  </svg>
+
                   {markers.map((m) => (
                     <MarkerPin
                       key={m.id}
@@ -252,6 +252,7 @@ export function MapCanvas(props: {
                       onClick={(e) => onMarkerClick(m, e)}
                       onDoubleClick={(e) => onMarkerDoubleClick(m, e)}
                       onContextMenu={(e) => onMarkerContextMenu?.(m, e)}
+                      onPointerDown={(e) => handleMarkerPointerDown(m.id, e)}
                     />
                   ))}
                 </Box>

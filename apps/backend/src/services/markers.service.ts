@@ -2,43 +2,25 @@ import crypto from 'node:crypto';
 import { nowIso } from '../config/paths.js';
 import { openProjectDb } from '../db/projectDB.js';
 import { listProjects } from './projects.service.js';
+import type { CreateMarkerDto, UpdateMarkerDto } from '../validation/markers.zod.js';
 
 export type MarkerLinkType = null | 'note' | 'map';
 
 export type MarkerDTO = {
   id: string;
   map_id: string;
-
   title: string;
   description: string;
-
   x: number;
   y: number;
-
-  // [NEW] Добавили точки для полигонов и стили
-  points?: { x: number; y: number }[]; 
-  style?: any; 
-
-  // [NEW] Добавили тип 'area'
-  marker_type: 'location' | 'event' | 'character' | 'area';
+  marker_type: 'location' | 'event' | 'character';
   color: string;
-
   link_type: MarkerLinkType;
   link_note_id: string | null;
   link_map_id: string | null;
-
   created_at: string;
   updated_at: string;
 };
-
-// [NEW] Хелпер для парсинга JSON полей из БД
-function parseDbMarker(row: any): MarkerDTO {
-  return {
-    ...row,
-    points: row.points ? JSON.parse(row.points) : undefined,
-    style: row.style ? JSON.parse(row.style) : undefined,
-  };
-}
 
 async function findProjectPathByMapId(mapId: string): Promise<string> {
   const projects = await listProjects();
@@ -102,10 +84,10 @@ export async function listMarkers(mapId: string): Promise<MarkerDTO[]> {
   const projectPath = await findProjectPathByMapId(mapId);
   const db = openProjectDb(projectPath);
   
-  // [NEW] Добавили points, style в SELECT
+  // Убрали points, style
   const rows = db.prepare(`
     SELECT
-      id, map_id, title, description, x, y, points, style, marker_type, color,
+      id, map_id, title, description, x, y, marker_type, color,
       link_type, link_note_id, link_map_id,
       created_at, updated_at
     FROM markers
@@ -114,8 +96,7 @@ export async function listMarkers(mapId: string): Promise<MarkerDTO[]> {
   `).all(mapId);
   
   db.close();
-  // [NEW] Используем парсер
-  return rows.map(parseDbMarker);
+  return rows as MarkerDTO[];
 }
 
 export async function createMarker(
@@ -138,17 +119,13 @@ export async function createMarker(
   const created_at = nowIso();
   const updated_at = created_at;
 
-  // [NEW] Подготовка JSON для points и style
-  const pointsJson = input.points ? JSON.stringify(input.points) : null;
-  const styleJson = input.style ? JSON.stringify(input.style) : null;
-
   db.prepare(`
     INSERT INTO markers (
-      id, map_id, title, description, x, y, points, style, marker_type, color,
+      id, map_id, title, description, x, y, marker_type, color,
       link_type, link_note_id, link_map_id,
       created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     mapId,
@@ -156,8 +133,6 @@ export async function createMarker(
     input.description ?? '',
     input.x,
     input.y,
-    pointsJson, // [NEW]
-    styleJson,  // [NEW]
     input.marker_type,
     input.color,
     link.link_type,
@@ -176,8 +151,6 @@ export async function createMarker(
     description: input.description ?? '',
     x: input.x,
     y: input.y,
-    points: input.points, // [NEW] возвращаем объект
-    style: input.style,   // [NEW]
     marker_type: input.marker_type,
     color: input.color,
     link_type: link.link_type,
@@ -195,21 +168,18 @@ export async function patchMarker(
   const projectPath = await findProjectPathByMarkerId(markerId);
   const db = openProjectDb(projectPath);
 
-  const rawCurrent = db.prepare(`
+  const current = db.prepare(`
     SELECT
-      id, map_id, title, description, x, y, points, style, marker_type, color,
+      id, map_id, title, description, x, y, marker_type, color,
       link_type, link_note_id, link_map_id,
       created_at, updated_at
     FROM markers WHERE id = ?
-  `).get(markerId);
+  `).get(markerId) as MarkerDTO | undefined;
 
-  if (!rawCurrent) {
+  if (!current) {
     db.close();
     throw Object.assign(new Error('Marker not found'), { status: 404, code: 'MARKER_NOT_FOUND' });
   }
-
-  // Парсим текущее состояние из БД
-  const current = parseDbMarker(rawCurrent);
 
   const wantsLinkUpdate =
     patch.link_type !== undefined || patch.link_note_id !== undefined || patch.link_map_id !== undefined;
@@ -232,10 +202,6 @@ export async function patchMarker(
     title: patch.title !== undefined ? patch.title.trim() : current.title,
     description: patch.description !== undefined ? patch.description : current.description,
     
-    // [NEW] Обработка points и style (если в патче нет, берем старые)
-    points: patch.points !== undefined ? patch.points : current.points,
-    style: patch.style !== undefined ? patch.style : current.style,
-
     link_type: nextLink.link_type,
     link_note_id: nextLink.link_note_id,
     link_map_id: nextLink.link_map_id,
@@ -243,14 +209,10 @@ export async function patchMarker(
     updated_at
   };
 
-  // [NEW] Подготовка JSON для UPDATE
-  const pointsJson = next.points ? JSON.stringify(next.points) : null;
-  const styleJson = next.style ? JSON.stringify(next.style) : null;
-
   db.prepare(`
     UPDATE markers
     SET
-      title = ?, description = ?, x = ?, y = ?, points = ?, style = ?, 
+      title = ?, description = ?, x = ?, y = ?, 
       marker_type = ?, color = ?,
       link_type = ?, link_note_id = ?, link_map_id = ?,
       updated_at = ?
@@ -260,8 +222,6 @@ export async function patchMarker(
     next.description,
     next.x,
     next.y,
-    pointsJson, // [NEW]
-    styleJson,  // [NEW]
     next.marker_type,
     next.color,
     next.link_type,

@@ -15,9 +15,6 @@ type CreateMarkerPayload = {
   description: string;
   x: number;
   y: number;
-  
-  // [NEW]
-  points?: { x: number; y: number }[];
 
   marker_type: MarkerType;
   color: string;
@@ -28,10 +25,25 @@ type CreateMarkerPayload = {
 };
 
 type PatchMarkerPayload = Partial<
-  Pick<CreateMarkerPayload,
-    'title'|'description'|'x'|'y'|'marker_type'|'color'|'link_type'|'link_note_id'|'link_map_id'|'points' // <-- добавил 'points'
+  Pick<
+    CreateMarkerPayload,
+    'title' | 'description' | 'x' | 'y' | 'marker_type' | 'color' | 'link_type' | 'link_note_id' | 'link_map_id'
   >
 >;
+
+type MarkerFiltersState = {
+  markerTypeVisibility: Record<MarkerType, boolean>;
+  markerSearchQuery: string;
+  markerOnlyLinked: boolean;
+
+  setMarkerTypeVisibility: (type: MarkerType, visible: boolean) => void;
+  setAllMarkerTypesVisibility: (visible: boolean) => void;
+  setMarkerSearchQuery: (q: string) => void;
+  setMarkerOnlyLinked: (v: boolean) => void;
+  resetMarkerFilters: () => void;
+
+  getVisibleMarkersForMap: (mapId: string) => MarkerDTO[];
+};
 
 type AppState = {
   // Projects
@@ -42,6 +54,7 @@ type AppState = {
   loadProjects: () => Promise<void>;
   createProject: (input: { name: string; rootPath?: string; system: GameSystemType }) => Promise<ProjectDTO>;
   setCurrentProjectId: (id: string | null) => void;
+  deleteProject: (projectId: string) => Promise<void>;
 
   // Maps
   maps: MapDTO[];
@@ -81,9 +94,71 @@ type AppState = {
   setNoteDraftContent: (noteId: string, content: string) => void;
   deleteMap: (projectId: string, mapId: string) => Promise<void>;
   createNoteSilent: (projectId: string, input: { title: string; type: NoteType }) => Promise<NoteDTO>;
+} & MarkerFiltersState;
+
+const defaultMarkerTypeVisibility: Record<MarkerType, boolean> = {
+  location: true,
+  event: true,
+  character: true
 };
 
+function norm(s: string) {
+  return s.trim().toLowerCase();
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
+  // --------------------
+  // Marker filters + search
+  // --------------------
+  markerTypeVisibility: defaultMarkerTypeVisibility,
+  markerSearchQuery: '',
+  markerOnlyLinked: false,
+
+  setMarkerTypeVisibility: (type, visible) =>
+    set((s) => ({ markerTypeVisibility: { ...s.markerTypeVisibility, [type]: visible } })),
+
+  setAllMarkerTypesVisibility: (visible) =>
+    set(() => ({
+      markerTypeVisibility: {
+        location: visible,
+        event: visible,
+        character: visible
+      }
+    })),
+
+  setMarkerSearchQuery: (q) => set({ markerSearchQuery: q }),
+
+  setMarkerOnlyLinked: (v) => set({ markerOnlyLinked: v }),
+
+  resetMarkerFilters: () =>
+    set({
+      markerTypeVisibility: defaultMarkerTypeVisibility,
+      markerSearchQuery: '',
+      markerOnlyLinked: false
+    }),
+
+  getVisibleMarkersForMap: (mapId) => {
+    const s = get();
+    const list = s.markersByMapId[mapId] ?? [];
+
+    const q = norm(s.markerSearchQuery);
+    const typeVis = s.markerTypeVisibility;
+
+    return list.filter((m) => {
+      if (!typeVis[m.marker_type]) return false;
+
+      if (s.markerOnlyLinked) {
+        const hasLink = m.link_type === 'note' || m.link_type === 'map';
+        if (!hasLink) return false;
+      }
+
+      if (!q) return true;
+
+      const hay = `${m.title ?? ''}\n${m.description ?? ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  },
+
   // --------------------
   // Projects
   // --------------------
@@ -107,6 +182,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     return res.data;
   },
 
+  deleteProject: async (projectId) => {
+    await api.delete(`/projects/${projectId}`, { params: { deleteFiles: 1 } });
+    await get().loadProjects();
+    if (get().currentProjectId === projectId) get().setCurrentProjectId(null);
+  },
+
+
   deleteMap: async (projectId, mapId) => {
     await api.delete(`/maps/${mapId}`);
     await get().loadMaps(projectId);
@@ -120,7 +202,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { markersByMapId: nextMarkers, markersLoadingByMapId: nextLoading };
     });
   },
-
 
   setCurrentProjectId: (id) =>
     set({
@@ -138,7 +219,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       notesLoading: false,
       selectedNoteId: null,
       noteContentById: {},
-      noteContentLoadingById: {}
+      noteContentLoadingById: {},
+
+      // и фильтры тоже
+      markerTypeVisibility: defaultMarkerTypeVisibility,
+      markerSearchQuery: '',
+      markerOnlyLinked: false
     }),
 
   // --------------------

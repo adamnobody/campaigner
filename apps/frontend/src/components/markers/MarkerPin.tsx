@@ -4,9 +4,12 @@ import type { MarkerDTO } from '../../app/api';
 
 function getIcon(type: MarkerDTO['marker_type']) {
   switch (type) {
-    case 'location': return FaMapMarkerAlt;
-    case 'event': return FaRegStar;
-    case 'character': return FaUser;
+    case 'location':
+      return FaMapMarkerAlt;
+    case 'event':
+      return FaRegStar;
+    case 'character':
+      return FaUser;
   }
 }
 
@@ -17,8 +20,11 @@ export function MarkerPin(props: {
   onClick: (e: React.MouseEvent) => void;
   onDoubleClick?: (e: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
+
+  // NEW: для drag&drop
+  onPointerDown?: (e: React.PointerEvent) => void;
 }) {
-  const { marker, showLabel, onClick, onDoubleClick, onContextMenu } = props;
+  const { marker, showLabel, onClick, onDoubleClick, onContextMenu, onPointerDown } = props;
   const Icon = getIcon(marker.marker_type);
 
   const hasLink =
@@ -28,6 +34,11 @@ export function MarkerPin(props: {
   return (
     <button
       type="button"
+      onPointerDown={(e) => {
+        // важно: не даём событию уйти на карту (иначе будет "создание маркера")
+        e.stopPropagation();
+        onPointerDown?.(e);
+      }}
       onClick={(e) => {
         e.stopPropagation();
         onClick(e);
@@ -50,7 +61,11 @@ export function MarkerPin(props: {
         background: 'transparent',
         border: 'none',
         padding: 0,
-        cursor: 'pointer'
+
+        // DnD-friendly
+        cursor: 'grab',
+        touchAction: 'none',
+        userSelect: 'none'
       }}
     >
       <span style={{ position: 'relative', display: 'inline-block' }}>

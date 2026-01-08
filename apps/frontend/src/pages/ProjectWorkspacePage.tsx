@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   AppBar,
   Box,
@@ -14,7 +14,10 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  TextField,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -32,7 +35,7 @@ import { CreateMapDialog } from '../components/maps/CreateMapDialog';
 import { MapCanvas } from '../components/maps/MapCanvas';
 import { MapsTree } from '../components/maps/MapsTree';
 import { MarkerDialog } from '../components/markers/MarkerDialog';
-import type { MarkerDTO } from '../app/api';
+import type { MarkerDTO, MarkerType } from '../app/api';
 
 import { NotesList } from '../components/notes/NotesList';
 import { CreateNoteDialog } from '../components/notes/CreateNoteDialog';
@@ -43,8 +46,6 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 
 type RightTab = 'inspector' | 'notes';
-
-const SPLITTER_W = 6;
 
 const LS_LEFT = 'ui.leftWidth';
 const LS_RIGHT = 'ui.rightWidth';
@@ -64,7 +65,7 @@ function buildBreadcrumbs(
   mapId: string | null
 ) {
   if (!mapId) return [];
-  const byId = new Map(maps.map(m => [m.id, m]));
+  const byId = new Map(maps.map((m) => [m.id, m]));
   const chain: { id: string; title: string }[] = [];
   let cur = byId.get(mapId);
   const guard = new Set<string>();
@@ -81,21 +82,18 @@ function buildBreadcrumbs(
 function Splitter(props: {
   ariaLabel: string;
   onDrag: (dx: number) => void;
-
-  // какую клавишу нужно держать для ресайза
   requireKey?: 'Shift' | 'Alt' | 'Control';
 }) {
   const { ariaLabel, onDrag, requireKey = 'Shift' } = props;
 
   const dragging = React.useRef(false);
   const lastX = React.useRef(0);
-  const elRef = React.useRef<HTMLDivElement | null>(null);
 
   const isKeyHeld = React.useCallback(
     (e: { shiftKey?: boolean; altKey?: boolean; ctrlKey?: boolean }) => {
       if (requireKey === 'Shift') return !!e.shiftKey;
       if (requireKey === 'Alt') return !!e.altKey;
-      return !!e.ctrlKey; // Control
+      return !!e.ctrlKey;
     },
     [requireKey]
   );
@@ -110,7 +108,6 @@ function Splitter(props: {
     const onPointerMove = (e: PointerEvent) => {
       if (!dragging.current) return;
 
-      // если отпустили нужную клавишу — остановить ресайз
       if (!isKeyHeld(e)) {
         stopDrag();
         return;
@@ -124,7 +121,6 @@ function Splitter(props: {
     const onPointerUp = () => stopDrag();
 
     const onKeyUp = (e: KeyboardEvent) => {
-      // отпустили нужную клавишу — остановить ресайз
       if (
         (requireKey === 'Shift' && e.key === 'Shift') ||
         (requireKey === 'Alt' && e.key === 'Alt') ||
@@ -147,28 +143,22 @@ function Splitter(props: {
 
   return (
     <Box
-      ref={elRef}
       role="separator"
       aria-label={ariaLabel}
       onPointerDown={(e) => {
-        // стартуем ресайз только если держим нужную клавишу
         if (!isKeyHeld(e)) return;
 
         dragging.current = true;
         lastX.current = e.clientX;
         document.body.style.cursor = 'col-resize';
-
-        // чтобы не выделялся текст и не терялся drag при уходе курсора
         (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
       }}
       sx={{
-        width: 12,              // зона захвата
+        width: 12,
         flex: '0 0 12px',
         cursor: 'col-resize',
         position: 'relative',
         bgcolor: 'transparent',
-
-        // ВИДИМАЯ граница (тонкая линия)
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -180,8 +170,6 @@ function Splitter(props: {
           opacity: 0.8,
           transform: 'translateX(-50%)'
         },
-
-        // Ховер подсветка
         '&:hover': { bgcolor: 'action.hover' },
         '&:hover::before': { opacity: 1 }
       }}
@@ -189,7 +177,6 @@ function Splitter(props: {
     />
   );
 }
-
 
 export function ProjectWorkspacePage() {
   const nav = useNavigate();
@@ -224,7 +211,17 @@ export function ProjectWorkspacePage() {
     deleteNote,
 
     // create&link
-    createNoteSilent
+    createNoteSilent,
+
+    // filters/search (NEW)
+    markerTypeVisibility,
+    markerSearchQuery,
+    markerOnlyLinked,
+    setMarkerTypeVisibility,
+    setMarkerSearchQuery,
+    setMarkerOnlyLinked,
+    resetMarkerFilters,
+    getVisibleMarkersForMap
   } = useAppStore();
 
   // sizes + right panel open
@@ -267,6 +264,9 @@ export function ProjectWorkspacePage() {
   const [draftPos, setDraftPos] = useState<{ x: number; y: number } | null>(null);
   const [editingMarker, setEditingMarker] = useState<MarkerDTO | null>(null);
 
+  // optimistic positions during drag (NEW)
+  const [dragPositions, setDragPositions] = useState<Record<string, { x: number; y: number }>>({});
+
   // load project data
   useEffect(() => {
     if (!pid) return;
@@ -280,7 +280,7 @@ export function ProjectWorkspacePage() {
     if (!maps.length) return;
 
     if (mapId) {
-      const exists = maps.some(m => m.id === mapId);
+      const exists = maps.some((m) => m.id === mapId);
       if (exists) {
         setCurrentMapId(mapId);
       } else {
@@ -291,31 +291,49 @@ export function ProjectWorkspacePage() {
     }
   }, [pid, maps, mapId, setCurrentMapId, nav]);
 
-  const currentMap = useMemo(
-    () => maps.find(m => m.id === currentMapId) ?? null,
-    [maps, currentMapId]
-  );
+  const currentMap = useMemo(() => maps.find((m) => m.id === currentMapId) ?? null, [maps, currentMapId]);
 
   // load markers for current map
   useEffect(() => {
     if (!currentMapId) return;
     loadMarkers(currentMapId);
     setInspectedMarker(null);
+
+    // при смене карты сбрасываем “drag overlay”, чтобы не протекал
+    setDragPositions({});
   }, [currentMapId, loadMarkers]);
 
   const currentMarkers = useMemo(
-    () => (currentMapId ? (markersByMapId[currentMapId] ?? []) : []),
+    () => (currentMapId ? markersByMapId[currentMapId] ?? [] : []),
     [currentMapId, markersByMapId]
   );
 
-  // notes
-  const selectedNote = useMemo(
-    () => notes.find(n => n.id === selectedNoteId) ?? null,
-    [notes, selectedNoteId]
-  );
+  const visibleMarkers = useMemo(() => {
+    if (!currentMapId) return [];
+    return getVisibleMarkersForMap(currentMapId);
+  }, [
+    currentMapId,
+    getVisibleMarkersForMap,
+    currentMarkers,
+    markerTypeVisibility,
+    markerSearchQuery,
+    markerOnlyLinked
+  ]);
 
-  const noteContent = selectedNoteId ? (noteContentById[selectedNoteId] ?? '') : '';
-  const noteLoading = selectedNoteId ? (noteContentLoadingById[selectedNoteId] ?? false) : false;
+  // overlay drag positions (NEW)
+  const markersForCanvas = useMemo(() => {
+    if (!dragPositions || Object.keys(dragPositions).length === 0) return visibleMarkers;
+    return visibleMarkers.map((m) => {
+      const p = dragPositions[m.id];
+      return p ? { ...m, x: p.x, y: p.y } : m;
+    });
+  }, [visibleMarkers, dragPositions]);
+
+  // notes
+  const selectedNote = useMemo(() => notes.find((n) => n.id === selectedNoteId) ?? null, [notes, selectedNoteId]);
+
+  const noteContent = selectedNoteId ? noteContentById[selectedNoteId] ?? '' : '';
+  const noteLoading = selectedNoteId ? noteContentLoadingById[selectedNoteId] ?? false : false;
 
   useEffect(() => {
     if (!selectedNoteId) return;
@@ -339,6 +357,27 @@ export function ProjectWorkspacePage() {
     if (fn) fn();
   };
   const themeMode = ((window as any).__themeMode as 'light' | 'dark' | undefined) ?? 'light';
+
+  const handleMarkerMove = useCallback((markerId: string, pos: { x: number; y: number }) => {
+    setDragPositions((s) => ({ ...s, [markerId]: pos }));
+  }, []);
+
+  const handleMarkerMoveEnd = useCallback(
+    async (markerId: string, pos: { x: number; y: number }) => {
+      await patchMarker(markerId, { x: pos.x, y: pos.y });
+
+      setDragPositions((s) => {
+        if (!s[markerId]) return s;
+        const next = { ...s };
+        delete next[markerId];
+        return next;
+      });
+    },
+    [patchMarker]
+  );
+
+  const toggleType = (t: MarkerType) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setMarkerTypeVisibility(t, e.target.checked);
 
   if (!pid) return null;
 
@@ -432,11 +471,7 @@ export function ProjectWorkspacePage() {
           <Divider />
 
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            <MapsTree
-              maps={maps}
-              selectedMapId={currentMapId}
-              onSelectMap={(id) => nav(`/projects/${pid}/maps/${id}`)}
-            />
+            <MapsTree maps={maps} selectedMapId={currentMapId} onSelectMap={(id) => nav(`/projects/${pid}/maps/${id}`)} />
 
             <Divider sx={{ my: 1 }} />
 
@@ -458,11 +493,7 @@ export function ProjectWorkspacePage() {
         </Box>
 
         {/* Left splitter */}
-        <Splitter
-          ariaLabel="Resize left panel"
-          requireKey="Shift"
-          onDrag={(dx) => setLeftW((w) => clamp(w + dx, LEFT_MIN, LEFT_MAX))}
-        />
+        <Splitter ariaLabel="Resize left panel" requireKey="Shift" onDrag={(dx) => setLeftW((w) => clamp(w + dx, LEFT_MIN, LEFT_MAX))} />
 
         {/* Center map area */}
         <Box sx={{ flex: 1, p: 1.5, minWidth: 0, overflow: 'hidden' }}>
@@ -471,22 +502,53 @@ export function ProjectWorkspacePage() {
               {currentMap ? currentMap.title : 'Выберите карту'}
             </Typography>
 
-            <Button
-              color="error"
-              variant="outlined"
-              size="small"
-              disabled={!currentMap}
-              onClick={() => setMapDeleteOpen(true)}
-            >
+            <Button color="error" variant="outlined" size="small" disabled={!currentMap} onClick={() => setMapDeleteOpen(true)}>
               Удалить
             </Button>
           </Box>
 
-          <Box sx={{ height: 'calc(100% - 34px)' }}>
+          {/* Filters/search row (NEW) */}
+          <Box sx={{ mb: 1, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            <TextField
+              size="small"
+              label="Поиск маркеров"
+              value={markerSearchQuery}
+              onChange={(e) => setMarkerSearchQuery(e.target.value)}
+              sx={{ minWidth: 260, flex: '1 1 260px' }}
+            />
+
+            <FormControlLabel
+              control={<Checkbox size="small" checked={markerTypeVisibility.location} onChange={toggleType('location')} />}
+              label="Локации"
+            />
+            <FormControlLabel
+              control={<Checkbox size="small" checked={markerTypeVisibility.event} onChange={toggleType('event')} />}
+              label="События"
+            />
+            <FormControlLabel
+              control={<Checkbox size="small" checked={markerTypeVisibility.character} onChange={toggleType('character')} />}
+              label="Персонажи"
+            />
+
+            <FormControlLabel
+              control={<Checkbox size="small" checked={markerOnlyLinked} onChange={(e) => setMarkerOnlyLinked(e.target.checked)} />}
+              label="Только со ссылкой"
+            />
+
+            <Button size="small" variant="outlined" onClick={resetMarkerFilters}>
+              Сброс
+            </Button>
+
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+              Показано: {markersForCanvas.length}
+            </Typography>
+          </Box>
+
+          <Box sx={{ height: 'calc(100% - 34px - 56px)' }}>
             {currentMap ? (
               <MapCanvas
                 mapId={currentMap.id}
-                markers={currentMarkers}
+                markers={markersForCanvas}
                 showLabels={showLabels}
                 onToggleLabels={() => setShowLabels((v) => !v)}
                 onMapClick={(pos) => {
@@ -496,7 +558,6 @@ export function ProjectWorkspacePage() {
                   setMarkerDialogOpen(true);
                 }}
                 onMarkerClick={(m, e) => {
-                  // Shift+Click — только инспектор
                   if (e.shiftKey) {
                     setInspectedMarker(m);
                     setRightOpen(true);
@@ -504,7 +565,6 @@ export function ProjectWorkspacePage() {
                     return;
                   }
 
-                  // обычный клик — переход по link
                   if (m.link_type === 'note' && m.link_note_id) {
                     openNote(m.link_note_id);
                     return;
@@ -514,13 +574,11 @@ export function ProjectWorkspacePage() {
                     return;
                   }
 
-                  // без link — просто в инспектор
                   setInspectedMarker(m);
                   setRightOpen(true);
                   setRightTab('inspector');
                 }}
                 onMarkerDoubleClick={(m) => {
-                  // double click — редактирование
                   setInspectedMarker(m);
                   setRightOpen(true);
                   setRightTab('inspector');
@@ -531,11 +589,12 @@ export function ProjectWorkspacePage() {
                   setMarkerDialogOpen(true);
                 }}
                 onMarkerContextMenu={(m) => {
-                  // ПКМ — только инспектор
                   setInspectedMarker(m);
                   setRightOpen(true);
                   setRightTab('inspector');
                 }}
+                onMarkerMove={handleMarkerMove}
+                onMarkerMoveEnd={handleMarkerMoveEnd}
               />
             ) : (
               <Typography color="text.secondary">Добавьте карту или выберите существующую.</Typography>
@@ -546,11 +605,7 @@ export function ProjectWorkspacePage() {
         {/* Right panel + splitter (only when open) */}
         {rightOpen && (
           <>
-            <Splitter
-              ariaLabel="Resize right panel"
-              requireKey="Shift"
-              onDrag={(dx) => setRightW((w) => clamp(w - dx, RIGHT_MIN, RIGHT_MAX))}
-            />
+            <Splitter ariaLabel="Resize right panel" requireKey="Shift" onDrag={(dx) => setRightW((w) => clamp(w - dx, RIGHT_MIN, RIGHT_MAX))} />
 
             <Box
               sx={{
@@ -597,7 +652,7 @@ export function ProjectWorkspacePage() {
                 ) : (
                   <InspectorPanel
                     mapTitle={currentMap?.title ?? null}
-                    parentTitle={parentMapId ? (maps.find(m => m.id === parentMapId)?.title ?? null) : null}
+                    parentTitle={parentMapId ? maps.find((m) => m.id === parentMapId)?.title ?? null : null}
                     markerCount={currentMarkers.length}
                     inspectedMarker={inspectedMarker}
                     onClearMarker={() => setInspectedMarker(null)}
@@ -660,8 +715,12 @@ export function ProjectWorkspacePage() {
         }}
         initial={
           markerDialogMode === 'create'
-            ? (draftPos ? { x: draftPos.x, y: draftPos.y } : undefined)
-            : (editingMarker ? { ...editingMarker, x: editingMarker.x, y: editingMarker.y } : undefined)
+            ? draftPos
+              ? { x: draftPos.x, y: draftPos.y }
+              : undefined
+            : editingMarker
+              ? { ...editingMarker, x: editingMarker.x, y: editingMarker.y }
+              : undefined
         }
         onClose={() => setMarkerDialogOpen(false)}
         onCreate={async (payload) => {
@@ -682,8 +741,8 @@ export function ProjectWorkspacePage() {
       <Dialog open={mapDeleteOpen} onClose={() => setMapDeleteOpen(false)}>
         <DialogTitle>Удалить карту?</DialogTitle>
         <DialogContent>
-          Будут удалены все маркеры на этой карте. Ссылки маркеров на эту карту будут отвязаны.
-          Файл карты будет удалён с диска. Действие необратимо.
+          Будут удалены все маркеры на этой карте. Ссылки маркеров на эту карту будут отвязаны. Файл карты будет удалён с
+          диска. Действие необратимо.
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setMapDeleteOpen(false)}>Отмена</Button>
@@ -693,9 +752,9 @@ export function ProjectWorkspacePage() {
               if (!currentMap) return;
 
               const fallbackId =
-                (currentMap.parent_map_id && maps.some(m => m.id === currentMap.parent_map_id))
+                currentMap.parent_map_id && maps.some((m) => m.id === currentMap.parent_map_id)
                   ? currentMap.parent_map_id
-                  : (maps.find(m => m.id !== currentMap.id)?.id ?? null);
+                  : maps.find((m) => m.id !== currentMap.id)?.id ?? null;
 
               await deleteMap(pid, currentMap.id);
 
@@ -763,12 +822,7 @@ function InspectorPanel(props: {
             Редактировать
           </Button>
 
-          <Button
-            variant="outlined"
-            size="small"
-            disabled={!inspectedMarker.link_type}
-            onClick={onOpenLinked}
-          >
+          <Button variant="outlined" size="small" disabled={!inspectedMarker.link_type} onClick={onOpenLinked}>
             Открыть link
           </Button>
 

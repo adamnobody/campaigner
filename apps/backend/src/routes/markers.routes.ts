@@ -4,6 +4,7 @@ import { createMarker, deleteMarker, listMarkers, patchMarker } from '../service
 
 export const markersRouter = Router();
 
+// GET /api/maps/:mapId/markers
 markersRouter.get('/maps/:mapId/markers', async (req, res, next) => {
   try {
     const markers = await listMarkers(req.params.mapId);
@@ -13,6 +14,7 @@ markersRouter.get('/maps/:mapId/markers', async (req, res, next) => {
   }
 });
 
+// POST /api/maps/:mapId/markers
 markersRouter.post('/maps/:mapId/markers', async (req, res, next) => {
   try {
     const parsed = CreateMarkerSchema.parse(req.body ?? {});
@@ -23,6 +25,7 @@ markersRouter.post('/maps/:mapId/markers', async (req, res, next) => {
   }
 });
 
+// PATCH /api/markers/:markerId
 markersRouter.patch('/markers/:markerId', async (req, res, next) => {
   try {
     const parsed = PatchMarkerSchema.parse(req.body ?? {});
@@ -33,6 +36,7 @@ markersRouter.patch('/markers/:markerId', async (req, res, next) => {
   }
 });
 
+// DELETE /api/markers/:markerId
 markersRouter.delete('/markers/:markerId', async (req, res, next) => {
   try {
     await deleteMarker(req.params.markerId);

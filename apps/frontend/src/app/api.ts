@@ -24,8 +24,8 @@ export type MapDTO = {
   updated_at: string;
 };
 
-export type MarkerType = 'location' | 'event' | 'character' | 'area';
-
+// Вернули как было
+export type MarkerType = 'location' | 'event' | 'character';
 export type MarkerLinkType = null | 'note' | 'map';
 
 export type MarkerDTO = {
@@ -35,12 +35,9 @@ export type MarkerDTO = {
   description: string;
   x: number;
   y: number;
-
-  points?: { x: number; y: number }[];
-  style?: any;
-
+  
   marker_type: MarkerType;
-  color: string; // #RRGGBB
+  color: string;
 
   link_type: MarkerLinkType;
   link_note_id: string | null;
