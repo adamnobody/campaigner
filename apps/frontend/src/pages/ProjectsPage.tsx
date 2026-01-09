@@ -22,11 +22,16 @@ import {
   Stack,
   Switch,
   FormControlLabel,
+  Link as MUILink,
+  Drawer,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WallpaperOutlinedIcon from '@mui/icons-material/WallpaperOutlined';
-
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import PaletteIcon from '@mui/icons-material/Palette';
+import defaultProjectsBg from '../assets/projects-bg.jpeg'
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../app/store';
 import type { GameSystemType, ProjectDTO } from '../app/api';
@@ -44,36 +49,98 @@ const SYSTEM_LABELS: Record<GameSystemType, string> = {
 type ProjectsBgSettings = {
   enabled: boolean;
   imageDataUrl: string | null;
-  blurPx: number;          // 0..20
-  brightnessPct: number;   // 50..150
-  contrastPct: number;     // 50..150
+  blurPx: number; // 0..20
+  brightnessPct: number; // 50..150
+  contrastPct: number; // 50..150
 };
 
 const BG_LS_KEY = 'projectsBg:v1';
 
 const BG_DEFAULTS: ProjectsBgSettings = {
-  enabled: false,
-  imageDataUrl: null,
+  enabled: true,
+  imageDataUrl: defaultProjectsBg,
   blurPx: 0,
   brightnessPct: 100,
   contrastPct: 100,
 };
 
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
+
+/** ===== Theme settings (Projects UI only) =====
+ * Глобальный primary уходит через window.__setThemeSettings({ primary })
+ * Цвет "панелей проектов" делаем локальным (только для ProjectsPage) и храним в localStorage.
+ */
+
+type ProjectsUiSettings = {
+  projectCardColor: string; // base overlay color for project cards
+};
+
+const PROJECTS_UI_KEY = 'ui.projectsUi:v1';
+
+const PROJECTS_UI_DEFAULTS: ProjectsUiSettings = {
+  projectCardColor: '#14181C', // тёмный базовый
+};
+
+function loadProjectsUi(): ProjectsUiSettings {
+  try {
+    const raw = localStorage.getItem(PROJECTS_UI_KEY);
+    if (!raw) return PROJECTS_UI_DEFAULTS;
+    const obj = JSON.parse(raw) as Partial<ProjectsUiSettings> | null;
+    const projectCardColor = typeof obj?.projectCardColor === 'string' ? obj.projectCardColor : PROJECTS_UI_DEFAULTS.projectCardColor;
+    return { projectCardColor };
+  } catch {
+    return PROJECTS_UI_DEFAULTS;
+  }
+}
+
+function saveProjectsUi(s: ProjectsUiSettings) {
+  try {
+    localStorage.setItem(PROJECTS_UI_KEY, JSON.stringify(s));
+  } catch {
+    // ignore
+  }
+}
+
+/** ===== Theme helpers (window MVP) ===== */
+
+function getInitialPrimary(): string {
+  const w = window as any;
+  if (typeof w.__getThemeSettings === 'function') {
+    const s = w.__getThemeSettings() as undefined | { primary?: string };
+    if (s?.primary) return s.primary;
+  }
+  const s = w.__themeSettings as undefined | { primary?: string };
+  return s?.primary ?? '#7C8CFF';
+}
+
+function applyPrimary(primary: string) {
+  const w = window as any;
+  const fn = w.__setThemeSettings as undefined | ((patch: { primary: string }) => void);
+  if (fn) fn({ primary });
+}
+
+/** ===== Image helpers (canvas compression) ===== */
 
 function loadBgSettings(): ProjectsBgSettings {
   try {
     const raw = localStorage.getItem(BG_LS_KEY);
     if (!raw) return BG_DEFAULTS;
+
     const obj = JSON.parse(raw) as Partial<ProjectsBgSettings> | null;
 
-    const imageDataUrl = typeof obj?.imageDataUrl === 'string' ? obj.imageDataUrl : null;
-    const enabled = Boolean(obj?.enabled) && Boolean(imageDataUrl);
+    const imageDataUrl =
+      typeof obj?.imageDataUrl === 'string' && obj.imageDataUrl.trim().length > 0
+        ? obj.imageDataUrl
+        : BG_DEFAULTS.imageDataUrl;
+
+    // если enabled не задан — берём дефолт (true)
+    const enabled = obj?.enabled === undefined ? BG_DEFAULTS.enabled : Boolean(obj.enabled);
 
     return {
-      enabled,
+      enabled: Boolean(enabled) && Boolean(imageDataUrl),
       imageDataUrl,
       blurPx: clamp(Number(obj?.blurPx ?? BG_DEFAULTS.blurPx), 0, 20),
       brightnessPct: clamp(Number(obj?.brightnessPct ?? BG_DEFAULTS.brightnessPct), 50, 150),
@@ -91,8 +158,6 @@ function saveBgSettings(s: ProjectsBgSettings) {
     // переполнение localStorage — не критично, просто не сохраним
   }
 }
-
-/** ===== Image helpers (canvas compression) ===== */
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -152,7 +217,6 @@ async function compressImageToDataUrl(file: File, opts: CompressOptions): Promis
   if ('imageSmoothingEnabled' in anyCtx) anyCtx.imageSmoothingEnabled = true;
   if ('imageSmoothingQuality' in anyCtx) anyCtx.imageSmoothingQuality = 'high';
 
-  // PNG transparency -> make it solid (neutral black works well under blur)
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, dstW, dstH);
   ctx.drawImage(img, 0, 0, dstW, dstH);
@@ -187,11 +251,76 @@ async function compressImageToDataUrl(file: File, opts: CompressOptions): Promis
   return out;
 }
 
+/** ===== Small UI: color picker row ===== */
+
+function ColorPickerRow(props: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const { label, value, onChange } = props;
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {label}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Выберите цвет
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box
+          sx={(theme) => ({
+            width: 40,
+            height: 34,
+            borderRadius: 1.5,
+            backgroundColor: value,
+            border: '1px solid rgba(255,255,255,0.18)',
+            boxShadow: `0 0 0 3px ${
+              theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.9)'
+            }`,
+          })}
+        />
+        <Box
+          component="input"
+          type="color"
+          value={value}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          sx={{
+            width: 44,
+            height: 34,
+            border: 'none',
+            background: 'transparent',
+            padding: 0,
+            cursor: 'pointer',
+          }}
+        />
+      </Box>
+    </Box>
+  );
+}
+
 /** ===== Page ===== */
 
 export function ProjectsPage() {
   const nav = useNavigate();
   const { projects, loadProjects, createProject, deleteProject } = useAppStore();
+
+  // Theme panel state
+  const [themePanelOpen, setThemePanelOpen] = useState(false);
+
+  // Global theme primary
+  const [primary, setPrimary] = useState<string>(() => getInitialPrimary());
+
+  // Projects UI (local) settings
+  const [projectsUi, setProjectsUi] = useState<ProjectsUiSettings>(() => loadProjectsUi());
+
+  useEffect(() => {
+    saveProjectsUi(projectsUi);
+  }, [projectsUi]);
 
   // Create project state
   const [open, setOpen] = useState(false);
@@ -279,6 +408,9 @@ export function ProjectsPage() {
     }
   };
 
+  // Use user-selected card base color
+  const cardBase = projectsUi.projectCardColor;
+
   return (
     <Box
       sx={(theme) => ({
@@ -334,9 +466,128 @@ export function ProjectsPage() {
         />
       )}
 
-      {/* Content */}
-      <Box sx={{ position: 'relative', zIndex: 2 }}>
-        <Container sx={{ py: 3 }}>
+      {/* Right-edge toggle button */}
+      <Box
+        sx={{
+          position: 'fixed',
+          right: 0,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 6,
+        }}
+      >
+        <Tooltip title="Цвета интерфейса">
+          <IconButton
+            onClick={() => setThemePanelOpen((v) => !v)}
+            sx={(theme) => ({
+              borderRadius: '12px 0 0 12px',
+              border: '1px solid rgba(255,255,255,0.10)',
+              borderRight: 'none',
+              background:
+                theme.palette.mode === 'dark'
+                  ? 'linear-gradient(180deg, rgba(18,20,26,0.85), rgba(12,14,18,0.85))'
+                  : 'rgba(255,255,255,0.9)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+              backdropFilter: 'blur(8px)',
+              px: 1.25,
+              gap: 0.5,
+            })}
+          >
+            <PaletteIcon fontSize="small" />
+            {themePanelOpen ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Theme settings drawer */}
+      <Drawer
+        anchor="right"
+        open={themePanelOpen}
+        onClose={() => setThemePanelOpen(false)}
+        PaperProps={{
+          sx: (theme) => ({
+            width: 340,
+            borderLeft: '1px solid rgba(255,255,255,0.10)',
+            background:
+              theme.palette.mode === 'dark'
+                ? 'linear-gradient(180deg, rgba(18,20,26,0.92), rgba(12,14,18,0.92))'
+                : 'rgba(255,255,255,0.98)',
+            backdropFilter: 'blur(10px)',
+          }),
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Typography
+            sx={{
+              fontFamily: '"IBM Plex Serif", ui-serif, Georgia, serif',
+              fontWeight: 700,
+              mb: 1,
+            }}
+          >
+            Цвета интерфейса
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Изменения применяются глобально (primary) и локально (панели проектов).
+          </Typography>
+
+          <Stack spacing={2}>
+            <ColorPickerRow
+              label="Primary (кнопки/акценты)"
+              value={primary}
+              onChange={(next) => {
+                setPrimary(next);
+                applyPrimary(next); // live apply
+              }}
+            />
+
+            <ColorPickerRow
+              label="Панели проектов (карточки)"
+              value={projectsUi.projectCardColor}
+              onChange={(next) => {
+                setProjectsUi((prev) => ({ ...prev, projectCardColor: next }));
+              }}
+            />
+
+            <Box sx={{ pt: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                Primary влияет на кнопки и акценты везде (включая ProjectWorkspacePage). Цвет панелей влияет только на список проектов.
+              </Typography>
+            </Box>
+
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  const defPrimary = '#7C8CFF';
+                  const defCard = '#14181C';
+                  setPrimary(defPrimary);
+                  applyPrimary(defPrimary);
+                  setProjectsUi({ projectCardColor: defCard });
+                }}
+              >
+                Сбросить
+              </Button>
+
+              <Button variant="contained" onClick={() => setThemePanelOpen(false)}>
+                Готово
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+      </Drawer>
+
+      {/* Content + footer (full height column) */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 2,
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Container sx={{ py: 3, flex: '1 0 auto' }}>
           {/* Brand header */}
           <Box sx={{ mb: 2.5 }}>
             <Typography
@@ -387,25 +638,22 @@ export function ProjectsPage() {
                 key={p.id}
                 onClick={() => nav(`/projects/${p.id}`)}
                 sx={(theme) => ({
-                  // превращаем list item в "панель"
                   borderRadius: 2,
                   px: 2,
                   py: 1.5,
                   alignItems: 'stretch',
                   gap: 1.5,
 
-                  // тёмный градиент + лёгкий блик
+                  // base color comes from user
                   background:
                     theme.palette.mode === 'dark'
-                      ? 'linear-gradient(135deg, rgba(22,24,28,0.92) 0%, rgba(14,16,20,0.92) 55%, rgba(10,12,16,0.92) 100%)'
-                      : 'linear-gradient(135deg, rgba(25,28,36,0.92) 0%, rgba(18,20,26,0.92) 55%, rgba(12,14,18,0.92) 100%)',
+                      ? `linear-gradient(135deg, ${cardBase}EE 0%, ${cardBase}D6 55%, ${cardBase}CC 100%)`
+                      : `linear-gradient(135deg, ${cardBase}EE 0%, ${cardBase}D6 55%, ${cardBase}CC 100%)`,
 
-                  // рамка/стекло
                   border: '1px solid rgba(255,255,255,0.08)',
                   boxShadow: '0 10px 30px rgba(0,0,0,0.20)',
                   backdropFilter: 'blur(6px)',
 
-                  // плавность
                   transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease',
 
                   '&:hover': {
@@ -423,7 +671,6 @@ export function ProjectsPage() {
                   primary={
                     <Typography
                       sx={{
-                        // чуть крупнее и "красивее": можно дать заголовкам serif (IBM Plex Serif уже подключен)
                         fontFamily: '"IBM Plex Serif", ui-serif, Georgia, serif',
                         fontWeight: 700,
                         fontSize: '1.15rem',
@@ -500,7 +747,12 @@ export function ProjectsPage() {
           </List>
 
           {/* Create dialog */}
-          <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+          <Dialog open={open} onClose={() => {
+            setOpen(false);
+            setName('');
+            setRootPath('');
+            setSystem('generic');
+          }} fullWidth maxWidth="sm">
             <DialogTitle>Новый проект</DialogTitle>
             <DialogContent sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <TextField
@@ -532,18 +784,23 @@ export function ProjectsPage() {
                 <TextField
                   fullWidth
                   label="Путь (опционально, абсолютный)"
-                  placeholder="C:\Users\You\Documents\DnDCampaigns"
+                  placeholder="C:\\Users\\You\\Documents\\DnDCampaigns"
                   value={rootPath}
                   onChange={(e) => setRootPath(e.target.value)}
                   margin="dense"
                 />
                 <Typography variant="caption" color="text.secondary">
-                  Если путь не указан, проект будет создан в Documents\CampaignerProjects.
+                  Если путь не указан, проект будет создан в Documents\\CampaignerProjects.
                 </Typography>
               </Box>
             </DialogContent>
             <DialogActions>
-              <Button onClick={handleClose}>Отмена</Button>
+              <Button onClick={() => {
+                setOpen(false);
+                setName('');
+                setRootPath('');
+                setSystem('generic');
+              }}>Отмена</Button>
               <Button variant="contained" disabled={!canCreate} onClick={handleCreate}>
                 Создать
               </Button>
@@ -681,6 +938,68 @@ export function ProjectsPage() {
             </DialogActions>
           </Dialog>
         </Container>
+
+        {/* Footer (ProjectsPage only) */}
+        <Box
+          component="footer"
+          sx={(theme) => ({
+            flex: '0 0 auto',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            background:
+              theme.palette.mode === 'dark'
+                ? 'linear-gradient(180deg, rgba(10,12,16,0.0) 0%, rgba(10,12,16,0.55) 100%)'
+                : 'linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.75) 100%)',
+            backdropFilter: 'blur(8px)',
+          })}
+        >
+          <Container
+            sx={{
+              py: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontFamily: '"IBM Plex Serif", ui-serif, Georgia, serif',
+                  fontWeight: 700,
+                  letterSpacing: '0.02em',
+                  lineHeight: 1.1,
+                }}
+              >
+                Campaigner
+              </Typography>
+
+              <Box sx={{ display: 'flex', gap: 1.25, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Среда для создания интерактивных карт вашего мира
+                </Typography>
+
+                <Typography variant="caption" color="text.secondary">
+                  ·
+                </Typography>
+
+                <MUILink
+                  href="https://github.com/adamnobody"
+                  target="_blank"
+                  rel="noreferrer"
+                  underline="hover"
+                  variant="caption"
+                  sx={{ color: 'text.secondary' }}
+                >
+                  GitHub: @adamnobody
+                </MUILink>
+              </Box>
+            </Box>
+
+            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+              © {new Date().getFullYear()}
+            </Typography>
+          </Container>
+        </Box>
       </Box>
     </Box>
   );
