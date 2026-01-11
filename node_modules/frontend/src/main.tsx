@@ -4,6 +4,7 @@ import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
+import { LoadingScreen } from './shared/ui/LoadingScreen';
 
 import { AppRouter } from './app/router';
 import { makeTheme, THEME_DEFAULT_SETTINGS, type ThemeSettings } from './theme/theme';
@@ -30,7 +31,7 @@ function getInitialThemeSettings(): ThemeSettings {
 
 function Root() {
   const [mode, setMode] = React.useState<'light' | 'dark'>(() => getInitialMode());
-
+  const [booting, setBooting] = React.useState(true);
   const [themeSettings, setThemeSettings] = React.useState<ThemeSettings>(() => getInitialThemeSettings());
   const theme = React.useMemo(() => makeTheme(mode, themeSettings), [mode, themeSettings]);
 
@@ -62,6 +63,18 @@ function Root() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      {booting && (
+        <LoadingScreen
+          durationMs={7000}
+          quotes={[
+            'Карта — это обещание приключения.',
+            'Мир строится из деталей.',
+            'Записывай легенды, пока они живы.',
+          ]}
+          quoteIntervalMs={2300}
+          onDone={() => setBooting(false)}
+        />
+      )}
       <AppRouter />
     </ThemeProvider>
   );
