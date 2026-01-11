@@ -58,3 +58,42 @@ export type NoteDTO = {
   created_at: string;
   updated_at: string;
 };
+
+export type CharacterDTO = {
+  id: string;
+  project_id: string;
+  name: string;
+  summary: string;
+  notes: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type RelationshipType =
+  | 'friend'
+  | 'enemy'
+  | 'parent'
+  | 'child'
+  | 'sibling'
+  | 'spouse'
+  | 'lover'
+  | 'mentor'
+  | 'student'
+  | 'ally'
+  | 'rival'
+  | 'colleague'
+  | 'leader'
+  | 'subordinate'
+  | 'other';
+
+export type RelationshipDTO = {
+  id: string;
+  project_id: string;
+  from_character_id: string;
+  to_character_id: string;
+  type: RelationshipType;
+  note: string;
+  created_at: string;
+  updated_at: string;
+};

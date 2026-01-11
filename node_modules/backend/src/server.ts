@@ -8,6 +8,8 @@ import { DEFAULT_PORT } from './config/paths.js';
 import { errorMiddleware } from './middleware/error.middleware.js';
 import { markersRouter } from './routes/markers.routes.js';
 import { notesRouter } from './routes/notes.routes.js';
+import { charactersRouter } from './routes/characters.routes.js';
+import { relationshipsRouter } from './routes/relationships.routes.js';
 
 const logger = pino();
 
@@ -21,6 +23,9 @@ app.use('/api/projects', projectsRouter);
 app.use('/api', mapsRouter);
 app.use('/api', markersRouter);
 app.use('/api', notesRouter);
+
+app.use('/api', charactersRouter);
+app.use('/api', relationshipsRouter);
 
 // Production: serve frontend build
 if (process.env.NODE_ENV === 'production') {

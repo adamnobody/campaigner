@@ -7,7 +7,10 @@ import {
   type MarkerType,
   type NoteDTO,
   type NoteType,
-  type GameSystemType
+  type GameSystemType,
+  type CharacterDTO,
+  type RelationshipDTO,
+  type RelationshipType
 } from './api';
 
 type CreateMarkerPayload = {
@@ -89,6 +92,32 @@ type AppState = {
   loadNoteContent: (noteId: string) => Promise<void>;
   saveNoteContent: (noteId: string, content: string) => Promise<void>;
   deleteNote: (noteId: string, projectId: string) => Promise<void>;
+
+    // Characters
+  characters: CharacterDTO[];
+  charactersLoading: boolean;
+
+  loadCharacters: (projectId: string) => Promise<void>;
+  createCharacter: (
+    projectId: string,
+    input: { name: string; summary?: string; notes?: string; tags?: string[] }
+  ) => Promise<CharacterDTO>;
+  patchCharacter: (
+    characterId: string,
+    patch: Partial<Pick<CharacterDTO, 'name' | 'summary' | 'notes' | 'tags'>>
+  ) => Promise<CharacterDTO>;
+  deleteCharacter: (projectId: string, characterId: string) => Promise<void>;
+
+  // Relationships
+  relationships: RelationshipDTO[];
+  relationshipsLoading: boolean;
+
+  loadRelationships: (projectId: string) => Promise<void>;
+  createRelationship: (
+    projectId: string,
+    input: { from_character_id: string; to_character_id: string; type: RelationshipType; note?: string }
+  ) => Promise<RelationshipDTO>;
+  deleteRelationship: (projectId: string, relationshipId: string) => Promise<void>;
 
   // Draft helper (важно для NoteEditorDrawer)
   setNoteDraftContent: (noteId: string, content: string) => void;
@@ -214,6 +243,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       markersByMapId: {},
       markersLoadingByMapId: {},
+
+      characters: [],
+      charactersLoading: false,
+
+      relationships: [],
+      relationshipsLoading: false,
 
       notes: [],
       notesLoading: false,
@@ -385,5 +420,86 @@ export const useAppStore = create<AppState>((set, get) => ({
         noteContentLoadingById: nextLoading
       };
     });
-  }
+  },
+  // --------------------
+  // Characters
+  // --------------------
+  characters: [],
+  charactersLoading: false,
+
+  loadCharacters: async (projectId) => {
+    set({ charactersLoading: true });
+    try {
+      const res = await api.get<CharacterDTO[]>(`/projects/${projectId}/characters`);
+      set({ characters: res.data });
+    } finally {
+      set({ charactersLoading: false });
+    }
+  },
+
+  createCharacter: async (projectId, input) => {
+    const res = await api.post<CharacterDTO>(`/projects/${projectId}/characters`, {
+      name: input.name,
+      summary: input.summary ?? '',
+      notes: input.notes ?? '',
+      tags: input.tags ?? []
+    });
+    await get().loadCharacters(projectId);
+    return res.data;
+  },
+
+  patchCharacter: async (characterId, patch) => {
+    const res = await api.patch<CharacterDTO>(`/characters/${characterId}`, patch);
+    const updated = res.data;
+
+    set((s) => ({
+      characters: s.characters.map((c) => (c.id === characterId ? updated : c))
+    }));
+
+    return updated;
+  },
+
+  deleteCharacter: async (projectId, characterId) => {
+    await api.delete(`/characters/${characterId}`);
+    await get().loadCharacters(projectId);
+
+    // подчистим связи локально, чтобы UI не мигал "мертвыми"
+    set((s) => ({
+      relationships: s.relationships.filter(
+        (r) => r.from_character_id !== characterId && r.to_character_id !== characterId
+      )
+    }));
+  },
+
+  // --------------------
+  // Relationships
+  // --------------------
+  relationships: [],
+  relationshipsLoading: false,
+
+  loadRelationships: async (projectId) => {
+    set({ relationshipsLoading: true });
+    try {
+      const res = await api.get<RelationshipDTO[]>(`/projects/${projectId}/relationships`);
+      set({ relationships: res.data });
+    } finally {
+      set({ relationshipsLoading: false });
+    }
+  },
+
+  createRelationship: async (projectId, input) => {
+    const res = await api.post<RelationshipDTO>(`/projects/${projectId}/relationships`, {
+      from_character_id: input.from_character_id,
+      to_character_id: input.to_character_id,
+      type: input.type,
+      note: input.note ?? ''
+    });
+    await get().loadRelationships(projectId);
+    return res.data;
+  },
+
+  deleteRelationship: async (projectId, relationshipId) => {
+    await api.delete(`/relationships/${relationshipId}`);
+    await get().loadRelationships(projectId);
+  },
 }));

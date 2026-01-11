@@ -8,16 +8,28 @@ export function openProjectDb(projectPath: string) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
+  // ВАЖНО: гарантируем, что схема применена (и для старых проектов тоже)
+  initProjectDb(db);
+
   try {
     const columns = db.prepare(`PRAGMA table_info(markers)`).all() as any[];
     const hasPoints = columns.some((col) => col.name === 'points');
-    
+
     if (!hasPoints) {
-      // Транзакция не обязательна для ALTER TABLE, но безопаснее делать последовательно
       db.prepare(`ALTER TABLE markers ADD COLUMN points TEXT`).run();
       db.prepare(`ALTER TABLE markers ADD COLUMN style TEXT`).run();
     }
   } catch (err) {
+    // ignore
+  }
+  try {
+    const cols = db.prepare(`PRAGMA table_info(characters)`).all() as any[];
+    const hasPhotoPath = cols.some((c) => c.name === 'photo_path');
+    if (!hasPhotoPath) {
+      db.prepare(`ALTER TABLE characters ADD COLUMN photo_path TEXT NOT NULL DEFAULT ''`).run();
+    }
+  } catch {
+    // если таблицы characters ещё нет, initProjectDb создаст её
   }
 
   return db;

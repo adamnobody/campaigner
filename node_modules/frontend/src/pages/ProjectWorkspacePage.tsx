@@ -391,6 +391,9 @@ export function ProjectWorkspacePage() {
           <Button startIcon={<HomeIcon />} onClick={() => nav('/')}>
             Проекты
           </Button>
+          <Button variant="text" onClick={() => nav(`/projects/${pid}/characters`)}>
+            Персонажи
+          </Button>
 
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
