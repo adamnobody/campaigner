@@ -66,6 +66,7 @@ export type CharacterDTO = {
   summary: string;
   notes: string;
   tags: string[];
+  photo_path: string;
   created_at: string;
   updated_at: string;
 };

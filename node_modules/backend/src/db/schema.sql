@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS characters (
   name TEXT NOT NULL,
   summary TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
+  photo_path TEXT NOT NULL DEFAULT '',
   tags_json TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL

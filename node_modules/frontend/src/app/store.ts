@@ -107,7 +107,8 @@ type AppState = {
     patch: Partial<Pick<CharacterDTO, 'name' | 'summary' | 'notes' | 'tags'>>
   ) => Promise<CharacterDTO>;
   deleteCharacter: (projectId: string, characterId: string) => Promise<void>;
-
+  uploadCharacterPhoto: (characterId: string, file: File) => Promise<CharacterDTO>;
+  clearCharacterPhoto: (characterId: string) => Promise<CharacterDTO>;
   // Relationships
   relationships: RelationshipDTO[];
   relationshipsLoading: boolean;
@@ -450,6 +451,34 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   patchCharacter: async (characterId, patch) => {
     const res = await api.patch<CharacterDTO>(`/characters/${characterId}`, patch);
+    const updated = res.data;
+
+    set((s) => ({
+      characters: s.characters.map((c) => (c.id === characterId ? updated : c))
+    }));
+
+    return updated;
+  },
+
+  uploadCharacterPhoto: async (characterId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+
+    const res = await api.post<CharacterDTO>(`/characters/${characterId}/photo`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    const updated = res.data;
+
+    set((s) => ({
+      characters: s.characters.map((c) => (c.id === characterId ? updated : c))
+    }));
+
+    return updated;
+  },
+
+  clearCharacterPhoto: async (characterId) => {
+    const res = await api.delete<CharacterDTO>(`/characters/${characterId}/photo`);
     const updated = res.data;
 
     set((s) => ({

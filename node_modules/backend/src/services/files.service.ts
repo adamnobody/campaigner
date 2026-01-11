@@ -26,3 +26,11 @@ export async function atomicWriteFile(fileAbs: string, content: string) {
   await fs.writeFile(tmp, content, 'utf8');
   await fs.rename(tmp, fileAbs);
 }
+export async function atomicWriteBuffer(fileAbs: string, content: Buffer) {
+  const dir = path.dirname(fileAbs);
+  await fs.mkdir(dir, { recursive: true });
+
+  const tmp = `${fileAbs}.tmp-${Date.now()}`;
+  await fs.writeFile(tmp, content);
+  await fs.rename(tmp, fileAbs);
+}
