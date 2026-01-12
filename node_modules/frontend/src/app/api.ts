@@ -35,9 +35,11 @@ export type MarkerDTO = {
   description: string;
   x: number;
   y: number;
-  
+
   marker_type: MarkerType;
   color: string;
+
+  icon: string; // NEW: '' = авто-иконка по типу
 
   link_type: MarkerLinkType;
   link_note_id: string | null;
@@ -46,6 +48,7 @@ export type MarkerDTO = {
   created_at: string;
   updated_at: string;
 };
+
 
 export type NoteType = 'md' | 'txt';
 

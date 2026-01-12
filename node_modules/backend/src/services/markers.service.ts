@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import { nowIso } from '../config/paths.js';
 import { openProjectDb } from '../db/projectDB.js';
 import { listProjects } from './projects.service.js';
-import type { CreateMarkerDto, UpdateMarkerDto } from '../validation/markers.zod.js';
 
 export type MarkerLinkType = null | 'note' | 'map';
 
@@ -15,6 +14,10 @@ export type MarkerDTO = {
   y: number;
   marker_type: 'location' | 'event' | 'character';
   color: string;
+
+  // NEW
+  icon: string; // '' = auto by marker_type
+
   link_type: MarkerLinkType;
   link_note_id: string | null;
   link_map_id: string | null;
@@ -30,7 +33,9 @@ async function findProjectPathByMapId(mapId: string): Promise<string> {
       const row = db.prepare('SELECT id FROM maps WHERE id = ?').get(mapId) as { id?: string } | undefined;
       db.close();
       if (row?.id) return p.path;
-    } catch (e) { continue; }
+    } catch (e) {
+      continue;
+    }
   }
   throw Object.assign(new Error('Map not found'), { status: 404, code: 'MAP_NOT_FOUND' });
 }
@@ -43,7 +48,9 @@ async function findProjectPathByMarkerId(markerId: string): Promise<string> {
       const row = db.prepare('SELECT id FROM markers WHERE id = ?').get(markerId) as { id?: string } | undefined;
       db.close();
       if (row?.id) return p.path;
-    } catch (e) { continue; }
+    } catch (e) {
+      continue;
+    }
   }
   throw Object.assign(new Error('Marker not found'), { status: 404, code: 'MARKER_NOT_FOUND' });
 }
@@ -66,7 +73,10 @@ function normalizeLink(input: {
   return { link_type: 'map' as const, link_note_id: null, link_map_id: link_map_id };
 }
 
-function assertLinkExists(db: any, link: { link_type: MarkerLinkType; link_note_id: string | null; link_map_id: string | null }) {
+function assertLinkExists(
+  db: any,
+  link: { link_type: MarkerLinkType; link_note_id: string | null; link_map_id: string | null }
+) {
   if (link.link_type === null) return;
 
   if (link.link_type === 'note') {
@@ -83,18 +93,22 @@ function assertLinkExists(db: any, link: { link_type: MarkerLinkType; link_note_
 export async function listMarkers(mapId: string): Promise<MarkerDTO[]> {
   const projectPath = await findProjectPathByMapId(mapId);
   const db = openProjectDb(projectPath);
-  
-  // Убрали points, style
-  const rows = db.prepare(`
+
+  const rows = db
+    .prepare(
+      `
     SELECT
       id, map_id, title, description, x, y, marker_type, color,
+      icon,
       link_type, link_note_id, link_map_id,
       created_at, updated_at
     FROM markers
     WHERE map_id = ?
     ORDER BY created_at DESC
-  `).all(mapId);
-  
+  `
+    )
+    .all(mapId);
+
   db.close();
   return rows as MarkerDTO[];
 }
@@ -119,14 +133,19 @@ export async function createMarker(
   const created_at = nowIso();
   const updated_at = created_at;
 
-  db.prepare(`
+  const icon = (input.icon ?? '').trim();
+
+  db.prepare(
+    `
     INSERT INTO markers (
       id, map_id, title, description, x, y, marker_type, color,
+      icon,
       link_type, link_note_id, link_map_id,
       created_at, updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `
+  ).run(
     id,
     mapId,
     input.title.trim(),
@@ -135,6 +154,7 @@ export async function createMarker(
     input.y,
     input.marker_type,
     input.color,
+    icon,
     link.link_type,
     link.link_note_id,
     link.link_map_id,
@@ -153,6 +173,7 @@ export async function createMarker(
     y: input.y,
     marker_type: input.marker_type,
     color: input.color,
+    icon,
     link_type: link.link_type,
     link_note_id: link.link_note_id,
     link_map_id: link.link_map_id,
@@ -168,13 +189,18 @@ export async function patchMarker(
   const projectPath = await findProjectPathByMarkerId(markerId);
   const db = openProjectDb(projectPath);
 
-  const current = db.prepare(`
+  const current = db
+    .prepare(
+      `
     SELECT
       id, map_id, title, description, x, y, marker_type, color,
+      icon,
       link_type, link_note_id, link_map_id,
       created_at, updated_at
     FROM markers WHERE id = ?
-  `).get(markerId) as MarkerDTO | undefined;
+  `
+    )
+    .get(markerId) as MarkerDTO | undefined;
 
   if (!current) {
     db.close();
@@ -190,7 +216,11 @@ export async function patchMarker(
         link_note_id: patch.link_note_id ?? current.link_note_id ?? null,
         link_map_id: patch.link_map_id ?? current.link_map_id ?? null
       })
-    : { link_type: current.link_type ?? null, link_note_id: current.link_note_id ?? null, link_map_id: current.link_map_id ?? null };
+    : {
+        link_type: current.link_type ?? null,
+        link_note_id: current.link_note_id ?? null,
+        link_map_id: current.link_map_id ?? null
+      };
 
   assertLinkExists(db, nextLink);
 
@@ -201,7 +231,10 @@ export async function patchMarker(
     ...patch,
     title: patch.title !== undefined ? patch.title.trim() : current.title,
     description: patch.description !== undefined ? patch.description : current.description,
-    
+
+    // NEW
+    icon: patch.icon !== undefined ? String(patch.icon ?? '').trim() : current.icon ?? '',
+
     link_type: nextLink.link_type,
     link_note_id: nextLink.link_note_id,
     link_map_id: nextLink.link_map_id,
@@ -209,21 +242,25 @@ export async function patchMarker(
     updated_at
   };
 
-  db.prepare(`
+  db.prepare(
+    `
     UPDATE markers
     SET
-      title = ?, description = ?, x = ?, y = ?, 
+      title = ?, description = ?, x = ?, y = ?,
       marker_type = ?, color = ?,
+      icon = ?,
       link_type = ?, link_note_id = ?, link_map_id = ?,
       updated_at = ?
     WHERE id = ?
-  `).run(
+  `
+  ).run(
     next.title,
     next.description,
     next.x,
     next.y,
     next.marker_type,
     next.color,
+    next.icon,
     next.link_type,
     next.link_note_id,
     next.link_map_id,

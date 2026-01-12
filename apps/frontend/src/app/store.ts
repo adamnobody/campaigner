@@ -22,6 +22,8 @@ type CreateMarkerPayload = {
   marker_type: MarkerType;
   color: string;
 
+  icon?: string; // NEW: '' = авто
+
   link_type?: null | 'note' | 'map';
   link_note_id?: string | null;
   link_map_id?: string | null;
@@ -30,7 +32,16 @@ type CreateMarkerPayload = {
 type PatchMarkerPayload = Partial<
   Pick<
     CreateMarkerPayload,
-    'title' | 'description' | 'x' | 'y' | 'marker_type' | 'color' | 'link_type' | 'link_note_id' | 'link_map_id'
+    | 'title'
+    | 'description'
+    | 'x'
+    | 'y'
+    | 'marker_type'
+    | 'color'
+    | 'icon' // NEW
+    | 'link_type'
+    | 'link_note_id'
+    | 'link_map_id'
   >
 >;
 

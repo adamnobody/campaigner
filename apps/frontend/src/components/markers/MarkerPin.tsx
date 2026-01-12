@@ -1,8 +1,9 @@
 import React from 'react';
 import { FaMapMarkerAlt, FaRegStar, FaUser, FaLink } from 'react-icons/fa';
 import type { MarkerDTO } from '../../app/api';
+import { ICON_BY_KEY } from './markerIcons';
 
-function getIcon(type: MarkerDTO['marker_type']) {
+function getDefaultIcon(type: MarkerDTO['marker_type']) {
   switch (type) {
     case 'location':
       return FaMapMarkerAlt;
@@ -11,10 +12,6 @@ function getIcon(type: MarkerDTO['marker_type']) {
     case 'character':
       return FaUser;
   }
-}
-
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
 }
 
 export function MarkerPin(props: {
@@ -26,23 +23,21 @@ export function MarkerPin(props: {
   onDoubleClick?: (e: React.MouseEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 
-  // NEW: для drag&drop
   onPointerDown?: (e: React.PointerEvent) => void;
 }) {
-  const { marker, showLabel, zoomScale = 1, onClick, onDoubleClick, onContextMenu, onPointerDown } = props;
-  const Icon = getIcon(marker.marker_type);
+  const { marker, showLabel, onClick, onDoubleClick, onContextMenu, onPointerDown, zoomScale = 1 } = props;
+
+  const iconKey = (marker.icon ?? '').trim();
+  const Icon = (iconKey && ICON_BY_KEY[iconKey as keyof typeof ICON_BY_KEY]) || getDefaultIcon(marker.marker_type);
 
   const hasLink =
     marker.link_type &&
     ((marker.link_type === 'note' && marker.link_note_id) || (marker.link_type === 'map' && marker.link_map_id));
 
-  // 1/scale держит размер постоянным.
-  // Чтобы "при приближении уменьшались" — делаем чуть сильнее, чем 1/scale:
+  // если ты уже внедрил inverse-scale — оставь его здесь как раньше
   const k = 1.15;
   const inv = 1 / Math.pow(Math.max(zoomScale, 0.0001), k);
-
-  // Ограничим, чтобы не было экстремумов
-  const invClamped = clamp(inv, 0.18, 2.5);
+  const invClamped = Math.max(0.18, Math.min(2.5, inv));
 
   return (
     <button
@@ -71,11 +66,9 @@ export function MarkerPin(props: {
         top: `${marker.y * 100}%`,
         transform: `translate(-50%, -100%) scale(${invClamped})`,
         transformOrigin: '50% 100%',
-
         background: 'transparent',
         border: 'none',
         padding: 0,
-
         cursor: 'grab',
         touchAction: 'none',
         userSelect: 'none'
