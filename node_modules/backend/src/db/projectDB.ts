@@ -10,11 +10,11 @@ export function openProjectDb(projectPath: string) {
 
   // ВАЖНО: гарантируем, что схема применена (и для старых проектов тоже)
   initProjectDb(db);
-
+  
   try {
     const columns = db.prepare(`PRAGMA table_info(markers)`).all() as any[];
     const hasPoints = columns.some((col) => col.name === 'points');
-
+    
     if (!hasPoints) {
       db.prepare(`ALTER TABLE markers ADD COLUMN points TEXT`).run();
       db.prepare(`ALTER TABLE markers ADD COLUMN style TEXT`).run();
@@ -31,7 +31,7 @@ export function openProjectDb(projectPath: string) {
   } catch {
     // если таблицы characters ещё нет, initProjectDb создаст её
   }
-
+  
   return db;
 }
 

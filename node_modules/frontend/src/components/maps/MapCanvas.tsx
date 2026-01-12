@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -52,6 +52,35 @@ export function MapCanvas(props: {
   const src = useMemo(() => `/api/maps/${mapId}/file`, [mapId]);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
+  /**
+   * ВАЖНО:
+   * react-zoom-pan-pinch дергает onTransformed очень часто.
+   * Если делать setState на каждый тик — можно получить перерендер-шторм и глюки (вплоть до "битой" картинки).
+   * Поэтому обновляем zoomScale через requestAnimationFrame + порог по дельте.
+   */
+  const [zoomScale, setZoomScale] = useState(1);
+  const zoomScaleRef = useRef(1);
+  const rafRef = useRef<number | null>(null);
+  const lastSentRef = useRef(1);
+
+  const updateScale = useCallback((next: number) => {
+    zoomScaleRef.current = next;
+
+    if (rafRef.current != null) return;
+
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+
+      const s = zoomScaleRef.current;
+
+      // не дергаем лишние ререндеры на микродельты
+      if (Math.abs(s - lastSentRef.current) < 0.01) return;
+
+      lastSentRef.current = s;
+      setZoomScale(s);
+    });
+  }, []);
+
   const suppressNextClickRef = useRef(false);
 
   const dragRef = useRef<{
@@ -76,7 +105,6 @@ export function MapCanvas(props: {
     const px = clientX - rect.left;
     const py = clientY - rect.top;
 
-    // rect уже “визуальный” (после zoom/pan), поэтому деление на rect.width/height даёт корректные 0..1
     const x = clamp01(px / rect.width);
     const y = clamp01(py / rect.height);
     return { x, y };
@@ -86,7 +114,6 @@ export function MapCanvas(props: {
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
 
-      // подавляем клик, который браузер генерит после drag
       if (suppressNextClickRef.current) {
         suppressNextClickRef.current = false;
         return;
@@ -150,10 +177,8 @@ export function MapCanvas(props: {
       const wasDragging = st.dragging;
       const finalPos = st.lastPos;
 
-      // если реально тянули — подавим следующий click по карте
       if (wasDragging) suppressNextClickRef.current = true;
 
-      // reset state
       dragRef.current.markerId = null;
       dragRef.current.pointerId = null;
       dragRef.current.startClient = null;
@@ -175,6 +200,7 @@ export function MapCanvas(props: {
         wheel={{ step: 0.1 }}
         panning={{ velocityDisabled: true }}
         doubleClick={{ disabled: true }}
+        onTransformed={({ state }) => updateScale(state.scale)}
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
@@ -249,6 +275,7 @@ export function MapCanvas(props: {
                       key={m.id}
                       marker={m}
                       showLabel={showLabels}
+                      zoomScale={zoomScale}
                       onClick={(e) => onMarkerClick(m, e)}
                       onDoubleClick={(e) => onMarkerDoubleClick(m, e)}
                       onContextMenu={(e) => onMarkerContextMenu?.(m, e)}

@@ -110,26 +110,26 @@ export async function deleteProject(
     });
   }
 
-  // Если удаляем файлы — проверим маркеры папки ДО удаления записи из app.sqlite.
-  // Это позволяет "не потерять" проект из списка, если выяснится что папка подозрительная.
-  if (opts.deleteFiles) {
-    const markerFile = path.join(projectDir, 'project.json');
+  // Если deleteFiles=true, то мы МОЖЕМ удалить файлы, но отсутствие markerFile/директории
+  // не должно мешать удалить проект из списка приложения.
+  let allowFsDelete = Boolean(opts.deleteFiles);
 
+  if (allowFsDelete) {
+    const markerFile = path.join(projectDir, 'project.json');
     try {
       await fs.access(markerFile);
     } catch {
-      throw Object.assign(new Error('Refusing to delete: project.json not found in project folder'), {
-        status: 400,
-        code: 'PROJECT_MARKER_NOT_FOUND'
-      });
+      // папка/marker отсутствуют => просто не трогаем FS, но карточку удаляем
+      allowFsDelete = false;
     }
   }
 
-  // 1) удаляем запись из глобальной БД
+  // 1) удаляем запись из глобальной БД ВСЕГДА
   appDb.prepare('DELETE FROM app_projects WHERE id = ?').run(projectId);
 
-  // 2) удаляем папку проекта (и всё внутри)
-  if (opts.deleteFiles) {
+  // 2) удаляем папку проекта (и всё внутри) — только если уверены
+  if (allowFsDelete) {
+    // force:true уже делает отсутствие папки неошибкой
     await fs.rm(projectDir, { recursive: true, force: true });
   }
 }

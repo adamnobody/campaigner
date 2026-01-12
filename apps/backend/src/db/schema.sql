@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS notes (
 CREATE TABLE IF NOT EXISTS markers (
   id TEXT PRIMARY KEY,
   map_id TEXT NOT NULL,
-
+  icon TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL,
   description TEXT,
 
