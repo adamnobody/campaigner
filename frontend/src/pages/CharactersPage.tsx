@@ -7,40 +7,53 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import PersonIcon from '@mui/icons-material/Person';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useCharacterStore } from '@/store/useCharacterStore';
-import { useUIStore } from '@/store/useUIStore';
+import { charactersApi } from '@/api/axiosClient';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export const CharactersPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
-  const { characters, total, loading, initialized, fetchCharacters } = useCharacterStore();
-  const { showSnackbar } = useUIStore();
+
+  const [characters, setCharacters] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
   const debouncedSearch = useDebounce(search, 300);
 
-  useEffect(() => {
-    fetchCharacters(pid, { search: debouncedSearch || undefined, limit: 100 });
-  }, [pid, fetchCharacters, debouncedSearch]);
+  const fetchData = () => {
+    setLoading(true);
+    charactersApi.getAll(pid, { search: debouncedSearch || undefined, limit: 100 })
+      .then(res => {
+        setCharacters(res.data.data.items);
+        setTotal(res.data.data.total);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  };
 
-  // Собираем все теги из персонажей
+  useEffect(() => {
+    fetchData();
+  }, [pid, debouncedSearch]);
+
+  // Собираем все теги
   const allTags = Array.from(
     new Map(
-      characters
-        .flatMap(c => c.tags || [])
-        .map(tag => [tag.id, tag])
+      characters.flatMap(c => c.tags || []).map((tag: any) => [tag.id, tag])
     ).values()
   );
 
-  // Фильтрация
+  // Фильтрация по тегу
   const filteredCharacters = characters.filter(c => {
     if (selectedTag) {
-      return c.tags?.some(t => t.name === selectedTag);
+      return c.tags?.some((t: any) => t.name === selectedTag);
     }
     return true;
   });
@@ -50,8 +63,15 @@ export const CharactersPage: React.FC = () => {
     setSelectedTag('');
   };
 
-  // Показываем loading только при первой загрузке
-  if (loading && !initialized) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+          {error ? `Ошибка: ${error}` : 'Загрузка персонажей...'}
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -89,8 +109,8 @@ export const CharactersPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Filters row */}
-      <Box display="flex" gap={2} mb={3} alignItems="center">
+      {/* Filters */}
+      <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
         <TextField
           placeholder="Поиск по имени"
           value={search}
@@ -114,24 +134,25 @@ export const CharactersPage: React.FC = () => {
           size="small"
         />
 
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <Select
-            value={selectedTag}
-            onChange={(e) => setSelectedTag(e.target.value)}
-            displayEmpty
-            sx={{
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-              color: '#fff',
-            }}
-          >
-            <MenuItem value="">Теги</MenuItem>
-            {allTags.map(tag => (
-              <MenuItem key={tag.id} value={tag.name}>{tag.name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {allTags.length > 0 && (
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <Select
+              value={selectedTag}
+              onChange={(e) => setSelectedTag(e.target.value)}
+              displayEmpty
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+                color: '#fff',
+              }}
+            >
+              <MenuItem value="">Теги</MenuItem>
+              {allTags.map((tag: any) => (
+                <MenuItem key={tag.id} value={tag.name}>{tag.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
 
         <Button
           variant="outlined"
@@ -163,7 +184,7 @@ export const CharactersPage: React.FC = () => {
         />
       ) : (
         <Grid container spacing={2}>
-          {filteredCharacters.map(character => (
+          {filteredCharacters.map((character: any) => (
             <Grid item xs={12} sm={6} md={4} key={character.id}>
               <Paper
                 onClick={() => navigate(`/project/${pid}/characters/${character.id}`)}
@@ -183,18 +204,12 @@ export const CharactersPage: React.FC = () => {
                   },
                 }}
               >
-                {/* Avatar */}
                 {character.imagePath ? (
-                  <Avatar
-                    src={character.imagePath}
-                    sx={{ width: 48, height: 48, flexShrink: 0 }}
-                  />
+                  <Avatar src={character.imagePath} sx={{ width: 48, height: 48, flexShrink: 0 }} />
                 ) : (
                   <Avatar
                     sx={{
-                      width: 48,
-                      height: 48,
-                      flexShrink: 0,
+                      width: 48, height: 48, flexShrink: 0,
                       backgroundColor: 'rgba(255,255,255,0.08)',
                       color: 'rgba(255,255,255,0.3)',
                     }}
@@ -202,49 +217,26 @@ export const CharactersPage: React.FC = () => {
                     <PersonIcon />
                   </Avatar>
                 )}
-
-                {/* Info */}
                 <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                  <Typography
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: '1rem',
-                      color: '#fff',
-                      lineHeight: 1.3,
-                    }}
-                    noWrap
-                  >
+                  <Typography sx={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }} noWrap>
                     {character.name}
                   </Typography>
                   {(character.title || character.bio) && (
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: 'rgba(255,255,255,0.4)',
-                        fontSize: '0.85rem',
-                        mt: 0.3,
-                      }}
-                      noWrap
-                    >
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', mt: 0.3 }} noWrap>
                       {character.title || character.bio}
                     </Typography>
                   )}
-
-                  {/* Tags */}
-                  {character.tags && character.tags.length > 0 && (
+                  {character.tags?.length > 0 && (
                     <Box display="flex" gap={0.5} mt={1} flexWrap="wrap">
-                      {character.tags.map(tag => (
+                      {character.tags.map((tag: any) => (
                         <Chip
                           key={tag.id}
                           label={tag.name}
                           size="small"
                           sx={{
-                            height: 22,
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
+                            height: 22, fontSize: '0.7rem', fontWeight: 600,
                             backgroundColor: tag.color || 'rgba(130,130,255,0.2)',
-                            color: '#fff',
-                            borderRadius: 1,
+                            color: '#fff', borderRadius: 1,
                           }}
                         />
                       ))}

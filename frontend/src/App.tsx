@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/Layout/AppLayout';
-import { ConfirmDialog } from './components/ui/ConfirmDialog';
-import { GlobalSnackbar } from './components/ui/GlobalSnackbar';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { HomePage } from './pages/HomePage';
 import { MapPage } from './pages/MapPage';
@@ -24,33 +22,28 @@ const App: React.FC = () => {
   }
 
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<HomePage />} />
+    <Routes>
+      <Route path="/" element={<AppLayout />}>
+        <Route index element={<HomePage />} />
 
-          <Route path="project/:projectId">
-            <Route index element={<Navigate to="map" replace />} />
-            <Route path="map" element={<MapPage />} />
-            <Route path="characters" element={<CharactersPage />} />
-            <Route path="characters/new" element={<CharacterDetailPage />} />
-            <Route path="characters/graph" element={<CharacterGraphPage />} />
-            <Route path="characters/:characterId" element={<CharacterDetailPage />} />
-            <Route path="notes" element={<NotesPage />} />
-            <Route path="notes/:noteId" element={<NoteEditorPage />} />
-            <Route path="wiki" element={<WikiPage />} />
-            <Route path="timeline" element={<TimelinePage />} />
-            <Route path="files" element={<FilesPage />} />
-            <Route path="settings" element={<ProjectSettingsPage />} />
-          </Route>
-
-          <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="project/:projectId">
+          <Route index element={<Navigate to="map" replace />} />
+          <Route path="map" element={<MapPage />} />
+          <Route path="characters" element={<CharactersPage />} />
+          <Route path="characters/new" element={<CharacterDetailPage />} />
+          <Route path="characters/graph" element={<CharacterGraphPage />} />
+          <Route path="characters/:characterId" element={<CharacterDetailPage />} />
+          <Route path="notes" element={<NotesPage />} />
+          <Route path="notes/:noteId" element={<NoteEditorPage />} />
+          <Route path="wiki" element={<WikiPage />} />
+          <Route path="timeline" element={<TimelinePage />} />
+          <Route path="files" element={<FilesPage />} />
+          <Route path="settings" element={<ProjectSettingsPage />} />
         </Route>
-      </Routes>
 
-      <ConfirmDialog />
-      <GlobalSnackbar />
-    </>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   );
 };
 

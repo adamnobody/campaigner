@@ -1,132 +1,130 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Grid, Paper, TextField, Button,
-  Select, MenuItem, FormControl, InputLabel, Chip,
+  Select, MenuItem, FormControl, InputLabel,
   Avatar, IconButton, Divider, Tabs, Tab,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SaveIcon from '@mui/icons-material/Save';
+import PersonIcon from '@mui/icons-material/Person';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useCharacterStore } from '@/store/useCharacterStore';
+import { charactersApi } from '@/api/axiosClient';
 import { useUIStore } from '@/store/useUIStore';
-import { CHARACTER_STATUSES, LIMITS } from '@campaigner/shared';
 import { DndButton } from '@/components/ui/DndButton';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
-const characterFormSchema = z.object({
-  name: z.string().min(LIMITS.CHARACTER_NAME_MIN).max(LIMITS.CHARACTER_NAME_MAX).trim(),
-  title: z.string().max(200).optional().default(''),
-  race: z.string().max(100).optional().default(''),
-  characterClass: z.string().max(100).optional().default(''),
-  level: z.number().int().min(1).max(30).nullable().optional(),
-  status: z.enum(CHARACTER_STATUSES).optional().default('alive'),
-  bio: z.string().max(LIMITS.CHARACTER_BIO_MAX).optional().default(''),
-  appearance: z.string().max(10000).optional().default(''),
-  personality: z.string().max(10000).optional().default(''),
-  backstory: z.string().max(50000).optional().default(''),
-  notes: z.string().max(50000).optional().default(''),
-});
+const CHARACTER_STATUSES = ['alive', 'dead', 'missing', 'unknown'] as const;
 
-type CharacterFormData = z.infer<typeof characterFormSchema>;
+interface CharacterForm {
+  name: string;
+  title: string;
+  race: string;
+  characterClass: string;
+  level: number | '';
+  status: string;
+  bio: string;
+  appearance: string;
+  personality: string;
+  backstory: string;
+  notes: string;
+}
+
+const emptyForm: CharacterForm = {
+  name: '',
+  title: '',
+  race: '',
+  characterClass: '',
+  level: '',
+  status: 'alive',
+  bio: '',
+  appearance: '',
+  personality: '',
+  backstory: '',
+  notes: '',
+};
 
 export const CharacterDetailPage: React.FC = () => {
   const { projectId, characterId } = useParams<{ projectId: string; characterId: string }>();
   const pid = parseInt(projectId!);
-  const isNew = characterId === 'new';
+  const isNew = !characterId || characterId === 'new';
   const navigate = useNavigate();
-  const {
-    currentCharacter, fetchCharacter, createCharacter,
-    updateCharacter, uploadImage, setCurrentCharacter
-  } = useCharacterStore();
   const { showSnackbar } = useUIStore();
+
+  const [form, setForm] = useState<CharacterForm>(emptyForm);
+  const [character, setCharacter] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState(0);
-  const [pageLoading, setPageLoading] = useState(!isNew);
+  const [error, setError] = useState<string | null>(null);
 
-  const { control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<CharacterFormData>({
-    resolver: zodResolver(characterFormSchema),
-    defaultValues: {
-      name: '',
-      title: '',
-      race: '',
-      characterClass: '',
-      level: null,
-      status: 'alive',
-      bio: '',
-      appearance: '',
-      personality: '',
-      backstory: '',
-      notes: '',
-    },
-  });
-
-  // При открытии новой страницы — очищаем currentCharacter
+  // Загружаем существующего персонажа
   useEffect(() => {
     if (isNew) {
-      setCurrentCharacter(null);
-      setPageLoading(false);
-      reset({
-        name: '',
-        title: '',
-        race: '',
-        characterClass: '',
-        level: null,
-        status: 'alive',
-        bio: '',
-        appearance: '',
-        personality: '',
-        backstory: '',
-        notes: '',
-      });
-    } else if (characterId) {
-      setPageLoading(true);
-      fetchCharacter(parseInt(characterId)).finally(() => {
-        setPageLoading(false);
-      });
+      console.log('[CharacterDetail] New character mode');
+      setForm(emptyForm);
+      setCharacter(null);
+      setLoading(false);
+      return;
     }
 
-    // Cleanup при уходе со страницы
-    return () => {
-      setCurrentCharacter(null);
-    };
-  }, [isNew, characterId, fetchCharacter, setCurrentCharacter, reset]);
-
-  // Заполняем форму при загрузке существующего персонажа
-  useEffect(() => {
-    if (!isNew && currentCharacter) {
-      reset({
-        name: currentCharacter.name,
-        title: currentCharacter.title || '',
-        race: currentCharacter.race || '',
-        characterClass: currentCharacter.characterClass || '',
-        level: currentCharacter.level,
-        status: currentCharacter.status,
-        bio: currentCharacter.bio || '',
-        appearance: currentCharacter.appearance || '',
-        personality: currentCharacter.personality || '',
-        backstory: currentCharacter.backstory || '',
-        notes: currentCharacter.notes || '',
+    console.log('[CharacterDetail] Loading character:', characterId);
+    setLoading(true);
+    charactersApi.getById(parseInt(characterId!))
+      .then(res => {
+        console.log('[CharacterDetail] Loaded:', res.data);
+        const c = res.data.data;
+        setCharacter(c);
+        setForm({
+          name: c.name || '',
+          title: c.title || '',
+          race: c.race || '',
+          characterClass: c.characterClass || '',
+          level: c.level || '',
+          status: c.status || 'alive',
+          bio: c.bio || '',
+          appearance: c.appearance || '',
+          personality: c.personality || '',
+          backstory: c.backstory || '',
+          notes: c.notes || '',
+        });
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('[CharacterDetail] Error:', err);
+        setError(err.message);
+        setLoading(false);
       });
-    }
-  }, [currentCharacter, isNew, reset]);
+  }, [characterId, isNew]);
 
-  const onSubmit = async (data: CharacterFormData) => {
+  const handleChange = (field: keyof CharacterForm, value: any) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      showSnackbar('Введите имя персонажа', 'error');
+      return;
+    }
+
     setSaving(true);
     try {
+      const payload = {
+        ...form,
+        level: form.level === '' ? null : Number(form.level),
+        projectId: pid,
+      };
+
       if (isNew) {
-        const character = await createCharacter({ ...data, projectId: pid });
+        const res = await charactersApi.create(payload);
+        const created = res.data.data;
         showSnackbar('Персонаж создан!', 'success');
-        navigate(`/project/${pid}/characters/${character.id}`, { replace: true });
+        navigate(`/project/${pid}/characters/${created.id}`, { replace: true });
       } else {
-        await updateCharacter(parseInt(characterId!), data);
+        await charactersApi.update(parseInt(characterId!), payload);
         showSnackbar('Персонаж обновлён!', 'success');
       }
-    } catch {
-      showSnackbar('Не удалось сохранить', 'error');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Не удалось сохранить', 'error');
     } finally {
       setSaving(false);
     }
@@ -136,19 +134,38 @@ export const CharacterDetailPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file || isNew || !characterId) return;
     try {
-      await uploadImage(parseInt(characterId), file);
+      const res = await charactersApi.uploadImage(parseInt(characterId), file);
+      setCharacter(res.data.data);
       showSnackbar('Изображение загружено!', 'success');
     } catch {
       showSnackbar('Не удалось загрузить', 'error');
     }
   };
 
-  if (pageLoading) return <LoadingScreen />;
+  // Loading state
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка персонажа...</Typography>
+      </Box>
+    );
+  }
 
-  const tabPanels = ['Основное', 'Внешность и Характер', 'Предыстория и Заметки'];
+  // Error state
+  if (error) {
+    return (
+      <Box p={4}>
+        <Typography sx={{ color: 'red' }}>Ошибка: {error}</Typography>
+        <Button onClick={() => navigate(`/project/${pid}/characters`)} sx={{ mt: 2 }}>
+          Назад к персонажам
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box>
+      {/* Header */}
       <Box display="flex" alignItems="center" gap={2} mb={3}>
         <IconButton onClick={() => navigate(`/project/${pid}/characters`)}>
           <ArrowBackIcon />
@@ -161,261 +178,233 @@ export const CharacterDetailPage: React.FC = () => {
             color: '#fff',
           }}
         >
-          {isNew ? 'Новый персонаж' : currentCharacter?.name || 'Персонаж'}
+          {isNew ? 'Новый персонаж' : form.name || 'Персонаж'}
         </Typography>
       </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Grid container spacing={3}>
-          {/* Left: Avatar */}
-          <Grid item xs={12} md={3}>
-            <Paper
-              sx={{
-                p: 2,
-                textAlign: 'center',
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              {!isNew && currentCharacter?.imagePath ? (
-                <Avatar
-                  src={currentCharacter.imagePath}
-                  sx={{ width: '100%', height: 'auto', aspectRatio: '1', borderRadius: 2, mb: 2 }}
-                  variant="rounded"
-                />
-              ) : (
-                <Avatar
-                  sx={{
-                    width: '100%',
-                    height: 'auto',
-                    aspectRatio: '1',
-                    borderRadius: 2,
-                    mb: 2,
-                    fontSize: 64,
-                    bgcolor: 'rgba(255,255,255,0.08)',
-                    color: 'rgba(255,255,255,0.3)',
-                  }}
-                  variant="rounded"
-                >
-                  {isNew ? '?' : currentCharacter?.name?.[0] || '?'}
-                </Avatar>
-              )}
-              {!isNew && (
-                <Button
-                  component="label"
-                  variant="outlined"
-                  startIcon={<CloudUploadIcon />}
-                  fullWidth
-                  size="small"
-                  sx={{
-                    borderColor: 'rgba(255,255,255,0.2)',
-                    color: 'rgba(255,255,255,0.6)',
-                  }}
-                >
-                  Загрузить фото
-                  <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml" onChange={handleImageUpload} />
-                </Button>
-              )}
-
-              {!isNew && currentCharacter?.tags && currentCharacter.tags.length > 0 && (
-                <Box display="flex" gap={0.5} mt={2} flexWrap="wrap" justifyContent="center">
-                  {currentCharacter.tags.map(tag => (
-                    <Chip
-                      key={tag.id}
-                      label={tag.name}
-                      size="small"
-                      sx={{ backgroundColor: tag.color, color: '#fff' }}
-                    />
-                  ))}
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-
-          {/* Right: Form */}
-          <Grid item xs={12} md={9}>
-            <Paper
-              sx={{
-                p: 3,
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
-                {tabPanels.map((label, i) => (
-                  <Tab key={i} label={label} />
-                ))}
-              </Tabs>
-
-              {tab === 0 && (
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Controller
-                      name="name"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          label="Имя *"
-                          error={!!errors.name}
-                          helperText={errors.name?.message as string}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Controller
-                      name="title"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} fullWidth label="Титул / Прозвище" placeholder="напр. Храбрый" />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Controller
-                      name="race"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} fullWidth label="Раса" placeholder="напр. Полуэльф" />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Controller
-                      name="characterClass"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} fullWidth label="Класс" placeholder="напр. Паладин" />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={6} sm={2}>
-                    <Controller
-                      name="level"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                          fullWidth
-                          label="Уровень"
-                          type="number"
-                          inputProps={{ min: 1, max: 30 }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={6} sm={2}>
-                    <Controller
-                      name="status"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth>
-                          <InputLabel>Статус</InputLabel>
-                          <Select {...field} label="Статус">
-                            {CHARACTER_STATUSES.map(s => (
-                              <MenuItem key={s} value={s}>{s}</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Controller
-                      name="bio"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          label="Биография"
-                          multiline
-                          rows={4}
-                          placeholder="Краткое описание персонажа..."
-                        />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              )}
-
-              {tab === 1 && (
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <Controller
-                      name="appearance"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} fullWidth label="Внешность" multiline rows={5} placeholder="Физическое описание..." />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Controller
-                      name="personality"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} fullWidth label="Характер" multiline rows={5} placeholder="Черты, идеалы, привязанности, слабости..." />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              )}
-
-              {tab === 2 && (
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <Controller
-                      name="backstory"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} fullWidth label="Предыстория" multiline rows={8} placeholder="История персонажа..." />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Controller
-                      name="notes"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField {...field} fullWidth label="Заметки ДМа" multiline rows={5} placeholder="Личные заметки, секреты, зацепки..." />
-                      )}
-                    />
-                  </Grid>
-                </Grid>
-              )}
-
-              <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
-
-              <Box display="flex" justifyContent="flex-end" gap={2}>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate(`/project/${pid}/characters`)}
-                  sx={{
-                    borderColor: 'rgba(255,255,255,0.2)',
-                    color: 'rgba(255,255,255,0.6)',
-                  }}
-                >
-                  Отмена
-                </Button>
-                <DndButton
-                  type="submit"
-                  variant="contained"
-                  startIcon={<SaveIcon />}
-                  loading={saving}
-                  disabled={!isDirty && !isNew}
-                >
-                  {isNew ? 'Создать' : 'Сохранить'}
-                </DndButton>
-              </Box>
-            </Paper>
-          </Grid>
+      <Grid container spacing={3}>
+        {/* Left: Avatar */}
+        <Grid item xs={12} md={3}>
+          <Paper
+            sx={{
+              p: 2,
+              textAlign: 'center',
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            {character?.imagePath ? (
+              <Avatar
+                src={character.imagePath}
+                sx={{ width: '100%', height: 'auto', aspectRatio: '1', borderRadius: 2, mb: 2 }}
+                variant="rounded"
+              />
+            ) : (
+              <Avatar
+                sx={{
+                  width: '100%',
+                  height: 'auto',
+                  aspectRatio: '1',
+                  borderRadius: 2,
+                  mb: 2,
+                  fontSize: 64,
+                  bgcolor: 'rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.3)',
+                }}
+                variant="rounded"
+              >
+                <PersonIcon sx={{ fontSize: 64 }} />
+              </Avatar>
+            )}
+            {!isNew && (
+              <Button
+                component="label"
+                variant="outlined"
+                startIcon={<CloudUploadIcon />}
+                fullWidth
+                size="small"
+                sx={{
+                  borderColor: 'rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.6)',
+                }}
+              >
+                Загрузить фото
+                <input type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={handleImageUpload} />
+              </Button>
+            )}
+          </Paper>
         </Grid>
-      </form>
+
+        {/* Right: Form */}
+        <Grid item xs={12} md={9}>
+          <Paper
+            sx={{
+              p: 3,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
+              <Tab label="Основное" />
+              <Tab label="Внешность и Характер" />
+              <Tab label="Предыстория и Заметки" />
+            </Tabs>
+
+            {tab === 0 && (
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Имя *"
+                    value={form.name}
+                    onChange={e => { handleChange('name', e.target.value); }}
+                    error={form.name.length > 0 && !form.name.trim()}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Титул / Прозвище"
+                    value={form.title}
+                    onChange={e => { handleChange('title', e.target.value); }}
+                    placeholder="напр. Храбрый"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Раса"
+                    value={form.race}
+                    onChange={e => { handleChange('race', e.target.value); }}
+                    placeholder="напр. Полуэльф"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Класс"
+                    value={form.characterClass}
+                    onChange={e => { handleChange('characterClass', e.target.value); }}
+                    placeholder="напр. Паладин"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={2}>
+                  <TextField
+                    fullWidth
+                    label="Уровень"
+                    type="number"
+                    value={form.level}
+                    onChange={e => { handleChange('level', e.target.value ? parseInt(e.target.value) : ''); }}
+                    inputProps={{ min: 1, max: 30 }}
+                  />
+                </Grid>
+                <Grid item xs={6} sm={2}>
+                  <FormControl fullWidth>
+                    <InputLabel>Статус</InputLabel>
+                    <Select
+                      value={form.status}
+                      label="Статус"
+                      onChange={e => { handleChange('status', e.target.value); }}
+                    >
+                      {CHARACTER_STATUSES.map(s => (
+                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Биография"
+                    multiline
+                    rows={4}
+                    value={form.bio}
+                    onChange={e => { handleChange('bio', e.target.value); }}
+                    placeholder="Краткое описание персонажа..."
+                  />
+                </Grid>
+              </Grid>
+            )}
+
+            {tab === 1 && (
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Внешность"
+                    multiline
+                    rows={5}
+                    value={form.appearance}
+                    onChange={e => { handleChange('appearance', e.target.value); }}
+                    placeholder="Физическое описание..."
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Характер"
+                    multiline
+                    rows={5}
+                    value={form.personality}
+                    onChange={e => { handleChange('personality', e.target.value); }}
+                    placeholder="Черты, идеалы, привязанности, слабости..."
+                  />
+                </Grid>
+              </Grid>
+            )}
+
+            {tab === 2 && (
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Предыстория"
+                    multiline
+                    rows={8}
+                    value={form.backstory}
+                    onChange={e => { handleChange('backstory', e.target.value); }}
+                    placeholder="История персонажа..."
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Заметки ДМа"
+                    multiline
+                    rows={5}
+                    value={form.notes}
+                    onChange={e => { handleChange('notes', e.target.value); }}
+                    placeholder="Личные заметки, секреты, зацепки..."
+                  />
+                </Grid>
+              </Grid>
+            )}
+            <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
+
+            <Box display="flex" justifyContent="flex-end" gap={2}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate(`/project/${pid}/characters`)}
+                sx={{
+                  borderColor: 'rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.6)',
+                }}
+              >
+                Отмена
+              </Button>
+              <DndButton
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                loading={saving}
+                disabled={!form.name.trim()}
+              >
+                {isNew ? 'Создать' : 'Сохранить'}
+              </DndButton>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 };
