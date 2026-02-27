@@ -17,7 +17,6 @@ import { CHARACTER_STATUSES, LIMITS } from '@campaigner/shared';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
-// Единая форм-схема без projectId — подходит и для создания, и для редактирования
 const characterFormSchema = z.object({
   name: z.string().min(LIMITS.CHARACTER_NAME_MIN).max(LIMITS.CHARACTER_NAME_MAX).trim(),
   title: z.string().max(200).optional().default(''),
@@ -39,10 +38,14 @@ export const CharacterDetailPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const isNew = characterId === 'new';
   const navigate = useNavigate();
-  const { currentCharacter, fetchCharacter, createCharacter, updateCharacter, uploadImage } = useCharacterStore();
+  const {
+    currentCharacter, fetchCharacter, createCharacter,
+    updateCharacter, uploadImage, setCurrentCharacter
+  } = useCharacterStore();
   const { showSnackbar } = useUIStore();
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState(0);
+  const [pageLoading, setPageLoading] = useState(!isNew);
 
   const { control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<CharacterFormData>({
     resolver: zodResolver(characterFormSchema),
@@ -61,12 +64,38 @@ export const CharacterDetailPage: React.FC = () => {
     },
   });
 
+  // При открытии новой страницы — очищаем currentCharacter
   useEffect(() => {
-    if (!isNew && characterId) {
-      fetchCharacter(parseInt(characterId));
+    if (isNew) {
+      setCurrentCharacter(null);
+      setPageLoading(false);
+      reset({
+        name: '',
+        title: '',
+        race: '',
+        characterClass: '',
+        level: null,
+        status: 'alive',
+        bio: '',
+        appearance: '',
+        personality: '',
+        backstory: '',
+        notes: '',
+      });
+    } else if (characterId) {
+      setPageLoading(true);
+      fetchCharacter(parseInt(characterId)).finally(() => {
+        setPageLoading(false);
+      });
     }
-  }, [isNew, characterId, fetchCharacter]);
 
+    // Cleanup при уходе со страницы
+    return () => {
+      setCurrentCharacter(null);
+    };
+  }, [isNew, characterId, fetchCharacter, setCurrentCharacter, reset]);
+
+  // Заполняем форму при загрузке существующего персонажа
   useEffect(() => {
     if (!isNew && currentCharacter) {
       reset({
@@ -90,14 +119,14 @@ export const CharacterDetailPage: React.FC = () => {
     try {
       if (isNew) {
         const character = await createCharacter({ ...data, projectId: pid });
-        showSnackbar('Character created!', 'success');
+        showSnackbar('Персонаж создан!', 'success');
         navigate(`/project/${pid}/characters/${character.id}`, { replace: true });
       } else {
         await updateCharacter(parseInt(characterId!), data);
-        showSnackbar('Character updated!', 'success');
+        showSnackbar('Персонаж обновлён!', 'success');
       }
     } catch {
-      showSnackbar('Failed to save character', 'error');
+      showSnackbar('Не удалось сохранить', 'error');
     } finally {
       setSaving(false);
     }
@@ -108,15 +137,15 @@ export const CharacterDetailPage: React.FC = () => {
     if (!file || isNew || !characterId) return;
     try {
       await uploadImage(parseInt(characterId), file);
-      showSnackbar('Image uploaded!', 'success');
+      showSnackbar('Изображение загружено!', 'success');
     } catch {
-      showSnackbar('Failed to upload image', 'error');
+      showSnackbar('Не удалось загрузить', 'error');
     }
   };
 
-  if (!isNew && !currentCharacter) return <LoadingScreen />;
+  if (pageLoading) return <LoadingScreen />;
 
-  const tabPanels = ['Basic Info', 'Appearance & Personality', 'Backstory & Notes'];
+  const tabPanels = ['Основное', 'Внешность и Характер', 'Предыстория и Заметки'];
 
   return (
     <Box>
@@ -124,8 +153,15 @@ export const CharacterDetailPage: React.FC = () => {
         <IconButton onClick={() => navigate(`/project/${pid}/characters`)}>
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h3">
-          {isNew ? 'New Character' : currentCharacter?.name}
+        <Typography
+          sx={{
+            fontFamily: '"Cinzel", serif',
+            fontWeight: 700,
+            fontSize: '1.8rem',
+            color: '#fff',
+          }}
+        >
+          {isNew ? 'Новый персонаж' : currentCharacter?.name || 'Персонаж'}
         </Typography>
       </Box>
 
@@ -133,7 +169,14 @@ export const CharacterDetailPage: React.FC = () => {
         <Grid container spacing={3}>
           {/* Left: Avatar */}
           <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper
+              sx={{
+                p: 2,
+                textAlign: 'center',
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
               {!isNew && currentCharacter?.imagePath ? (
                 <Avatar
                   src={currentCharacter.imagePath}
@@ -149,7 +192,8 @@ export const CharacterDetailPage: React.FC = () => {
                     borderRadius: 2,
                     mb: 2,
                     fontSize: 64,
-                    bgcolor: 'primary.dark',
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.3)',
                   }}
                   variant="rounded"
                 >
@@ -163,8 +207,12 @@ export const CharacterDetailPage: React.FC = () => {
                   startIcon={<CloudUploadIcon />}
                   fullWidth
                   size="small"
+                  sx={{
+                    borderColor: 'rgba(255,255,255,0.2)',
+                    color: 'rgba(255,255,255,0.6)',
+                  }}
                 >
-                  Upload Image
+                  Загрузить фото
                   <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml" onChange={handleImageUpload} />
                 </Button>
               )}
@@ -186,14 +234,19 @@ export const CharacterDetailPage: React.FC = () => {
 
           {/* Right: Form */}
           <Grid item xs={12} md={9}>
-            <Paper sx={{ p: 3 }}>
+            <Paper
+              sx={{
+                p: 3,
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
               <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
                 {tabPanels.map((label, i) => (
                   <Tab key={i} label={label} />
                 ))}
               </Tabs>
 
-              {/* Tab 0: Basic Info */}
               {tab === 0 && (
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
@@ -204,7 +257,7 @@ export const CharacterDetailPage: React.FC = () => {
                         <TextField
                           {...field}
                           fullWidth
-                          label="Name *"
+                          label="Имя *"
                           error={!!errors.name}
                           helperText={errors.name?.message as string}
                         />
@@ -216,7 +269,7 @@ export const CharacterDetailPage: React.FC = () => {
                       name="title"
                       control={control}
                       render={({ field }) => (
-                        <TextField {...field} fullWidth label="Title / Epithet" placeholder="e.g. The Brave" />
+                        <TextField {...field} fullWidth label="Титул / Прозвище" placeholder="напр. Храбрый" />
                       )}
                     />
                   </Grid>
@@ -225,7 +278,7 @@ export const CharacterDetailPage: React.FC = () => {
                       name="race"
                       control={control}
                       render={({ field }) => (
-                        <TextField {...field} fullWidth label="Race" placeholder="e.g. Half-Elf" />
+                        <TextField {...field} fullWidth label="Раса" placeholder="напр. Полуэльф" />
                       )}
                     />
                   </Grid>
@@ -234,7 +287,7 @@ export const CharacterDetailPage: React.FC = () => {
                       name="characterClass"
                       control={control}
                       render={({ field }) => (
-                        <TextField {...field} fullWidth label="Class" placeholder="e.g. Paladin" />
+                        <TextField {...field} fullWidth label="Класс" placeholder="напр. Паладин" />
                       )}
                     />
                   </Grid>
@@ -248,7 +301,7 @@ export const CharacterDetailPage: React.FC = () => {
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                           fullWidth
-                          label="Level"
+                          label="Уровень"
                           type="number"
                           inputProps={{ min: 1, max: 30 }}
                         />
@@ -261,8 +314,8 @@ export const CharacterDetailPage: React.FC = () => {
                       control={control}
                       render={({ field }) => (
                         <FormControl fullWidth>
-                          <InputLabel>Status</InputLabel>
-                          <Select {...field} label="Status">
+                          <InputLabel>Статус</InputLabel>
+                          <Select {...field} label="Статус">
                             {CHARACTER_STATUSES.map(s => (
                               <MenuItem key={s} value={s}>{s}</MenuItem>
                             ))}
@@ -279,10 +332,10 @@ export const CharacterDetailPage: React.FC = () => {
                         <TextField
                           {...field}
                           fullWidth
-                          label="Bio"
+                          label="Биография"
                           multiline
                           rows={4}
-                          placeholder="Brief character description..."
+                          placeholder="Краткое описание персонажа..."
                         />
                       )}
                     />
@@ -290,7 +343,6 @@ export const CharacterDetailPage: React.FC = () => {
                 </Grid>
               )}
 
-              {/* Tab 1: Appearance & Personality */}
               {tab === 1 && (
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
@@ -298,14 +350,7 @@ export const CharacterDetailPage: React.FC = () => {
                       name="appearance"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          label="Appearance"
-                          multiline
-                          rows={5}
-                          placeholder="Physical description..."
-                        />
+                        <TextField {...field} fullWidth label="Внешность" multiline rows={5} placeholder="Физическое описание..." />
                       )}
                     />
                   </Grid>
@@ -314,21 +359,13 @@ export const CharacterDetailPage: React.FC = () => {
                       name="personality"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          label="Personality"
-                          multiline
-                          rows={5}
-                          placeholder="Character traits, ideals, bonds, flaws..."
-                        />
+                        <TextField {...field} fullWidth label="Характер" multiline rows={5} placeholder="Черты, идеалы, привязанности, слабости..." />
                       )}
                     />
                   </Grid>
                 </Grid>
               )}
 
-              {/* Tab 2: Backstory & Notes */}
               {tab === 2 && (
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
@@ -336,14 +373,7 @@ export const CharacterDetailPage: React.FC = () => {
                       name="backstory"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          label="Backstory"
-                          multiline
-                          rows={8}
-                          placeholder="Character's history..."
-                        />
+                        <TextField {...field} fullWidth label="Предыстория" multiline rows={8} placeholder="История персонажа..." />
                       )}
                     />
                   </Grid>
@@ -352,29 +382,25 @@ export const CharacterDetailPage: React.FC = () => {
                       name="notes"
                       control={control}
                       render={({ field }) => (
-                        <TextField
-                          {...field}
-                          fullWidth
-                          label="DM Notes"
-                          multiline
-                          rows={5}
-                          placeholder="Private notes, secrets, plot hooks..."
-                        />
+                        <TextField {...field} fullWidth label="Заметки ДМа" multiline rows={5} placeholder="Личные заметки, секреты, зацепки..." />
                       )}
                     />
                   </Grid>
                 </Grid>
               )}
 
-              <Divider sx={{ my: 3 }} />
+              <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
 
               <Box display="flex" justifyContent="flex-end" gap={2}>
                 <Button
                   variant="outlined"
-                  color="inherit"
                   onClick={() => navigate(`/project/${pid}/characters`)}
+                  sx={{
+                    borderColor: 'rgba(255,255,255,0.2)',
+                    color: 'rgba(255,255,255,0.6)',
+                  }}
                 >
-                  Cancel
+                  Отмена
                 </Button>
                 <DndButton
                   type="submit"
@@ -383,7 +409,7 @@ export const CharacterDetailPage: React.FC = () => {
                   loading={saving}
                   disabled={!isDirty && !isNew}
                 >
-                  {isNew ? 'Create Character' : 'Save Changes'}
+                  {isNew ? 'Создать' : 'Сохранить'}
                 </DndButton>
               </Box>
             </Paper>

@@ -13,6 +13,7 @@ interface CharacterState {
   graph: CharacterGraph | null;
   total: number;
   loading: boolean;
+  initialized: boolean;
   error: string | null;
 
   fetchCharacters: (projectId: number, params?: any) => Promise<void>;
@@ -40,6 +41,7 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   graph: null,
   total: 0,
   loading: false,
+  initialized: false,
   error: null,
 
   fetchCharacters: async (projectId, params) => {
@@ -50,9 +52,10 @@ export const useCharacterStore = create<CharacterState>((set) => ({
         characters: res.data.data.items,
         total: res.data.data.total,
         loading: false,
+        initialized: true,
       });
     } catch (error: any) {
-      set({ error: error.message, loading: false });
+      set({ error: error.message, loading: false, initialized: true });
     }
   },
 
@@ -132,7 +135,6 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     set({ error: null });
     try {
       await charactersApi.setTags(id, tagIds);
-      // Перезагрузим персонажа чтобы получить обновлённые теги
       const res = await charactersApi.getById(id);
       const updated = res.data.data;
       set(state => ({

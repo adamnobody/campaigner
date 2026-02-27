@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/Layout/AppLayout';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { GlobalSnackbar } from './components/ui/GlobalSnackbar';
+import { SplashScreen } from './components/ui/SplashScreen';
 import { HomePage } from './pages/HomePage';
 import { MapPage } from './pages/MapPage';
 import { CharactersPage } from './pages/CharactersPage';
@@ -16,14 +17,18 @@ import { FilesPage } from './pages/FilesPage';
 import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
 
 const App: React.FC = () => {
+  const [splashDone, setSplashDone] = useState(false);
+
+  if (!splashDone) {
+    return <SplashScreen onFinish={() => setSplashDone(true)} />;
+  }
+
   return (
     <>
       <Routes>
-        {/* Home — без sidebar layout */}
         <Route path="/" element={<AppLayout />}>
           <Route index element={<HomePage />} />
 
-          {/* Project routes */}
           <Route path="project/:projectId">
             <Route index element={<Navigate to="map" replace />} />
             <Route path="map" element={<MapPage />} />
@@ -39,12 +44,10 @@ const App: React.FC = () => {
             <Route path="settings" element={<ProjectSettingsPage />} />
           </Route>
 
-          {/* 404 */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
 
-      {/* Global UI components */}
       <ConfirmDialog />
       <GlobalSnackbar />
     </>

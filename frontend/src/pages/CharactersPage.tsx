@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Grid, Card, CardContent, CardMedia,
-  TextField, InputAdornment, Tabs, Tab, Chip, Avatar,
-  IconButton,
+  Box, Typography, Grid, Paper, TextField, InputAdornment,
+  Chip, Avatar, Select, MenuItem, FormControl, Button,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
+import PersonIcon from '@mui/icons-material/Person';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -14,188 +13,245 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { CHARACTER_STATUSES } from '@campaigner/shared';
-
-const statusColors: Record<string, string> = {
-  alive: '#82E0AA',
-  dead: '#FF6B6B',
-  unknown: '#F7DC6F',
-  missing: '#85C1E9',
-};
 
 export const CharactersPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
-  const { characters, total, loading, fetchCharacters, deleteCharacter } = useCharacterStore();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
+  const { characters, total, loading, initialized, fetchCharacters } = useCharacterStore();
+  const { showSnackbar } = useUIStore();
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState(0);
+  const [selectedTag, setSelectedTag] = useState<string>('');
   const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
-    fetchCharacters(pid, { search: debouncedSearch || undefined });
+    fetchCharacters(pid, { search: debouncedSearch || undefined, limit: 100 });
   }, [pid, fetchCharacters, debouncedSearch]);
 
-  const handleDelete = (id: number, name: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    showConfirmDialog('Delete Character', `Delete "${name}"? This cannot be undone.`, async () => {
-      try {
-        await deleteCharacter(id);
-        showSnackbar('Character deleted', 'success');
-      } catch {
-        showSnackbar('Failed to delete', 'error');
-      }
-    });
+  // Собираем все теги из персонажей
+  const allTags = Array.from(
+    new Map(
+      characters
+        .flatMap(c => c.tags || [])
+        .map(tag => [tag.id, tag])
+    ).values()
+  );
+
+  // Фильтрация
+  const filteredCharacters = characters.filter(c => {
+    if (selectedTag) {
+      return c.tags?.some(t => t.name === selectedTag);
+    }
+    return true;
+  });
+
+  const handleReset = () => {
+    setSearch('');
+    setSelectedTag('');
   };
 
-  const tabs = ['all', ...CHARACTER_STATUSES];
-
-  const filteredCharacters = tab === 0
-    ? characters
-    : characters.filter(c => c.status === tabs[tab]);
-
-  if (loading && characters.length === 0) return <LoadingScreen />;
+  // Показываем loading только при первой загрузке
+  if (loading && !initialized) return <LoadingScreen />;
 
   return (
     <Box>
+      {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h3">Characters</Typography>
-        <Box display="flex" gap={2}>
+        <Typography
+          sx={{
+            fontFamily: '"Cinzel", serif',
+            fontWeight: 700,
+            fontSize: '1.8rem',
+            color: '#fff',
+          }}
+        >
+          Персонажи
+        </Typography>
+        <Box display="flex" gap={1}>
           <DndButton
             variant="outlined"
-            onClick={() => navigate(`/project/${pid}/characters/graph`)}
+            onClick={() => navigate(`/project/${pid}/map`)}
+            sx={{
+              borderColor: 'rgba(255,255,255,0.2)',
+              color: '#fff',
+              '&:hover': { borderColor: 'rgba(255,255,255,0.4)' },
+            }}
           >
-            Relationship Graph
+            НАЗАД К ПРОЕКТУ
           </DndButton>
           <DndButton
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate(`/project/${pid}/characters/new`)}
           >
-            New Character
+            ДОБАВИТЬ
           </DndButton>
         </Box>
       </Box>
 
-      <TextField
-        fullWidth
-        placeholder="Search characters..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2 }}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start"><SearchIcon /></InputAdornment>
-          ),
-        }}
-      />
+      {/* Filters row */}
+      <Box display="flex" gap={2} mb={3} alignItems="center">
+        <TextField
+          placeholder="Поиск по имени"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{
+            flexGrow: 1,
+            maxWidth: 500,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+              '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+            },
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
+              </InputAdornment>
+            ),
+          }}
+          size="small"
+        />
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
-        <Tab label={`All (${total})`} />
-        {CHARACTER_STATUSES.map(status => (
-          <Tab
-            key={status}
-            label={
-              <Chip
-                label={status}
-                size="small"
-                sx={{ backgroundColor: statusColors[status], color: '#000', fontWeight: 600 }}
-              />
-            }
-          />
-        ))}
-      </Tabs>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <Select
+            value={selectedTag}
+            onChange={(e) => setSelectedTag(e.target.value)}
+            displayEmpty
+            sx={{
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+              color: '#fff',
+            }}
+          >
+            <MenuItem value="">Теги</MenuItem>
+            {allTags.map(tag => (
+              <MenuItem key={tag.id} value={tag.name}>{tag.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
+        <Button
+          variant="outlined"
+          onClick={handleReset}
+          size="small"
+          sx={{
+            borderColor: 'rgba(130,130,255,0.4)',
+            color: 'rgba(130,130,255,0.9)',
+            '&:hover': { borderColor: 'rgba(130,130,255,0.6)' },
+            textTransform: 'none',
+            fontFamily: '"Cinzel", serif',
+          }}
+        >
+          СБРОС
+        </Button>
+
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>
+          Показано: {filteredCharacters.length}
+        </Typography>
+      </Box>
+
+      {/* Characters grid */}
       {filteredCharacters.length === 0 ? (
         <EmptyState
-          title="No characters found"
-          description="Create your first character to populate your world"
-          actionLabel="Create Character"
+          title="Персонажи не найдены"
+          description="Создайте первого персонажа для вашего мира"
+          actionLabel="Создать персонажа"
           onAction={() => navigate(`/project/${pid}/characters/new`)}
         />
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           {filteredCharacters.map(character => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={character.id}>
-              <Card
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  cursor: 'pointer',
-                  '&:hover': { transform: 'translateY(-2px)', transition: 'transform 0.2s' },
-                }}
+            <Grid item xs={12} sm={6} md={4} key={character.id}>
+              <Paper
                 onClick={() => navigate(`/project/${pid}/characters/${character.id}`)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 2,
+                  p: 2,
+                  cursor: 'pointer',
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 2,
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    borderColor: 'rgba(130,130,255,0.3)',
+                  },
+                }}
               >
+                {/* Avatar */}
                 {character.imagePath ? (
-                  <CardMedia
-                    component="img"
-                    height="220"
-                    image={character.imagePath}
-                    alt={character.name}
-                    sx={{ objectFit: 'cover' }}
+                  <Avatar
+                    src={character.imagePath}
+                    sx={{ width: 48, height: 48, flexShrink: 0 }}
                   />
                 ) : (
-                  <Box
+                  <Avatar
                     sx={{
-                      height: 220,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'linear-gradient(135deg, #1A1A2E 0%, #2D2D44 100%)',
+                      width: 48,
+                      height: 48,
+                      flexShrink: 0,
+                      backgroundColor: 'rgba(255,255,255,0.08)',
+                      color: 'rgba(255,255,255,0.3)',
                     }}
                   >
-                    <Avatar sx={{ width: 80, height: 80, fontSize: 36, bgcolor: 'primary.dark' }}>
-                      {character.name[0]}
-                    </Avatar>
-                  </Box>
+                    <PersonIcon />
+                  </Avatar>
                 )}
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                    <Box>
-                      <Typography variant="h6" noWrap>{character.name}</Typography>
-                      {character.title && (
-                        <Typography variant="body2" color="text.secondary" noWrap>
-                          {character.title}
-                        </Typography>
-                      )}
-                    </Box>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => handleDelete(character.id, character.name, e)}
+
+                {/* Info */}
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      color: '#fff',
+                      lineHeight: 1.3,
+                    }}
+                    noWrap
+                  >
+                    {character.name}
+                  </Typography>
+                  {(character.title || character.bio) && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'rgba(255,255,255,0.4)',
+                        fontSize: '0.85rem',
+                        mt: 0.3,
+                      }}
+                      noWrap
                     >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                  <Box display="flex" gap={1} mt={1} flexWrap="wrap">
-                    <Chip
-                      label={character.status}
-                      size="small"
-                      sx={{ backgroundColor: statusColors[character.status], color: '#000' }}
-                    />
-                    {character.race && <Chip label={character.race} size="small" variant="outlined" />}
-                    {character.characterClass && <Chip label={character.characterClass} size="small" variant="outlined" />}
-                    {character.level && <Chip label={`Lvl ${character.level}`} size="small" variant="outlined" />}
-                  </Box>
+                      {character.title || character.bio}
+                    </Typography>
+                  )}
+
+                  {/* Tags */}
                   {character.tags && character.tags.length > 0 && (
                     <Box display="flex" gap={0.5} mt={1} flexWrap="wrap">
-                      {character.tags.slice(0, 3).map(tag => (
+                      {character.tags.map(tag => (
                         <Chip
                           key={tag.id}
                           label={tag.name}
                           size="small"
-                          sx={{ backgroundColor: tag.color, color: '#fff', fontSize: '0.7rem' }}
+                          sx={{
+                            height: 22,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            backgroundColor: tag.color || 'rgba(130,130,255,0.2)',
+                            color: '#fff',
+                            borderRadius: 1,
+                          }}
                         />
                       ))}
-                      {character.tags.length > 3 && (
-                        <Chip label={`+${character.tags.length - 3}`} size="small" />
-                      )}
                     </Box>
                   )}
-                </CardContent>
-              </Card>
+                </Box>
+              </Paper>
             </Grid>
           ))}
         </Grid>
