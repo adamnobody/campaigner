@@ -1,279 +1,344 @@
-import React, { useEffect, useCallback, useMemo, useState } from 'react';
-import {
-  Box, Typography, Paper, IconButton, Chip, Dialog,
-  DialogTitle, DialogContent, DialogActions, Button,
-  TextField, Select, MenuItem, FormControl, InputLabel,
-  FormControlLabel, Checkbox,
-} from '@mui/material';
+import React, { useEffect, useState, useRef } from 'react';
+import { Box, Typography, Button, Paper } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import AddIcon from '@mui/icons-material/Add';
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  Node,
-  Edge,
-  useNodesState,
-  useEdgesState,
-  MarkerType,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useCharacterStore } from '@/store/useCharacterStore';
-import { useUIStore } from '@/store/useUIStore';
-import { RELATIONSHIP_TYPES } from '@campaigner/shared';
+import { charactersApi } from '@/api/axiosClient';
 import { DndButton } from '@/components/ui/DndButton';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
-const relationshipColors: Record<string, string> = {
-  ally: '#82E0AA',
-  enemy: '#FF6B6B',
-  family: '#85C1E9',
-  friend: '#F7DC6F',
-  rival: '#F0B27A',
-  mentor: '#BB8FCE',
-  student: '#AED6F1',
-  lover: '#F1948A',
-  spouse: '#D7BDE2',
-  employer: '#A9CCE3',
-  employee: '#A3E4D7',
-  custom: '#BFC9CA',
+interface Node {
+  id: number;
+  name: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+}
+
+interface Edge {
+  source: number;
+  target: number;
+  type: string;
+  description?: string;
+}
+
+const RELATIONSHIP_LABELS: Record<string, string> = {
+  ally: 'Союзник',
+  enemy: 'Враг',
+  family: 'Семья',
+  friend: 'Друг',
+  rival: 'Соперник',
+  mentor: 'Наставник',
+  student: 'Ученик',
+  lover: 'Возлюбленный',
+  spouse: 'Супруг',
+  employer: 'Работодатель',
+  employee: 'Работник',
+  custom: 'Другое',
 };
 
 export const CharacterGraphPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
-  const {
-    characters, graph, relationships,
-    fetchCharacters, fetchGraph, fetchRelationships,
-    createRelationship, deleteRelationship,
-  } = useCharacterStore();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef<number>(0);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [sourceId, setSourceId] = useState<number | ''>('');
-  const [targetId, setTargetId] = useState<number | ''>('');
-  const [relType, setRelType] = useState<string>('ally');
-  const [customLabel, setCustomLabel] = useState('');
-  const [isBidirectional, setIsBidirectional] = useState(true);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dragNode, setDragNode] = useState<number | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchCharacters(pid, { limit: 200 });
-    fetchGraph(pid);
-    fetchRelationships(pid);
-  }, [pid, fetchCharacters, fetchGraph, fetchRelationships]);
+    Promise.all([
+      charactersApi.getAll(pid, { limit: 200 }),
+      charactersApi.getRelationships(pid),
+    ]).then(([charRes, relRes]) => {
+      const chars = charRes.data.data.items || [];
+      const rels = relRes.data.data || [];
 
+      // Create nodes in circle layout
+      const centerX = 400;
+      const centerY = 300;
+      const radius = Math.min(250, chars.length * 40);
+
+      const newNodes: Node[] = chars.map((c: any, i: number) => {
+        const angle = (2 * Math.PI * i) / chars.length;
+        return {
+          id: c.id,
+          name: c.name,
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle),
+          vx: 0,
+          vy: 0,
+        };
+      });
+
+      const newEdges: Edge[] = rels.map((r: any) => ({
+        source: r.sourceCharacterId,
+        target: r.targetCharacterId,
+        type: RELATIONSHIP_LABELS[r.relationshipType] || r.relationshipType || '',
+        description: r.description,
+      }));
+
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [pid]);
+
+  // Simple force-directed simulation
   useEffect(() => {
-    if (!graph) return;
+    if (nodes.length === 0) return;
 
-    const flowNodes: Node[] = graph.nodes.map((node, index) => {
-      // Располагаем по кругу
-      const angle = (2 * Math.PI * index) / graph.nodes.length;
-      const radius = 300;
-      return {
-        id: String(node.id),
-        position: {
-          x: 400 + radius * Math.cos(angle),
-          y: 400 + radius * Math.sin(angle),
-        },
-        data: {
-          label: (
-            <Box sx={{ textAlign: 'center', p: 0.5 }}>
-              <Typography variant="body2" fontWeight={600}>{node.name}</Typography>
-              {node.title && (
-                <Typography variant="caption" color="text.secondary">{node.title}</Typography>
-              )}
-              <Chip
-                label={node.status}
-                size="small"
-                sx={{ mt: 0.5, fontSize: '0.65rem' }}
-              />
-            </Box>
-          ),
-        },
-        style: {
-          background: '#1A1A2E',
-          border: '2px solid #C9A959',
-          borderRadius: 8,
-          padding: 8,
-          minWidth: 120,
-        },
-      };
+    const simulate = () => {
+      setNodes(prevNodes => {
+        const updated = prevNodes.map(n => ({ ...n }));
+
+        // Repulsion between nodes
+        for (let i = 0; i < updated.length; i++) {
+          for (let j = i + 1; j < updated.length; j++) {
+            const dx = updated[j].x - updated[i].x;
+            const dy = updated[j].y - updated[i].y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const force = 5000 / (dist * dist);
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+            updated[i].vx -= fx;
+            updated[i].vy -= fy;
+            updated[j].vx += fx;
+            updated[j].vy += fy;
+          }
+        }
+
+        // Attraction along edges
+        edges.forEach(edge => {
+          const s = updated.find(n => n.id === edge.source);
+          const t = updated.find(n => n.id === edge.target);
+          if (!s || !t) return;
+          const dx = t.x - s.x;
+          const dy = t.y - s.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = (dist - 150) * 0.01;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          s.vx += fx;
+          s.vy += fy;
+          t.vx -= fx;
+          t.vy -= fy;
+        });
+
+        // Center gravity
+        updated.forEach(n => {
+          n.vx += (400 - n.x) * 0.001;
+          n.vy += (300 - n.y) * 0.001;
+          n.vx *= 0.9;
+          n.vy *= 0.9;
+          if (n.id !== dragNode) {
+            n.x += n.vx;
+            n.y += n.vy;
+          }
+          n.x = Math.max(50, Math.min(750, n.x));
+          n.y = Math.max(50, Math.min(550, n.y));
+        });
+
+        return updated;
+      });
+
+      animRef.current = requestAnimationFrame(simulate);
+    };
+
+    animRef.current = requestAnimationFrame(simulate);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [edges, dragNode, nodes.length]);
+
+  // Draw
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, 800, 600);
+
+    // Draw edges
+    edges.forEach(edge => {
+      const s = nodes.find(n => n.id === edge.source);
+      const t = nodes.find(n => n.id === edge.target);
+      if (!s || !t) return;
+
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.strokeStyle = 'rgba(130,130,255,0.3)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Edge label
+      if (edge.type) {
+        const mx = (s.x + t.x) / 2;
+        const my = (s.y + t.y) / 2;
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.textAlign = 'center';
+        ctx.fillText(edge.type, mx, my - 5);
+      }
     });
 
-    const flowEdges: Edge[] = graph.edges.map(edge => ({
-      id: String(edge.id),
-      source: String(edge.source),
-      target: String(edge.target),
-      label: edge.customLabel || edge.relationshipType,
-      style: { stroke: relationshipColors[edge.relationshipType] || '#BFC9CA', strokeWidth: 2 },
-      labelStyle: { fill: '#E8E8E8', fontSize: 11, fontWeight: 500 },
-      labelBgStyle: { fill: '#1A1A2E', fillOpacity: 0.8 },
-      markerEnd: edge.isBidirectional ? undefined : { type: MarkerType.ArrowClosed },
-      animated: edge.relationshipType === 'enemy',
-    }));
+    // Draw nodes
+    nodes.forEach(node => {
+      const isHovered = hoveredNode === node.id;
+      const radius = isHovered ? 25 : 20;
 
-    setNodes(flowNodes);
-    setEdges(flowEdges);
-  }, [graph, setNodes, setEdges]);
+      // Circle
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = isHovered ? 'rgba(130,130,255,0.4)' : 'rgba(130,130,255,0.2)';
+      ctx.fill();
+      ctx.strokeStyle = isHovered ? 'rgba(130,130,255,0.8)' : 'rgba(130,130,255,0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-  const handleAddRelationship = async () => {
-    if (!sourceId || !targetId || sourceId === targetId) return;
-    try {
-      await createRelationship({
-        projectId: pid,
-        sourceCharacterId: sourceId as number,
-        targetCharacterId: targetId as number,
-        relationshipType: relType as any,
-        customLabel,
-        isBidirectional,
-        description: '',
-      });
-      showSnackbar('Relationship created', 'success');
-      setDialogOpen(false);
-      fetchGraph(pid);
-      // Reset form
-      setSourceId('');
-      setTargetId('');
-      setRelType('ally');
-      setCustomLabel('');
-      setIsBidirectional(true);
-    } catch {
-      showSnackbar('Failed to create relationship', 'error');
+      // Name
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(node.name, node.x, node.y + radius + 15);
+    });
+  }, [nodes, edges, hoveredNode]);
+
+  // Mouse interactions
+  const getNodeAt = (x: number, y: number): Node | null => {
+    for (const node of nodes) {
+      const dx = x - node.x;
+      const dy = y - node.y;
+      if (dx * dx + dy * dy < 625) return node;
+    }
+    return null;
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const node = getNodeAt(x, y);
+    if (node) setDragNode(node.id);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (dragNode !== null) {
+      setNodes(prev => prev.map(n =>
+        n.id === dragNode ? { ...n, x, y, vx: 0, vy: 0 } : n
+      ));
+    } else {
+      const node = getNodeAt(x, y);
+      setHoveredNode(node?.id || null);
     }
   };
 
-  const handleEdgeClick = useCallback((_: any, edge: Edge) => {
-    showConfirmDialog(
-      'Delete Relationship',
-      'Remove this relationship?',
-      async () => {
-        try {
-          await deleteRelationship(parseInt(edge.id));
-          showSnackbar('Relationship removed', 'success');
-          fetchGraph(pid);
-        } catch {
-          showSnackbar('Failed to delete', 'error');
-        }
-      }
-    );
-  }, [deleteRelationship, fetchGraph, pid, showConfirmDialog, showSnackbar]);
+  const handleCanvasMouseUp = () => {
+    setDragNode(null);
+  };
 
-  if (!graph) return <LoadingScreen />;
+  const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const node = getNodeAt(x, y);
+    if (node) {
+      navigate(`/project/${pid}/characters/${node.id}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка графа...</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ height: 'calc(100vh - 140px)' }}>
+    <Box>
+      {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate(`/project/${pid}/characters`)}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h3">Relationship Graph</Typography>
+          <DndButton
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(`/project/${pid}/characters`)}
+            sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
+          >
+            Назад
+          </DndButton>
+          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
+            Граф связей
+          </Typography>
         </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
-          Add Relationship
-        </DndButton>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)' }}>
+          Перетаскивайте узлы · Двойной клик — открыть персонажа
+        </Typography>
       </Box>
+
+      {nodes.length === 0 ? (
+        <Paper sx={{
+          p: 6, textAlign: 'center',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
+            Нет персонажей или связей для отображения
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => navigate(`/project/${pid}/characters`)}
+          >
+            К списку персонажей
+          </Button>
+        </Paper>
+      ) : (
+        <Paper sx={{
+          backgroundColor: 'rgba(10,10,20,0.9)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}>
+          <canvas
+            ref={canvasRef}
+            width={800}
+            height={600}
+            style={{
+              width: '100%',
+              height: '600px',
+              cursor: dragNode !== null ? 'grabbing' : hoveredNode !== null ? 'pointer' : 'default',
+            }}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+            onDoubleClick={handleCanvasDoubleClick}
+          />
+        </Paper>
+      )}
 
       {/* Legend */}
-      <Box display="flex" gap={1} mb={2} flexWrap="wrap">
-        {Object.entries(relationshipColors).map(([type, color]) => (
-          <Chip
-            key={type}
-            label={type}
-            size="small"
-            sx={{ backgroundColor: color, color: '#000', fontWeight: 600 }}
-          />
-        ))}
-      </Box>
-
-      <Paper sx={{ height: 'calc(100% - 80px)', borderRadius: 2, overflow: 'hidden' }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onEdgeClick={handleEdgeClick}
-          fitView
-          attributionPosition="bottom-left"
-        >
-          <Background color="#333" gap={20} />
-          <Controls />
-          <MiniMap
-            nodeColor="#C9A959"
-            maskColor="rgba(0, 0, 0, 0.7)"
-            style={{ backgroundColor: '#0F0F1A' }}
-          />
-        </ReactFlow>
-      </Paper>
-
-      {/* Add Relationship Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Relationship</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>From Character</InputLabel>
-            <Select
-              value={sourceId}
-              label="From Character"
-              onChange={(e) => setSourceId(e.target.value as number)}
-            >
-              {characters.map(c => (
-                <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel>To Character</InputLabel>
-            <Select
-              value={targetId}
-              label="To Character"
-              onChange={(e) => setTargetId(e.target.value as number)}
-            >
-              {characters.filter(c => c.id !== sourceId).map(c => (
-                <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Relationship Type</InputLabel>
-            <Select value={relType} label="Relationship Type" onChange={(e) => setRelType(e.target.value)}>
-              {RELATIONSHIP_TYPES.map(t => (
-                <MenuItem key={t} value={t}>{t}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            fullWidth
-            label="Custom Label (optional)"
-            value={customLabel}
-            onChange={(e) => setCustomLabel(e.target.value)}
-            margin="normal"
-            placeholder="e.g. Blood brothers"
-          />
-
-          <FormControlLabel
-            control={<Checkbox checked={isBidirectional} onChange={(e) => setIsBidirectional(e.target.checked)} />}
-            label="Bidirectional (mutual relationship)"
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
-          <DndButton
-            variant="contained"
-            onClick={handleAddRelationship}
-            disabled={!sourceId || !targetId || sourceId === targetId}
-          >
-            Add
-          </DndButton>
-        </DialogActions>
-      </Dialog>
+      {edges.length > 0 && (
+        <Box display="flex" gap={2} mt={2} flexWrap="wrap">
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+            Узлов: {nodes.length}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+            Связей: {edges.length}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+            Типы: {[...new Set(edges.map(e => e.type).filter(Boolean))].join(', ') || '—'}
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 };

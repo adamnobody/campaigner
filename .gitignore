@@ -62,3 +62,4 @@ coverage/
 
 # Keep data directory structure
 !data/.gitkeep
+node_modules

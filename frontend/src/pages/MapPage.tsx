@@ -1,297 +1,536 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Box, Typography, Paper, IconButton, Tooltip, Fab,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Select, MenuItem, FormControl, InputLabel, Button, Chip,
+  Box, Typography, Paper, TextField, Button, Dialog,
+  DialogTitle, DialogContent, DialogActions, IconButton,
+  Select, MenuItem, FormControl, InputLabel, Tooltip,
 } from '@mui/material';
-import AddLocationIcon from '@mui/icons-material/AddLocation';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import CloseIcon from '@mui/icons-material/Close';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useParams } from 'react-router-dom';
-import { useProjectStore } from '@/store/useProjectStore';
-import { useMapStore } from '@/store/useMapStore';
+import { mapApi, projectsApi } from '@/api/axiosClient';
 import { useUIStore } from '@/store/useUIStore';
-import { MARKER_COLORS, MARKER_ICONS } from '@campaigner/shared';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { DndButton } from '@/components/ui/DndButton';
+
+// Иконки маркеров
+const MARKER_ICONS: Record<string, string> = {
+  castle: '🏰',
+  city: '🏙️',
+  village: '🏘️',
+  tavern: '🍺',
+  dungeon: '⚔️',
+  forest: '🌲',
+  mountain: '⛰️',
+  river: '🌊',
+  cave: '🕳️',
+  temple: '⛪',
+  ruins: '🏚️',
+  port: '⚓',
+  bridge: '🌉',
+  tower: '🗼',
+  camp: '🏕️',
+  battlefield: '�crossed_swords',
+  mine: '⛏️',
+  farm: '🌾',
+  graveyard: '💀',
+  custom: '📍',
+};
+
+const MARKER_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+  '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+  '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
+];
+
+interface Marker {
+  id: number;
+  title: string;
+  description: string;
+  x: number;
+  y: number;
+  icon: string;
+  color: string;
+}
 
 export const MapPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
-  const { currentProject, fetchProject, uploadMap } = useProjectStore();
-  const { markers, fetchMarkers, createMarker, updateMarker, deleteMarker, selectedMarker, setSelectedMarker } = useMapStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [addingMarker, setAddingMarker] = useState(false);
-  const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
-  const [editingMarker, setEditingMarker] = useState<any>(null);
-  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  // Form state
-  const [markerTitle, setMarkerTitle] = useState('');
-  const [markerDescription, setMarkerDescription] = useState('');
-  const [markerColor, setMarkerColor] = useState<string>(MARKER_COLORS[0]);
-  const [markerIcon, setMarkerIcon] = useState<string>('custom');
+  const [project, setProject] = useState<any>(null);
+  const [markers, setMarkers] = useState<Marker[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Zoom & pan
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  // Marker dialog
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
+  const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null);
+  const [markerForm, setMarkerForm] = useState({
+    title: '',
+    description: '',
+    icon: 'custom',
+    color: MARKER_COLORS[0],
+  });
+
+  // Selected marker popup
+  const [selectedMarker, setSelectedMarker] = useState<Marker | null>(null);
+
+  // Fetch
   useEffect(() => {
-    fetchProject(pid);
-    fetchMarkers(pid);
-  }, [pid, fetchProject, fetchMarkers]);
+    Promise.all([
+      projectsApi.getById(pid),
+      mapApi.getMarkers(pid),
+    ]).then(([projRes, markersRes]) => {
+      setProject(projRes.data.data);
+      setMarkers((markersRes.data.data || []).map(normalizeMarker));
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [pid]);
 
-  const handleMapClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!addingMarker || !mapContainerRef.current) return;
+  // Zoom with mouse wheel
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(prev => Math.min(5, Math.max(0.2, prev + delta)));
+  }, []);
 
-    const rect = mapContainerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+  const zoomIn = () => setZoom(prev => Math.min(5, prev + 0.2));
+  const zoomOut = () => setZoom(prev => Math.max(0.2, prev - 0.2));
+  const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
-    setClickPosition({ x, y });
-    setMarkerTitle('');
-    setMarkerDescription('');
-    setMarkerColor(MARKER_COLORS[0] as string);
-    setMarkerIcon('custom');
-    setEditingMarker(null);
-    setMarkerDialogOpen(true);
-    setAddingMarker(false);
-  }, [addingMarker]);
-
-  const handleSaveMarker = async () => {
-    if (!markerTitle.trim()) return;
-
-    try {
-      if (editingMarker) {
-        await updateMarker(editingMarker.id, {
-          title: markerTitle,
-          description: markerDescription,
-          color: markerColor,
-          icon: markerIcon as any,
-        });
-        showSnackbar('Marker updated', 'success');
-      } else if (clickPosition) {
-        await createMarker({
-          projectId: pid,
-          title: markerTitle,
-          description: markerDescription,
-          positionX: clickPosition.x,
-          positionY: clickPosition.y,
-          color: markerColor,
-          icon: markerIcon as any,
-        });
-        showSnackbar('Marker added', 'success');
-      }
-      setMarkerDialogOpen(false);
-    } catch {
-      showSnackbar('Failed to save marker', 'error');
+  // Pan
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 1 || (e.button === 0 && e.altKey)) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      e.preventDefault();
     }
   };
 
-  const handleEditMarker = (marker: any) => {
-    setEditingMarker(marker);
-    setMarkerTitle(marker.title);
-    setMarkerDescription(marker.description || '');
-    setMarkerColor(marker.color);
-    setMarkerIcon(marker.icon);
-    setMarkerDialogOpen(true);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isPanning) {
+      setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+    }
   };
 
-  const handleDeleteMarker = (id: number) => {
-    showConfirmDialog('Delete Marker', 'Are you sure?', async () => {
+  const handleMouseUp = () => setIsPanning(false);
+
+  // Click on map to add marker
+  const handleMapClick = (e: React.MouseEvent) => {
+    if (isPanning) return;
+    if (!imgRef.current) return;
+
+    const rect = imgRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    setClickPos({ x, y });
+    setEditingMarker(null);
+    setMarkerForm({ title: '', description: '', icon: 'custom', color: MARKER_COLORS[0] });
+    setDialogOpen(true);
+  };
+
+  const normalizeMarker = (m: any): Marker => ({
+    id: m.id,
+    title: m.title,
+    description: m.description || '',
+    x: (m.positionX ?? 0) * 100,
+    y: (m.positionY ?? 0) * 100,
+    icon: m.icon || 'custom',
+    color: m.color || MARKER_COLORS[0],
+  });
+
+  // Save marker
+  const handleSaveMarker = async () => {
+    if (!markerForm.title.trim()) return;
+    try {
+      if (editingMarker) {
+        const res = await mapApi.update(editingMarker.id, {
+          title: markerForm.title,
+          description: markerForm.description,
+          positionX: editingMarker.x / 100,
+          positionY: editingMarker.y / 100,
+          icon: markerForm.icon,
+          color: markerForm.color,
+        });
+        setMarkers(prev => prev.map(m => m.id === editingMarker.id ? normalizeMarker(res.data.data) : m));
+        showSnackbar('Маркер обновлён', 'success');
+      } else if (clickPos) {
+        const res = await mapApi.create({
+          title: markerForm.title,
+          description: markerForm.description,
+          projectId: pid,
+          positionX: clickPos.x / 100,
+          positionY: clickPos.y / 100,
+          icon: markerForm.icon,
+          color: markerForm.color,
+        });
+        setMarkers(prev => [...prev, normalizeMarker(res.data.data)]);
+        showSnackbar('Маркер добавлен', 'success');
+      }
+      setDialogOpen(false);
+    } catch (err: any) {
+      showSnackbar(err.message || 'Ошибка сохранения', 'error');
+    }
+  };
+
+  // Delete marker
+  const handleDeleteMarker = (marker: Marker) => {
+    showConfirmDialog('Удалить маркер', `Удалить "${marker.title}"?`, async () => {
       try {
-        await deleteMarker(id);
-        showSnackbar('Marker deleted', 'success');
+        await mapApi.delete(marker.id);
+        setMarkers(prev => prev.filter(m => m.id !== marker.id));
+        setSelectedMarker(null);
+        showSnackbar('Маркер удалён', 'success');
       } catch {
-        showSnackbar('Failed to delete marker', 'error');
+        showSnackbar('Ошибка удаления', 'error');
       }
     });
   };
 
+  // Edit marker
+  const handleEditMarker = (marker: Marker) => {
+    setEditingMarker(marker);
+    setMarkerForm({
+      title: marker.title,
+      description: marker.description || '',
+      icon: marker.icon || 'custom',
+      color: marker.color || MARKER_COLORS[0],
+    });
+    setDialogOpen(true);
+  };
+
+  // Upload map image
   const handleUploadMap = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      await uploadMap(pid, file);
-      showSnackbar('Map uploaded!', 'success');
+      const res = await projectsApi.uploadMap(pid, file);
+      setProject(res.data.data);
+      showSnackbar('Карта загружена!', 'success');
     } catch {
-      showSnackbar('Failed to upload map', 'error');
+      showSnackbar('Ошибка загрузки', 'error');
     }
   };
 
-  if (!currentProject) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка карты...</Typography>
+      </Box>
+    );
+  }
+
+  const mapImageUrl = project?.mapImagePath
+    ? `${project.mapImagePath}`
+    : null;
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h3">World Map</Typography>
-        <Box display="flex" gap={1}>
-          <Tooltip title={addingMarker ? 'Click on map to place marker' : 'Add marker mode'}>
-            <DndButton
-              variant={addingMarker ? 'contained' : 'outlined'}
-              startIcon={<AddLocationIcon />}
-              onClick={() => setAddingMarker(!addingMarker)}
-              color={addingMarker ? 'warning' : 'primary'}
-            >
-              {addingMarker ? 'Click on map...' : 'Add Marker'}
-            </DndButton>
-          </Tooltip>
-          <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />}>
-            Upload Map
-            <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml" onChange={handleUploadMap} />
+    <Box sx={{ height: 'calc(100vh - 64px - 48px)', display: 'flex', flexDirection: 'column' }}>
+      {/* Toolbar */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
+          Карта мира
+        </Typography>
+        <Box display="flex" gap={1} alignItems="center">
+          {/* Zoom controls */}
+          <Box display="flex" gap={0.5} sx={{
+            backgroundColor: 'rgba(255,255,255,0.06)',
+            borderRadius: 1,
+            p: 0.5,
+          }}>
+            <IconButton size="small" onClick={zoomOut} sx={{ color: '#fff' }}>
+              <ZoomOutIcon fontSize="small" />
+            </IconButton>
+            <Typography sx={{ color: '#fff', fontSize: '0.8rem', lineHeight: '30px', px: 1 }}>
+              {Math.round(zoom * 100)}%
+            </Typography>
+            <IconButton size="small" onClick={zoomIn} sx={{ color: '#fff' }}>
+              <ZoomInIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={resetView} sx={{ color: '#fff' }}>
+              <CenterFocusStrongIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<CloudUploadIcon />}
+            size="small"
+            sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
+          >
+            Загрузить карту
+            <input type="file" hidden accept="image/*" onChange={handleUploadMap} />
           </Button>
         </Box>
       </Box>
 
-      {currentProject.mapImagePath ? (
-        <Paper
-          sx={{
-            position: 'relative',
-            overflow: 'hidden',
-            cursor: addingMarker ? 'crosshair' : 'default',
-            borderRadius: 2,
-          }}
-        >
-          <div
-            ref={mapContainerRef}
-            onClick={handleMapClick}
-            style={{ position: 'relative', display: 'inline-block', width: '100%' }}
-          >
-            <img
-              src={currentProject.mapImagePath}
-              alt="Campaign Map"
-              style={{ width: '100%', display: 'block' }}
-            />
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mb: 1, display: 'block' }}>
+        Клик на карту — добавить маркер · Alt+перетаскивание — панорамирование · Колёсико — зум
+      </Typography>
 
-            {/* Markers */}
-            {markers.map(marker => (
-              <Tooltip key={marker.id} title={marker.title} arrow>
+      {/* Map area */}
+      <Box
+        ref={containerRef}
+        sx={{
+          flexGrow: 1,
+          overflow: 'hidden',
+          borderRadius: 2,
+          border: '1px solid rgba(255,255,255,0.1)',
+          backgroundColor: '#0a0a14',
+          position: 'relative',
+          cursor: isPanning ? 'grabbing' : 'crosshair',
+        }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {mapImageUrl ? (
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Box
+              sx={{
+                position: 'relative',
+                transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                transformOrigin: 'center center',
+                transition: isPanning ? 'none' : 'transform 0.1s ease-out',
+              }}
+            >
+              <img
+                ref={imgRef}
+                src={mapImageUrl}
+                alt="Map"
+                onClick={handleMapClick}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: 'calc(100vh - 200px)',
+                  display: 'block',
+                  userSelect: 'none',
+                  pointerEvents: 'auto',
+                }}
+                draggable={false}
+              />
+
+              {/* Markers */}
+              {markers.map(marker => (
                 <Box
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!addingMarker) {
-                      setSelectedMarker(marker);
-                    }
-                  }}
+                  key={marker.id}
+                  onClick={(e) => { e.stopPropagation(); setSelectedMarker(marker); }}
                   sx={{
                     position: 'absolute',
-                    left: `${marker.positionX * 100}%`,
-                    top: `${marker.positionY * 100}%`,
-                    transform: 'translate(-50%, -100%)',
+                    left: `${marker.x}%`,
+                    top: `${marker.y}%`,
+                    transform: 'translate(-50%, -50%)',
                     cursor: 'pointer',
-                    fontSize: '28px',
-                    filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.5))`,
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'translate(-50%, -100%) scale(1.3)' },
-                    zIndex: selectedMarker?.id === marker.id ? 10 : 1,
+                    zIndex: selectedMarker?.id === marker.id ? 10 : 5,
+                    transition: 'transform 0.15s',
+                    '&:hover': { transform: 'translate(-50%, -50%) scale(1.3)' },
                   }}
                 >
-                  📍
+                  {/* Marker icon with color */}
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      backgroundColor: marker.color || MARKER_COLORS[0],
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      boxShadow: `0 0 8px ${marker.color || MARKER_COLORS[0]}80, 0 2px 8px rgba(0,0,0,0.5)`,
+                      border: selectedMarker?.id === marker.id ? '2px solid #fff' : '2px solid rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    {MARKER_ICONS[marker.icon] || MARKER_ICONS.custom}
+                  </Box>
+                  {/* Title label */}
+                  <Typography
+                    sx={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      mt: 0.3,
+                      fontSize: `${Math.max(9, 11 / zoom)}px`,
+                      color: '#fff',
+                      textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)',
+                      whiteSpace: 'nowrap',
+                      fontWeight: 600,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {marker.title}
+                  </Typography>
                 </Box>
-              </Tooltip>
-            ))}
-          </div>
+              ))}
+            </Box>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.3)', mb: 2 }}>Карта не загружена</Typography>
+            <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />}>
+              Загрузить изображение карты
+              <input type="file" hidden accept="image/*" onChange={handleUploadMap} />
+            </Button>
+          </Box>
+        )}
 
-          {/* Selected marker info */}
-          {selectedMarker && (
-            <Paper
-              sx={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                width: 320,
-                p: 2,
-                zIndex: 20,
-              }}
-              elevation={8}
-            >
-              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                <Typography variant="h5">{selectedMarker.title}</Typography>
-                <IconButton size="small" onClick={() => setSelectedMarker(null)}>
-                  <CloseIcon />
-                </IconButton>
+        {/* Selected marker popup */}
+        {selectedMarker && (
+          <Paper
+            sx={{
+              position: 'absolute',
+              bottom: 16,
+              left: 16,
+              p: 2,
+              maxWidth: 300,
+              backgroundColor: 'rgba(20,20,35,0.95)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 20,
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography fontSize="1.2rem">{MARKER_ICONS[selectedMarker.icon] || '📍'}</Typography>
+                <Typography sx={{ fontWeight: 700, color: '#fff' }}>{selectedMarker.title}</Typography>
               </Box>
-              {selectedMarker.description && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  {selectedMarker.description}
-                </Typography>
-              )}
-              <Chip label={selectedMarker.icon} size="small" sx={{ mt: 1, mr: 1 }} />
-              <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                <IconButton size="small" onClick={() => handleEditMarker(selectedMarker)}>
+              <Box display="flex" gap={0.5}>
+                <IconButton size="small" onClick={() => handleEditMarker(selectedMarker)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
                   <EditIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" color="error" onClick={() => handleDeleteMarker(selectedMarker.id)}>
+                <IconButton size="small" onClick={() => handleDeleteMarker(selectedMarker)} sx={{ color: 'rgba(255,100,100,0.5)' }}>
                   <DeleteIcon fontSize="small" />
                 </IconButton>
               </Box>
-            </Paper>
-          )}
-        </Paper>
-      ) : (
-        <EmptyState
-          title="No map uploaded yet"
-          description="Upload a map image (JPEG, PNG, or SVG) to start placing markers"
-          actionLabel="Upload Map"
-          onAction={() => document.querySelector<HTMLInputElement>('input[type=file]')?.click()}
-        />
-      )}
+            </Box>
+            {selectedMarker.description && (
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+                {selectedMarker.description}
+              </Typography>
+            )}
+            <Button size="small" onClick={() => setSelectedMarker(null)} sx={{ mt: 1, color: 'rgba(255,255,255,0.4)' }}>
+              Закрыть
+            </Button>
+          </Paper>
+        )}
+      </Box>
 
-      {/* Marker Dialog */}
-      <Dialog open={markerDialogOpen} onClose={() => setMarkerDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingMarker ? 'Edit Marker' : 'Add Marker'}</DialogTitle>
+      {/* Add/Edit Marker Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      >
+        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+          {editingMarker ? 'Редактировать маркер' : 'Добавить маркер'}
+        </DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
             fullWidth
-            label="Marker Title"
-            value={markerTitle}
-            onChange={(e) => setMarkerTitle(e.target.value)}
+            label="Название маркера"
+            value={markerForm.title}
+            onChange={e => { setMarkerForm(prev => ({ ...prev, title: e.target.value })); }}
             margin="normal"
           />
           <TextField
             fullWidth
-            label="Description"
-            value={markerDescription}
-            onChange={(e) => setMarkerDescription(e.target.value)}
+            label="Описание"
+            value={markerForm.description}
+            onChange={e => { setMarkerForm(prev => ({ ...prev, description: e.target.value })); }}
             margin="normal"
             multiline
             rows={3}
           />
+
+          {/* Icon selector */}
           <FormControl fullWidth margin="normal">
-            <InputLabel>Icon</InputLabel>
-            <Select value={markerIcon} label="Icon" onChange={(e) => setMarkerIcon(e.target.value)}>
-              {MARKER_ICONS.map(icon => (
-                <MenuItem key={icon} value={icon}>{icon}</MenuItem>
+            <InputLabel>Иконка</InputLabel>
+            <Select
+              value={markerForm.icon}
+              label="Иконка"
+              onChange={e => { setMarkerForm(prev => ({ ...prev, icon: e.target.value })); }}
+            >
+              {Object.entries(MARKER_ICONS).map(([key, emoji]) => (
+                <MenuItem key={key} value={key}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography fontSize="1.2rem">{emoji}</Typography>
+                    <Typography>{key}</Typography>
+                  </Box>
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" gutterBottom>Color</Typography>
-            <Box display="flex" gap={1} flexWrap="wrap">
-              {MARKER_COLORS.map(color => (
-                <Box
-                  key={color}
-                  onClick={() => setMarkerColor(color)}
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    backgroundColor: color,
-                    cursor: 'pointer',
-                    border: markerColor === color ? '3px solid white' : '2px solid transparent',
-                    transition: 'border 0.2s',
-                  }}
-                />
-              ))}
+
+          {/* Color selector */}
+          <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 2, mb: 1 }}>
+            Цвет
+          </Typography>
+          <Box display="flex" gap={1} flexWrap="wrap">
+            {MARKER_COLORS.map(color => (
+              <Box
+                key={color}
+                onClick={() => setMarkerForm(prev => ({ ...prev, color }))}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  backgroundColor: color,
+                  cursor: 'pointer',
+                  border: markerForm.color === color ? '3px solid #fff' : '2px solid transparent',
+                  transition: 'all 0.15s',
+                  '&:hover': { transform: 'scale(1.2)' },
+                }}
+              />
+            ))}
+          </Box>
+
+          {/* Preview */}
+          <Box display="flex" alignItems="center" gap={1} mt={2} p={1.5}
+            sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1 }}
+          >
+            <Box sx={{
+              width: 36, height: 36, borderRadius: '50%', backgroundColor: markerForm.color,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+              boxShadow: `0 0 8px ${markerForm.color}80`,
+            }}>
+              {MARKER_ICONS[markerForm.icon] || '📍'}
             </Box>
+            <Typography sx={{ color: '#fff', fontWeight: 600 }}>
+              {markerForm.title || 'Превью маркера'}
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setMarkerDialogOpen(false)} color="inherit">Cancel</Button>
-          <DndButton variant="contained" onClick={handleSaveMarker} disabled={!markerTitle.trim()}>
-            {editingMarker ? 'Update' : 'Add'}
+          <Button onClick={() => setDialogOpen(false)} color="inherit">Отмена</Button>
+          <DndButton variant="contained" onClick={handleSaveMarker} disabled={!markerForm.title.trim()}>
+            {editingMarker ? 'Сохранить' : 'Добавить'}
           </DndButton>
         </DialogActions>
       </Dialog>
