@@ -17,6 +17,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ALLOWED_NOTE_FORMATS } from '@campaigner/shared';
 
 function stripMarkdown(text: string): string {
@@ -153,21 +155,66 @@ export const NotesPage: React.FC = () => {
                     </IconButton>
                   </Box>
                   {note.content && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{
-                        mt: 1,
+                    <Box sx={{
+                      mt: 1,
+                      maxHeight: '7em',
+                      overflow: 'hidden',
+                      position: 'relative',
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: '2em',
+                        background: 'linear-gradient(transparent, rgba(20,20,35,0.95))',
+                        pointerEvents: 'none',
+                      },
+                      // Compact markdown styles
+                      '& h1, & h2, & h3': {
+                        fontFamily: '"Cinzel", serif',
+                        color: 'primary.main',
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        my: 0.5,
+                      },
+                      '& p': { fontSize: '0.85rem', color: 'text.secondary', my: 0.3, lineHeight: 1.5 },
+                      '& ul, & ol': { pl: 2.5, my: 0.3 },
+                      '& li': { fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.5 },
+                      '& strong': { color: '#fff' },
+                      '& em': { color: 'rgba(255,255,255,0.8)' },
+                      '& a': { color: '#4ECDC4' },
+                      '& code': {
+                        backgroundColor: 'rgba(201,169,89,0.1)',
+                        px: 0.5,
+                        borderRadius: 0.5,
+                        fontSize: '0.8rem',
+                      },
+                      '& pre': {
+                        backgroundColor: 'rgba(0,0,0,0.3)',
+                        p: 1,
+                        borderRadius: 1,
+                        fontSize: '0.8rem',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {stripMarkdown(note.content)}
-                    </Typography>
+                      },
+                      '& blockquote': {
+                        borderLeft: '2px solid',
+                        borderColor: 'primary.main',
+                        pl: 1,
+                        ml: 0,
+                        opacity: 0.8,
+                      },
+                      '& hr': { border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', my: 0.5 },
+                      '& img': { display: 'none' },
+                    }}>
+                      {note.format === 'md' ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.85rem' }}>
+                          {note.content}
+                        </Typography>
+                      )}
+                    </Box>
                   )}
                   <Box display="flex" gap={0.5} mt={1.5} flexWrap="wrap" alignItems="center">
                     <Chip label={note.format.toUpperCase()} size="small" variant="outlined" />
