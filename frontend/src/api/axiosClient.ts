@@ -51,6 +51,10 @@ export const projectsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  exportProject: (id: number) =>
+    apiClient.get(`/projects/${id}/export`, { responseType: 'blob' }),
+  importProject: (data: any) =>
+    apiClient.post('/projects/import', data),
 };
 
 // Characters

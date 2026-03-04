@@ -5,10 +5,12 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useStyleStore } from '@/store/useStyleStore';
+import { projectsApi } from '@/api/axiosClient';
 import { DndButton } from '@/components/ui/DndButton';
 import { StyleCustomizer } from '@/components/ui/StyleCustomizer';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -62,6 +64,39 @@ export const HomePage: React.FC = () => {
         }
       }
     );
+  };
+
+  // ==================== Import ====================
+  const handleImportClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if (!data.version || !data.project) {
+          showSnackbar('Неверный формат файла. Ожидается экспорт Campaigner.', 'error');
+          return;
+        }
+
+        const res = await projectsApi.importProject(data);
+        showSnackbar(`Проект "${res.data.data.name}" импортирован!`, 'success');
+        fetchProjects(); // Refresh list
+        navigate(`/project/${res.data.data.id}/map`);
+      } catch (err: any) {
+        if (err instanceof SyntaxError) {
+          showSnackbar('Файл не является валидным JSON', 'error');
+        } else {
+          showSnackbar(err.message || 'Ошибка импорта', 'error');
+        }
+      }
+    };
+    input.click();
   };
 
   if (loading && projects.length === 0) return <LoadingScreen message="Загрузка кампаний..." />;
@@ -141,25 +176,44 @@ export const HomePage: React.FC = () => {
             >
               Проекты
             </Typography>
-            <DndButton
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setCreateDialogOpen(true)}
-              sx={{
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.18)',
-                color: '#fff',
-                fontWeight: 600,
-                letterSpacing: '0.05em',
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.14)',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                },
-                boxShadow: 'none',
-              }}
-            >
-              СОЗДАТЬ ПРОЕКТ
-            </DndButton>
+            <Box display="flex" gap={1}>
+              <DndButton
+                variant="outlined"
+                startIcon={<FileUploadIcon />}
+                onClick={handleImportClick}
+                sx={{
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: 'rgba(255,255,255,0.6)',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                  '&:hover': {
+                    borderColor: 'rgba(255,255,255,0.3)',
+                    color: '#fff',
+                  },
+                }}
+              >
+                ИМПОРТ
+              </DndButton>
+              <DndButton
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setCreateDialogOpen(true)}
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  color: '#fff',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.14)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                  },
+                  boxShadow: 'none',
+                }}
+              >
+                СОЗДАТЬ ПРОЕКТ
+              </DndButton>
+            </Box>
           </Box>
 
           {/* Project list */}
@@ -253,13 +307,13 @@ export const HomePage: React.FC = () => {
             >
               <Typography variant="h6">Нет проектов</Typography>
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Создайте первый проект, чтобы начать строить свой мир!
+                Создайте первый проект или импортируйте из JSON.
               </Typography>
             </Box>
           )}
         </Container>
 
-        {/* Spacer — pushes footer down */}
+        {/* Spacer */}
         <Box sx={{ flexGrow: 1 }} />
 
         {/* Footer */}

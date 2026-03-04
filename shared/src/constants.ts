@@ -17,14 +17,15 @@ export const LIMITS = {
   TIMELINE_EVENT_TITLE_MIN: 1,
   TIMELINE_EVENT_TITLE_MAX: 300,
   TIMELINE_EVENT_DESCRIPTION_MAX: 20000,
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
-  MAX_IMAGE_SIZE: 20 * 1024 * 1024, // 20MB для карт
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB для аватаров
+  MAX_IMAGE_SIZE: 50 * 1024 * 1024, // 50MB для карт
+  MAX_IMPORT_SIZE: 100 * 1024 * 1024, // 100MB для JSON импорта (base64 раздувает)
   MAX_TAGS_PER_ENTITY: 50,
   MAX_CONNECTIONS_PER_CHARACTER: 100,
 } as const;
 
 // ==================== Допустимые форматы ====================
-export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/svg+xml'] as const;
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'] as const;
 export const ALLOWED_NOTE_FORMATS = ['md', 'txt'] as const;
 
 // ==================== Статусы ====================

@@ -177,8 +177,12 @@ export function initializeDatabase(): void {
   // Indexes
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
+    CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(project_id, name);
+    CREATE INDEX IF NOT EXISTS idx_characters_status ON characters(project_id, status);
     CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
     CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
+    CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(project_id, note_type);
+    CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(project_id, is_pinned);
     CREATE INDEX IF NOT EXISTS idx_map_markers_project ON map_markers(project_id);
     CREATE INDEX IF NOT EXISTS idx_timeline_events_project ON timeline_events(project_id);
     CREATE INDEX IF NOT EXISTS idx_timeline_events_sort ON timeline_events(project_id, sort_order);
@@ -186,6 +190,8 @@ export function initializeDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id);
     CREATE INDEX IF NOT EXISTS idx_tags_project ON tags(project_id);
     CREATE INDEX IF NOT EXISTS idx_tag_associations_entity ON tag_associations(entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_tag_associations_tag ON tag_associations(tag_id);
+    CREATE INDEX IF NOT EXISTS idx_tag_associations_full ON tag_associations(entity_type, entity_id, tag_id);
     CREATE INDEX IF NOT EXISTS idx_relationships_source ON character_relationships(source_character_id);
     CREATE INDEX IF NOT EXISTS idx_relationships_target ON character_relationships(target_character_id);
     CREATE INDEX IF NOT EXISTS idx_relationships_project ON character_relationships(project_id);

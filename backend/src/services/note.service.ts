@@ -1,5 +1,5 @@
 import { getDb } from '../db/connection';
-import { CreateNote, UpdateNote, Note, Pagination } from '@campaigner/shared';
+import { CreateNote, UpdateNote, Note, Pagination, Tag } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
 
@@ -9,6 +9,33 @@ function mapRow(row: any): Note {
     isPinned: !!row.isPinned,
     tags: [],
   };
+}
+
+/** Batch-загрузка тегов для списка entity_id за 1 запрос */
+function loadTagsBatch(projectId: number, entityType: string, entityIds: number[]): Map<number, Tag[]> {
+  const result = new Map<number, Tag[]>();
+  if (entityIds.length === 0) return result;
+
+  entityIds.forEach(id => result.set(id, []));
+
+  const db = getDb();
+  const placeholders = entityIds.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT ta.entity_id, t.id, t.name, t.color
+    FROM tags t
+    JOIN tag_associations ta ON t.id = ta.tag_id
+    WHERE ta.entity_type = ? AND ta.entity_id IN (${placeholders}) AND t.project_id = ?
+    ORDER BY t.name ASC
+  `).all(entityType, ...entityIds, projectId) as any[];
+
+  for (const row of rows) {
+    const tags = result.get(row.entity_id);
+    if (tags) {
+      tags.push({ id: row.id, name: row.name, color: row.color });
+    }
+  }
+
+  return result;
 }
 
 export class NoteService {
@@ -57,9 +84,13 @@ export class NoteService {
       LIMIT ? OFFSET ?
     `).all(...params, limit, offset) as any[];
 
+    // Batch-загрузка тегов — 1 запрос вместо N
+    const ids = rows.map(r => r.id);
+    const tagsMap = loadTagsBatch(projectId, 'note', ids);
+
     const items = rows.map(row => {
       const note = mapRow(row);
-      note.tags = TagService.getTagsForEntity(projectId, 'note', row.id);
+      note.tags = tagsMap.get(row.id) || [];
       return note;
     });
 

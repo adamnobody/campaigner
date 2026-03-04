@@ -2,9 +2,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Box, Typography, Paper, TextField, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Tooltip,
+  Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -16,28 +15,12 @@ import { mapApi, projectsApi } from '@/api/axiosClient';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 
-// Иконки маркеров
 const MARKER_ICONS: Record<string, string> = {
-  castle: '🏰',
-  city: '🏙️',
-  village: '🏘️',
-  tavern: '🍺',
-  dungeon: '⚔️',
-  forest: '🌲',
-  mountain: '⛰️',
-  river: '🌊',
-  cave: '🕳️',
-  temple: '⛪',
-  ruins: '🏚️',
-  port: '⚓',
-  bridge: '🌉',
-  tower: '🗼',
-  camp: '🏕️',
-  battlefield: '�crossed_swords',
-  mine: '⛏️',
-  farm: '🌾',
-  graveyard: '💀',
-  custom: '📍',
+  castle: '🏰', city: '🏙️', village: '🏘️', tavern: '🍺',
+  dungeon: '⚔️', forest: '🌲', mountain: '⛰️', river: '🌊',
+  cave: '🕳️', temple: '⛪', ruins: '🏚️', port: '⚓',
+  bridge: '🌉', tower: '🗼', camp: '🏕️', battlefield: '⚔️',
+  mine: '⛏️', farm: '🌾', graveyard: '💀', custom: '📍',
 };
 
 const MARKER_COLORS = [
@@ -56,6 +39,10 @@ interface Marker {
   color: string;
 }
 
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 5;
+const ZOOM_SPEED = 0.1;
+
 export const MapPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
@@ -68,24 +55,27 @@ export const MapPage: React.FC = () => {
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Zoom & pan
+  // Transform state: zoom + pan
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const panStartRef = useRef({ x: 0, y: 0 });
+  const panOriginRef = useRef({ x: 0, y: 0 });
+
+  // Refs for current values (used in native event listeners)
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = pan; }, [pan]);
 
   // Marker dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
   const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null);
   const [markerForm, setMarkerForm] = useState({
-    title: '',
-    description: '',
-    icon: 'custom',
-    color: MARKER_COLORS[0],
+    title: '', description: '', icon: 'custom', color: MARKER_COLORS[0],
   });
 
-  // Selected marker popup
   const [selectedMarker, setSelectedMarker] = useState<Marker | null>(null);
 
   // Fetch
@@ -100,35 +90,88 @@ export const MapPage: React.FC = () => {
     }).catch(() => setLoading(false));
   }, [pid]);
 
-  // Zoom with mouse wheel
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom(prev => Math.min(5, Math.max(0.2, prev + delta)));
+  // ==================== Zoom to cursor (native listener) ====================
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const oldZoom = zoomRef.current;
+      const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
+      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, oldZoom + delta));
+
+      if (newZoom === oldZoom) return;
+
+      const rect = container.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+
+      const oldPan = panRef.current;
+      const newPanX = cursorX - ((cursorX - oldPan.x) / oldZoom) * newZoom;
+      const newPanY = cursorY - ((cursorY - oldPan.y) / oldZoom) * newZoom;
+
+      zoomRef.current = newZoom;
+      panRef.current = { x: newPanX, y: newPanY };
+
+      setZoom(newZoom);
+      setPan({ x: newPanX, y: newPanY });
+    };
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => container.removeEventListener('wheel', onWheel);
+  }, [loading]);
+
+  // Zoom buttons (zoom to center of container)
+  const zoomToCenter = useCallback((newZoom: number) => {
+    const container = containerRef.current;
+    if (!container) { setZoom(newZoom); return; }
+
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const oldZoom = zoomRef.current;
+    const oldPan = panRef.current;
+
+    const newPanX = centerX - ((centerX - oldPan.x) / oldZoom) * newZoom;
+    const newPanY = centerY - ((centerY - oldPan.y) / oldZoom) * newZoom;
+
+    setZoom(newZoom);
+    setPan({ x: newPanX, y: newPanY });
   }, []);
 
-  const zoomIn = () => setZoom(prev => Math.min(5, prev + 0.2));
-  const zoomOut = () => setZoom(prev => Math.max(0.2, prev - 0.2));
+  const zoomIn = () => zoomToCenter(Math.min(MAX_ZOOM, zoomRef.current + 0.2));
+  const zoomOut = () => zoomToCenter(Math.max(MIN_ZOOM, zoomRef.current - 0.2));
   const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
-  // Pan
+  // ==================== Pan ====================
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Middle button or Alt+Left
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
       setIsPanning(true);
-      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      panStartRef.current = { x: e.clientX, y: e.clientY };
+      panOriginRef.current = { ...panRef.current };
       e.preventDefault();
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
-      setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      setPan({
+        x: panOriginRef.current.x + dx,
+        y: panOriginRef.current.y + dy,
+      });
     }
   };
 
   const handleMouseUp = () => setIsPanning(false);
 
-  // Click on map to add marker
+  // ==================== Markers ====================
   const handleMapClick = (e: React.MouseEvent) => {
     if (isPanning) return;
     if (!imgRef.current) return;
@@ -153,7 +196,6 @@ export const MapPage: React.FC = () => {
     color: m.color || MARKER_COLORS[0],
   });
 
-  // Save marker
   const handleSaveMarker = async () => {
     if (!markerForm.title.trim()) return;
     try {
@@ -187,7 +229,6 @@ export const MapPage: React.FC = () => {
     }
   };
 
-  // Delete marker
   const handleDeleteMarker = (marker: Marker) => {
     showConfirmDialog('Удалить маркер', `Удалить "${marker.title}"?`, async () => {
       try {
@@ -201,7 +242,6 @@ export const MapPage: React.FC = () => {
     });
   };
 
-  // Edit marker
   const handleEditMarker = (marker: Marker) => {
     setEditingMarker(marker);
     setMarkerForm({
@@ -213,7 +253,6 @@ export const MapPage: React.FC = () => {
     setDialogOpen(true);
   };
 
-  // Upload map image
   const handleUploadMap = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -234,9 +273,7 @@ export const MapPage: React.FC = () => {
     );
   }
 
-  const mapImageUrl = project?.mapImagePath
-    ? `${project.mapImagePath}`
-    : null;
+  const mapImageUrl = project?.mapImagePath ? `${project.mapImagePath}` : null;
 
   return (
     <Box sx={{ height: 'calc(100vh - 64px - 48px)', display: 'flex', flexDirection: 'column' }}>
@@ -246,16 +283,13 @@ export const MapPage: React.FC = () => {
           Карта мира
         </Typography>
         <Box display="flex" gap={1} alignItems="center">
-          {/* Zoom controls */}
           <Box display="flex" gap={0.5} sx={{
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            borderRadius: 1,
-            p: 0.5,
+            backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 1, p: 0.5,
           }}>
             <IconButton size="small" onClick={zoomOut} sx={{ color: '#fff' }}>
               <ZoomOutIcon fontSize="small" />
             </IconButton>
-            <Typography sx={{ color: '#fff', fontSize: '0.8rem', lineHeight: '30px', px: 1 }}>
+            <Typography sx={{ color: '#fff', fontSize: '0.8rem', lineHeight: '30px', px: 1, minWidth: 40, textAlign: 'center' }}>
               {Math.round(zoom * 100)}%
             </Typography>
             <IconButton size="small" onClick={zoomIn} sx={{ color: '#fff' }}>
@@ -265,12 +299,8 @@ export const MapPage: React.FC = () => {
               <CenterFocusStrongIcon fontSize="small" />
             </IconButton>
           </Box>
-
           <Button
-            component="label"
-            variant="outlined"
-            startIcon={<CloudUploadIcon />}
-            size="small"
+            component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small"
             sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
           >
             Загрузить карту
@@ -280,7 +310,7 @@ export const MapPage: React.FC = () => {
       </Box>
 
       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mb: 1, display: 'block' }}>
-        Клик на карту — добавить маркер · Alt+перетаскивание — панорамирование · Колёсико — зум
+        Клик на карту — добавить маркер · Alt+перетаскивание или СКМ — панорамирование · Колёсико — зум к курсору
       </Typography>
 
       {/* Map area */}
@@ -295,7 +325,6 @@ export const MapPage: React.FC = () => {
           position: 'relative',
           cursor: isPanning ? 'grabbing' : 'crosshair',
         }}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -304,97 +333,75 @@ export const MapPage: React.FC = () => {
         {mapImageUrl ? (
           <Box
             sx={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
+              position: 'absolute',
+              transformOrigin: '0 0',
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transition: isPanning ? 'none' : 'transform 0.1s ease-out',
             }}
           >
-            <Box
-              sx={{
-                position: 'relative',
-                transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-                transformOrigin: 'center center',
-                transition: isPanning ? 'none' : 'transform 0.1s ease-out',
+            <img
+              ref={imgRef}
+              src={mapImageUrl}
+              alt="Map"
+              onClick={handleMapClick}
+              style={{
+                display: 'block',
+                maxWidth: containerRef.current ? containerRef.current.clientWidth : '100%',
+                maxHeight: containerRef.current ? containerRef.current.clientHeight : 'calc(100vh - 200px)',
+                userSelect: 'none',
+                pointerEvents: 'auto',
               }}
-            >
-              <img
-                ref={imgRef}
-                src={mapImageUrl}
-                alt="Map"
-                onClick={handleMapClick}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: 'calc(100vh - 200px)',
-                  display: 'block',
-                  userSelect: 'none',
-                  pointerEvents: 'auto',
-                }}
-                draggable={false}
-              />
+              draggable={false}
+            />
 
-              {/* Markers */}
-              {markers.map(marker => {
-                const markerSize = Math.max(20, 36 / zoom);
-                const fontSize = Math.max(10, 18 / zoom);
-                const borderWidth = Math.max(1, 2 / zoom);
-                const labelSize = Math.max(7, 11 / zoom);
+            {/* Markers */}
+            {markers.map(marker => {
+              const markerSize = Math.max(20, 36 / zoom);
+              const fontSize = Math.max(10, 18 / zoom);
+              const borderWidth = Math.max(1, 2 / zoom);
+              const labelSize = Math.max(7, 11 / zoom);
 
-                return (
-                  <Box
-                    key={marker.id}
-                    onClick={(e) => { e.stopPropagation(); setSelectedMarker(marker); }}
-                    sx={{
-                      position: 'absolute',
-                      left: `${marker.x}%`,
-                      top: `${marker.y}%`,
-                      transform: 'translate(-50%, -50%)',
-                      cursor: 'pointer',
-                      zIndex: selectedMarker?.id === marker.id ? 10 : 5,
-                      transition: 'transform 0.15s',
-                      '&:hover': { transform: 'translate(-50%, -50%) scale(1.3)' },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: markerSize,
-                        height: markerSize,
-                        borderRadius: '50%',
-                        backgroundColor: marker.color || MARKER_COLORS[0],
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: `${fontSize}px`,
-                        boxShadow: `0 0 ${Math.max(4, 8 / zoom)}px ${marker.color || MARKER_COLORS[0]}80, 0 ${Math.max(1, 2 / zoom)}px ${Math.max(4, 8 / zoom)}px rgba(0,0,0,0.5)`,
-                        border: selectedMarker?.id === marker.id
-                          ? `${borderWidth}px solid #fff`
-                          : `${borderWidth}px solid rgba(0,0,0,0.3)`,
-                      }}
-                    >
-                      {MARKER_ICONS[marker.icon] || MARKER_ICONS.custom}
-                    </Box>
-                    <Typography
-                      sx={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        mt: `${Math.max(1, 3 / zoom)}px`,
-                        fontSize: `${labelSize}px`,
-                        color: '#fff',
-                        textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)',
-                        whiteSpace: 'nowrap',
-                        fontWeight: 600,
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      {marker.title}
-                    </Typography>
+              return (
+                <Box
+                  key={marker.id}
+                  onClick={(e) => { e.stopPropagation(); setSelectedMarker(marker); }}
+                  sx={{
+                    position: 'absolute',
+                    left: `${marker.x}%`,
+                    top: `${marker.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    cursor: 'pointer',
+                    zIndex: selectedMarker?.id === marker.id ? 10 : 5,
+                    transition: 'transform 0.15s',
+                    '&:hover': { transform: 'translate(-50%, -50%) scale(1.3)' },
+                  }}
+                >
+                  <Box sx={{
+                    width: markerSize, height: markerSize, borderRadius: '50%',
+                    backgroundColor: marker.color || MARKER_COLORS[0],
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: `${fontSize}px`,
+                    boxShadow: `0 0 ${Math.max(4, 8 / zoom)}px ${marker.color || MARKER_COLORS[0]}80, 0 ${Math.max(1, 2 / zoom)}px ${Math.max(4, 8 / zoom)}px rgba(0,0,0,0.5)`,
+                    border: selectedMarker?.id === marker.id
+                      ? `${borderWidth}px solid #fff`
+                      : `${borderWidth}px solid rgba(0,0,0,0.3)`,
+                  }}>
+                    {MARKER_ICONS[marker.icon] || MARKER_ICONS.custom}
                   </Box>
-                );
-              })}
-            </Box>
+                  <Typography sx={{
+                    position: 'absolute', top: '100%', left: '50%',
+                    transform: 'translateX(-50%)',
+                    mt: `${Math.max(1, 3 / zoom)}px`,
+                    fontSize: `${labelSize}px`,
+                    color: '#fff',
+                    textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)',
+                    whiteSpace: 'nowrap', fontWeight: 600, pointerEvents: 'none',
+                  }}>
+                    {marker.title}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -408,19 +415,11 @@ export const MapPage: React.FC = () => {
 
         {/* Selected marker popup */}
         {selectedMarker && (
-          <Paper
-            sx={{
-              position: 'absolute',
-              bottom: 16,
-              left: 16,
-              p: 2,
-              maxWidth: 300,
-              backgroundColor: 'rgba(20,20,35,0.95)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              backdropFilter: 'blur(10px)',
-              zIndex: 20,
-            }}
-          >
+          <Paper sx={{
+            position: 'absolute', bottom: 16, left: 16, p: 2, maxWidth: 300,
+            backgroundColor: 'rgba(20,20,35,0.95)', border: '1px solid rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(10px)', zIndex: 20,
+          }}>
             <Box display="flex" justifyContent="space-between" alignItems="flex-start">
               <Box display="flex" alignItems="center" gap={1}>
                 <Typography fontSize="1.2rem">{MARKER_ICONS[selectedMarker.icon] || '📍'}</Typography>
@@ -449,41 +448,22 @@ export const MapPage: React.FC = () => {
 
       {/* Add/Edit Marker Dialog */}
       <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
+        open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
       >
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
           {editingMarker ? 'Редактировать маркер' : 'Добавить маркер'}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            label="Название маркера"
-            value={markerForm.title}
-            onChange={e => { setMarkerForm(prev => ({ ...prev, title: e.target.value })); }}
-            margin="normal"
-          />
-          <TextField
-            fullWidth
-            label="Описание"
-            value={markerForm.description}
-            onChange={e => { setMarkerForm(prev => ({ ...prev, description: e.target.value })); }}
-            margin="normal"
-            multiline
-            rows={3}
-          />
-
-          {/* Icon selector */}
+          <TextField fullWidth label="Название маркера" value={markerForm.title}
+            onChange={e => setMarkerForm(prev => ({ ...prev, title: e.target.value }))} margin="normal" />
+          <TextField fullWidth label="Описание" value={markerForm.description}
+            onChange={e => setMarkerForm(prev => ({ ...prev, description: e.target.value }))}
+            margin="normal" multiline rows={3} />
           <FormControl fullWidth margin="normal">
             <InputLabel>Иконка</InputLabel>
-            <Select
-              value={markerForm.icon}
-              label="Иконка"
-              onChange={e => { setMarkerForm(prev => ({ ...prev, icon: e.target.value })); }}
-            >
+            <Select value={markerForm.icon} label="Иконка"
+              onChange={e => setMarkerForm(prev => ({ ...prev, icon: e.target.value }))}>
               {Object.entries(MARKER_ICONS).map(([key, emoji]) => (
                 <MenuItem key={key} value={key}>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -494,34 +474,19 @@ export const MapPage: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-
-          {/* Color selector */}
-          <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 2, mb: 1 }}>
-            Цвет
-          </Typography>
+          <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 2, mb: 1 }}>Цвет</Typography>
           <Box display="flex" gap={1} flexWrap="wrap">
             {MARKER_COLORS.map(color => (
-              <Box
-                key={color}
-                onClick={() => setMarkerForm(prev => ({ ...prev, color }))}
+              <Box key={color} onClick={() => setMarkerForm(prev => ({ ...prev, color }))}
                 sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  backgroundColor: color,
-                  cursor: 'pointer',
+                  width: 32, height: 32, borderRadius: '50%', backgroundColor: color, cursor: 'pointer',
                   border: markerForm.color === color ? '3px solid #fff' : '2px solid transparent',
-                  transition: 'all 0.15s',
-                  '&:hover': { transform: 'scale(1.2)' },
-                }}
-              />
+                  transition: 'all 0.15s', '&:hover': { transform: 'scale(1.2)' },
+                }} />
             ))}
           </Box>
-
-          {/* Preview */}
           <Box display="flex" alignItems="center" gap={1} mt={2} p={1.5}
-            sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1 }}
-          >
+            sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
             <Box sx={{
               width: 36, height: 36, borderRadius: '50%', backgroundColor: markerForm.color,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',

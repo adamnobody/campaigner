@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/Layout/AppLayout';
 import { SplashScreen } from './components/ui/SplashScreen';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { MapPage } from './pages/MapPage';
 import { CharactersPage } from './pages/CharactersPage';
@@ -22,28 +23,30 @@ const App: React.FC = () => {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<AppLayout />}>
-        <Route index element={<HomePage />} />
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/" element={<AppLayout />}>
+          <Route index element={<HomePage />} />
 
-        <Route path="project/:projectId">
-          <Route index element={<Navigate to="map" replace />} />
-          <Route path="map" element={<MapPage />} />
-          <Route path="characters" element={<CharactersPage />} />
-          <Route path="characters/new" element={<CharacterDetailPage />} />
-          <Route path="characters/graph" element={<CharacterGraphPage />} />
-          <Route path="characters/:characterId" element={<CharacterDetailPage />} />
-          <Route path="notes" element={<NotesPage />} />
-          <Route path="notes/:noteId" element={<NoteEditorPage />} />
-          <Route path="wiki" element={<WikiPage />} />
-          <Route path="timeline" element={<TimelinePage />} />
-          <Route path="files" element={<FilesPage />} />
-          <Route path="settings" element={<ProjectSettingsPage />} />
+          <Route path="project/:projectId">
+            <Route index element={<Navigate to="map" replace />} />
+            <Route path="map" element={<ErrorBoundary><MapPage /></ErrorBoundary>} />
+            <Route path="characters" element={<ErrorBoundary><CharactersPage /></ErrorBoundary>} />
+            <Route path="characters/new" element={<ErrorBoundary><CharacterDetailPage /></ErrorBoundary>} />
+            <Route path="characters/graph" element={<ErrorBoundary><CharacterGraphPage /></ErrorBoundary>} />
+            <Route path="characters/:characterId" element={<ErrorBoundary><CharacterDetailPage /></ErrorBoundary>} />
+            <Route path="notes" element={<ErrorBoundary><NotesPage /></ErrorBoundary>} />
+            <Route path="notes/:noteId" element={<ErrorBoundary><NoteEditorPage /></ErrorBoundary>} />
+            <Route path="wiki" element={<ErrorBoundary><WikiPage /></ErrorBoundary>} />
+            <Route path="timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
+            <Route path="files" element={<ErrorBoundary><FilesPage /></ErrorBoundary>} />
+            <Route path="settings" element={<ErrorBoundary><ProjectSettingsPage /></ErrorBoundary>} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+      </Routes>
+    </ErrorBoundary>
   );
 };
 

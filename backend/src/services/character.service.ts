@@ -2,7 +2,7 @@ import { getDb } from '../db/connection';
 import {
   CreateCharacter, UpdateCharacter, Character,
   CreateRelationship, UpdateRelationship, CharacterRelationship,
-  CharacterGraph, Pagination
+  CharacterGraph, Pagination, Tag
 } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
@@ -13,6 +13,33 @@ function mapRow(row: any): Character {
     tags: [],
     level: row.level ?? null,
   };
+}
+
+/** Batch-загрузка тегов для списка entity_id за 1 запрос */
+function loadTagsBatch(projectId: number, entityType: string, entityIds: number[]): Map<number, Tag[]> {
+  const result = new Map<number, Tag[]>();
+  if (entityIds.length === 0) return result;
+
+  entityIds.forEach(id => result.set(id, []));
+
+  const db = getDb();
+  const placeholders = entityIds.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT ta.entity_id, t.id, t.name, t.color
+    FROM tags t
+    JOIN tag_associations ta ON t.id = ta.tag_id
+    WHERE ta.entity_type = ? AND ta.entity_id IN (${placeholders}) AND t.project_id = ?
+    ORDER BY t.name ASC
+  `).all(entityType, ...entityIds, projectId) as any[];
+
+  for (const row of rows) {
+    const tags = result.get(row.entity_id);
+    if (tags) {
+      tags.push({ id: row.id, name: row.name, color: row.color });
+    }
+  }
+
+  return result;
 }
 
 export class CharacterService {
@@ -48,9 +75,13 @@ export class CharacterService {
       LIMIT ? OFFSET ?
     `).all(...params, limit, offset) as any[];
 
+    // Batch-загрузка тегов — 1 запрос вместо N
+    const ids = rows.map(r => r.id);
+    const tagsMap = loadTagsBatch(projectId, 'character', ids);
+
     const items = rows.map(row => {
       const character = mapRow(row);
-      character.tags = TagService.getTagsForEntity(projectId, 'character', row.id);
+      character.tags = tagsMap.get(row.id) || [];
       return character;
     });
 
@@ -132,20 +163,28 @@ export class CharacterService {
 
   // ==================== Relationships ====================
 
-  static getRelationships(projectId: number): CharacterRelationship[] {
+  static getRelationships(projectId: number): any[] {
     const db = getDb();
+    // JOIN для имён персонажей — убираем необходимость дополнительных запросов на фронте
     return db.prepare(`
-      SELECT id, project_id as projectId, source_character_id as sourceCharacterId,
-             target_character_id as targetCharacterId, relationship_type as relationshipType,
-             custom_label as customLabel, description, is_bidirectional as isBidirectional,
-             created_at as createdAt
-      FROM character_relationships WHERE project_id = ?
-    `).all(projectId) as CharacterRelationship[];
+      SELECT cr.id, cr.project_id as projectId,
+             cr.source_character_id as sourceCharacterId,
+             cr.target_character_id as targetCharacterId,
+             cr.relationship_type as relationshipType,
+             cr.custom_label as customLabel, cr.description,
+             cr.is_bidirectional as isBidirectional,
+             cr.created_at as createdAt,
+             sc.name as sourceCharacterName,
+             tc.name as targetCharacterName
+      FROM character_relationships cr
+      LEFT JOIN characters sc ON cr.source_character_id = sc.id
+      LEFT JOIN characters tc ON cr.target_character_id = tc.id
+      WHERE cr.project_id = ?
+    `).all(projectId) as any[];
   }
 
-  static createRelationship(data: CreateRelationship): CharacterRelationship {
+  static createRelationship(data: CreateRelationship): any {
     const db = getDb();
-    // Verify both characters exist
     this.getById(data.sourceCharacterId);
     this.getById(data.targetCharacterId);
 
@@ -159,15 +198,21 @@ export class CharacterService {
       data.isBidirectional ? 1 : 0
     );
 
-    const row = db.prepare(`
-      SELECT id, project_id as projectId, source_character_id as sourceCharacterId,
-             target_character_id as targetCharacterId, relationship_type as relationshipType,
-             custom_label as customLabel, description, is_bidirectional as isBidirectional,
-             created_at as createdAt
-      FROM character_relationships WHERE id = ?
-    `).get(result.lastInsertRowid as number) as CharacterRelationship;
-
-    return row;
+    return db.prepare(`
+      SELECT cr.id, cr.project_id as projectId,
+             cr.source_character_id as sourceCharacterId,
+             cr.target_character_id as targetCharacterId,
+             cr.relationship_type as relationshipType,
+             cr.custom_label as customLabel, cr.description,
+             cr.is_bidirectional as isBidirectional,
+             cr.created_at as createdAt,
+             sc.name as sourceCharacterName,
+             tc.name as targetCharacterName
+      FROM character_relationships cr
+      LEFT JOIN characters sc ON cr.source_character_id = sc.id
+      LEFT JOIN characters tc ON cr.target_character_id = tc.id
+      WHERE cr.id = ?
+    `).get(result.lastInsertRowid as number);
   }
 
   static updateRelationship(id: number, data: UpdateRelationship): CharacterRelationship {
