@@ -1,25 +1,38 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, Paper, TextField, IconButton,
-  ToggleButtonGroup, ToggleButton, Chip,
+  ToggleButtonGroup, ToggleButton, Chip, Divider,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SyncIcon from '@mui/icons-material/Sync';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import CodeIcon from '@mui/icons-material/Code';
+import TitleIcon from '@mui/icons-material/Title';
+import LinkIcon from '@mui/icons-material/Link';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useHotkeys } from '@/hooks/useHotkeys';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
-const AUTOSAVE_DELAY = 30000; // 30 секунд
+const AUTOSAVE_DELAY = 3000; // 3 секунды
+
+type EditorMode = 'edit' | 'preview' | 'split';
 
 export const NoteEditorPage: React.FC = () => {
   const { projectId, noteId } = useParams<{ projectId: string; noteId: string }>();
@@ -29,7 +42,7 @@ export const NoteEditorPage: React.FC = () => {
   const { currentNote, fetchNote, updateNote } = useNoteStore();
   const { showSnackbar } = useUIStore();
 
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const [mode, setMode] = useState<EditorMode>('split');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
@@ -41,6 +54,9 @@ export const NoteEditorPage: React.FC = () => {
   const hasChangesRef = useRef(false);
   const titleRef = useRef('');
   const contentRef = useRef('');
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorScrollRef = useRef<HTMLDivElement>(null);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -62,7 +78,7 @@ export const NoteEditorPage: React.FC = () => {
     }
   }, [currentNote]);
 
-  // Core save function
+  // ==================== Save ====================
   const doSave = useCallback(async (isAuto: boolean = false) => {
     if (!hasChangesRef.current) return;
 
@@ -87,7 +103,6 @@ export const NoteEditorPage: React.FC = () => {
     }
   }, [nid, updateNote, showSnackbar]);
 
-  // Autosave timer — reset on every change
   const scheduleAutosave = useCallback(() => {
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
@@ -97,7 +112,6 @@ export const NoteEditorPage: React.FC = () => {
     }, AUTOSAVE_DELAY);
   }, [doSave]);
 
-  // Handle changes
   const handleTitleChange = (value: string) => {
     setTitle(value);
     setHasChanges(true);
@@ -112,47 +126,114 @@ export const NoteEditorPage: React.FC = () => {
     scheduleAutosave();
   };
 
-  // Manual save
   const handleSave = useCallback(() => {
     doSave(false);
   }, [doSave]);
 
-  // Keyboard shortcut Ctrl+S
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleSave]);
+  // ==================== Hotkeys ====================
+  useHotkeys(useMemo(() => [
+    { key: 's', ctrl: true, handler: () => doSave(false), description: 'Save note' },
+    { key: 'b', ctrl: true, handler: () => insertMarkdown('bold'), description: 'Bold' },
+    { key: 'i', ctrl: true, handler: () => insertMarkdown('italic'), description: 'Italic' },
+  ], [doSave]));
 
-  // Save on unmount if there are changes
+  // Save on unmount
   useEffect(() => {
     return () => {
-      if (autosaveTimerRef.current) {
-        clearTimeout(autosaveTimerRef.current);
-      }
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
       if (hasChangesRef.current) {
-        // Fire and forget — best effort save on leave
         updateNote(nid, { title: titleRef.current, content: contentRef.current }).catch(() => {});
       }
     };
   }, [nid, updateNote]);
 
-  // Warn before leaving with unsaved changes
+  // Warn before leaving
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (hasChangesRef.current) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
+      if (hasChangesRef.current) { e.preventDefault(); e.returnValue = ''; }
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, []);
+
+  // ==================== Markdown toolbar ====================
+  const insertMarkdown = useCallback((type: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = content.substring(start, end);
+    let insertion = '';
+    let cursorOffset = 0;
+
+    switch (type) {
+      case 'bold':
+        insertion = `**${selected || 'жирный текст'}**`;
+        cursorOffset = selected ? insertion.length : 2;
+        break;
+      case 'italic':
+        insertion = `*${selected || 'курсив'}*`;
+        cursorOffset = selected ? insertion.length : 1;
+        break;
+      case 'heading':
+        insertion = `## ${selected || 'Заголовок'}`;
+        cursorOffset = insertion.length;
+        break;
+      case 'link':
+        insertion = `[${selected || 'текст'}](url)`;
+        cursorOffset = selected ? insertion.length - 1 : 1;
+        break;
+      case 'code':
+        if (selected.includes('\n')) {
+          insertion = `\`\`\`\n${selected || 'код'}\n\`\`\``;
+        } else {
+          insertion = `\`${selected || 'код'}\``;
+        }
+        cursorOffset = selected ? insertion.length : 1;
+        break;
+      case 'list':
+        insertion = selected
+          ? selected.split('\n').map(line => `- ${line}`).join('\n')
+          : '- элемент списка';
+        cursorOffset = insertion.length;
+        break;
+      case 'quote':
+        insertion = selected
+          ? selected.split('\n').map(line => `> ${line}`).join('\n')
+          : '> цитата';
+        cursorOffset = insertion.length;
+        break;
+      case 'hr':
+        insertion = '\n---\n';
+        cursorOffset = insertion.length;
+        break;
+      default:
+        return;
+    }
+
+    const newContent = content.substring(0, start) + insertion + content.substring(end);
+    handleContentChange(newContent);
+
+    // Restore cursor position
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = start + cursorOffset;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
+  }, [content]);
+
+  // ==================== Synced scroll ====================
+  const handleEditorScroll = useCallback(() => {
+    if (!editorScrollRef.current || !previewScrollRef.current) return;
+    if (mode !== 'split') return;
+
+    const editor = editorScrollRef.current;
+    const preview = previewScrollRef.current;
+
+    const scrollRatio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
+    preview.scrollTop = scrollRatio * (preview.scrollHeight - preview.clientHeight);
+  }, [mode]);
 
   const handleTogglePin = async () => {
     if (!currentNote) return;
@@ -174,19 +255,113 @@ export const NoteEditorPage: React.FC = () => {
     return lastSaved.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   };
 
+  // ==================== Word count ====================
+  const wordCount = useMemo(() => {
+    const words = content.trim().split(/\s+/).filter(Boolean).length;
+    const chars = content.length;
+    return { words, chars };
+  }, [content]);
+
   if (!currentNote) return <LoadingScreen />;
+
+  const isMarkdown = currentNote.format === 'md';
+
+  // ==================== Markdown preview styles ====================
+  const markdownStyles = {
+    '& h1': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.8rem', mt: 3, mb: 1, borderBottom: '1px solid rgba(201,169,89,0.2)', pb: 1 },
+    '& h2': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.4rem', mt: 2.5, mb: 1 },
+    '& h3': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.15rem', mt: 2, mb: 0.5 },
+    '& p': { mb: 1.5, lineHeight: 1.8, color: 'rgba(255,255,255,0.85)' },
+    '& a': { color: '#4ECDC4', textDecoration: 'underline', textDecorationColor: 'rgba(78,205,196,0.3)' },
+    '& code': { backgroundColor: 'rgba(201,169,89,0.1)', padding: '2px 6px', borderRadius: '4px', fontFamily: '"Fira Code", monospace', fontSize: '0.85em' },
+    '& pre': { backgroundColor: 'rgba(0,0,0,0.4)', p: 2, borderRadius: 2, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', '& code': { backgroundColor: 'transparent', p: 0 } },
+    '& blockquote': { borderLeft: '3px solid', borderColor: 'primary.main', pl: 2, ml: 0, opacity: 0.85, fontStyle: 'italic' },
+    '& ul, & ol': { pl: 3, mb: 1.5 },
+    '& li': { mb: 0.5, lineHeight: 1.7 },
+    '& table': { borderCollapse: 'collapse', width: '100%', mb: 2 },
+    '& th, & td': { border: '1px solid rgba(255,255,255,0.1)', px: 2, py: 1, textAlign: 'left' },
+    '& th': { backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 },
+    '& hr': { border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', my: 3 },
+    '& img': { maxWidth: '100%', borderRadius: 1 },
+    '& strong': { color: '#fff', fontWeight: 700 },
+    '& em': { color: 'rgba(255,255,255,0.9)' },
+  };
+
+  // ==================== Render ====================
+  const renderEditor = () => (
+    <Box
+      ref={editorScrollRef}
+      onScroll={handleEditorScroll}
+      sx={{ height: '100%', overflow: 'auto' }}
+    >
+      {/* Markdown Toolbar */}
+      {isMarkdown && (
+        <Box sx={{
+          display: 'flex', gap: 0.5, p: 1,
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          flexWrap: 'wrap',
+        }}>
+          <ToolbarButton icon={<TitleIcon />} tooltip="Заголовок" onClick={() => insertMarkdown('heading')} />
+          <ToolbarButton icon={<FormatBoldIcon />} tooltip="Жирный (Ctrl+B)" onClick={() => insertMarkdown('bold')} />
+          <ToolbarButton icon={<FormatItalicIcon />} tooltip="Курсив (Ctrl+I)" onClick={() => insertMarkdown('italic')} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
+          <ToolbarButton icon={<FormatListBulletedIcon />} tooltip="Список" onClick={() => insertMarkdown('list')} />
+          <ToolbarButton icon={<FormatQuoteIcon />} tooltip="Цитата" onClick={() => insertMarkdown('quote')} />
+          <ToolbarButton icon={<CodeIcon />} tooltip="Код" onClick={() => insertMarkdown('code')} />
+          <ToolbarButton icon={<LinkIcon />} tooltip="Ссылка" onClick={() => insertMarkdown('link')} />
+          <ToolbarButton icon={<HorizontalRuleIcon />} tooltip="Разделитель" onClick={() => insertMarkdown('hr')} />
+        </Box>
+      )}
+
+      <TextField
+        value={content}
+        onChange={e => handleContentChange(e.target.value)}
+        multiline
+        fullWidth
+        variant="standard"
+        InputProps={{ disableUnderline: true }}
+        inputRef={textareaRef}
+        sx={{
+          p: 2,
+          '& .MuiInput-input': {
+            fontFamily: isMarkdown ? '"Fira Code", monospace' : '"Crimson Text", serif',
+            fontSize: isMarkdown ? '0.9rem' : '1rem',
+            lineHeight: 1.8,
+            color: 'rgba(255,255,255,0.9)',
+          },
+          minHeight: '100%',
+        }}
+        placeholder="Начните писать..."
+      />
+    </Box>
+  );
+
+  const renderPreview = () => (
+    <Box
+      ref={previewScrollRef}
+      sx={{ height: '100%', overflow: 'auto', p: 3, ...markdownStyles }}
+    >
+      {isMarkdown ? (
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || '*Пусто...*'}</ReactMarkdown>
+      ) : (
+        <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: '"Crimson Text", serif', lineHeight: 1.8, color: 'rgba(255,255,255,0.85)' }}>
+          {content || 'Пусто...'}
+        </Typography>
+      )}
+    </Box>
+  );
 
   return (
     <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => { navigate(`/project/${pid}/notes`); }}>
+          <IconButton onClick={() => navigate(`/project/${pid}/notes`)}>
             <ArrowBackIcon />
           </IconButton>
           <TextField
             value={title}
-            onChange={e => { handleTitleChange(e.target.value); }}
+            onChange={e => handleTitleChange(e.target.value)}
             variant="standard"
             sx={{
               '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600 },
@@ -198,8 +373,9 @@ export const NoteEditorPage: React.FC = () => {
             {currentNote.isPinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
           </IconButton>
         </Box>
+
         <Box display="flex" alignItems="center" gap={2}>
-          {/* Save status indicator */}
+          {/* Save status */}
           <Box display="flex" alignItems="center" gap={0.5}>
             {saveStatus === 'saved' && (
               <>
@@ -210,15 +386,17 @@ export const NoteEditorPage: React.FC = () => {
               </>
             )}
             {saveStatus === 'unsaved' && (
-              <>
-                <Typography variant="caption" sx={{ color: 'rgba(255,200,100,0.8)' }}>
-                  ● Несохранённые изменения
-                </Typography>
-              </>
+              <Typography variant="caption" sx={{ color: 'rgba(255,200,100,0.8)' }}>
+                ● Несохранённые изменения
+              </Typography>
             )}
             {saveStatus === 'saving' && (
               <>
-                <SyncIcon sx={{ fontSize: 16, color: 'rgba(130,130,255,0.6)', animation: 'spin 1s linear infinite', '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />
+                <SyncIcon sx={{
+                  fontSize: 16, color: 'rgba(130,130,255,0.6)',
+                  animation: 'spin 1s linear infinite',
+                  '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } },
+                }} />
                 <Typography variant="caption" sx={{ color: 'rgba(130,130,255,0.6)' }}>
                   Сохранение...
                 </Typography>
@@ -234,15 +412,24 @@ export const NoteEditorPage: React.FC = () => {
             )}
           </Box>
 
+          {/* Mode toggle */}
           <ToggleButtonGroup
             value={mode}
             exclusive
             onChange={(_, v) => { if (v) setMode(v); }}
             size="small"
           >
-            <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Редактор</ToggleButton>
-            <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Просмотр</ToggleButton>
+            <ToggleButton value="edit">
+              <EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Код
+            </ToggleButton>
+            <ToggleButton value="split">
+              <VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> Сплит
+            </ToggleButton>
+            <ToggleButton value="preview">
+              <VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Превью
+            </ToggleButton>
           </ToggleButtonGroup>
+
           <DndButton
             variant="contained"
             startIcon={<SaveIcon />}
@@ -256,48 +443,69 @@ export const NoteEditorPage: React.FC = () => {
         </Box>
       </Box>
 
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', mb: 1 }}>
-        Автосохранение каждые 30 сек · Ctrl+S — сохранить вручную
-      </Typography>
+      {/* Info bar */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)' }}>
+          Автосохранение через 3 сек · Ctrl+S — сохранить · Ctrl+B — жирный · Ctrl+I — курсив
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)' }}>
+          {wordCount.words} слов · {wordCount.chars} символов
+        </Typography>
+      </Box>
 
-      {/* Content */}
-      <Paper sx={{ flexGrow: 1, overflow: 'auto', p: 3 }}>
-        {mode === 'edit' ? (
-          <TextField
-            value={content}
-            onChange={e => { handleContentChange(e.target.value); }}
-            multiline
-            fullWidth
-            variant="standard"
-            InputProps={{ disableUnderline: true }}
-            sx={{
-              '& .MuiInput-input': {
-                fontFamily: currentNote.format === 'md' ? '"Fira Code", monospace' : '"Crimson Text", serif',
-                fontSize: '1rem',
-                lineHeight: 1.8,
-              },
-              minHeight: '100%',
-            }}
-            placeholder="Начните писать..."
-          />
-        ) : (
-          <Box sx={{
-            '& h1, & h2, & h3': { fontFamily: '"Cinzel", serif', color: 'primary.main' },
-            '& a': { color: 'primary.main' },
-            '& code': { backgroundColor: 'rgba(201, 169, 89, 0.1)', padding: '2px 6px', borderRadius: 4 },
-            '& pre': { backgroundColor: 'rgba(0,0,0,0.3)', p: 2, borderRadius: 2, overflow: 'auto' },
-            '& blockquote': { borderLeft: '3px solid', borderColor: 'primary.main', pl: 2, ml: 0, opacity: 0.8 },
-          }}>
-            {currentNote.format === 'md' ? (
-              <ReactMarkdown>{content}</ReactMarkdown>
-            ) : (
-              <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                {content}
-              </Typography>
-            )}
+      {/* Content area */}
+      <Paper sx={{
+        flexGrow: 1, overflow: 'hidden', display: 'flex',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        {mode === 'edit' && (
+          <Box sx={{ width: '100%', height: '100%' }}>
+            {renderEditor()}
+          </Box>
+        )}
+
+        {mode === 'split' && (
+          <>
+            <Box sx={{ width: '50%', height: '100%', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
+              {renderEditor()}
+            </Box>
+            <Box sx={{ width: '50%', height: '100%' }}>
+              {renderPreview()}
+            </Box>
+          </>
+        )}
+
+        {mode === 'preview' && (
+          <Box sx={{ width: '100%', height: '100%' }}>
+            {renderPreview()}
           </Box>
         )}
       </Paper>
     </Box>
   );
 };
+
+// ==================== Toolbar button component ====================
+const ToolbarButton: React.FC<{
+  icon: React.ReactNode;
+  tooltip: string;
+  onClick: () => void;
+}> = ({ icon, tooltip, onClick }) => (
+  <IconButton
+    size="small"
+    onClick={onClick}
+    title={tooltip}
+    sx={{
+      color: 'rgba(255,255,255,0.4)',
+      borderRadius: 1,
+      width: 30,
+      height: 30,
+      '&:hover': {
+        color: 'rgba(255,255,255,0.8)',
+        backgroundColor: 'rgba(255,255,255,0.06)',
+      },
+    }}
+  >
+    {icon}
+  </IconButton>
+);
