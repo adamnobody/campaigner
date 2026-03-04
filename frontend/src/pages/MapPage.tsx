@@ -335,58 +335,65 @@ export const MapPage: React.FC = () => {
               />
 
               {/* Markers */}
-              {markers.map(marker => (
-                <Box
-                  key={marker.id}
-                  onClick={(e) => { e.stopPropagation(); setSelectedMarker(marker); }}
-                  sx={{
-                    position: 'absolute',
-                    left: `${marker.x}%`,
-                    top: `${marker.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    cursor: 'pointer',
-                    zIndex: selectedMarker?.id === marker.id ? 10 : 5,
-                    transition: 'transform 0.15s',
-                    '&:hover': { transform: 'translate(-50%, -50%) scale(1.3)' },
-                  }}
-                >
-                  {/* Marker icon with color */}
+              {markers.map(marker => {
+                const markerSize = Math.max(20, 36 / zoom);
+                const fontSize = Math.max(10, 18 / zoom);
+                const borderWidth = Math.max(1, 2 / zoom);
+                const labelSize = Math.max(7, 11 / zoom);
+
+                return (
                   <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      backgroundColor: marker.color || MARKER_COLORS[0],
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '18px',
-                      boxShadow: `0 0 8px ${marker.color || MARKER_COLORS[0]}80, 0 2px 8px rgba(0,0,0,0.5)`,
-                      border: selectedMarker?.id === marker.id ? '2px solid #fff' : '2px solid rgba(0,0,0,0.3)',
-                    }}
-                  >
-                    {MARKER_ICONS[marker.icon] || MARKER_ICONS.custom}
-                  </Box>
-                  {/* Title label */}
-                  <Typography
+                    key={marker.id}
+                    onClick={(e) => { e.stopPropagation(); setSelectedMarker(marker); }}
                     sx={{
                       position: 'absolute',
-                      top: '100%',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      mt: 0.3,
-                      fontSize: `${Math.max(9, 11 / zoom)}px`,
-                      color: '#fff',
-                      textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)',
-                      whiteSpace: 'nowrap',
-                      fontWeight: 600,
-                      pointerEvents: 'none',
+                      left: `${marker.x}%`,
+                      top: `${marker.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      cursor: 'pointer',
+                      zIndex: selectedMarker?.id === marker.id ? 10 : 5,
+                      transition: 'transform 0.15s',
+                      '&:hover': { transform: 'translate(-50%, -50%) scale(1.3)' },
                     }}
                   >
-                    {marker.title}
-                  </Typography>
-                </Box>
-              ))}
+                    <Box
+                      sx={{
+                        width: markerSize,
+                        height: markerSize,
+                        borderRadius: '50%',
+                        backgroundColor: marker.color || MARKER_COLORS[0],
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: `${fontSize}px`,
+                        boxShadow: `0 0 ${Math.max(4, 8 / zoom)}px ${marker.color || MARKER_COLORS[0]}80, 0 ${Math.max(1, 2 / zoom)}px ${Math.max(4, 8 / zoom)}px rgba(0,0,0,0.5)`,
+                        border: selectedMarker?.id === marker.id
+                          ? `${borderWidth}px solid #fff`
+                          : `${borderWidth}px solid rgba(0,0,0,0.3)`,
+                      }}
+                    >
+                      {MARKER_ICONS[marker.icon] || MARKER_ICONS.custom}
+                    </Box>
+                    <Typography
+                      sx={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        mt: `${Math.max(1, 3 / zoom)}px`,
+                        fontSize: `${labelSize}px`,
+                        color: '#fff',
+                        textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)',
+                        whiteSpace: 'nowrap',
+                        fontWeight: 600,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {marker.title}
+                    </Typography>
+                  </Box>
+                );
+              })}
             </Box>
           </Box>
         ) : (
