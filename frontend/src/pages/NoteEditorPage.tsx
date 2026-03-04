@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, Paper, TextField, IconButton,
-  ToggleButtonGroup, ToggleButton, Chip, Divider,
+  ToggleButtonGroup, ToggleButton, Chip, Divider, Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -21,16 +21,19 @@ import CodeIcon from '@mui/icons-material/Code';
 import TitleIcon from '@mui/icons-material/Title';
 import LinkIcon from '@mui/icons-material/Link';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
+import UndoIcon from '@mui/icons-material/Undo';
+import RedoIcon from '@mui/icons-material/Redo';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
+import { useHistory } from '@/hooks/useHistory';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
-const AUTOSAVE_DELAY = 3000; // 3 секунды
+const AUTOSAVE_DELAY = 3000;
 
 type EditorMode = 'edit' | 'preview' | 'split';
 
@@ -57,6 +60,11 @@ export const NoteEditorPage: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const editorScrollRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
+  const isUndoRedoRef = useRef(false);
+
+  // History for undo/redo
+  const history = useHistory('');
+  const initializedNoteIdRef = useRef<number | null>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -71,17 +79,20 @@ export const NoteEditorPage: React.FC = () => {
 
   useEffect(() => {
     if (currentNote) {
-      setTitle(currentNote.title);
-      setContent(currentNote.content);
-      setHasChanges(false);
-      setSaveStatus('saved');
+      if (initializedNoteIdRef.current !== currentNote.id) {
+        initializedNoteIdRef.current = currentNote.id;
+        setTitle(currentNote.title);
+        setContent(currentNote.content);
+        history.reset(currentNote.content);
+        setHasChanges(false);
+        setSaveStatus('saved');
+      }
     }
   }, [currentNote]);
 
   // ==================== Save ====================
   const doSave = useCallback(async (isAuto: boolean = false) => {
     if (!hasChangesRef.current) return;
-
     setSaving(true);
     setSaveStatus('saving');
     try {
@@ -90,26 +101,18 @@ export const NoteEditorPage: React.FC = () => {
       hasChangesRef.current = false;
       setSaveStatus('saved');
       setLastSaved(new Date());
-      if (!isAuto) {
-        showSnackbar('Заметка сохранена', 'success');
-      }
+      if (!isAuto) showSnackbar('Заметка сохранена', 'success');
     } catch {
       setSaveStatus('error');
-      if (!isAuto) {
-        showSnackbar('Ошибка сохранения', 'error');
-      }
+      if (!isAuto) showSnackbar('Ошибка сохранения', 'error');
     } finally {
       setSaving(false);
     }
   }, [nid, updateNote, showSnackbar]);
 
   const scheduleAutosave = useCallback(() => {
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-    }
-    autosaveTimerRef.current = setTimeout(() => {
-      doSave(true);
-    }, AUTOSAVE_DELAY);
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => doSave(true), AUTOSAVE_DELAY);
   }, [doSave]);
 
   const handleTitleChange = (value: string) => {
@@ -124,39 +127,53 @@ export const NoteEditorPage: React.FC = () => {
     setHasChanges(true);
     setSaveStatus('unsaved');
     scheduleAutosave();
+
+    // Push to history (skip if this change came from undo/redo)
+    if (!isUndoRedoRef.current) {
+      const ta = textareaRef.current;
+      history.push(value, ta?.selectionStart ?? value.length, ta?.selectionEnd ?? value.length);
+    }
+    isUndoRedoRef.current = false;
   };
 
-  const handleSave = useCallback(() => {
-    doSave(false);
-  }, [doSave]);
+  const handleSave = useCallback(() => doSave(false), [doSave]);
 
-  // ==================== Hotkeys ====================
-  useHotkeys(useMemo(() => [
-    { key: 's', ctrl: true, handler: () => doSave(false), description: 'Save note' },
-    { key: 'b', ctrl: true, handler: () => insertMarkdown('bold'), description: 'Bold' },
-    { key: 'i', ctrl: true, handler: () => insertMarkdown('italic'), description: 'Italic' },
-  ], [doSave]));
-
-  // Save on unmount
-  useEffect(() => {
-    return () => {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      if (hasChangesRef.current) {
-        updateNote(nid, { title: titleRef.current, content: contentRef.current }).catch(() => {});
+  // ==================== Undo / Redo ====================
+  const handleUndo = useCallback(() => {
+    const entry = history.undo();
+    if (!entry) return;
+    isUndoRedoRef.current = true;
+    setContent(entry.value);
+    setHasChanges(true);
+    setSaveStatus('unsaved');
+    scheduleAutosave();
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(entry.cursorStart, entry.cursorEnd);
       }
-    };
-  }, [nid, updateNote]);
+    }, 0);
+  }, [history, scheduleAutosave]);
 
-  // Warn before leaving
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (hasChangesRef.current) { e.preventDefault(); e.returnValue = ''; }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, []);
+  const handleRedo = useCallback(() => {
+    const entry = history.redo();
+    if (!entry) return;
+    isUndoRedoRef.current = true;
+    setContent(entry.value);
+    setHasChanges(true);
+    setSaveStatus('unsaved');
+    scheduleAutosave();
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(entry.cursorStart, entry.cursorEnd);
+      }
+    }, 0);
+  }, [history, scheduleAutosave]);
 
-  // ==================== Markdown toolbar ====================
+  // ==================== Markdown insert ====================
   const insertMarkdown = useCallback((type: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -213,26 +230,56 @@ export const NoteEditorPage: React.FC = () => {
     }
 
     const newContent = content.substring(0, start) + insertion + content.substring(end);
+    const newCursorPos = start + cursorOffset;
+
+    // Push to history before the change
+    history.push(newContent, newCursorPos, newCursorPos);
+
+    isUndoRedoRef.current = true; // Prevent double-push in handleContentChange
     handleContentChange(newContent);
 
-    // Restore cursor position
     setTimeout(() => {
       textarea.focus();
-      const newPos = start + cursorOffset;
-      textarea.setSelectionRange(newPos, newPos);
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
     }, 0);
-  }, [content]);
+  }, [content, history]);
 
-  // ==================== Synced scroll ====================
+  // ==================== Hotkeys ====================
+  useHotkeys(useMemo(() => [
+    { key: 's', ctrl: true, handler: () => doSave(false) },
+    { key: 'b', ctrl: true, handler: () => insertMarkdown('bold') },
+    { key: 'i', ctrl: true, handler: () => insertMarkdown('italic') },
+    { key: 'z', ctrl: true, handler: handleUndo },
+    { key: 'z', ctrl: true, shift: true, handler: handleRedo },
+    { key: 'y', ctrl: true, handler: handleRedo },
+  ], [doSave, insertMarkdown, handleUndo, handleRedo]));
+
+  // Save on unmount
+  useEffect(() => {
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      if (hasChangesRef.current) {
+        updateNote(nid, { title: titleRef.current, content: contentRef.current }).catch(() => {});
+      }
+    };
+  }, [nid, updateNote]);
+
+  // Warn before leaving
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasChangesRef.current) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
+  // Synced scroll
   const handleEditorScroll = useCallback(() => {
-    if (!editorScrollRef.current || !previewScrollRef.current) return;
-    if (mode !== 'split') return;
-
+    if (!editorScrollRef.current || !previewScrollRef.current || mode !== 'split') return;
     const editor = editorScrollRef.current;
     const preview = previewScrollRef.current;
-
-    const scrollRatio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
-    preview.scrollTop = scrollRatio * (preview.scrollHeight - preview.clientHeight);
+    const ratio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
+    preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
   }, [mode]);
 
   const handleTogglePin = async () => {
@@ -240,33 +287,27 @@ export const NoteEditorPage: React.FC = () => {
     try {
       await updateNote(nid, { isPinned: !currentNote.isPinned });
       showSnackbar(currentNote.isPinned ? 'Откреплено' : 'Закреплено', 'success');
-    } catch {
-      showSnackbar('Ошибка', 'error');
-    }
+    } catch { showSnackbar('Ошибка', 'error'); }
   };
 
   const formatLastSaved = () => {
     if (!lastSaved) return '';
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
+    const diff = Math.floor((Date.now() - lastSaved.getTime()) / 1000);
     if (diff < 10) return 'только что';
     if (diff < 60) return `${diff} сек. назад`;
     if (diff < 3600) return `${Math.floor(diff / 60)} мин. назад`;
     return lastSaved.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // ==================== Word count ====================
   const wordCount = useMemo(() => {
     const words = content.trim().split(/\s+/).filter(Boolean).length;
-    const chars = content.length;
-    return { words, chars };
+    return { words, chars: content.length };
   }, [content]);
 
   if (!currentNote) return <LoadingScreen />;
 
   const isMarkdown = currentNote.format === 'md';
 
-  // ==================== Markdown preview styles ====================
   const markdownStyles = {
     '& h1': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.8rem', mt: 3, mb: 1, borderBottom: '1px solid rgba(201,169,89,0.2)', pb: 1 },
     '& h2': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.4rem', mt: 2.5, mb: 1 },
@@ -287,20 +328,31 @@ export const NoteEditorPage: React.FC = () => {
     '& em': { color: 'rgba(255,255,255,0.9)' },
   };
 
-  // ==================== Render ====================
   const renderEditor = () => (
-    <Box
-      ref={editorScrollRef}
-      onScroll={handleEditorScroll}
-      sx={{ height: '100%', overflow: 'auto' }}
-    >
-      {/* Markdown Toolbar */}
+    <Box ref={editorScrollRef} onScroll={handleEditorScroll} sx={{ height: '100%', overflow: 'auto' }}>
       {isMarkdown && (
         <Box sx={{
           display: 'flex', gap: 0.5, p: 1,
           borderBottom: '1px solid rgba(255,255,255,0.06)',
-          flexWrap: 'wrap',
+          flexWrap: 'wrap', alignItems: 'center',
         }}>
+          <Tooltip title="Отменить (Ctrl+Z)">
+            <span>
+              <IconButton size="small" onClick={handleUndo} disabled={!history.canUndo}
+                sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-disabled': { color: 'rgba(255,255,255,0.12)' }, borderRadius: 1, width: 30, height: 30 }}>
+                <UndoIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Повторить (Ctrl+Shift+Z)">
+            <span>
+              <IconButton size="small" onClick={handleRedo} disabled={!history.canRedo}
+                sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-disabled': { color: 'rgba(255,255,255,0.12)' }, borderRadius: 1, width: 30, height: 30 }}>
+                <RedoIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
           <ToolbarButton icon={<TitleIcon />} tooltip="Заголовок" onClick={() => insertMarkdown('heading')} />
           <ToolbarButton icon={<FormatBoldIcon />} tooltip="Жирный (Ctrl+B)" onClick={() => insertMarkdown('bold')} />
           <ToolbarButton icon={<FormatItalicIcon />} tooltip="Курсив (Ctrl+I)" onClick={() => insertMarkdown('italic')} />
@@ -316,9 +368,7 @@ export const NoteEditorPage: React.FC = () => {
       <TextField
         value={content}
         onChange={e => handleContentChange(e.target.value)}
-        multiline
-        fullWidth
-        variant="standard"
+        multiline fullWidth variant="standard"
         InputProps={{ disableUnderline: true }}
         inputRef={textareaRef}
         sx={{
@@ -337,10 +387,7 @@ export const NoteEditorPage: React.FC = () => {
   );
 
   const renderPreview = () => (
-    <Box
-      ref={previewScrollRef}
-      sx={{ height: '100%', overflow: 'auto', p: 3, ...markdownStyles }}
-    >
+    <Box ref={previewScrollRef} sx={{ height: '100%', overflow: 'auto', p: 3, ...markdownStyles }}>
       {isMarkdown ? (
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || '*Пусто...*'}</ReactMarkdown>
       ) : (
@@ -359,153 +406,72 @@ export const NoteEditorPage: React.FC = () => {
           <IconButton onClick={() => navigate(`/project/${pid}/notes`)}>
             <ArrowBackIcon />
           </IconButton>
-          <TextField
-            value={title}
-            onChange={e => handleTitleChange(e.target.value)}
-            variant="standard"
-            sx={{
-              '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600 },
-              minWidth: 300,
-            }}
-          />
+          <TextField value={title} onChange={e => handleTitleChange(e.target.value)} variant="standard"
+            sx={{ '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600 }, minWidth: 300 }} />
           <Chip label={currentNote.format.toUpperCase()} size="small" variant="outlined" />
           <IconButton onClick={handleTogglePin} color={currentNote.isPinned ? 'primary' : 'default'}>
             {currentNote.isPinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
           </IconButton>
         </Box>
-
         <Box display="flex" alignItems="center" gap={2}>
-          {/* Save status */}
           <Box display="flex" alignItems="center" gap={0.5}>
             {saveStatus === 'saved' && (
-              <>
-                <CloudDoneIcon sx={{ fontSize: 16, color: 'rgba(130,255,130,0.6)' }} />
-                <Typography variant="caption" sx={{ color: 'rgba(130,255,130,0.6)' }}>
-                  Сохранено {formatLastSaved()}
-                </Typography>
-              </>
+              <><CloudDoneIcon sx={{ fontSize: 16, color: 'rgba(130,255,130,0.6)' }} />
+              <Typography variant="caption" sx={{ color: 'rgba(130,255,130,0.6)' }}>Сохранено {formatLastSaved()}</Typography></>
             )}
             {saveStatus === 'unsaved' && (
-              <Typography variant="caption" sx={{ color: 'rgba(255,200,100,0.8)' }}>
-                ● Несохранённые изменения
-              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,200,100,0.8)' }}>● Несохранённые изменения</Typography>
             )}
             {saveStatus === 'saving' && (
-              <>
-                <SyncIcon sx={{
-                  fontSize: 16, color: 'rgba(130,130,255,0.6)',
-                  animation: 'spin 1s linear infinite',
-                  '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } },
-                }} />
-                <Typography variant="caption" sx={{ color: 'rgba(130,130,255,0.6)' }}>
-                  Сохранение...
-                </Typography>
-              </>
+              <><SyncIcon sx={{ fontSize: 16, color: 'rgba(130,130,255,0.6)', animation: 'spin 1s linear infinite',
+                '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />
+              <Typography variant="caption" sx={{ color: 'rgba(130,130,255,0.6)' }}>Сохранение...</Typography></>
             )}
             {saveStatus === 'error' && (
-              <>
-                <CloudOffIcon sx={{ fontSize: 16, color: 'rgba(255,100,100,0.6)' }} />
-                <Typography variant="caption" sx={{ color: 'rgba(255,100,100,0.6)' }}>
-                  Ошибка сохранения
-                </Typography>
-              </>
+              <><CloudOffIcon sx={{ fontSize: 16, color: 'rgba(255,100,100,0.6)' }} />
+              <Typography variant="caption" sx={{ color: 'rgba(255,100,100,0.6)' }}>Ошибка сохранения</Typography></>
             )}
           </Box>
-
-          {/* Mode toggle */}
-          <ToggleButtonGroup
-            value={mode}
-            exclusive
-            onChange={(_, v) => { if (v) setMode(v); }}
-            size="small"
-          >
-            <ToggleButton value="edit">
-              <EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Код
-            </ToggleButton>
-            <ToggleButton value="split">
-              <VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> Сплит
-            </ToggleButton>
-            <ToggleButton value="preview">
-              <VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Превью
-            </ToggleButton>
+          <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => { if (v) setMode(v); }} size="small">
+            <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Код</ToggleButton>
+            <ToggleButton value="split"><VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> Сплит</ToggleButton>
+            <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Превью</ToggleButton>
           </ToggleButtonGroup>
-
-          <DndButton
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            loading={saving}
-            disabled={!hasChanges}
-            size="small"
-          >
+          <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!hasChanges} size="small">
             Сохранить
           </DndButton>
         </Box>
       </Box>
 
-      {/* Info bar */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)' }}>
-          Автосохранение через 3 сек · Ctrl+S — сохранить · Ctrl+B — жирный · Ctrl+I — курсив
+          Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить
         </Typography>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)' }}>
           {wordCount.words} слов · {wordCount.chars} символов
         </Typography>
       </Box>
 
-      {/* Content area */}
-      <Paper sx={{
-        flexGrow: 1, overflow: 'hidden', display: 'flex',
-        border: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        {mode === 'edit' && (
-          <Box sx={{ width: '100%', height: '100%' }}>
-            {renderEditor()}
-          </Box>
-        )}
-
+      <Paper sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {mode === 'edit' && <Box sx={{ width: '100%', height: '100%' }}>{renderEditor()}</Box>}
         {mode === 'split' && (
           <>
-            <Box sx={{ width: '50%', height: '100%', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-              {renderEditor()}
-            </Box>
-            <Box sx={{ width: '50%', height: '100%' }}>
-              {renderPreview()}
-            </Box>
+            <Box sx={{ width: '50%', height: '100%', borderRight: '1px solid rgba(255,255,255,0.08)' }}>{renderEditor()}</Box>
+            <Box sx={{ width: '50%', height: '100%' }}>{renderPreview()}</Box>
           </>
         )}
-
-        {mode === 'preview' && (
-          <Box sx={{ width: '100%', height: '100%' }}>
-            {renderPreview()}
-          </Box>
-        )}
+        {mode === 'preview' && <Box sx={{ width: '100%', height: '100%' }}>{renderPreview()}</Box>}
       </Paper>
     </Box>
   );
 };
 
-// ==================== Toolbar button component ====================
-const ToolbarButton: React.FC<{
-  icon: React.ReactNode;
-  tooltip: string;
-  onClick: () => void;
-}> = ({ icon, tooltip, onClick }) => (
-  <IconButton
-    size="small"
-    onClick={onClick}
-    title={tooltip}
-    sx={{
-      color: 'rgba(255,255,255,0.4)',
-      borderRadius: 1,
-      width: 30,
-      height: 30,
-      '&:hover': {
-        color: 'rgba(255,255,255,0.8)',
-        backgroundColor: 'rgba(255,255,255,0.06)',
-      },
-    }}
-  >
-    {icon}
-  </IconButton>
+const ToolbarButton: React.FC<{ icon: React.ReactNode; tooltip: string; onClick: () => void }> = ({ icon, tooltip, onClick }) => (
+  <Tooltip title={tooltip}>
+    <IconButton size="small" onClick={onClick}
+      sx={{ color: 'rgba(255,255,255,0.4)', borderRadius: 1, width: 30, height: 30,
+        '&:hover': { color: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(255,255,255,0.06)' } }}>
+      {icon}
+    </IconButton>
+  </Tooltip>
 );
