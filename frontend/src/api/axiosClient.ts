@@ -137,3 +137,9 @@ export const tagsApi = {
   create: (data: any) => apiClient.post('/tags', data),
   delete: (id: number) => apiClient.delete(`/tags/${id}`),
 };
+
+// Search
+export const searchApi = {
+  search: (projectId: number, query: string) =>
+    apiClient.get('/search', { params: { projectId, q: query } }),
+};
