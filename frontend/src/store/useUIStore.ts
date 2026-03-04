@@ -6,6 +6,9 @@ interface UIState {
   sidebarOpen: boolean;
   sidebarWidth: number;
 
+  // Search
+  searchOpen: boolean;
+
   // Snackbar
   snackbar: {
     open: boolean;
@@ -24,6 +27,8 @@ interface UIState {
   // Actions
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  setSearchOpen: (open: boolean) => void;
+  toggleSearch: () => void;
   showSnackbar: (message: string, severity?: SnackbarSeverity) => void;
   hideSnackbar: () => void;
   showConfirmDialog: (title: string, message: string, onConfirm: () => void) => void;
@@ -33,6 +38,8 @@ interface UIState {
 export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: true,
   sidebarWidth: 280,
+
+  searchOpen: false,
 
   snackbar: {
     open: false,
@@ -49,6 +56,8 @@ export const useUIStore = create<UIState>((set) => ({
 
   toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  setSearchOpen: (open) => set({ searchOpen: open }),
+  toggleSearch: () => set(state => ({ searchOpen: !state.searchOpen })),
 
   showSnackbar: (message, severity = 'info') =>
     set({ snackbar: { open: true, message, severity } }),

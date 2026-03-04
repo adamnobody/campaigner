@@ -1,25 +1,41 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, Paper, TextField, IconButton,
-  ToggleButtonGroup, ToggleButton, Chip,
+  ToggleButtonGroup, ToggleButton, Chip, Divider, Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SyncIcon from '@mui/icons-material/Sync';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import CodeIcon from '@mui/icons-material/Code';
+import TitleIcon from '@mui/icons-material/Title';
+import LinkIcon from '@mui/icons-material/Link';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
+import UndoIcon from '@mui/icons-material/Undo';
+import RedoIcon from '@mui/icons-material/Redo';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useHotkeys } from '@/hooks/useHotkeys';
+import { useHistory } from '@/hooks/useHistory';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
-const AUTOSAVE_DELAY = 30000; // 30 секунд
+const AUTOSAVE_DELAY = 3000;
+
+type EditorMode = 'edit' | 'preview' | 'split';
 
 export const NoteEditorPage: React.FC = () => {
   const { projectId, noteId } = useParams<{ projectId: string; noteId: string }>();
@@ -29,7 +45,7 @@ export const NoteEditorPage: React.FC = () => {
   const { currentNote, fetchNote, updateNote } = useNoteStore();
   const { showSnackbar } = useUIStore();
 
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const [mode, setMode] = useState<EditorMode>('split');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
@@ -41,6 +57,14 @@ export const NoteEditorPage: React.FC = () => {
   const hasChangesRef = useRef(false);
   const titleRef = useRef('');
   const contentRef = useRef('');
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorScrollRef = useRef<HTMLDivElement>(null);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+  const isUndoRedoRef = useRef(false);
+
+  // History for undo/redo
+  const history = useHistory('');
+  const initializedNoteIdRef = useRef<number | null>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -55,17 +79,20 @@ export const NoteEditorPage: React.FC = () => {
 
   useEffect(() => {
     if (currentNote) {
-      setTitle(currentNote.title);
-      setContent(currentNote.content);
-      setHasChanges(false);
-      setSaveStatus('saved');
+      if (initializedNoteIdRef.current !== currentNote.id) {
+        initializedNoteIdRef.current = currentNote.id;
+        setTitle(currentNote.title);
+        setContent(currentNote.content);
+        history.reset(currentNote.content);
+        setHasChanges(false);
+        setSaveStatus('saved');
+      }
     }
   }, [currentNote]);
 
-  // Core save function
+  // ==================== Save ====================
   const doSave = useCallback(async (isAuto: boolean = false) => {
     if (!hasChangesRef.current) return;
-
     setSaving(true);
     setSaveStatus('saving');
     try {
@@ -74,30 +101,20 @@ export const NoteEditorPage: React.FC = () => {
       hasChangesRef.current = false;
       setSaveStatus('saved');
       setLastSaved(new Date());
-      if (!isAuto) {
-        showSnackbar('Заметка сохранена', 'success');
-      }
+      if (!isAuto) showSnackbar('Заметка сохранена', 'success');
     } catch {
       setSaveStatus('error');
-      if (!isAuto) {
-        showSnackbar('Ошибка сохранения', 'error');
-      }
+      if (!isAuto) showSnackbar('Ошибка сохранения', 'error');
     } finally {
       setSaving(false);
     }
   }, [nid, updateNote, showSnackbar]);
 
-  // Autosave timer — reset on every change
   const scheduleAutosave = useCallback(() => {
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
-    }
-    autosaveTimerRef.current = setTimeout(() => {
-      doSave(true);
-    }, AUTOSAVE_DELAY);
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => doSave(true), AUTOSAVE_DELAY);
   }, [doSave]);
 
-  // Handle changes
   const handleTitleChange = (value: string) => {
     setTitle(value);
     setHasChanges(true);
@@ -110,194 +127,351 @@ export const NoteEditorPage: React.FC = () => {
     setHasChanges(true);
     setSaveStatus('unsaved');
     scheduleAutosave();
+
+    // Push to history (skip if this change came from undo/redo)
+    if (!isUndoRedoRef.current) {
+      const ta = textareaRef.current;
+      history.push(value, ta?.selectionStart ?? value.length, ta?.selectionEnd ?? value.length);
+    }
+    isUndoRedoRef.current = false;
   };
 
-  // Manual save
-  const handleSave = useCallback(() => {
-    doSave(false);
-  }, [doSave]);
+  const handleSave = useCallback(() => doSave(false), [doSave]);
 
-  // Keyboard shortcut Ctrl+S
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
+  // ==================== Undo / Redo ====================
+  const handleUndo = useCallback(() => {
+    const entry = history.undo();
+    if (!entry) return;
+    isUndoRedoRef.current = true;
+    setContent(entry.value);
+    setHasChanges(true);
+    setSaveStatus('unsaved');
+    scheduleAutosave();
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(entry.cursorStart, entry.cursorEnd);
       }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleSave]);
+    }, 0);
+  }, [history, scheduleAutosave]);
 
-  // Save on unmount if there are changes
+  const handleRedo = useCallback(() => {
+    const entry = history.redo();
+    if (!entry) return;
+    isUndoRedoRef.current = true;
+    setContent(entry.value);
+    setHasChanges(true);
+    setSaveStatus('unsaved');
+    scheduleAutosave();
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (ta) {
+        ta.focus();
+        ta.setSelectionRange(entry.cursorStart, entry.cursorEnd);
+      }
+    }, 0);
+  }, [history, scheduleAutosave]);
+
+  // ==================== Markdown insert ====================
+  const insertMarkdown = useCallback((type: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = content.substring(start, end);
+    let insertion = '';
+    let cursorOffset = 0;
+
+    switch (type) {
+      case 'bold':
+        insertion = `**${selected || 'жирный текст'}**`;
+        cursorOffset = selected ? insertion.length : 2;
+        break;
+      case 'italic':
+        insertion = `*${selected || 'курсив'}*`;
+        cursorOffset = selected ? insertion.length : 1;
+        break;
+      case 'heading':
+        insertion = `## ${selected || 'Заголовок'}`;
+        cursorOffset = insertion.length;
+        break;
+      case 'link':
+        insertion = `[${selected || 'текст'}](url)`;
+        cursorOffset = selected ? insertion.length - 1 : 1;
+        break;
+      case 'code':
+        if (selected.includes('\n')) {
+          insertion = `\`\`\`\n${selected || 'код'}\n\`\`\``;
+        } else {
+          insertion = `\`${selected || 'код'}\``;
+        }
+        cursorOffset = selected ? insertion.length : 1;
+        break;
+      case 'list':
+        insertion = selected
+          ? selected.split('\n').map(line => `- ${line}`).join('\n')
+          : '- элемент списка';
+        cursorOffset = insertion.length;
+        break;
+      case 'quote':
+        insertion = selected
+          ? selected.split('\n').map(line => `> ${line}`).join('\n')
+          : '> цитата';
+        cursorOffset = insertion.length;
+        break;
+      case 'hr':
+        insertion = '\n---\n';
+        cursorOffset = insertion.length;
+        break;
+      default:
+        return;
+    }
+
+    const newContent = content.substring(0, start) + insertion + content.substring(end);
+    const newCursorPos = start + cursorOffset;
+
+    // Push to history before the change
+    history.push(newContent, newCursorPos, newCursorPos);
+
+    isUndoRedoRef.current = true; // Prevent double-push in handleContentChange
+    handleContentChange(newContent);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  }, [content, history]);
+
+  // ==================== Hotkeys ====================
+  useHotkeys(useMemo(() => [
+    { key: 's', ctrl: true, handler: () => doSave(false) },
+    { key: 'b', ctrl: true, handler: () => insertMarkdown('bold') },
+    { key: 'i', ctrl: true, handler: () => insertMarkdown('italic') },
+    { key: 'z', ctrl: true, handler: handleUndo },
+    { key: 'z', ctrl: true, shift: true, handler: handleRedo },
+    { key: 'y', ctrl: true, handler: handleRedo },
+  ], [doSave, insertMarkdown, handleUndo, handleRedo]));
+
+  // Save on unmount
   useEffect(() => {
     return () => {
-      if (autosaveTimerRef.current) {
-        clearTimeout(autosaveTimerRef.current);
-      }
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
       if (hasChangesRef.current) {
-        // Fire and forget — best effort save on leave
         updateNote(nid, { title: titleRef.current, content: contentRef.current }).catch(() => {});
       }
     };
   }, [nid, updateNote]);
 
-  // Warn before leaving with unsaved changes
+  // Warn before leaving
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (hasChangesRef.current) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
+      if (hasChangesRef.current) { e.preventDefault(); e.returnValue = ''; }
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, []);
+
+  // Synced scroll
+  const handleEditorScroll = useCallback(() => {
+    if (!editorScrollRef.current || !previewScrollRef.current || mode !== 'split') return;
+    const editor = editorScrollRef.current;
+    const preview = previewScrollRef.current;
+    const ratio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
+    preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
+  }, [mode]);
 
   const handleTogglePin = async () => {
     if (!currentNote) return;
     try {
       await updateNote(nid, { isPinned: !currentNote.isPinned });
       showSnackbar(currentNote.isPinned ? 'Откреплено' : 'Закреплено', 'success');
-    } catch {
-      showSnackbar('Ошибка', 'error');
-    }
+    } catch { showSnackbar('Ошибка', 'error'); }
   };
 
   const formatLastSaved = () => {
     if (!lastSaved) return '';
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
+    const diff = Math.floor((Date.now() - lastSaved.getTime()) / 1000);
     if (diff < 10) return 'только что';
     if (diff < 60) return `${diff} сек. назад`;
     if (diff < 3600) return `${Math.floor(diff / 60)} мин. назад`;
     return lastSaved.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const wordCount = useMemo(() => {
+    const words = content.trim().split(/\s+/).filter(Boolean).length;
+    return { words, chars: content.length };
+  }, [content]);
+
   if (!currentNote) return <LoadingScreen />;
+
+  const isMarkdown = currentNote.format === 'md';
+
+  const markdownStyles = {
+    '& h1': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.8rem', mt: 3, mb: 1, borderBottom: '1px solid rgba(201,169,89,0.2)', pb: 1 },
+    '& h2': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.4rem', mt: 2.5, mb: 1 },
+    '& h3': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.15rem', mt: 2, mb: 0.5 },
+    '& p': { mb: 1.5, lineHeight: 1.8, color: 'rgba(255,255,255,0.85)' },
+    '& a': { color: '#4ECDC4', textDecoration: 'underline', textDecorationColor: 'rgba(78,205,196,0.3)' },
+    '& code': { backgroundColor: 'rgba(201,169,89,0.1)', padding: '2px 6px', borderRadius: '4px', fontFamily: '"Fira Code", monospace', fontSize: '0.85em' },
+    '& pre': { backgroundColor: 'rgba(0,0,0,0.4)', p: 2, borderRadius: 2, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', '& code': { backgroundColor: 'transparent', p: 0 } },
+    '& blockquote': { borderLeft: '3px solid', borderColor: 'primary.main', pl: 2, ml: 0, opacity: 0.85, fontStyle: 'italic' },
+    '& ul, & ol': { pl: 3, mb: 1.5 },
+    '& li': { mb: 0.5, lineHeight: 1.7 },
+    '& table': { borderCollapse: 'collapse', width: '100%', mb: 2 },
+    '& th, & td': { border: '1px solid rgba(255,255,255,0.1)', px: 2, py: 1, textAlign: 'left' },
+    '& th': { backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 },
+    '& hr': { border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', my: 3 },
+    '& img': { maxWidth: '100%', borderRadius: 1 },
+    '& strong': { color: '#fff', fontWeight: 700 },
+    '& em': { color: 'rgba(255,255,255,0.9)' },
+  };
+
+  const renderEditor = () => (
+    <Box ref={editorScrollRef} onScroll={handleEditorScroll} sx={{ height: '100%', overflow: 'auto' }}>
+      {isMarkdown && (
+        <Box sx={{
+          display: 'flex', gap: 0.5, p: 1,
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          flexWrap: 'wrap', alignItems: 'center',
+        }}>
+          <Tooltip title="Отменить (Ctrl+Z)">
+            <span>
+              <IconButton size="small" onClick={handleUndo} disabled={!history.canUndo}
+                sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-disabled': { color: 'rgba(255,255,255,0.12)' }, borderRadius: 1, width: 30, height: 30 }}>
+                <UndoIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Повторить (Ctrl+Shift+Z)">
+            <span>
+              <IconButton size="small" onClick={handleRedo} disabled={!history.canRedo}
+                sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-disabled': { color: 'rgba(255,255,255,0.12)' }, borderRadius: 1, width: 30, height: 30 }}>
+                <RedoIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
+          <ToolbarButton icon={<TitleIcon />} tooltip="Заголовок" onClick={() => insertMarkdown('heading')} />
+          <ToolbarButton icon={<FormatBoldIcon />} tooltip="Жирный (Ctrl+B)" onClick={() => insertMarkdown('bold')} />
+          <ToolbarButton icon={<FormatItalicIcon />} tooltip="Курсив (Ctrl+I)" onClick={() => insertMarkdown('italic')} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
+          <ToolbarButton icon={<FormatListBulletedIcon />} tooltip="Список" onClick={() => insertMarkdown('list')} />
+          <ToolbarButton icon={<FormatQuoteIcon />} tooltip="Цитата" onClick={() => insertMarkdown('quote')} />
+          <ToolbarButton icon={<CodeIcon />} tooltip="Код" onClick={() => insertMarkdown('code')} />
+          <ToolbarButton icon={<LinkIcon />} tooltip="Ссылка" onClick={() => insertMarkdown('link')} />
+          <ToolbarButton icon={<HorizontalRuleIcon />} tooltip="Разделитель" onClick={() => insertMarkdown('hr')} />
+        </Box>
+      )}
+
+      <TextField
+        value={content}
+        onChange={e => handleContentChange(e.target.value)}
+        multiline fullWidth variant="standard"
+        InputProps={{ disableUnderline: true }}
+        inputRef={textareaRef}
+        sx={{
+          p: 2,
+          '& .MuiInput-input': {
+            fontFamily: isMarkdown ? '"Fira Code", monospace' : '"Crimson Text", serif',
+            fontSize: isMarkdown ? '0.9rem' : '1rem',
+            lineHeight: 1.8,
+            color: 'rgba(255,255,255,0.9)',
+          },
+          minHeight: '100%',
+        }}
+        placeholder="Начните писать..."
+      />
+    </Box>
+  );
+
+  const renderPreview = () => (
+    <Box ref={previewScrollRef} sx={{ height: '100%', overflow: 'auto', p: 3, ...markdownStyles }}>
+      {isMarkdown ? (
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || '*Пусто...*'}</ReactMarkdown>
+      ) : (
+        <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: '"Crimson Text", serif', lineHeight: 1.8, color: 'rgba(255,255,255,0.85)' }}>
+          {content || 'Пусто...'}
+        </Typography>
+      )}
+    </Box>
+  );
 
   return (
     <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => { navigate(`/project/${pid}/notes`); }}>
+          <IconButton onClick={() => navigate(`/project/${pid}/notes`)}>
             <ArrowBackIcon />
           </IconButton>
-          <TextField
-            value={title}
-            onChange={e => { handleTitleChange(e.target.value); }}
-            variant="standard"
-            sx={{
-              '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600 },
-              minWidth: 300,
-            }}
-          />
+          <TextField value={title} onChange={e => handleTitleChange(e.target.value)} variant="standard"
+            sx={{ '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600 }, minWidth: 300 }} />
           <Chip label={currentNote.format.toUpperCase()} size="small" variant="outlined" />
           <IconButton onClick={handleTogglePin} color={currentNote.isPinned ? 'primary' : 'default'}>
             {currentNote.isPinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
           </IconButton>
         </Box>
         <Box display="flex" alignItems="center" gap={2}>
-          {/* Save status indicator */}
           <Box display="flex" alignItems="center" gap={0.5}>
             {saveStatus === 'saved' && (
-              <>
-                <CloudDoneIcon sx={{ fontSize: 16, color: 'rgba(130,255,130,0.6)' }} />
-                <Typography variant="caption" sx={{ color: 'rgba(130,255,130,0.6)' }}>
-                  Сохранено {formatLastSaved()}
-                </Typography>
-              </>
+              <><CloudDoneIcon sx={{ fontSize: 16, color: 'rgba(130,255,130,0.6)' }} />
+              <Typography variant="caption" sx={{ color: 'rgba(130,255,130,0.6)' }}>Сохранено {formatLastSaved()}</Typography></>
             )}
             {saveStatus === 'unsaved' && (
-              <>
-                <Typography variant="caption" sx={{ color: 'rgba(255,200,100,0.8)' }}>
-                  ● Несохранённые изменения
-                </Typography>
-              </>
+              <Typography variant="caption" sx={{ color: 'rgba(255,200,100,0.8)' }}>● Несохранённые изменения</Typography>
             )}
             {saveStatus === 'saving' && (
-              <>
-                <SyncIcon sx={{ fontSize: 16, color: 'rgba(130,130,255,0.6)', animation: 'spin 1s linear infinite', '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />
-                <Typography variant="caption" sx={{ color: 'rgba(130,130,255,0.6)' }}>
-                  Сохранение...
-                </Typography>
-              </>
+              <><SyncIcon sx={{ fontSize: 16, color: 'rgba(130,130,255,0.6)', animation: 'spin 1s linear infinite',
+                '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />
+              <Typography variant="caption" sx={{ color: 'rgba(130,130,255,0.6)' }}>Сохранение...</Typography></>
             )}
             {saveStatus === 'error' && (
-              <>
-                <CloudOffIcon sx={{ fontSize: 16, color: 'rgba(255,100,100,0.6)' }} />
-                <Typography variant="caption" sx={{ color: 'rgba(255,100,100,0.6)' }}>
-                  Ошибка сохранения
-                </Typography>
-              </>
+              <><CloudOffIcon sx={{ fontSize: 16, color: 'rgba(255,100,100,0.6)' }} />
+              <Typography variant="caption" sx={{ color: 'rgba(255,100,100,0.6)' }}>Ошибка сохранения</Typography></>
             )}
           </Box>
-
-          <ToggleButtonGroup
-            value={mode}
-            exclusive
-            onChange={(_, v) => { if (v) setMode(v); }}
-            size="small"
-          >
-            <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Редактор</ToggleButton>
-            <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Просмотр</ToggleButton>
+          <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => { if (v) setMode(v); }} size="small">
+            <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Код</ToggleButton>
+            <ToggleButton value="split"><VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> Сплит</ToggleButton>
+            <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Превью</ToggleButton>
           </ToggleButtonGroup>
-          <DndButton
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            loading={saving}
-            disabled={!hasChanges}
-            size="small"
-          >
+          <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!hasChanges} size="small">
             Сохранить
           </DndButton>
         </Box>
       </Box>
 
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', mb: 1 }}>
-        Автосохранение каждые 30 сек · Ctrl+S — сохранить вручную
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)' }}>
+          Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)' }}>
+          {wordCount.words} слов · {wordCount.chars} символов
+        </Typography>
+      </Box>
 
-      {/* Content */}
-      <Paper sx={{ flexGrow: 1, overflow: 'auto', p: 3 }}>
-        {mode === 'edit' ? (
-          <TextField
-            value={content}
-            onChange={e => { handleContentChange(e.target.value); }}
-            multiline
-            fullWidth
-            variant="standard"
-            InputProps={{ disableUnderline: true }}
-            sx={{
-              '& .MuiInput-input': {
-                fontFamily: currentNote.format === 'md' ? '"Fira Code", monospace' : '"Crimson Text", serif',
-                fontSize: '1rem',
-                lineHeight: 1.8,
-              },
-              minHeight: '100%',
-            }}
-            placeholder="Начните писать..."
-          />
-        ) : (
-          <Box sx={{
-            '& h1, & h2, & h3': { fontFamily: '"Cinzel", serif', color: 'primary.main' },
-            '& a': { color: 'primary.main' },
-            '& code': { backgroundColor: 'rgba(201, 169, 89, 0.1)', padding: '2px 6px', borderRadius: 4 },
-            '& pre': { backgroundColor: 'rgba(0,0,0,0.3)', p: 2, borderRadius: 2, overflow: 'auto' },
-            '& blockquote': { borderLeft: '3px solid', borderColor: 'primary.main', pl: 2, ml: 0, opacity: 0.8 },
-          }}>
-            {currentNote.format === 'md' ? (
-              <ReactMarkdown>{content}</ReactMarkdown>
-            ) : (
-              <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                {content}
-              </Typography>
-            )}
-          </Box>
+      <Paper sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {mode === 'edit' && <Box sx={{ width: '100%', height: '100%' }}>{renderEditor()}</Box>}
+        {mode === 'split' && (
+          <>
+            <Box sx={{ width: '50%', height: '100%', borderRight: '1px solid rgba(255,255,255,0.08)' }}>{renderEditor()}</Box>
+            <Box sx={{ width: '50%', height: '100%' }}>{renderPreview()}</Box>
+          </>
         )}
+        {mode === 'preview' && <Box sx={{ width: '100%', height: '100%' }}>{renderPreview()}</Box>}
       </Paper>
     </Box>
   );
 };
+
+const ToolbarButton: React.FC<{ icon: React.ReactNode; tooltip: string; onClick: () => void }> = ({ icon, tooltip, onClick }) => (
+  <Tooltip title={tooltip}>
+    <IconButton size="small" onClick={onClick}
+      sx={{ color: 'rgba(255,255,255,0.4)', borderRadius: 1, width: 30, height: 30,
+        '&:hover': { color: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(255,255,255,0.06)' } }}>
+      {icon}
+    </IconButton>
+  </Tooltip>
+);

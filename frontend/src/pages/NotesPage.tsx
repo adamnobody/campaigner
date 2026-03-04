@@ -19,6 +19,24 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { ALLOWED_NOTE_FORMATS } from '@campaigner/shared';
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, '')       // headings
+    .replace(/\*\*\*(.*?)\*\*\*/g, '$1') // bold+italic
+    .replace(/\*\*(.*?)\*\*/g, '$1')     // bold
+    .replace(/\*(.*?)\*/g, '$1')         // italic
+    .replace(/~~(.*?)~~/g, '$1')         // strikethrough
+    .replace(/`{1,3}[^`]*`{1,3}/g, '')  // inline/block code
+    .replace(/$$([^$$]*)\]$[^)]*$/g, '$1') // links
+    .replace(/!$$([^$$]*)\]$[^)]*$/g, '$1') // images
+    .replace(/^>\s+/gm, '')             // blockquotes
+    .replace(/^[-*+]\s+/gm, '')         // unordered lists
+    .replace(/^\d+\.\s+/gm, '')         // ordered lists
+    .replace(/^---+$/gm, '')            // hr
+    .replace(/\n{2,}/g, ' ')            // collapse newlines
+    .trim();
+}
+
 export const NotesPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
@@ -111,17 +129,18 @@ export const NotesPage: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {notes.map(note => (
-            <Grid item xs={12} sm={6} md={4} key={note.id}>
+            <Grid item xs={12} md={6} key={note.id}>
               <Card
                 sx={{
                   cursor: 'pointer',
+                  height: '100%',
                   '&:hover': { transform: 'translateY(-2px)', transition: 'transform 0.2s' },
                 }}
                 onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
               >
                 <CardContent>
                   <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flex: 1 }}>
                       {note.isPinned && <PushPinIcon fontSize="small" color="primary" />}
                       <Typography variant="h6" noWrap>{note.title}</Typography>
                     </Box>
@@ -144,9 +163,10 @@ export const NotesPage: React.FC = () => {
                         display: '-webkit-box',
                         WebkitLineClamp: 3,
                         WebkitBoxOrient: 'vertical',
+                        lineHeight: 1.6,
                       }}
                     >
-                      {note.content}
+                      {stripMarkdown(note.content)}
                     </Typography>
                   )}
                   <Box display="flex" gap={0.5} mt={1.5} flexWrap="wrap" alignItems="center">
