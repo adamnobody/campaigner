@@ -143,3 +143,13 @@ export const searchApi = {
   search: (projectId: number, query: string) =>
     apiClient.get('/search', { params: { projectId, q: query } }),
 };
+
+export const wikiApi = {
+  getLinks: (projectId: number, noteId?: number) =>
+    apiClient.get('/wiki/links', { params: { projectId, noteId } }),
+  createLink: (data: { projectId: number; sourceNoteId: number; targetNoteId: number; label?: string }) =>
+    apiClient.post('/wiki/links', data),
+  deleteLink: (id: number) => apiClient.delete(`/wiki/links/${id}`),
+  getCategories: (projectId: number) =>
+    apiClient.get('/wiki/categories', { params: { projectId } }),
+};

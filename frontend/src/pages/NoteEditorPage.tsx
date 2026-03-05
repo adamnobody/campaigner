@@ -403,7 +403,7 @@ export const NoteEditorPage: React.FC = () => {
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate(`/project/${pid}/notes`)}>
+          <IconButton onClick={() => navigate(-1)}>
             <ArrowBackIcon />
           </IconButton>
           <TextField value={title} onChange={e => handleTitleChange(e.target.value)} variant="standard"

@@ -14,6 +14,7 @@ import { folderRoutes } from './routes/folder.routes';
 import { tagRoutes } from './routes/tag.routes';
 import { uploadRoutes } from './routes/upload.routes';
 import { searchRoutes } from './routes/search.routes';
+import wikiRoutes from './routes/wiki.routes';
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -60,6 +61,7 @@ app.use('/api/folders', folderRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/wiki', wikiRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

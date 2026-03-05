@@ -5,7 +5,7 @@ import {
   DialogTitle, DialogContent, DialogActions,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, Tabs, Tab,
-  Grid, Tooltip,
+  Grid, Tooltip, Autocomplete, InputAdornment,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -14,10 +14,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import AddIcon from '@mui/icons-material/Add';
 import GroupsIcon from '@mui/icons-material/Groups';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { useParams, useNavigate } from 'react-router-dom';
 import { charactersApi, tagsApi } from '@/api/axiosClient';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
+
 
 const RELATIONSHIP_TYPES = [
   'ally', 'enemy', 'family', 'friend', 'rival',
@@ -74,6 +76,13 @@ export const CharacterDetailPage: React.FC = () => {
   const [allCharacters, setAllCharacters] = useState<any[]>([]);
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [relForm, setRelForm] = useState({ targetId: '', type: 'ally', description: '' });
+  const [allTags, setAllTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    tagsApi.getAll(pid).then(res => {
+      setAllTags((res.data.data || []).map((t: any) => t.name));
+    }).catch(() => {});
+  }, [pid]);
 
   useEffect(() => {
     if (isNew) {
@@ -388,9 +397,38 @@ export const CharacterDetailPage: React.FC = () => {
                       multiline rows={3} placeholder="Кто этот персонаж..." />
                   </Grid>
                   <Grid item xs={12}>
-                    <TextField fullWidth label="Теги (через запятую)" value={form.tagsStr}
-                      onChange={e => handleChange('tagsStr', e.target.value)}
-                      placeholder="напр. злодей, маг, NPC" />
+                    <Autocomplete
+                      multiple freeSolo
+                      options={allTags}
+                      value={form.tagsStr ? form.tagsStr.split(',').map(s => s.trim()).filter(Boolean) : []}
+                      onChange={(_, vals) => handleChange('tagsStr', vals.join(', '))}
+                      renderTags={(value, getTagProps) =>
+                        value.map((opt, index) => (
+                          <Chip {...getTagProps({ index })} key={opt} label={opt} size="small"
+                            sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
+                        ))
+                      }
+                      renderInput={(params) => (
+                        <TextField {...params} label="Теги" placeholder="Выберите или введите..."
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <InputAdornment position="start">
+                                  <LocalOfferIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 18 }} />
+                                </InputAdornment>
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      noOptionsText="Введите новый тег"
+                      sx={{
+                        '& .MuiAutocomplete-clearIndicator': { color: 'rgba(255,255,255,0.3)' },
+                        '& .MuiAutocomplete-popupIndicator': { color: 'rgba(255,255,255,0.3)' },
+                      }}
+                    />
                   </Grid>
                 </Grid>
               )}
