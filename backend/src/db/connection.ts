@@ -174,6 +174,22 @@ export function initializeDatabase(): void {
     );
   `);
 
+  // Wiki links (connections between wiki articles)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS wiki_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      source_note_id INTEGER NOT NULL,
+      target_note_id INTEGER NOT NULL,
+      label TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (source_note_id) REFERENCES notes(id) ON DELETE CASCADE,
+      FOREIGN KEY (target_note_id) REFERENCES notes(id) ON DELETE CASCADE,
+      UNIQUE(source_note_id, target_note_id)
+    );
+  `);
+
   // Indexes
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
@@ -195,6 +211,9 @@ export function initializeDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_relationships_source ON character_relationships(source_character_id);
     CREATE INDEX IF NOT EXISTS idx_relationships_target ON character_relationships(target_character_id);
     CREATE INDEX IF NOT EXISTS idx_relationships_project ON character_relationships(project_id);
+    CREATE INDEX IF NOT EXISTS idx_wiki_links_project ON wiki_links(project_id);
+    CREATE INDEX IF NOT EXISTS idx_wiki_links_source ON wiki_links(source_note_id);
+    CREATE INDEX IF NOT EXISTS idx_wiki_links_target ON wiki_links(target_note_id);
   `);
 
   console.log('✅ Database initialized successfully');
