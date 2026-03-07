@@ -37,6 +37,7 @@ export const useTagStore = create<TagState>((set, get) => ({
         loading: false,
         initialized: true,
       });
+      throw error;
     }
   },
 
@@ -45,9 +46,16 @@ export const useTagStore = create<TagState>((set, get) => ({
     try {
       const res = await tagsApi.create({ ...data, projectId });
       const created = res.data.data as Tag;
-      set((state) => ({
-        tags: [...state.tags, created].sort((a, b) => a.name.localeCompare(b.name)),
-      }));
+
+      set((state) => {
+        const exists = created.id !== undefined && state.tags.some((tag) => tag.id === created.id);
+        return {
+          tags: exists
+            ? state.tags
+            : [...state.tags, created].sort((a, b) => a.name.localeCompare(b.name)),
+        };
+      });
+
       return created;
     } catch (error: any) {
       set({ error: error.message || 'Failed to create tag' });
@@ -69,34 +77,39 @@ export const useTagStore = create<TagState>((set, get) => ({
   },
 
   findOrCreateTagsByNames: async (projectId, names) => {
-    const normalized = names.map((n) => n.trim()).filter(Boolean);
-    if (normalized.length === 0) return [];
+    const normalizedNames = Array.from(
+      new Set(
+        names
+          .map((name) => name.trim())
+          .filter(Boolean)
+      )
+    );
 
-    const { tags, fetchTags, createTag } = get();
+    if (normalizedNames.length === 0) return [];
 
     if (!get().initialized) {
-      await fetchTags(projectId);
+      await get().fetchTags(projectId);
     }
 
     const resultIds: number[] = [];
-    let currentTags = get().tags.length > 0 ? get().tags : tags;
 
-    for (const name of normalized) {
-      const existing = currentTags.find(
+    for (const name of normalizedNames) {
+      const existing = get().tags.find(
         (tag) => tag.name.trim().toLowerCase() === name.toLowerCase()
       );
 
-      if (existing?.id) {
+      if (existing?.id !== undefined) {
         resultIds.push(existing.id);
         continue;
       }
 
-      const created = await createTag(projectId, { name });
-      if (created.id) {
-        resultIds.push(created.id);
+      const created = await get().createTag(projectId, { name });
+
+      if (created.id === undefined) {
+        throw new Error(`Tag "${name}" was created without id`);
       }
 
-      currentTags = get().tags;
+      resultIds.push(created.id);
     }
 
     return resultIds;

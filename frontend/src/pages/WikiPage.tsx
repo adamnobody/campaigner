@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  Box, Typography, Grid, Card, CardContent, TextField,
+  Box, Typography, Card, CardContent, TextField,
   InputAdornment, IconButton, Dialog, DialogTitle,
   DialogContent, DialogActions, Button, Chip,
   Autocomplete, Tooltip,
@@ -13,42 +13,25 @@ import LinkIcon from '@mui/icons-material/Link';
 import CategoryIcon from '@mui/icons-material/Category';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import EditIcon from '@mui/icons-material/Edit';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
+import { useWikiStore } from '@/store/useWikiStore';
+import { useTagStore } from '@/store/useTagStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { wikiApi, tagsApi } from '@/api/axiosClient';
 import type { Note } from '@campaigner/shared';
-
-interface WikiLink {
-  id: number;
-  sourceNoteId: number;
-  targetNoteId: number;
-  sourceTitle: string;
-  targetTitle: string;
-  label: string;
-}
-
-interface Category {
-  name: string;
-  count: number;
-}
-
-interface TagOption {
-  id: number;
-  name: string;
-  color: string;
-}
 
 export const WikiPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+
   const { notes, loading, fetchNotes, createNote, deleteNote, setTags } = useNoteStore();
+  const { links, categories, fetchLinks, fetchCategories, createLink } = useWikiStore();
+  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
   const [search, setSearch] = useState('');
@@ -58,80 +41,58 @@ export const WikiPage: React.FC = () => {
   const [tagsDialogOpen, setTagsDialogOpen] = useState(false);
   const [tagsEditNote, setTagsEditNote] = useState<Note | null>(null);
 
-  // Create form
   const [newTitle, setNewTitle] = useState('');
   const [newTagsStr, setNewTagsStr] = useState('');
-
-  // Tags edit
   const [editTagsStr, setEditTagsStr] = useState('');
+  const [newTagsInput, setNewTagsInput] = useState('');
+  const [editTagsInput, setEditTagsInput] = useState('');
 
-  // Data
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [allLinks, setAllLinks] = useState<WikiLink[]>([]);
-  const [allTags, setAllTags] = useState<TagOption[]>([]);
-
-  // Link form
   const [linkSource, setLinkSource] = useState<Note | null>(null);
   const [linkTarget, setLinkTarget] = useState<Note | null>(null);
   const [linkLabel, setLinkLabel] = useState('');
 
   const debouncedSearch = useDebounce(search, 300);
 
-  const reload = () => {
-    fetchNotes(pid, { noteType: 'wiki', search: debouncedSearch || undefined, limit: 500 });
-    loadCategories();
-    loadLinks();
-    loadTags();
+  const reload = async () => {
+    await Promise.all([
+      fetchNotes(pid, { noteType: 'wiki', search: debouncedSearch || undefined, limit: 500 }),
+      fetchCategories(pid),
+      fetchLinks(pid),
+      fetchTags(pid),
+    ]);
   };
 
   useEffect(() => {
     reload();
   }, [pid, debouncedSearch]);
 
-  const loadCategories = async () => {
-    try {
-      const res = await wikiApi.getCategories(pid);
-      setCategories(res.data.data || []);
-    } catch {}
-  };
-
-  const loadLinks = async () => {
-    try {
-      const res = await wikiApi.getLinks(pid);
-      setAllLinks(res.data.data || []);
-    } catch {}
-  };
-
-  const loadTags = async () => {
-    try {
-      const res = await tagsApi.getAll(pid);
-      setAllTags(res.data.data || []);
-    } catch {}
-  };
-
-  // ============ Save tags helper ============
   const resolveTagIds = async (tagsString: string): Promise<number[]> => {
-    const tagNames = tagsString.split(',').map(s => s.trim()).filter(Boolean);
-    if (tagNames.length === 0) return [];
+    const tagNames = tagsString
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-    const tagIds: number[] = [];
-    for (const name of tagNames) {
-      const existing = allTags.find(t => t.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        tagIds.push(existing.id);
-      } else {
-        const newRes = await tagsApi.create({ name, projectId: pid });
-        const newTag = newRes.data.data;
-        tagIds.push(newTag.id);
-        setAllTags(prev => [...prev, newTag]);
-      }
-    }
-    return tagIds;
+    if (tagNames.length === 0) return [];
+    return await findOrCreateTagsByNames(pid, tagNames);
   };
 
-  // ============ Create article ============
+  const mergeTagValues = (tagsString: string, pendingInput: string): string => {
+    const committed = tagsString
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const pending = pendingInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set([...committed, ...pending])).join(', ');
+  };
+
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
+
     try {
       const note = await createNote({
         projectId: pid,
@@ -142,15 +103,19 @@ export const WikiPage: React.FC = () => {
         isPinned: false,
       });
 
-      // Save tags
-      if (newTagsStr.trim()) {
-        const tagIds = await resolveTagIds(newTagsStr);
-        if (tagIds.length > 0) await setTags(note.id, tagIds);
+      const finalTagsStr = mergeTagValues(newTagsStr, newTagsInput);
+
+      if (finalTagsStr.trim()) {
+        const tagIds = await resolveTagIds(finalTagsStr);
+        if (tagIds.length > 0) {
+          await setTags(note.id, tagIds);
+        }
       }
 
       setCreateOpen(false);
       setNewTitle('');
       setNewTagsStr('');
+      setNewTagsInput('');
       showSnackbar('Статья создана', 'success');
       navigate(`/project/${pid}/notes/${note.id}`);
     } catch {
@@ -158,75 +123,77 @@ export const WikiPage: React.FC = () => {
     }
   };
 
-  // ============ Delete ============
   const handleDelete = (id: number, title: string, e: React.MouseEvent) => {
     e.stopPropagation();
     showConfirmDialog('Удалить статью', `Удалить "${title}"?`, async () => {
       try {
         await deleteNote(id);
         showSnackbar('Удалено', 'success');
-        loadLinks();
-        loadCategories();
+        await Promise.all([fetchLinks(pid), fetchCategories(pid)]);
       } catch {
         showSnackbar('Ошибка', 'error');
       }
     });
   };
 
-  // ============ Edit tags ============
   const handleOpenTagsEdit = (note: Note, e: React.MouseEvent) => {
     e.stopPropagation();
     setTagsEditNote(note);
     setEditTagsStr((note.tags || []).map((t: any) => t.name).join(', '));
+    setEditTagsInput('');
     setTagsDialogOpen(true);
   };
 
   const handleSaveTags = async () => {
     if (!tagsEditNote) return;
+
     try {
-      const tagIds = await resolveTagIds(editTagsStr);
+      const finalTagsStr = mergeTagValues(editTagsStr, editTagsInput);
+      const tagIds = await resolveTagIds(finalTagsStr);
       await setTags(tagsEditNote.id, tagIds);
       setTagsDialogOpen(false);
       setTagsEditNote(null);
+      setEditTagsStr('');
+      setEditTagsInput('');
       showSnackbar('Теги обновлены', 'success');
-      reload();
+      await reload();
     } catch {
       showSnackbar('Ошибка', 'error');
     }
   };
 
-  // ============ Links ============
   const handleCreateLink = async () => {
     if (!linkSource || !linkTarget) return;
+
     try {
-      await wikiApi.createLink({
+      await createLink({
         projectId: pid,
         sourceNoteId: linkSource.id,
         targetNoteId: linkTarget.id,
         label: linkLabel.trim(),
       });
+
       setLinkDialogOpen(false);
       setLinkSource(null);
       setLinkTarget(null);
       setLinkLabel('');
       showSnackbar('Связь создана', 'success');
-      loadLinks();
+      await fetchLinks(pid);
     } catch (err: any) {
-      showSnackbar(err.response?.data?.message || 'Такая связь уже существует', 'error');
+      showSnackbar(err.message || 'Такая связь уже существует', 'error');
     }
   };
 
-  const getLinksForNote = (noteId: number): WikiLink[] => {
-    return allLinks.filter(l => l.sourceNoteId === noteId || l.targetNoteId === noteId);
+  const getLinksForNote = (noteId: number) => {
+    return links.filter((l) => l.sourceNoteId === noteId || l.targetNoteId === noteId);
   };
 
-  // Existing tag names for autocomplete suggestions
-  const existingTagNames = useMemo(() => allTags.map(t => t.name), [allTags]);
+  const existingTagNames = useMemo(() => tags.map((t) => t.name), [tags]);
 
   const filteredNotes = useMemo(() => {
     let result = notes;
     if (selectedCategory) {
-      result = result.filter(n =>
+      result = result.filter((n) =>
         n.tags?.some((t: any) => t.name === selectedCategory)
       );
     }
@@ -237,7 +204,6 @@ export const WikiPage: React.FC = () => {
 
   return (
     <Box>
-      {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff' }}>
           Вики
@@ -255,14 +221,14 @@ export const WikiPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Filters */}
       <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
         <TextField
           placeholder="Поиск в вики..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{
-            flexGrow: 1, maxWidth: 400,
+            flexGrow: 1,
+            maxWidth: 400,
             '& .MuiOutlinedInput-root': {
               backgroundColor: 'rgba(255,255,255,0.04)',
               '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
@@ -293,7 +259,7 @@ export const WikiPage: React.FC = () => {
                 '&:hover': { backgroundColor: 'rgba(130,130,255,0.2)' },
               }}
             />
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <Chip
                 key={cat.name}
                 label={`${cat.name} (${cat.count})`}
@@ -312,8 +278,15 @@ export const WikiPage: React.FC = () => {
         )}
 
         {(search || selectedCategory) && (
-          <Button variant="outlined" onClick={() => { setSearch(''); setSelectedCategory(''); }}
-            size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setSearch('');
+              setSelectedCategory('');
+            }}
+            size="small"
+            sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}
+          >
             Сброс
           </Button>
         )}
@@ -332,14 +305,29 @@ export const WikiPage: React.FC = () => {
           onAction={() => setCreateOpen(true)}
         />
       ) : (
-        <Grid container spacing={2}>
-          {filteredNotes.map(note => {
-            const links = getLinksForNote(note.id);
+        <Box
+          sx={{
+            columnCount: { xs: 1, sm: 2, md: 3 },
+            columnGap: '16px',
+          }}
+        >
+          {filteredNotes.map((note) => {
+            const noteLinks = getLinksForNote(note.id);
+
             return (
-              <Grid item xs={12} sm={6} md={4} key={note.id}>
+              <Box
+                key={note.id}
+                sx={{
+                  breakInside: 'avoid',
+                  mb: 2,
+                  display: 'inline-block',
+                  width: '100%',
+                }}
+              >
                 <Card
                   sx={{
                     cursor: 'pointer',
+                    width: '100%',
                     backgroundColor: 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.08)',
                     transition: 'all 0.2s',
@@ -369,14 +357,20 @@ export const WikiPage: React.FC = () => {
                       </Typography>
                       <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
                         <Tooltip title="Редактировать теги">
-                          <IconButton size="small" onClick={(e) => handleOpenTagsEdit(note, e)}
-                            sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'rgba(201,169,89,0.8)' } }}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleOpenTagsEdit(note, e)}
+                            sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'rgba(201,169,89,0.8)' } }}
+                          >
                             <LocalOfferIcon sx={{ fontSize: 16 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Удалить">
-                          <IconButton size="small" onClick={(e) => handleDelete(note.id, note.title, e)}
-                            sx={{ color: 'rgba(255,100,100,0.4)', '&:hover': { color: 'rgba(255,100,100,0.8)' } }}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleDelete(note.id, note.title, e)}
+                            sx={{ color: 'rgba(255,100,100,0.4)', '&:hover': { color: 'rgba(255,100,100,0.8)' } }}
+                          >
                             <DeleteIcon sx={{ fontSize: 16 }} />
                           </IconButton>
                         </Tooltip>
@@ -401,7 +395,6 @@ export const WikiPage: React.FC = () => {
                       </Typography>
                     )}
 
-                    {/* Tags */}
                     {note.tags && note.tags.length > 0 && (
                       <Box display="flex" gap={0.5} mt={1.5} flexWrap="wrap">
                         {note.tags.map((tag: any) => (
@@ -428,32 +421,36 @@ export const WikiPage: React.FC = () => {
                       </Box>
                     )}
 
-                    {/* No tags hint */}
                     {(!note.tags || note.tags.length === 0) && (
                       <Box
-                        display="flex" alignItems="center" gap={0.5} mt={1.5}
+                        display="flex"
+                        alignItems="center"
+                        gap={0.5}
+                        mt={1.5}
                         onClick={(e) => handleOpenTagsEdit(note, e)}
                         sx={{ cursor: 'pointer', '&:hover': { '& .add-tag-text': { color: 'rgba(201,169,89,0.8)' } } }}
                       >
                         <LocalOfferIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.2)' }} />
-                        <Typography className="add-tag-text" variant="caption"
-                          sx={{ color: 'rgba(255,255,255,0.2)', transition: 'color 0.15s' }}>
+                        <Typography
+                          className="add-tag-text"
+                          variant="caption"
+                          sx={{ color: 'rgba(255,255,255,0.2)', transition: 'color 0.15s' }}
+                        >
                           + добавить теги
                         </Typography>
                       </Box>
                     )}
 
-                    {/* Links */}
-                    {links.length > 0 && (
+                    {noteLinks.length > 0 && (
                       <Box mt={1.5} pt={1.5} borderTop="1px solid rgba(255,255,255,0.06)">
                         <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
                           <AccountTreeIcon sx={{ fontSize: 14, color: 'rgba(78,205,196,0.6)' }} />
                           <Typography variant="caption" sx={{ color: 'rgba(78,205,196,0.6)', fontWeight: 600 }}>
-                            Связи ({links.length})
+                            Связи ({noteLinks.length})
                           </Typography>
                         </Box>
                         <Box display="flex" flexDirection="column" gap={0.3}>
-                          {links.slice(0, 3).map(link => {
+                          {noteLinks.slice(0, 3).map((link) => {
                             const otherTitle = link.sourceNoteId === note.id ? link.targetTitle : link.sourceTitle;
                             const label = link.label ? ` (${link.label})` : '';
                             return (
@@ -472,9 +469,9 @@ export const WikiPage: React.FC = () => {
                               </Typography>
                             );
                           })}
-                          {links.length > 3 && (
+                          {noteLinks.length > 3 && (
                             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>
-                              +{links.length - 3} ещё
+                              +{noteLinks.length - 3} ещё
                             </Typography>
                           )}
                         </Box>
@@ -486,36 +483,60 @@ export const WikiPage: React.FC = () => {
                     </Typography>
                   </CardContent>
                 </Card>
-              </Grid>
+              </Box>
             );
           })}
-        </Grid>
+        </Box>
       )}
 
-      {/* ============ Create Article Dialog ============ */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
+      <Dialog
+        open={createOpen}
+        onClose={() => {
+          setCreateOpen(false);
+          setNewTitle('');
+          setNewTagsStr('');
+          setNewTagsInput('');
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      >
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Новая статья</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus fullWidth label="Название статьи *" value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)} margin="normal"
+            autoFocus
+            fullWidth
+            label="Название статьи *"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            margin="normal"
             placeholder="напр. Королевство Элдория"
           />
 
           <Autocomplete
-            multiple freeSolo
+            multiple
+            freeSolo
             options={existingTagNames}
-            value={newTagsStr ? newTagsStr.split(',').map(s => s.trim()).filter(Boolean) : []}
+            value={newTagsStr ? newTagsStr.split(',').map((s) => s.trim()).filter(Boolean) : []}
+            inputValue={newTagsInput}
+            onInputChange={(_, value) => setNewTagsInput(value)}
             onChange={(_, vals) => setNewTagsStr(vals.join(', '))}
             renderTags={(value, getTagProps) =>
               value.map((opt, index) => (
-                <Chip {...getTagProps({ index })} key={opt} label={opt} size="small"
-                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
+                <Chip
+                  {...getTagProps({ index })}
+                  key={opt}
+                  label={opt}
+                  size="small"
+                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }}
+                />
               ))
             }
             renderInput={(params) => (
-              <TextField {...params} label="Теги (категории)" margin="normal"
+              <TextField
+                {...params}
+                label="Теги (категории)"
+                margin="normal"
                 placeholder="Выберите или введите новые теги..."
                 helperText="Теги используются как категории для фильтрации вики-статей"
                 InputProps={{
@@ -535,33 +556,63 @@ export const WikiPage: React.FC = () => {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => { setCreateOpen(false); setNewTitle(''); setNewTagsStr(''); }} color="inherit">Отмена</Button>
+          <Button
+            onClick={() => {
+              setCreateOpen(false);
+              setNewTitle('');
+              setNewTagsStr('');
+              setNewTagsInput('');
+            }}
+            color="inherit"
+          >
+            Отмена
+          </Button>
           <DndButton variant="contained" onClick={handleCreate} disabled={!newTitle.trim()}>
             Создать
           </DndButton>
         </DialogActions>
       </Dialog>
 
-      {/* ============ Edit Tags Dialog ============ */}
-      <Dialog open={tagsDialogOpen} onClose={() => setTagsDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
+      <Dialog
+        open={tagsDialogOpen}
+        onClose={() => {
+          setTagsDialogOpen(false);
+          setTagsEditNote(null);
+          setEditTagsStr('');
+          setEditTagsInput('');
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      >
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
           Теги: {tagsEditNote?.title}
         </DialogTitle>
         <DialogContent>
           <Autocomplete
-            multiple freeSolo
+            multiple
+            freeSolo
             options={existingTagNames}
-            value={editTagsStr ? editTagsStr.split(',').map(s => s.trim()).filter(Boolean) : []}
+            value={editTagsStr ? editTagsStr.split(',').map((s) => s.trim()).filter(Boolean) : []}
+            inputValue={editTagsInput}
+            onInputChange={(_, value) => setEditTagsInput(value)}
             onChange={(_, vals) => setEditTagsStr(vals.join(', '))}
             renderTags={(value, getTagProps) =>
               value.map((opt, index) => (
-                <Chip {...getTagProps({ index })} key={opt} label={opt} size="small"
-                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
+                <Chip
+                  {...getTagProps({ index })}
+                  key={opt}
+                  label={opt}
+                  size="small"
+                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }}
+                />
               ))
             }
             renderInput={(params) => (
-              <TextField {...params} label="Теги" margin="normal"
+              <TextField
+                {...params}
+                label="Теги"
+                margin="normal"
                 placeholder="Выберите или введите..."
                 InputProps={{
                   ...params.InputProps,
@@ -580,16 +631,30 @@ export const WikiPage: React.FC = () => {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setTagsDialogOpen(false)} color="inherit">Отмена</Button>
+          <Button
+            onClick={() => {
+              setTagsDialogOpen(false);
+              setTagsEditNote(null);
+              setEditTagsStr('');
+              setEditTagsInput('');
+            }}
+            color="inherit"
+          >
+            Отмена
+          </Button>
           <DndButton variant="contained" onClick={handleSaveTags}>
             Сохранить
           </DndButton>
         </DialogActions>
       </Dialog>
 
-      {/* ============ Link Dialog ============ */}
-      <Dialog open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
+      <Dialog
+        open={linkDialogOpen}
+        onClose={() => setLinkDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      >
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Связать статьи</DialogTitle>
         <DialogContent>
           <Autocomplete
@@ -605,7 +670,7 @@ export const WikiPage: React.FC = () => {
           />
 
           <Autocomplete
-            options={notes.filter(n => n.id !== linkSource?.id)}
+            options={notes.filter((n) => n.id !== linkSource?.id)}
             getOptionLabel={(opt) => opt.title}
             value={linkTarget}
             onChange={(_, val) => setLinkTarget(val)}
@@ -617,14 +682,19 @@ export const WikiPage: React.FC = () => {
           />
 
           <TextField
-            fullWidth label="Описание связи (опционально)" value={linkLabel}
-            onChange={(e) => setLinkLabel(e.target.value)} margin="normal"
+            fullWidth
+            label="Описание связи (опционально)"
+            value={linkLabel}
+            onChange={(e) => setLinkLabel(e.target.value)}
+            margin="normal"
             placeholder="напр. столица, союзник, часть..."
             helperText="Краткое описание отношения между статьями"
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setLinkDialogOpen(false)} color="inherit">Отмена</Button>
+          <Button onClick={() => setLinkDialogOpen(false)} color="inherit">
+            Отмена
+          </Button>
           <DndButton variant="contained" onClick={handleCreateLink} disabled={!linkSource || !linkTarget}>
             Создать связь
           </DndButton>
