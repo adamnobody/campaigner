@@ -243,6 +243,9 @@ export const WikiPage: React.FC = () => {
           Вики
         </Typography>
         <Box display="flex" gap={1}>
+          <DndButton variant="outlined" startIcon={<AccountTreeIcon />} onClick={() => navigate(`/project/${pid}/wiki/graph`)}>
+            Граф
+          </DndButton>
           <DndButton variant="outlined" startIcon={<LinkIcon />} onClick={() => setLinkDialogOpen(true)}>
             Связать статьи
           </DndButton>
@@ -394,7 +397,7 @@ export const WikiPage: React.FC = () => {
                           lineHeight: 1.6,
                         }}
                       >
-                        {note.content.replace(/^#+ /gm, '').substring(0, 150)}
+                        {note.content.replace(/^#+ /gm, '').replace(/$$\[|$$\]/g, '').substring(0, 150)}
                       </Typography>
                     )}
 

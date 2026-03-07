@@ -12,7 +12,8 @@ campaigner
 │  │  │  ├─ project.controller.ts
 │  │  │  ├─ search.controller.ts
 │  │  │  ├─ tag.controller.ts
-│  │  │  └─ timeline.controller.ts
+│  │  │  ├─ timeline.controller.ts
+│  │  │  └─ wiki.controller.ts
 │  │  ├─ db
 │  │  │  ├─ connection.ts
 │  │  │  └─ migrate.ts
@@ -30,7 +31,8 @@ campaigner
 │  │  │  ├─ search.routes.ts
 │  │  │  ├─ tag.routes.ts
 │  │  │  ├─ timeline.routes.ts
-│  │  │  └─ upload.routes.ts
+│  │  │  ├─ upload.routes.ts
+│  │  │  └─ wiki.routes.ts
 │  │  └─ services
 │  │     ├─ character.service.ts
 │  │     ├─ folder.service.ts
@@ -39,7 +41,8 @@ campaigner
 │  │     ├─ project.service.ts
 │  │     ├─ search.service.ts
 │  │     ├─ tag.service.ts
-│  │     └─ timeline.service.ts
+│  │     ├─ timeline.service.ts
+│  │     └─ wiki.service.ts
 │  └─ tsconfig.json
 ├─ data
 ├─ frontend
@@ -80,6 +83,7 @@ campaigner
 │  │  │  ├─ NotesPage.tsx
 │  │  │  ├─ ProjectSettingsPage.tsx
 │  │  │  ├─ TimelinePage.tsx
+│  │  │  ├─ WikiGraphPage.tsx
 │  │  │  └─ WikiPage.tsx
 │  │  ├─ store
 │  │  │  ├─ useCharacterStore.ts

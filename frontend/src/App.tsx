@@ -14,6 +14,7 @@ import { WikiPage } from './pages/WikiPage';
 import { TimelinePage } from './pages/TimelinePage';
 import { FilesPage } from './pages/FilesPage';
 import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
+import { WikiGraphPage } from './pages/WikiGraphPage';
 
 const App: React.FC = () => {
   const [splashDone, setSplashDone] = useState(false);
@@ -27,7 +28,6 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<HomePage />} />
-
           <Route path="project/:projectId">
             <Route index element={<Navigate to="map" replace />} />
             <Route path="map" element={<ErrorBoundary><MapPage /></ErrorBoundary>} />
@@ -37,6 +37,7 @@ const App: React.FC = () => {
             <Route path="characters/:characterId" element={<ErrorBoundary><CharacterDetailPage /></ErrorBoundary>} />
             <Route path="notes" element={<ErrorBoundary><NotesPage /></ErrorBoundary>} />
             <Route path="notes/:noteId" element={<ErrorBoundary><NoteEditorPage /></ErrorBoundary>} />
+            <Route path="wiki/graph" element={<ErrorBoundary><WikiGraphPage /></ErrorBoundary>} />
             <Route path="wiki" element={<ErrorBoundary><WikiPage /></ErrorBoundary>} />
             <Route path="timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
             <Route path="files" element={<ErrorBoundary><FilesPage /></ErrorBoundary>} />
