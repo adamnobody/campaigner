@@ -285,7 +285,7 @@ export const NoteEditorPage: React.FC = () => {
     const { start, end } = insertWikiSelectionRef.current;
 
     const label = insertWikiLabel.trim() || insertWikiTarget.title;
-    const insertion = `[[note:${insertWikiTarget.id}|${label}]]`;
+    const insertion = `[${label}](/__note__/${insertWikiTarget.id})`;
 
     const newContent = content.substring(0, start) + insertion + content.substring(end);
     const newCursorPos = start + insertion.length;
@@ -373,60 +373,6 @@ export const NoteEditorPage: React.FC = () => {
     return { words, chars: content.length };
   }, [content]);
 
-  /** Pre-process [[wiki links]] into real markdown links */
-  const processedContent = useMemo(() => {
-    if (!content) return content;
-
-    return content.replace(/$$\[([^$$]+?)\]\]/g, (_match, rawValue) => {
-      const value = String(rawValue).trim();
-
-      const noteIdMatch = value.match(/^note:(\d+)(?:\|(.+))?$/i);
-      if (noteIdMatch) {
-        const noteIdNum = parseInt(noteIdMatch[1], 10);
-        const customLabel = noteIdMatch[2]?.trim();
-        const foundById = wikiNotes.find((n) => n.id === noteIdNum);
-
-        if (foundById) {
-          const label = customLabel || foundById.title;
-          return `[${label}](/project/${pid}/notes/${foundById.id})`;
-        }
-
-        const fallbackLabel = customLabel || `Статья #${noteIdNum}`;
-        return `<span style="color:#FF6B6B;border-bottom:1px dashed rgba(255,107,107,0.4)">${fallbackLabel}</span>`;
-      }
-
-      const titleAliasMatch = value.match(/^([^|]+)\|(.+)$/);
-      if (titleAliasMatch) {
-        const targetTitle = titleAliasMatch[1].trim();
-        const customLabel = titleAliasMatch[2].trim();
-        const foundByTitle = wikiNotes.find(
-          (n) => n.title.toLowerCase() === targetTitle.toLowerCase()
-        );
-
-        if (foundByTitle) {
-          return `[${customLabel}](/project/${pid}/notes/${foundByTitle.id})`;
-        }
-
-        return `<span style="color:#FF6B6B;border-bottom:1px dashed rgba(255,107,107,0.4)">${customLabel}</span>`;
-      }
-
-      const foundByTitle = wikiNotes.find(
-        (n) => n.title.toLowerCase() === value.toLowerCase()
-      );
-
-      if (foundByTitle) {
-        return `[${value}](/project/${pid}/notes/${foundByTitle.id})`;
-      }
-
-      return `<span style="color:#FF6B6B;border-bottom:1px dashed rgba(255,107,107,0.4)">${value}</span>`;
-    });
-  }, [content, wikiNotes, pid]);
-
-  useEffect(() => {
-    console.log('CONTENT:', content);
-    console.log('PROCESSED:', processedContent);
-  }, [content, processedContent]);
-
   if (!currentNote) return <LoadingScreen />;
 
   const isMarkdown = currentNote.format === 'md';
@@ -485,7 +431,7 @@ export const NoteEditorPage: React.FC = () => {
           {isWiki && (
             <>
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
-              <Tooltip title="Вики-ссылка [[...]]">
+              <Tooltip title="Внутренняя вики-ссылка">
                 <IconButton size="small" onClick={() => insertMarkdown('wikilink')}
                   sx={{ color: 'rgba(78,205,196,0.6)', borderRadius: 1, width: 30, height: 30,
                     '&:hover': { color: 'rgba(78,205,196,1)', backgroundColor: 'rgba(78,205,196,0.1)' } }}>
@@ -527,7 +473,44 @@ export const NoteEditorPage: React.FC = () => {
           rehypePlugins={[rehypeRaw]}
           components={{
             a: ({ href, children }) => {
-              // Internal wiki links — use React Router navigation
+              if (href?.startsWith('/__note__/')) {
+                const noteIdStr = href.replace('/__note__/', '');
+                const targetNoteId = parseInt(noteIdStr, 10);
+                const found = wikiNotes.find((n) => n.id === targetNoteId);
+
+                if (!Number.isNaN(targetNoteId) && found) {
+                  return (
+                    <a
+                      href={href}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(`/project/${pid}/notes/${targetNoteId}`);
+                      }}
+                      style={{
+                        color: '#4ECDC4',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'rgba(78,205,196,0.3)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {children}
+                    </a>
+                  );
+                }
+
+                return (
+                  <span
+                    style={{
+                      color: '#FF6B6B',
+                      borderBottom: '1px dashed rgba(255,107,107,0.4)',
+                      cursor: 'not-allowed',
+                    }}
+                  >
+                    {children}
+                  </span>
+                );
+              }
+
               if (href && href.startsWith('/project/')) {
                 return (
                   <a
@@ -536,22 +519,39 @@ export const NoteEditorPage: React.FC = () => {
                       e.preventDefault();
                       navigate(href);
                     }}
-                    style={{ color: '#4ECDC4', textDecoration: 'underline', textDecorationColor: 'rgba(78,205,196,0.3)', cursor: 'pointer' }}
+                    style={{
+                      color: '#4ECDC4',
+                      textDecoration: 'underline',
+                      textDecorationColor: 'rgba(78,205,196,0.3)',
+                      cursor: 'pointer',
+                    }}
                   >
                     {children}
                   </a>
                 );
               }
-              return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+
+              return (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              );
             },
           }}
-          // Allow raw HTML for the red "not found" spans
           skipHtml={false}
         >
-          {processedContent || '*Пусто...*'}
+          {content || '*Пусто...*'}
         </ReactMarkdown>
       ) : (
-        <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: '"Crimson Text", serif', lineHeight: 1.8, color: 'rgba(255,255,255,0.85)' }}>
+        <Typography
+          component="pre"
+          sx={{
+            whiteSpace: 'pre-wrap',
+            fontFamily: '"Crimson Text", serif',
+            lineHeight: 1.8,
+            color: 'rgba(255,255,255,0.85)',
+          }}
+        >
           {content || 'Пусто...'}
         </Typography>
       )}
@@ -636,7 +636,7 @@ export const NoteEditorPage: React.FC = () => {
 
         <Box sx={{ p: 1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', display: 'block', textAlign: 'center' }}>
-            Используйте [[note:ID|Текст]] или [[Название]]
+            Используйте [Текст ссылки](/__note__/ID)
           </Typography>
         </Box>
       </Box>
@@ -700,7 +700,7 @@ export const NoteEditorPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)' }}>
           Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить
-          {isWiki && ' · [[note:ID|Текст]] или [[Название]] — вики-ссылка'}
+          {isWiki && ' · [Текст ссылки](/__note__/ID) — внутренняя вики-ссылка'}
         </Typography>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)' }}>
           {wordCount.words} слов · {wordCount.chars} символов
@@ -767,7 +767,7 @@ export const NoteEditorPage: React.FC = () => {
             onChange={(e) => setInsertWikiLabel(e.target.value)}
             margin="normal"
             placeholder="Текст, который будет показан в статье"
-            helperText="Если ничего не указать, будет использовано название статьи"
+            helperText="В текст будет вставлена markdown-ссылка на внутреннюю статью"
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

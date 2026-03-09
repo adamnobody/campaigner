@@ -53,6 +53,8 @@ campaigner
 │  │  │  └─ axiosClient.ts
 │  │  ├─ App.tsx
 │  │  ├─ components
+│  │  │  ├─ forms
+│  │  │  │  └─ TagAutocompleteField.tsx
 │  │  │  ├─ Layout
 │  │  │  │  ├─ AppLayout.tsx
 │  │  │  │  ├─ Sidebar.tsx
@@ -87,12 +89,15 @@ campaigner
 │  │  │  └─ WikiPage.tsx
 │  │  ├─ store
 │  │  │  ├─ useCharacterStore.ts
+│  │  │  ├─ useFolderStore.ts
 │  │  │  ├─ useMapStore.ts
 │  │  │  ├─ useNoteStore.ts
 │  │  │  ├─ useProjectStore.ts
 │  │  │  ├─ useStyleStore.ts
+│  │  │  ├─ useTagStore.ts
 │  │  │  ├─ useTimelineStore.ts
-│  │  │  └─ useUIStore.ts
+│  │  │  ├─ useUIStore.ts
+│  │  │  └─ useWikiStore.ts
 │  │  └─ theme
 │  │     └─ muiTheme.ts
 │  ├─ tsconfig.json
@@ -100,6 +105,7 @@ campaigner
 ├─ LICENSE
 ├─ package-lock.json
 ├─ package.json
+├─ README.md
 ├─ scripts
 │  └─ doctor.mjs
 ├─ shared
