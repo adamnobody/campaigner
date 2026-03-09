@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, List, ListItemButton, ListItemIcon,
   ListItemText, IconButton, Dialog, DialogTitle,
@@ -13,8 +13,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import HomeIcon from '@mui/icons-material/Home';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
+import { useFolderStore } from '@/store/useFolderStore';
 import { useUIStore } from '@/store/useUIStore';
-import { foldersApi } from '@/api/axiosClient';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -22,11 +22,18 @@ export const FilesPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+
   const { notes, fetchNotes, createNote } = useNoteStore();
+  const {
+    folders,
+    currentFolderId,
+    fetchFolders,
+    createFolder,
+    deleteFolder,
+    setCurrentFolderId,
+  } = useFolderStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
-  const [allFolders, setAllFolders] = useState<any[]>([]);
-  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<{ id: number | null; name: string }[]>([
     { id: null, name: 'Root' },
   ]);
@@ -34,55 +41,48 @@ export const FilesPage: React.FC = () => {
   const [newFolderName, setNewFolderName] = useState('');
 
   useEffect(() => {
-    loadFolders();
-  }, [pid]);
+    fetchFolders(pid);
+  }, [pid, fetchFolders]);
 
   useEffect(() => {
-    loadNotes();
-  }, [pid, currentFolderId]);
-
-  const loadFolders = async () => {
-    try {
-      const res = await foldersApi.getAll(pid);
-      setAllFolders(res.data.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const loadNotes = () => {
     fetchNotes(pid, { folderId: currentFolderId, limit: 100 });
-  };
+  }, [pid, currentFolderId, fetchNotes]);
 
-  const currentSubfolders = allFolders.filter(f =>
-    currentFolderId === null ? !f.parentId : f.parentId === currentFolderId
-  );
+  const currentSubfolders = useMemo(() => {
+    return folders.filter((f) =>
+      currentFolderId === null ? !f.parentId : f.parentId === currentFolderId
+    );
+  }, [folders, currentFolderId]);
 
   const handleNavigateToFolder = (folderId: number | null, folderName: string) => {
     setCurrentFolderId(folderId);
+
     if (folderId === null) {
       setBreadcrumbs([{ id: null, name: 'Root' }]);
+      return;
+    }
+
+    const existingIdx = breadcrumbs.findIndex((b) => b.id === folderId);
+    if (existingIdx >= 0) {
+      setBreadcrumbs(breadcrumbs.slice(0, existingIdx + 1));
     } else {
-      const existingIdx = breadcrumbs.findIndex(b => b.id === folderId);
-      if (existingIdx >= 0) {
-        setBreadcrumbs(breadcrumbs.slice(0, existingIdx + 1));
-      } else {
-        setBreadcrumbs([...breadcrumbs, { id: folderId, name: folderName }]);
-      }
+      setBreadcrumbs([...breadcrumbs, { id: folderId, name: folderName }]);
     }
   };
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
+
     try {
-      await foldersApi.create({
+      await createFolder({
         projectId: pid,
         name: newFolderName.trim(),
         parentId: currentFolderId,
       });
+
       setFolderDialogOpen(false);
       setNewFolderName('');
-      loadFolders();
+      await fetchFolders(pid);
       showSnackbar('Folder created', 'success');
     } catch {
       showSnackbar('Failed to create folder', 'error');
@@ -92,8 +92,14 @@ export const FilesPage: React.FC = () => {
   const handleDeleteFolder = (id: number, name: string) => {
     showConfirmDialog('Delete Folder', `Delete folder "${name}" and all its contents?`, async () => {
       try {
-        await foldersApi.delete(id);
-        loadFolders();
+        await deleteFolder(id);
+        await fetchFolders(pid);
+
+        if (currentFolderId === id) {
+          setCurrentFolderId(null);
+          setBreadcrumbs([{ id: null, name: 'Root' }]);
+        }
+
         showSnackbar('Folder deleted', 'success');
       } catch {
         showSnackbar('Failed', 'error');
@@ -112,6 +118,7 @@ export const FilesPage: React.FC = () => {
         folderId: currentFolderId,
         isPinned: false,
       });
+
       showSnackbar('Note created', 'success');
       navigate(`/project/${pid}/notes/${note.id}`);
     } catch {
@@ -124,10 +131,18 @@ export const FilesPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h3">Files</Typography>
         <Box display="flex" gap={1}>
-          <DndButton variant="outlined" startIcon={<CreateNewFolderIcon />} onClick={() => setFolderDialogOpen(true)}>
+          <DndButton
+            variant="outlined"
+            startIcon={<CreateNewFolderIcon />}
+            onClick={() => setFolderDialogOpen(true)}
+          >
             New Folder
           </DndButton>
-          <DndButton variant="contained" startIcon={<NoteAddIcon />} onClick={handleCreateNoteInFolder}>
+          <DndButton
+            variant="contained"
+            startIcon={<NoteAddIcon />}
+            onClick={handleCreateNoteInFolder}
+          >
             New Note Here
           </DndButton>
         </Box>
@@ -136,7 +151,7 @@ export const FilesPage: React.FC = () => {
       <Breadcrumbs sx={{ mb: 2 }}>
         {breadcrumbs.map((bc, idx) => (
           <MuiLink
-            key={idx}
+            key={`${bc.id ?? 'root'}-${idx}`}
             component="button"
             underline="hover"
             color={idx === breadcrumbs.length - 1 ? 'text.primary' : 'inherit'}
@@ -158,29 +173,36 @@ export const FilesPage: React.FC = () => {
           />
         ) : (
           <List>
-            {currentSubfolders.map(folder => (
+            {currentSubfolders.map((folder) => (
               <ListItemButton
                 key={`folder-${folder.id}`}
                 onClick={() => handleNavigateToFolder(folder.id, folder.name)}
               >
-                <ListItemIcon><FolderIcon color="primary" /></ListItemIcon>
+                <ListItemIcon>
+                  <FolderIcon color="primary" />
+                </ListItemIcon>
                 <ListItemText primary={folder.name} />
                 <IconButton
                   size="small"
                   color="error"
-                  onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id, folder.name); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFolder(folder.id, folder.name);
+                  }}
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>
               </ListItemButton>
             ))}
 
-            {notes.map(note => (
+            {notes.map((note) => (
               <ListItemButton
                 key={`note-${note.id}`}
                 onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
               >
-                <ListItemIcon><DescriptionIcon /></ListItemIcon>
+                <ListItemIcon>
+                  <DescriptionIcon />
+                </ListItemIcon>
                 <ListItemText
                   primary={note.title}
                   secondary={`${note.format.toUpperCase()} · ${new Date(note.updatedAt).toLocaleDateString()}`}
@@ -191,7 +213,6 @@ export const FilesPage: React.FC = () => {
         )}
       </Paper>
 
-      {/* Create Folder Dialog */}
       <Dialog open={folderDialogOpen} onClose={() => setFolderDialogOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Create New Folder</DialogTitle>
         <DialogContent>
@@ -209,7 +230,9 @@ export const FilesPage: React.FC = () => {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setFolderDialogOpen(false)} color="inherit">Cancel</Button>
+          <Button onClick={() => setFolderDialogOpen(false)} color="inherit">
+            Cancel
+          </Button>
           <DndButton variant="contained" onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
             Create
           </DndButton>
