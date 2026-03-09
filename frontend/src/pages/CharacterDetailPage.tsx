@@ -5,7 +5,7 @@ import {
   DialogTitle, DialogContent, DialogActions,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, Tabs, Tab,
-  Grid, Tooltip, Autocomplete, InputAdornment,
+  Grid, Tooltip,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -21,6 +21,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
 import { DndButton } from '@/components/ui/DndButton';
+import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 
 const RELATIONSHIP_TYPES = [
   'ally', 'enemy', 'family', 'friend', 'rival',
@@ -591,48 +592,12 @@ export const CharacterDetailPage: React.FC = () => {
                     />
                   </Grid>
                   <Grid item xs={12}>
-                    <Autocomplete
-                      multiple
-                      freeSolo
+                    <TagAutocompleteField
                       options={allTagNames}
-                      value={form.tagsStr ? form.tagsStr.split(',').map((s) => s.trim()).filter(Boolean) : []}
-                      inputValue={tagsInput}
-                      onInputChange={(_, value) => setTagsInput(value)}
-                      onChange={(_, vals) => handleChange('tagsStr', vals.join(', '))}
-                      renderTags={(value, getTagProps) =>
-                        value.map((opt, index) => (
-                          <Chip
-                            {...getTagProps({ index })}
-                            key={opt}
-                            label={opt}
-                            size="small"
-                            sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }}
-                          />
-                        ))
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Теги"
-                          placeholder="Выберите или введите..."
-                          InputProps={{
-                            ...params.InputProps,
-                            startAdornment: (
-                              <>
-                                <InputAdornment position="start">
-                                  <LocalOfferIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 18 }} />
-                                </InputAdornment>
-                                {params.InputProps.startAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
-                      noOptionsText="Введите новый тег"
-                      sx={{
-                        '& .MuiAutocomplete-clearIndicator': { color: 'rgba(255,255,255,0.3)' },
-                        '& .MuiAutocomplete-popupIndicator': { color: 'rgba(255,255,255,0.3)' },
-                      }}
+                      value={form.tagsStr}
+                      pendingInput={tagsInput}
+                      onValueChange={(value) => handleChange('tagsStr', value)}
+                      onPendingInputChange={setTagsInput}
                     />
                   </Grid>
                 </Grid>

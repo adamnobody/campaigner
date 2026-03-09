@@ -23,6 +23,7 @@ import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import type { Note } from '@campaigner/shared';
+import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 
 export const WikiPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -182,6 +183,15 @@ export const WikiPage: React.FC = () => {
     } catch (err: any) {
       showSnackbar(err.message || 'Такая связь уже существует', 'error');
     }
+  };
+
+  const getPlainPreviewText = (content: string): string => {
+    return content
+      .replace(/^#+\s+/gm, '')
+      .replace(/$$\[([^|$$]+)\|([^\]]+)\]\]/g, '$2')
+      .replace(/$$\[([^$$]+)\]\]/g, '$1')
+      .replace(/\n+/g, ' ')
+      .trim();
   };
 
   const getLinksForNote = (noteId: number) => {
@@ -391,7 +401,7 @@ export const WikiPage: React.FC = () => {
                           lineHeight: 1.6,
                         }}
                       >
-                        {note.content.replace(/^#+ /gm, '').replace(/$$\[|$$\]/g, '').substring(0, 150)}
+                        {getPlainPreviewText(note.content).substring(0, 150)}
                       </Typography>
                     )}
 
@@ -513,46 +523,16 @@ export const WikiPage: React.FC = () => {
             placeholder="напр. Королевство Элдория"
           />
 
-          <Autocomplete
-            multiple
-            freeSolo
+          <TagAutocompleteField
             options={existingTagNames}
-            value={newTagsStr ? newTagsStr.split(',').map((s) => s.trim()).filter(Boolean) : []}
-            inputValue={newTagsInput}
-            onInputChange={(_, value) => setNewTagsInput(value)}
-            onChange={(_, vals) => setNewTagsStr(vals.join(', '))}
-            renderTags={(value, getTagProps) =>
-              value.map((opt, index) => (
-                <Chip
-                  {...getTagProps({ index })}
-                  key={opt}
-                  label={opt}
-                  size="small"
-                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }}
-                />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Теги (категории)"
-                margin="normal"
-                placeholder="Выберите или введите новые теги..."
-                helperText="Теги используются как категории для фильтрации вики-статей"
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <LocalOfferIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 18 }} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-            noOptionsText="Введите название нового тега"
+            value={newTagsStr}
+            pendingInput={newTagsInput}
+            label="Теги (категории)"
+            placeholder="Выберите или введите новые теги..."
+            helperText="Теги используются как категории для фильтрации вики-статей"
+            margin="normal"
+            onValueChange={setNewTagsStr}
+            onPendingInputChange={setNewTagsInput}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -589,45 +569,15 @@ export const WikiPage: React.FC = () => {
           Теги: {tagsEditNote?.title}
         </DialogTitle>
         <DialogContent>
-          <Autocomplete
-            multiple
-            freeSolo
+          <TagAutocompleteField
             options={existingTagNames}
-            value={editTagsStr ? editTagsStr.split(',').map((s) => s.trim()).filter(Boolean) : []}
-            inputValue={editTagsInput}
-            onInputChange={(_, value) => setEditTagsInput(value)}
-            onChange={(_, vals) => setEditTagsStr(vals.join(', '))}
-            renderTags={(value, getTagProps) =>
-              value.map((opt, index) => (
-                <Chip
-                  {...getTagProps({ index })}
-                  key={opt}
-                  label={opt}
-                  size="small"
-                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }}
-                />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Теги"
-                margin="normal"
-                placeholder="Выберите или введите..."
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <LocalOfferIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 18 }} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-            noOptionsText="Введите название нового тега"
+            value={editTagsStr}
+            pendingInput={editTagsInput}
+            label="Теги"
+            placeholder="Выберите или введите..."
+            margin="normal"
+            onValueChange={setEditTagsStr}
+            onPendingInputChange={setEditTagsInput}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

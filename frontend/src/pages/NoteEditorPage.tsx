@@ -3,7 +3,7 @@ import {
   Box, Typography, Paper, TextField, IconButton,
   ToggleButtonGroup, ToggleButton, Chip, Divider, Tooltip,
   List, ListItem, ListItemText, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Autocomplete, InputAdornment,
+  DialogContent, DialogActions, Autocomplete, 
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -32,7 +32,7 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
@@ -78,6 +78,10 @@ export const NoteEditorPage: React.FC = () => {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkTarget, setLinkTarget] = useState<{ id: number; title: string } | null>(null);
   const [linkLabel, setLinkLabel] = useState('');
+  const [insertWikiDialogOpen, setInsertWikiDialogOpen] = useState(false);
+  const [insertWikiTarget, setInsertWikiTarget] = useState<{ id: number; title: string } | null>(null);
+  const [insertWikiLabel, setInsertWikiLabel] = useState('');
+  const insertWikiSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasChangesRef = useRef(false);
@@ -219,9 +223,19 @@ export const NoteEditorPage: React.FC = () => {
   const insertMarkdown = useCallback((type: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
+
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selected = content.substring(start, end);
+
+    if (type === 'wikilink') {
+      insertWikiSelectionRef.current = { start, end };
+      setInsertWikiTarget(null);
+      setInsertWikiLabel(selected || '');
+      setInsertWikiDialogOpen(true);
+      return;
+    }
+
     let insertion = '';
     let cursorOffset = 0;
 
@@ -262,6 +276,34 @@ export const NoteEditorPage: React.FC = () => {
     } catch (err: any) {
       showSnackbar(err.response?.data?.message || 'Связь уже существует', 'error');
     }
+  };
+
+  const handleInsertWikiLink = () => {
+    if (!insertWikiTarget) return;
+
+    const textarea = textareaRef.current;
+    const { start, end } = insertWikiSelectionRef.current;
+
+    const label = insertWikiLabel.trim() || insertWikiTarget.title;
+    const insertion = `[[note:${insertWikiTarget.id}|${label}]]`;
+
+    const newContent = content.substring(0, start) + insertion + content.substring(end);
+    const newCursorPos = start + insertion.length;
+
+    history.push(newContent, newCursorPos, newCursorPos);
+    isUndoRedoRef.current = true;
+    handleContentChange(newContent);
+
+    setInsertWikiDialogOpen(false);
+    setInsertWikiTarget(null);
+    setInsertWikiLabel('');
+
+    setTimeout(() => {
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
   };
 
   const handleDeleteLink = async (linkId: number) => {
@@ -325,7 +367,7 @@ export const NoteEditorPage: React.FC = () => {
     if (diff < 3600) return `${Math.floor(diff / 60)} мин. назад`;
     return lastSaved.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   };
-
+  
   const wordCount = useMemo(() => {
     const words = content.trim().split(/\s+/).filter(Boolean).length;
     return { words, chars: content.length };
@@ -334,15 +376,56 @@ export const NoteEditorPage: React.FC = () => {
   /** Pre-process [[wiki links]] into real markdown links */
   const processedContent = useMemo(() => {
     if (!content) return content;
-    return content.replace(/$$\[([^$$]+)\]\]/g, (_match, linkTitle) => {
-      const trimmed = linkTitle.trim();
-      const found = wikiNotes.find(n => n.title.toLowerCase() === trimmed.toLowerCase());
-      if (found) {
-        return `[${trimmed}](/project/${pid}/notes/${found.id})`;
+
+    return content.replace(/$$\[([^$$]+?)\]\]/g, (_match, rawValue) => {
+      const value = String(rawValue).trim();
+
+      const noteIdMatch = value.match(/^note:(\d+)(?:\|(.+))?$/i);
+      if (noteIdMatch) {
+        const noteIdNum = parseInt(noteIdMatch[1], 10);
+        const customLabel = noteIdMatch[2]?.trim();
+        const foundById = wikiNotes.find((n) => n.id === noteIdNum);
+
+        if (foundById) {
+          const label = customLabel || foundById.title;
+          return `[${label}](/project/${pid}/notes/${foundById.id})`;
+        }
+
+        const fallbackLabel = customLabel || `Статья #${noteIdNum}`;
+        return `<span style="color:#FF6B6B;border-bottom:1px dashed rgba(255,107,107,0.4)">${fallbackLabel}</span>`;
       }
-      return `<span style="color:#FF6B6B;border-bottom:1px dashed rgba(255,107,107,0.4)">${trimmed}</span>`;
+
+      const titleAliasMatch = value.match(/^([^|]+)\|(.+)$/);
+      if (titleAliasMatch) {
+        const targetTitle = titleAliasMatch[1].trim();
+        const customLabel = titleAliasMatch[2].trim();
+        const foundByTitle = wikiNotes.find(
+          (n) => n.title.toLowerCase() === targetTitle.toLowerCase()
+        );
+
+        if (foundByTitle) {
+          return `[${customLabel}](/project/${pid}/notes/${foundByTitle.id})`;
+        }
+
+        return `<span style="color:#FF6B6B;border-bottom:1px dashed rgba(255,107,107,0.4)">${customLabel}</span>`;
+      }
+
+      const foundByTitle = wikiNotes.find(
+        (n) => n.title.toLowerCase() === value.toLowerCase()
+      );
+
+      if (foundByTitle) {
+        return `[${value}](/project/${pid}/notes/${foundByTitle.id})`;
+      }
+
+      return `<span style="color:#FF6B6B;border-bottom:1px dashed rgba(255,107,107,0.4)">${value}</span>`;
     });
   }, [content, wikiNotes, pid]);
+
+  useEffect(() => {
+    console.log('CONTENT:', content);
+    console.log('PROCESSED:', processedContent);
+  }, [content, processedContent]);
 
   if (!currentNote) return <LoadingScreen />;
 
@@ -553,7 +636,7 @@ export const NoteEditorPage: React.FC = () => {
 
         <Box sx={{ p: 1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', display: 'block', textAlign: 'center' }}>
-            Используйте [[Название]] для вики-ссылок
+            Используйте [[note:ID|Текст]] или [[Название]]
           </Typography>
         </Box>
       </Box>
@@ -617,7 +700,7 @@ export const NoteEditorPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)' }}>
           Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить
-          {isWiki && ' · [[Название]] — вики-ссылка'}
+          {isWiki && ' · [[note:ID|Текст]] или [[Название]] — вики-ссылка'}
         </Typography>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)' }}>
           {wordCount.words} слов · {wordCount.chars} символов
@@ -639,6 +722,74 @@ export const NoteEditorPage: React.FC = () => {
 
         {renderWikiSidebar()}
       </Box>
+
+      <Dialog
+        open={insertWikiDialogOpen}
+        onClose={() => {
+          setInsertWikiDialogOpen(false);
+          setInsertWikiTarget(null);
+          setInsertWikiLabel('');
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      >
+        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+          Вставить вики-ссылку
+        </DialogTitle>
+        <DialogContent>
+          <Autocomplete
+            options={wikiNotes.filter((n) => n.id !== nid)}
+            getOptionLabel={(opt) => opt.title}
+            value={insertWikiTarget}
+            onChange={(_, val) => {
+              setInsertWikiTarget(val);
+              if (val && !insertWikiLabel.trim()) {
+                setInsertWikiLabel(val.title);
+              }
+            }}
+            isOptionEqualToValue={(opt, val) => opt.id === val.id}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Вики-статья *"
+                margin="normal"
+                placeholder="Выберите статью..."
+              />
+            )}
+            noOptionsText="Нет статей"
+          />
+
+          <TextField
+            fullWidth
+            label="Текст ссылки"
+            value={insertWikiLabel}
+            onChange={(e) => setInsertWikiLabel(e.target.value)}
+            margin="normal"
+            placeholder="Текст, который будет показан в статье"
+            helperText="Если ничего не указать, будет использовано название статьи"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setInsertWikiDialogOpen(false);
+              setInsertWikiTarget(null);
+              setInsertWikiLabel('');
+            }}
+            color="inherit"
+          >
+            Отмена
+          </Button>
+          <DndButton
+            variant="contained"
+            onClick={handleInsertWikiLink}
+            disabled={!insertWikiTarget}
+          >
+            Вставить
+          </DndButton>
+        </DialogActions>
+      </Dialog>
 
       {/* Add Link Dialog */}
       <Dialog open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} maxWidth="sm" fullWidth
