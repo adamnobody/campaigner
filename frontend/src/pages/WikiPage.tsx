@@ -188,9 +188,10 @@ export const WikiPage: React.FC = () => {
   const getPlainPreviewText = (content: string): string => {
     return content
       .replace(/^#+\s+/gm, '')
-      .replace(/$$\[([^|$$]+)\|([^\]]+)\]\]/g, '$2')
-      .replace(/$$\[([^$$]+)\]\]/g, '$1')
+      .replace(/$$([^$$]+)\]$\/__note__\/\d+$/g, '$1')
+      .replace(/$$([^$$]+)\]$[^)]+$/g, '$1')
       .replace(/\n+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
       .trim();
   };
 
@@ -210,15 +211,26 @@ export const WikiPage: React.FC = () => {
     return result;
   }, [notes, selectedCategory]);
 
+  const hasFilters = Boolean(search || selectedCategory);
+
   if (loading && notes.length === 0) return <LoadingScreen />;
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+    <Box sx={{ minWidth: 0, width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', md: 'center' }}
+        mb={3}
+        gap={2}
+        flexWrap="wrap"
+        sx={{ minWidth: 0 }}
+      >
         <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff' }}>
           Вики
         </Typography>
-        <Box display="flex" gap={1}>
+
+        <Box display="flex" gap={1} flexWrap="wrap" sx={{ minWidth: 0 }}>
           <DndButton variant="outlined" startIcon={<AccountTreeIcon />} onClick={() => navigate(`/project/${pid}/wiki/graph`)}>
             Граф
           </DndButton>
@@ -231,79 +243,163 @@ export const WikiPage: React.FC = () => {
         </Box>
       </Box>
 
-      <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
-        <TextField
-          placeholder="Поиск в вики..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      <Box
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 2,
+          border: '1px solid rgba(255,255,255,0.08)',
+          backgroundColor: 'rgba(255,255,255,0.02)',
+          minWidth: 0,
+          maxWidth: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
           sx={{
-            flexGrow: 1,
-            maxWidth: 400,
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' },
+            gridTemplateAreas: {
+              xs: `
+                "search"
+                "tags"
+                "meta"
+              `,
+              md: `
+                "search meta"
+                "tags meta"
+              `,
             },
+            gap: 2,
+            alignItems: 'start',
+            minWidth: 0,
+            maxWidth: '100%',
           }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
-              </InputAdornment>
-            ),
-          }}
-          size="small"
-        />
-
-        {categories.length > 0 && (
-          <Box display="flex" gap={0.5} flexWrap="wrap" alignItems="center">
-            <CategoryIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.3)', mr: 0.5 }} />
-            <Chip
-              label="Все"
+        >
+          <Box sx={{ gridArea: 'search', minWidth: 0, maxWidth: '100%' }}>
+            <TextField
+              fullWidth
+              placeholder="Поиск в вики..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               size="small"
-              onClick={() => setSelectedCategory('')}
               sx={{
-                backgroundColor: !selectedCategory ? 'rgba(130,130,255,0.3)' : 'rgba(255,255,255,0.06)',
-                color: !selectedCategory ? '#fff' : 'rgba(255,255,255,0.5)',
-                fontWeight: !selectedCategory ? 600 : 400,
-                cursor: 'pointer',
-                '&:hover': { backgroundColor: 'rgba(130,130,255,0.2)' },
+                minWidth: 0,
+                maxWidth: '100%',
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                  '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.22)' },
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
+                  </InputAdornment>
+                ),
               }}
             />
-            {categories.map((cat) => (
-              <Chip
-                key={cat.name}
-                label={`${cat.name} (${cat.count})`}
-                size="small"
-                onClick={() => setSelectedCategory(selectedCategory === cat.name ? '' : cat.name)}
-                sx={{
-                  backgroundColor: selectedCategory === cat.name ? 'rgba(130,130,255,0.3)' : 'rgba(255,255,255,0.06)',
-                  color: selectedCategory === cat.name ? '#fff' : 'rgba(255,255,255,0.5)',
-                  fontWeight: selectedCategory === cat.name ? 600 : 400,
-                  cursor: 'pointer',
-                  '&:hover': { backgroundColor: 'rgba(130,130,255,0.2)' },
-                }}
-              />
-            ))}
           </Box>
-        )}
 
-        {(search || selectedCategory) && (
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setSearch('');
-              setSelectedCategory('');
+          <Box sx={{ gridArea: 'tags', minWidth: 0, maxWidth: '100%' }}>
+            {categories.length > 0 && (
+              <Box display="flex" gap={1} alignItems="flex-start" sx={{ minWidth: 0, maxWidth: '100%' }}>
+                <CategoryIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.3)', mt: '6px', flexShrink: 0 }} />
+                <Box
+                  display="flex"
+                  gap={0.75}
+                  flexWrap="wrap"
+                  alignItems="center"
+                  sx={{
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    flex: 1,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Chip
+                    label="Все"
+                    size="small"
+                    onClick={() => setSelectedCategory('')}
+                    sx={{
+                      maxWidth: '100%',
+                      backgroundColor: !selectedCategory ? 'rgba(130,130,255,0.3)' : 'rgba(255,255,255,0.06)',
+                      color: !selectedCategory ? '#fff' : 'rgba(255,255,255,0.5)',
+                      fontWeight: !selectedCategory ? 600 : 400,
+                      cursor: 'pointer',
+                      '&:hover': { backgroundColor: 'rgba(130,130,255,0.2)' },
+                    }}
+                  />
+                  {categories.map((cat) => (
+                    <Chip
+                      key={cat.name}
+                      label={`${cat.name} (${cat.count})`}
+                      size="small"
+                      onClick={() => setSelectedCategory(selectedCategory === cat.name ? '' : cat.name)}
+                      sx={{
+                        maxWidth: '100%',
+                        backgroundColor: selectedCategory === cat.name ? 'rgba(130,130,255,0.3)' : 'rgba(255,255,255,0.06)',
+                        color: selectedCategory === cat.name ? '#fff' : 'rgba(255,255,255,0.5)',
+                        fontWeight: selectedCategory === cat.name ? 600 : 400,
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: 'rgba(130,130,255,0.2)' },
+                        '& .MuiChip-label': {
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        },
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
+
+          <Box
+            sx={{
+              gridArea: 'meta',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: { xs: 'flex-start', md: 'flex-end' },
+              justifyContent: 'flex-start',
+              gap: 1,
+              minWidth: 0,
+              maxWidth: '100%',
             }}
-            size="small"
-            sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}
           >
-            Сброс
-          </Button>
-        )}
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'rgba(255,255,255,0.4)',
+                textAlign: { xs: 'left', md: 'right' },
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {filteredNotes.length} из {notes.length}
+            </Typography>
 
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-          {filteredNotes.length} из {notes.length}
-        </Typography>
+            {hasFilters && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setSearch('');
+                  setSelectedCategory('');
+                }}
+                size="small"
+                sx={{
+                  borderColor: 'rgba(130,130,255,0.4)',
+                  color: 'rgba(130,130,255,0.9)',
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Сброс
+              </Button>
+            )}
+          </Box>
+        </Box>
       </Box>
 
       {notes.length === 0 ? (
@@ -317,183 +413,195 @@ export const WikiPage: React.FC = () => {
       ) : (
         <Box
           sx={{
-            columnCount: { xs: 1, sm: 2, md: 3 },
-            columnGap: '16px',
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              lg: 'repeat(3, minmax(0, 1fr))',
+            },
+            gap: 2,
+            width: '100%',
+            minWidth: 0,
+            maxWidth: '100%',
+            overflow: 'hidden',
           }}
         >
           {filteredNotes.map((note) => {
             const noteLinks = getLinksForNote(note.id);
 
             return (
-              <Box
+              <Card
                 key={note.id}
                 sx={{
-                  breakInside: 'avoid',
-                  mb: 2,
-                  display: 'inline-block',
+                  cursor: 'pointer',
+                  minWidth: 0,
                   width: '100%',
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    backgroundColor: 'rgba(255,255,255,0.07)',
+                    borderColor: 'rgba(255,255,255,0.15)',
+                    '& .card-actions': { opacity: 1 },
+                  },
                 }}
+                onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
               >
-                <Card
-                  sx={{
-                    cursor: 'pointer',
-                    width: '100%',
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      backgroundColor: 'rgba(255,255,255,0.07)',
-                      borderColor: 'rgba(255,255,255,0.15)',
-                      '& .card-actions': { opacity: 1 },
-                    },
-                  }}
-                  onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
-                >
-                  <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                      <Typography
-                        sx={{
-                          fontFamily: '"Cinzel", serif',
-                          fontWeight: 600,
-                          fontSize: '1.1rem',
-                          color: '#fff',
-                          flexGrow: 1,
-                          pr: 1,
-                        }}
-                        noWrap
-                      >
-                        {note.title}
-                      </Typography>
-                      <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
-                        <Tooltip title="Редактировать теги">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => handleOpenTagsEdit(note, e)}
-                            sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'rgba(201,169,89,0.8)' } }}
-                          >
-                            <LocalOfferIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Удалить">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => handleDelete(note.id, note.title, e)}
-                            sx={{ color: 'rgba(255,100,100,0.4)', '&:hover': { color: 'rgba(255,100,100,0.8)' } }}
-                          >
-                            <DeleteIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
+                <CardContent sx={{ minWidth: 0 }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1} sx={{ minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontFamily: '"Cinzel", serif',
+                        fontWeight: 600,
+                        fontSize: '1.1rem',
+                        color: '#fff',
+                        flexGrow: 1,
+                        pr: 1,
+                        minWidth: 0,
+                      }}
+                      noWrap
+                    >
+                      {note.title}
+                    </Typography>
 
-                    {note.content && (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: 'rgba(255,255,255,0.5)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          fontSize: '0.85rem',
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        {getPlainPreviewText(note.content).substring(0, 150)}
-                      </Typography>
-                    )}
-
-                    {note.tags && note.tags.length > 0 && (
-                      <Box display="flex" gap={0.5} mt={1.5} flexWrap="wrap">
-                        {note.tags.map((tag: any) => (
-                          <Chip
-                            key={tag.id}
-                            label={tag.name}
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCategory(selectedCategory === tag.name ? '' : tag.name);
-                            }}
-                            sx={{
-                              height: 20,
-                              fontSize: '0.65rem',
-                              fontWeight: 600,
-                              backgroundColor: tag.color || 'rgba(130,130,255,0.2)',
-                              color: '#fff',
-                              borderRadius: 1,
-                              cursor: 'pointer',
-                              '&:hover': { opacity: 0.8 },
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    )}
-
-                    {(!note.tags || note.tags.length === 0) && (
-                      <Box
-                        display="flex"
-                        alignItems="center"
-                        gap={0.5}
-                        mt={1.5}
-                        onClick={(e) => handleOpenTagsEdit(note, e)}
-                        sx={{ cursor: 'pointer', '&:hover': { '& .add-tag-text': { color: 'rgba(201,169,89,0.8)' } } }}
-                      >
-                        <LocalOfferIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.2)' }} />
-                        <Typography
-                          className="add-tag-text"
-                          variant="caption"
-                          sx={{ color: 'rgba(255,255,255,0.2)', transition: 'color 0.15s' }}
+                    <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0 }}>
+                      <Tooltip title="Редактировать теги">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleOpenTagsEdit(note, e)}
+                          sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'rgba(201,169,89,0.8)' } }}
                         >
-                          + добавить теги
+                          <LocalOfferIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Удалить">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleDelete(note.id, note.title, e)}
+                          sx={{ color: 'rgba(255,100,100,0.4)', '&:hover': { color: 'rgba(255,100,100,0.8)' } }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
+
+                  {note.content && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'rgba(255,255,255,0.5)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        fontSize: '0.85rem',
+                        lineHeight: 1.6,
+                        minWidth: 0,
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {getPlainPreviewText(note.content).substring(0, 150)}
+                    </Typography>
+                  )}
+
+                  {note.tags && note.tags.length > 0 && (
+                    <Box display="flex" gap={0.5} mt={1.5} flexWrap="wrap" sx={{ minWidth: 0 }}>
+                      {note.tags.map((tag: any) => (
+                        <Chip
+                          key={tag.id}
+                          label={tag.name}
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCategory(selectedCategory === tag.name ? '' : tag.name);
+                          }}
+                          sx={{
+                            maxWidth: '100%',
+                            height: 20,
+                            fontSize: '0.65rem',
+                            fontWeight: 600,
+                            backgroundColor: tag.color || 'rgba(130,130,255,0.2)',
+                            color: '#fff',
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            '&:hover': { opacity: 0.8 },
+                            '& .MuiChip-label': {
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            },
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+
+                  {(!note.tags || note.tags.length === 0) && (
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={0.5}
+                      mt={1.5}
+                      onClick={(e) => handleOpenTagsEdit(note, e)}
+                      sx={{ cursor: 'pointer', '&:hover': { '& .add-tag-text': { color: 'rgba(201,169,89,0.8)' } } }}
+                    >
+                      <LocalOfferIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.2)' }} />
+                      <Typography
+                        className="add-tag-text"
+                        variant="caption"
+                        sx={{ color: 'rgba(255,255,255,0.2)', transition: 'color 0.15s' }}
+                      >
+                        + добавить теги
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {noteLinks.length > 0 && (
+                    <Box mt={1.5} pt={1.5} borderTop="1px solid rgba(255,255,255,0.06)" sx={{ minWidth: 0 }}>
+                      <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+                        <AccountTreeIcon sx={{ fontSize: 14, color: 'rgba(78,205,196,0.6)' }} />
+                        <Typography variant="caption" sx={{ color: 'rgba(78,205,196,0.6)', fontWeight: 600 }}>
+                          Связи ({noteLinks.length})
                         </Typography>
                       </Box>
-                    )}
-
-                    {noteLinks.length > 0 && (
-                      <Box mt={1.5} pt={1.5} borderTop="1px solid rgba(255,255,255,0.06)">
-                        <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
-                          <AccountTreeIcon sx={{ fontSize: 14, color: 'rgba(78,205,196,0.6)' }} />
-                          <Typography variant="caption" sx={{ color: 'rgba(78,205,196,0.6)', fontWeight: 600 }}>
-                            Связи ({noteLinks.length})
-                          </Typography>
-                        </Box>
-                        <Box display="flex" flexDirection="column" gap={0.3}>
-                          {noteLinks.slice(0, 3).map((link) => {
-                            const otherTitle = link.sourceNoteId === note.id ? link.targetTitle : link.sourceTitle;
-                            const label = link.label ? ` (${link.label})` : '';
-                            return (
-                              <Typography
-                                key={link.id}
-                                variant="caption"
-                                sx={{
-                                  color: 'rgba(78,205,196,0.5)',
-                                  fontSize: '0.7rem',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                → {otherTitle}{label}
-                              </Typography>
-                            );
-                          })}
-                          {noteLinks.length > 3 && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>
-                              +{noteLinks.length - 3} ещё
+                      <Box display="flex" flexDirection="column" gap={0.3}>
+                        {noteLinks.slice(0, 3).map((link) => {
+                          const otherTitle = link.sourceNoteId === note.id ? link.targetTitle : link.sourceTitle;
+                          const label = link.label ? ` (${link.label})` : '';
+                          return (
+                            <Typography
+                              key={link.id}
+                              variant="caption"
+                              sx={{
+                                color: 'rgba(78,205,196,0.5)',
+                                fontSize: '0.7rem',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                minWidth: 0,
+                              }}
+                            >
+                              → {otherTitle}{label}
                             </Typography>
-                          )}
-                        </Box>
+                          );
+                        })}
+                        {noteLinks.length > 3 && (
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>
+                            +{noteLinks.length - 3} ещё
+                          </Typography>
+                        )}
                       </Box>
-                    )}
+                    </Box>
+                  )}
 
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', display: 'block', mt: 1 }}>
-                      {new Date(note.updatedAt).toLocaleDateString('ru-RU')}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Box>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', display: 'block', mt: 1 }}>
+                    {new Date(note.updatedAt).toLocaleDateString('ru-RU')}
+                  </Typography>
+                </CardContent>
+              </Card>
             );
           })}
         </Box>
