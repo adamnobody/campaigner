@@ -1,9 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
 import App from './App';
-import { dndTheme } from './theme/muiTheme';
+import { BrowserRouter } from 'react-router-dom';
+import { AppThemeProvider } from './theme/AppThemeProvider';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { GlobalSnackbar } from './components/ui/GlobalSnackbar';
 
@@ -15,12 +14,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         v7_relativeSplatPath: true,
       }}
     >
-      <ThemeProvider theme={dndTheme}>
-        <CssBaseline />
+      <AppThemeProvider>
         <App />
         <ConfirmDialog />
         <GlobalSnackbar />
-      </ThemeProvider>
+      </AppThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

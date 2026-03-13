@@ -17,13 +17,17 @@
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "db:migrate": "cd backend && npm run migrate",
-    "doctor": "node scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs",
+    "chunk": "node scripts/chunker.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "remark-gfm": "^4.0.1"
+    "globby": "^16.1.1",
+    "picocolors": "^1.1.1",
+    "remark-gfm": "^4.0.1",
+    "tiktoken": "^1.0.22"
   }
 }

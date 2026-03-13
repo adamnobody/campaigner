@@ -15,6 +15,7 @@ import { TimelinePage } from './pages/TimelinePage';
 import { FilesPage } from './pages/FilesPage';
 import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
 import { WikiGraphPage } from './pages/WikiGraphPage';
+import { AppearanceSettingsPage } from './pages/AppearanceSettingsPage';
 
 const App: React.FC = () => {
   const [splashDone, setSplashDone] = useState(false);
@@ -28,6 +29,7 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="appearance" element={<ErrorBoundary><AppearanceSettingsPage /></ErrorBoundary>} />
           <Route path="project/:projectId">
             <Route index element={<Navigate to="map" replace />} />
             <Route path="map" element={<ErrorBoundary><MapPage /></ErrorBoundary>} />
@@ -43,7 +45,6 @@ const App: React.FC = () => {
             <Route path="files" element={<ErrorBoundary><FilesPage /></ErrorBoundary>} />
             <Route path="settings" element={<ErrorBoundary><ProjectSettingsPage /></ErrorBoundary>} />
           </Route>
-
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
