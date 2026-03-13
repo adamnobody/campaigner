@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 
-export type ThemePreset = 'obsidian-gold' | 'midnight-cyan' | 'royal-violet' | 'ember-crimson';
+export type ThemePreset =
+  | 'obsidian-gold'
+  | 'midnight-cyan'
+  | 'royal-violet'
+  | 'ember-crimson'
+  | 'forest-emerald'
+  | 'moonstone-silver'
+  | 'sable-rose'
+  | 'deep-amber'
+  | 'storm-indigo'
+  | 'ashen-teal';
+
 export type SurfaceMode = 'glass' | 'solid';
 export type FontMode = 'serif' | 'sans';
 export type UiDensity = 'compact' | 'comfortable' | 'spacious';
@@ -16,6 +27,9 @@ export interface PreferencesState {
   blur: number;
   borderRadius: number;
 
+  homeBackgroundImage: string;
+  homeBackgroundOpacity: number;
+
   setThemePreset: (value: ThemePreset) => void;
   setSurfaceMode: (value: SurfaceMode) => void;
   setFontMode: (value: FontMode) => void;
@@ -24,6 +38,11 @@ export interface PreferencesState {
   setTransparency: (value: number) => void;
   setBlur: (value: number) => void;
   setBorderRadius: (value: number) => void;
+
+  setHomeBackgroundImage: (value: string) => void;
+  setHomeBackgroundOpacity: (value: number) => void;
+  clearHomeBackgroundImage: () => void;
+
   resetAppearance: () => void;
 }
 
@@ -38,6 +57,9 @@ const defaultPreferences = {
   transparency: 0.72,
   blur: 14,
   borderRadius: 14,
+
+  homeBackgroundImage: '',
+  homeBackgroundOpacity: 0.42,
 };
 
 const loadInitialState = () => {
@@ -52,7 +74,7 @@ const loadInitialState = () => {
   }
 };
 
-export const usePreferencesStore = create<PreferencesState>((set, get) => ({
+export const usePreferencesStore = create<PreferencesState>((set) => ({
   ...loadInitialState(),
 
   setThemePreset: (value) => set({ themePreset: value }),
@@ -63,7 +85,15 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
   setTransparency: (value) => set({ transparency: value }),
   setBlur: (value) => set({ blur: value }),
   setBorderRadius: (value) => set({ borderRadius: value }),
-  resetAppearance: () => set(defaultPreferences),
+
+  setHomeBackgroundImage: (value) => set({ homeBackgroundImage: value }),
+  setHomeBackgroundOpacity: (value) => set({ homeBackgroundOpacity: value }),
+  clearHomeBackgroundImage: () => set({ homeBackgroundImage: '' }),
+
+  resetAppearance: () =>
+    set({
+      ...defaultPreferences,
+    }),
 }));
 
 usePreferencesStore.subscribe((state) => {
@@ -77,6 +107,8 @@ usePreferencesStore.subscribe((state) => {
       transparency,
       blur,
       borderRadius,
+      homeBackgroundImage,
+      homeBackgroundOpacity,
     } = state;
 
     localStorage.setItem(
@@ -90,6 +122,8 @@ usePreferencesStore.subscribe((state) => {
         transparency,
         blur,
         borderRadius,
+        homeBackgroundImage,
+        homeBackgroundOpacity,
       })
     );
   } catch {
