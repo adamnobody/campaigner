@@ -1,0 +1,297 @@
+import { alpha, createTheme } from '@mui/material/styles';
+import { THEME_PRESETS } from './presets';
+import type { PreferencesState } from '@/store/usePreferencesStore';
+
+export const createAppTheme = (preferences: Pick<
+  PreferencesState,
+  'themePreset' | 'surfaceMode' | 'fontMode' | 'uiDensity' | 'motionMode' | 'transparency' | 'blur' | 'borderRadius'
+>) => {
+  const preset = THEME_PRESETS[preferences.themePreset];
+
+  const spacingBase =
+    preferences.uiDensity === 'compact' ? 7 :
+    preferences.uiDensity === 'spacious' ? 10 :
+    8;
+
+  const bodyFont =
+    preferences.fontMode === 'serif'
+      ? '"Crimson Text", serif'
+      : '"Inter", "Roboto", sans-serif';
+
+  const uiFont = '"Inter", "Roboto", sans-serif';
+  const headingFont = '"Cinzel", serif';
+  const monoFont = '"Fira Code", monospace';
+
+  const panelOpacity = preferences.surfaceMode === 'glass'
+    ? preferences.transparency
+    : 0.96;
+
+  const blurAmount = preferences.surfaceMode === 'glass'
+    ? preferences.blur
+    : 0;
+
+  const transitionDuration = preferences.motionMode === 'reduced' ? 0 : 180;
+
+  const paperBackground = `rgba(${preset.panelBaseRgb}, ${panelOpacity})`;
+  const softBackground = alpha(preset.textPrimary, 0.03);
+  const borderColor = `rgba(${preset.borderRgb}, 0.18)`;
+
+  return createTheme({
+    spacing: spacingBase,
+    shape: {
+      borderRadius: preferences.borderRadius,
+    },
+    palette: {
+      mode: 'dark',
+      primary: {
+        main: preset.accentMain,
+      },
+      secondary: {
+        main: preset.accentStrong,
+      },
+      success: {
+        main: preset.success,
+      },
+      warning: {
+        main: preset.warning,
+      },
+      error: {
+        main: preset.error,
+      },
+      background: {
+        default: preset.background,
+        paper: paperBackground,
+      },
+      text: {
+        primary: preset.textPrimary,
+        secondary: preset.textSecondary,
+      },
+      divider: borderColor,
+    },
+    typography: {
+      fontFamily: uiFont,
+      h1: {
+        fontFamily: headingFont,
+        fontWeight: 700,
+      },
+      h2: {
+        fontFamily: headingFont,
+        fontWeight: 700,
+      },
+      h3: {
+        fontFamily: headingFont,
+        fontWeight: 600,
+      },
+      h4: {
+        fontFamily: headingFont,
+        fontWeight: 600,
+      },
+      h5: {
+        fontFamily: headingFont,
+        fontWeight: 600,
+      },
+      h6: {
+        fontFamily: headingFont,
+        fontWeight: 600,
+      },
+      body1: {
+        fontFamily: bodyFont,
+      },
+      body2: {
+        fontFamily: bodyFont,
+      },
+      button: {
+        fontFamily: uiFont,
+        textTransform: 'none',
+        fontWeight: 600,
+      },
+      caption: {
+        fontFamily: uiFont,
+      },
+      subtitle1: {
+        fontFamily: uiFont,
+      },
+      subtitle2: {
+        fontFamily: uiFont,
+      },
+    },
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          body: {
+            backgroundColor: preset.background,
+            backgroundImage: `
+              ${preset.backgroundAccent},
+              linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0))
+            `,
+            backgroundAttachment: 'fixed',
+          },
+          '*': {
+            boxSizing: 'border-box',
+          },
+          '::-webkit-scrollbar': {
+            width: 10,
+            height: 10,
+          },
+          '::-webkit-scrollbar-thumb': {
+            background: alpha(preset.accentMain, 0.28),
+            borderRadius: 999,
+          },
+          '::-webkit-scrollbar-track': {
+            background: 'rgba(255,255,255,0.04)',
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            backgroundColor: paperBackground,
+            backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
+            border: `1px solid ${borderColor}`,
+            transition: transitionDuration ? `background-color ${transitionDuration}ms ease, border-color ${transitionDuration}ms ease, transform ${transitionDuration}ms ease` : 'none',
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            backgroundColor: paperBackground,
+            backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
+            border: `1px solid ${borderColor}`,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+            transition: transitionDuration ? `background-color ${transitionDuration}ms ease, border-color ${transitionDuration}ms ease, transform ${transitionDuration}ms ease, box-shadow ${transitionDuration}ms ease` : 'none',
+          },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            backgroundImage: 'none',
+            backgroundColor: paperBackground,
+            backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
+            border: `1px solid ${borderColor}`,
+          },
+        },
+      },
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            backgroundColor: `rgba(${preset.panelBaseRgb}, ${Math.min(panelOpacity, 0.88)})`,
+            backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
+            borderBottom: `1px solid ${borderColor}`,
+            boxShadow: 'none',
+          },
+        },
+      },
+      MuiDrawer: {
+        styleOverrides: {
+          paper: {
+            backgroundImage: 'none',
+            backgroundColor: `rgba(${preset.panelBaseRgb}, ${Math.min(panelOpacity, 0.9)})`,
+            backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
+            borderRight: `1px solid ${borderColor}`,
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: Math.max(10, preferences.borderRadius - 2),
+            transition: transitionDuration ? `all ${transitionDuration}ms ease` : 'none',
+          },
+          contained: {
+            background: `linear-gradient(180deg, ${preset.accentMain}, ${preset.accentStrong})`,
+            color: '#111',
+            boxShadow: `0 8px 20px ${alpha(preset.accentMain, 0.22)}`,
+            '&:hover': {
+              background: `linear-gradient(180deg, ${preset.accentStrong}, ${preset.accentMain})`,
+              boxShadow: `0 10px 24px ${alpha(preset.accentMain, 0.28)}`,
+            },
+          },
+          outlined: {
+            borderColor: alpha(preset.accentMain, 0.32),
+            color: preset.textPrimary,
+            backgroundColor: alpha(preset.textPrimary, 0.02),
+            '&:hover': {
+              borderColor: alpha(preset.accentMain, 0.5),
+              backgroundColor: alpha(preset.accentMain, 0.08),
+            },
+          },
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            color: preset.textSecondary,
+            transition: transitionDuration ? `all ${transitionDuration}ms ease` : 'none',
+            '&:hover': {
+              backgroundColor: alpha(preset.accentMain, 0.1),
+              color: preset.textPrimary,
+            },
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            backgroundColor: alpha(preset.textPrimary, 0.06),
+            border: `1px solid ${alpha(preset.accentMain, 0.14)}`,
+            color: preset.textSecondary,
+            transition: transitionDuration ? `all ${transitionDuration}ms ease` : 'none',
+          },
+          filled: {
+            backgroundColor: alpha(preset.accentMain, 0.14),
+            color: preset.textPrimary,
+          },
+        },
+      },
+      MuiTextField: {
+        defaultProps: {
+          variant: 'outlined',
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            backgroundColor: softBackground,
+            backdropFilter: blurAmount ? `blur(${Math.max(0, blurAmount - 4)}px)` : 'none',
+            transition: transitionDuration ? `all ${transitionDuration}ms ease` : 'none',
+            '& fieldset': {
+              borderColor: alpha(preset.textPrimary, 0.12),
+            },
+            '&:hover fieldset': {
+              borderColor: alpha(preset.accentMain, 0.24),
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: preset.accentMain,
+              boxShadow: `0 0 0 3px ${alpha(preset.accentMain, 0.12)}`,
+            },
+          },
+          input: {
+            color: preset.textPrimary,
+          },
+        },
+      },
+      MuiTooltip: {
+        styleOverrides: {
+          tooltip: {
+            backgroundColor: `rgba(${preset.panelBaseRgb}, 0.96)`,
+            border: `1px solid ${borderColor}`,
+            color: preset.textPrimary,
+            backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
+          },
+        },
+      },
+      MuiDivider: {
+        styleOverrides: {
+          root: {
+            borderColor: borderColor,
+          },
+        },
+      },
+    },
+  });
+};
