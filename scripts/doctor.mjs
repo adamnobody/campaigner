@@ -352,7 +352,7 @@ function checkFrontend() {
   }
 
   // Check stores
-  const stores = ['useProjectStore', 'useCharacterStore', 'useNoteStore', 'useMapStore', 'useTimelineStore', 'useUIStore', 'useStyleStore'];
+  const stores = ['useProjectStore', 'useCharacterStore', 'useNoteStore', 'useMapStore', 'useTimelineStore', 'useUIStore'];
   let missingStores = [];
   for (const s of stores) {
     if (!fileExists(`frontend/src/store/${s}.ts`)) {
