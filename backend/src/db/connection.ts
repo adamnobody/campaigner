@@ -28,7 +28,6 @@ export function getDb(): Database.Database {
 export function initializeDatabase(): void {
   const database = getDb();
 
-  // Projects
   database.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +40,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Folders
   database.exec(`
     CREATE TABLE IF NOT EXISTS folders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +52,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Characters
   database.exec(`
     CREATE TABLE IF NOT EXISTS characters (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,7 +74,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Character relationships
   database.exec(`
     CREATE TABLE IF NOT EXISTS character_relationships (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +91,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Notes
   database.exec(`
     CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,11 +108,25 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Map markers
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS maps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      parent_map_id INTEGER,
+      parent_marker_id INTEGER,
+      name TEXT NOT NULL,
+      image_path TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_map_id) REFERENCES maps(id) ON DELETE CASCADE
+    );
+  `);
+
   database.exec(`
     CREATE TABLE IF NOT EXISTS map_markers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      project_id INTEGER NOT NULL,
+      map_id INTEGER NOT NULL,
       title TEXT NOT NULL,
       description TEXT DEFAULT '',
       position_x REAL NOT NULL,
@@ -125,14 +134,15 @@ export function initializeDatabase(): void {
       color TEXT DEFAULT '#FF6B6B',
       icon TEXT DEFAULT 'custom',
       linked_note_id INTEGER,
+      child_map_id INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-      FOREIGN KEY (linked_note_id) REFERENCES notes(id) ON DELETE SET NULL
+      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
+      FOREIGN KEY (linked_note_id) REFERENCES notes(id) ON DELETE SET NULL,
+      FOREIGN KEY (child_map_id) REFERENCES maps(id) ON DELETE SET NULL
     );
   `);
 
-  // Timeline events
   database.exec(`
     CREATE TABLE IF NOT EXISTS timeline_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,7 +160,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Tags
   database.exec(`
     CREATE TABLE IF NOT EXISTS tags (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,7 +171,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Tag associations (polymorphic)
   database.exec(`
     CREATE TABLE IF NOT EXISTS tag_associations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,7 +182,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Wiki links (connections between wiki articles)
   database.exec(`
     CREATE TABLE IF NOT EXISTS wiki_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -190,7 +197,6 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // Indexes
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
     CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(project_id, name);
@@ -199,7 +205,6 @@ export function initializeDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
     CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(project_id, note_type);
     CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(project_id, is_pinned);
-    CREATE INDEX IF NOT EXISTS idx_map_markers_project ON map_markers(project_id);
     CREATE INDEX IF NOT EXISTS idx_timeline_events_project ON timeline_events(project_id);
     CREATE INDEX IF NOT EXISTS idx_timeline_events_sort ON timeline_events(project_id, sort_order);
     CREATE INDEX IF NOT EXISTS idx_folders_project ON folders(project_id);
@@ -214,6 +219,10 @@ export function initializeDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_wiki_links_project ON wiki_links(project_id);
     CREATE INDEX IF NOT EXISTS idx_wiki_links_source ON wiki_links(source_note_id);
     CREATE INDEX IF NOT EXISTS idx_wiki_links_target ON wiki_links(target_note_id);
+    CREATE INDEX IF NOT EXISTS idx_maps_project ON maps(project_id);
+    CREATE INDEX IF NOT EXISTS idx_maps_parent ON maps(parent_map_id);
+    CREATE INDEX IF NOT EXISTS idx_map_markers_map ON map_markers(map_id);
+    CREATE INDEX IF NOT EXISTS idx_map_markers_child_map ON map_markers(child_map_id);
   `);
 
   console.log('✅ Database initialized successfully');

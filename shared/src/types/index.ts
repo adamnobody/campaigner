@@ -20,6 +20,9 @@ import {
   updateNoteSchema,
 } from '../schemas/note.schema.js';
 import {
+  mapSchema,
+  createMapSchema,
+  updateMapSchema,
   mapMarkerSchema,
   createMarkerSchema,
   updateMarkerSchema,
@@ -56,6 +59,9 @@ export type CreateNote = z.input<typeof createNoteSchema>;
 export type UpdateNote = z.input<typeof updateNoteSchema>;
 
 // ==================== Map ====================
+export type Map = z.infer<typeof mapSchema>;
+export type CreateMap = z.input<typeof createMapSchema>;
+export type UpdateMap = z.input<typeof updateMapSchema>;
 export type MapMarker = z.infer<typeof mapMarkerSchema>;
 export type CreateMarker = z.input<typeof createMarkerSchema>;
 export type UpdateMarker = z.input<typeof updateMarkerSchema>;

@@ -8,7 +8,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { projectRoutes } from './routes/project.routes';
 import { characterRoutes } from './routes/character.routes';
 import { noteRoutes } from './routes/note.routes';
-import { mapRoutes } from './routes/map.routes';
+import mapRoutes from './routes/map.routes.js';
 import { timelineRoutes } from './routes/timeline.routes';
 import { folderRoutes } from './routes/folder.routes';
 import { tagRoutes } from './routes/tag.routes';
@@ -45,8 +45,9 @@ app.use(cors({
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
-// Static files for uploads
+// Static files — доступ через /uploads и /api/uploads
 app.use('/uploads', express.static(uploadsDir));
+app.use('/api/uploads', express.static(uploadsDir));
 
 // Initialize database
 initializeDatabase();
@@ -55,7 +56,7 @@ initializeDatabase();
 app.use('/api/projects', projectRoutes);
 app.use('/api/characters', characterRoutes);
 app.use('/api/notes', noteRoutes);
-app.use('/api/maps', mapRoutes);
+app.use('/api', mapRoutes);
 app.use('/api/timeline', timelineRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/tags', tagRoutes);

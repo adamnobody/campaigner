@@ -33,6 +33,7 @@ const App: React.FC = () => {
           <Route path="project/:projectId">
             <Route index element={<Navigate to="map" replace />} />
             <Route path="map" element={<ErrorBoundary><MapPage /></ErrorBoundary>} />
+            <Route path="map/:mapId" element={<ErrorBoundary><MapPage /></ErrorBoundary>} />
             <Route path="characters" element={<ErrorBoundary><CharactersPage /></ErrorBoundary>} />
             <Route path="characters/new" element={<ErrorBoundary><CharacterDetailPage /></ErrorBoundary>} />
             <Route path="characters/graph" element={<ErrorBoundary><CharacterGraphPage /></ErrorBoundary>} />

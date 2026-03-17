@@ -10,7 +10,6 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Interceptor для обработки ошибок
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -19,7 +18,6 @@ apiClient.interceptors.response.use(
       const message = data?.error || data?.message || 'An error occurred';
       console.error(`API Error [${status}]:`, message);
 
-      // Создаём ошибку с более полезной информацией
       const enrichedError = new Error(message);
       (enrichedError as any).status = status;
       (enrichedError as any).details = data?.details;
@@ -37,7 +35,6 @@ apiClient.interceptors.response.use(
 
 // ==================== API методы ====================
 
-// Projects
 export const projectsApi = {
   getAll: () => apiClient.get('/projects'),
   getById: (id: number) => apiClient.get(`/projects/${id}`),
@@ -57,7 +54,6 @@ export const projectsApi = {
     apiClient.post('/projects/import', data),
 };
 
-// Characters
 export const charactersApi = {
   getAll: (projectId: number, params?: any) =>
     apiClient.get('/characters', { params: { projectId, ...params } }),
@@ -83,7 +79,6 @@ export const charactersApi = {
   deleteRelationship: (id: number) => apiClient.delete(`/characters/relationships/${id}`),
 };
 
-// Notes
 export const notesApi = {
   getAll: (projectId: number, params?: any) =>
     apiClient.get('/notes', { params: { projectId, ...params } }),
@@ -95,17 +90,36 @@ export const notesApi = {
     apiClient.put(`/notes/${id}/tags`, { tagIds }),
 };
 
-// Map markers
 export const mapApi = {
-  getMarkers: (projectId: number) =>
-    apiClient.get('/maps', { params: { projectId } }),
-  getById: (id: number) => apiClient.get(`/maps/${id}`),
-  create: (data: any) => apiClient.post('/maps', data),
-  update: (id: number, data: any) => apiClient.put(`/maps/${id}`, data),
-  delete: (id: number) => apiClient.delete(`/maps/${id}`),
+  getRootMap: (projectId: number) =>
+    apiClient.get(`/projects/${projectId}/maps/root`),
+  getMapById: (mapId: number) =>
+    apiClient.get(`/maps/${mapId}`),
+  getMapTree: (projectId: number) =>
+    apiClient.get(`/projects/${projectId}/maps/tree`),
+  createMap: (data: any) =>
+    apiClient.post('/maps', data),
+  updateMap: (mapId: number, data: any) =>
+    apiClient.put(`/maps/${mapId}`, data),
+  deleteMap: (mapId: number) =>
+    apiClient.delete(`/maps/${mapId}`),
+  uploadMapImage: (mapId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiClient.post(`/maps/${mapId}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getMarkersByMapId: (mapId: number) =>
+    apiClient.get(`/maps/${mapId}/markers`),
+  createMarker: (mapId: number, data: any) =>
+    apiClient.post(`/maps/${mapId}/markers`, data),
+  updateMarker: (markerId: number, data: any) =>
+    apiClient.put(`/markers/${markerId}`, data),
+  deleteMarker: (markerId: number) =>
+    apiClient.delete(`/markers/${markerId}`),
 };
 
-// Timeline
 export const timelineApi = {
   getAll: (projectId: number, era?: string) =>
     apiClient.get('/timeline', { params: { projectId, era } }),
@@ -119,7 +133,6 @@ export const timelineApi = {
     apiClient.put(`/timeline/${id}/tags`, { tagIds }),
 };
 
-// Folders
 export const foldersApi = {
   getAll: (projectId: number) =>
     apiClient.get('/folders', { params: { projectId } }),
@@ -130,7 +143,6 @@ export const foldersApi = {
   delete: (id: number) => apiClient.delete(`/folders/${id}`),
 };
 
-// Tags
 export const tagsApi = {
   getAll: (projectId: number) =>
     apiClient.get('/tags', { params: { projectId } }),
@@ -138,7 +150,6 @@ export const tagsApi = {
   delete: (id: number) => apiClient.delete(`/tags/${id}`),
 };
 
-// Search
 export const searchApi = {
   search: (projectId: number, query: string) =>
     apiClient.get('/search', { params: { projectId, q: query } }),

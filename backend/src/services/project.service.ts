@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import { MapService } from './map.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -85,7 +86,11 @@ export class ProjectService {
       VALUES (?, ?, ?)
     `).run(data.name, data.description || '', data.status || 'active');
 
-    return this.getById(result.lastInsertRowid as number);
+    const projectId = result.lastInsertRowid as number;
+    const mapService = new MapService();
+    mapService.createRootMapForProject(projectId);
+
+    return this.getById(projectId);
   }
 
   static update(id: number, data: UpdateProject): Project {
@@ -157,12 +162,21 @@ export class ProjectService {
       FROM folders WHERE project_id = ?
     `).all(id) as any[];
 
-    const markers = db.prepare(`
-      SELECT id, title, description, position_x as positionX, position_y as positionY,
-             color, icon, linked_note_id as linkedNoteId,
+    const maps = db.prepare(`
+      SELECT id, project_id as projectId, parent_map_id as parentMapId,
+             parent_marker_id as parentMarkerId, name, image_path as imagePath,
              created_at as createdAt, updated_at as updatedAt
-      FROM map_markers WHERE project_id = ?
+      FROM maps WHERE project_id = ?
     `).all(id) as any[];
+
+    const markers = db.prepare(`
+      SELECT id, map_id as mapId, title, description,
+             position_x as positionX, position_y as positionY,
+             color, icon, linked_note_id as linkedNoteId,
+             child_map_id as childMapId,
+             created_at as createdAt, updated_at as updatedAt
+      FROM map_markers
+    `).all() as any[];
 
     const timelineEvents = db.prepare(`
       SELECT id, title, description, event_date as eventDate,
@@ -204,6 +218,7 @@ export class ProjectService {
       relationships,
       notes,
       folders,
+      maps,
       markers,
       timelineEvents,
       tags,
@@ -232,6 +247,10 @@ export class ProjectService {
       );
       const projectId = projectResult.lastInsertRowid as number;
 
+      // Create root map
+      const mapService = new MapService();
+      mapService.createRootMapForProject(projectId);
+
       // Restore map image
       if (data.project.mapImageBase64) {
         const mapPath = saveBase64ToFile(data.project.mapImageBase64, 'maps');
@@ -245,6 +264,7 @@ export class ProjectService {
       const characterIdMap = new Map<number, number>();
       const noteIdMap = new Map<number, number>();
       const tagIdMap = new Map<number, number>();
+      const mapIdMap = new Map<number, number>();
 
       // 2. Folders
       if (data.folders?.length) {
@@ -263,8 +283,19 @@ export class ProjectService {
           }
         }
       }
+      // 3. Maps
+      if (data.maps?.length) {
+        for (const map of data.maps) {
+          const newParentMapId = map.parentMapId ? (mapIdMap.get(map.parentMapId) || null) : null;
+          const r = db.prepare(`
+            INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path)
+            VALUES (?, ?, NULL, ?, ?)
+          `).run(projectId, newParentMapId, map.name, map.imagePath || null);
+          mapIdMap.set(map.id, r.lastInsertRowid as number);
+        }
+      }
 
-      // 3. Tags
+      // 4. Tags
       if (data.tags?.length) {
         for (const tag of data.tags) {
           const r = db.prepare(`
@@ -274,7 +305,7 @@ export class ProjectService {
         }
       }
 
-      // 4. Characters (with image restore)
+      // 5. Characters (with image restore)
       if (data.characters?.length) {
         for (const ch of data.characters) {
           let newImagePath: string | null = null;
@@ -296,7 +327,7 @@ export class ProjectService {
         }
       }
 
-      // 5. Notes
+      // 6. Notes
       if (data.notes?.length) {
         for (const note of data.notes) {
           const newFolderId = note.folderId ? (folderIdMap.get(note.folderId) || null) : null;
@@ -312,7 +343,7 @@ export class ProjectService {
         }
       }
 
-      // 6. Relationships
+      // 7. Relationships
       if (data.relationships?.length) {
         for (const rel of data.relationships) {
           const newSource = characterIdMap.get(rel.sourceCharacterId);
@@ -331,23 +362,28 @@ export class ProjectService {
         }
       }
 
-      // 7. Markers
+      // 8. Markers
       if (data.markers?.length) {
         for (const m of data.markers) {
           const newLinkedNoteId = m.linkedNoteId ? (noteIdMap.get(m.linkedNoteId) || null) : null;
-          db.prepare(`
-            INSERT INTO map_markers (project_id, title, description, position_x, position_y,
-                                     color, icon, linked_note_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(
-            projectId, m.title, m.description || '',
-            m.positionX, m.positionY, m.color || '#FF6B6B',
-            m.icon || 'custom', newLinkedNoteId
-          );
+          const newChildMapId = m.childMapId ? (mapIdMap.get(m.childMapId) || null) : null;
+          const newMapId = m.mapId ? (mapIdMap.get(m.mapId) || null) : null;
+          
+          if (newMapId) {
+            db.prepare(`
+              INSERT INTO map_markers (map_id, title, description, position_x, position_y,
+                                       color, icon, linked_note_id, child_map_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              newMapId, m.title, m.description || '',
+              m.positionX, m.positionY, m.color || '#FF6B6B',
+              m.icon || 'custom', newLinkedNoteId, newChildMapId
+            );
+          }
         }
       }
 
-      // 8. Timeline events
+      // 9. Timeline events
       if (data.timelineEvents?.length) {
         for (const ev of data.timelineEvents) {
           const newLinkedNoteId = ev.linkedNoteId ? (noteIdMap.get(ev.linkedNoteId) || null) : null;
@@ -363,7 +399,7 @@ export class ProjectService {
         }
       }
 
-      // 9. Tag associations
+      // 10. Tag associations
       if (data.tagAssociations?.length) {
         const insertTA = db.prepare(`
           INSERT OR IGNORE INTO tag_associations (tag_id, entity_type, entity_id) VALUES (?, ?, ?)
