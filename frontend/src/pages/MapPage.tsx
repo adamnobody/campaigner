@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Paper, TextField, Button, Dialog,
+  Box, Typography, TextField, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, IconButton,
   Select, MenuItem, FormControl, InputLabel, Autocomplete,
-  Chip, Drawer, Divider, Tooltip,
+  Chip, Divider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -24,6 +24,7 @@ import { mapApi, projectsApi, notesApi } from '@/api/axiosClient';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 
+// ==================== Constants ====================
 const MARKER_ICONS: Record<string, string> = {
   castle: '🏰', city: '🏙️', village: '🏘️', tavern: '🍺',
   dungeon: '⚔️', forest: '🌲', mountain: '⛰️', river: '🌊',
@@ -31,46 +32,81 @@ const MARKER_ICONS: Record<string, string> = {
   bridge: '🌉', tower: '🗼', camp: '🏕️', battlefield: '⚔️',
   mine: '⛏️', farm: '🌾', graveyard: '💀', custom: '📍',
 };
+const MARKER_ICON_ENTRIES = Object.entries(MARKER_ICONS);
 
 const MARKER_COLORS = [
   '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
   '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
   '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
-];
-
-interface Marker {
-  id: number;
-  title: string;
-  description: string;
-  x: number;
-  y: number;
-  icon: string;
-  color: string;
-  linkedNoteId: number | null;
-  childMapId: number | null;
-}
-
-interface MapData {
-  id: number;
-  projectId: number;
-  parentMapId: number | null;
-  parentMarkerId: number | null;
-  name: string;
-  imagePath: string | null;
-}
-
-interface NoteOption {
-  id: number;
-  title: string;
-  noteType: string;
-}
+] as const;
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 5;
 const ZOOM_SPEED = 0.1;
 const DRAG_THRESHOLD = 4;
 const PANEL_WIDTH = 340;
+const DEFAULT_FORM = {
+  title: '', description: '', icon: 'custom', color: MARKER_COLORS[0] as string,
+  linkedNoteId: null as number | null, createChildMap: false,
+};
 
+// ==================== Static styles ====================
+const sxDivider = { borderColor: 'rgba(255,255,255,0.06)', my: 1.5 } as const;
+const sxSectionLabel = { color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 } as const;
+const sxPanelRoot = {
+  width: PANEL_WIDTH, minWidth: PANEL_WIDTH, height: '100%',
+  backgroundColor: 'rgba(15,15,28,0.98)', borderLeft: '1px solid rgba(255,255,255,0.1)',
+  display: 'flex', flexDirection: 'column', overflow: 'hidden',
+} as const;
+const sxMapContainer = { flexGrow: 1, display: 'flex', overflow: 'hidden', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' } as const;
+
+// ==================== Types ====================
+interface Marker {
+  id: number; title: string; description: string;
+  x: number; y: number; icon: string; color: string;
+  linkedNoteId: number | null; childMapId: number | null;
+}
+interface MapData {
+  id: number; projectId: number; parentMapId: number | null;
+  parentMarkerId: number | null; name: string; imagePath: string | null;
+}
+interface NoteOption { id: number; title: string; noteType: string; }
+
+// ==================== Helpers (pure) ====================
+const extractData = (res: any): any => res.data?.data || res.data;
+
+const normalizeMarker = (m: any): Marker => ({
+  id: m.id, title: m.title, description: m.description || '',
+  x: (m.positionX ?? 0) * 100, y: (m.positionY ?? 0) * 100,
+  icon: m.icon || 'custom', color: m.color || MARKER_COLORS[0],
+  linkedNoteId: m.linkedNoteId || null, childMapId: m.childMapId || null,
+});
+
+const normalizeMap = (m: any): MapData => ({
+  id: m.id, projectId: m.projectId || m.project_id,
+  parentMapId: m.parentMapId || m.parent_map_id || null,
+  parentMarkerId: m.parentMarkerId || m.parent_marker_id || null,
+  name: m.name, imagePath: m.imagePath || m.image_path || null,
+});
+
+const parseMarkers = (data: any): Marker[] =>
+  (Array.isArray(data) ? data : []).map(normalizeMarker);
+
+const parseNotes = (data: any): NoteOption[] => {
+  const list = data?.items || (Array.isArray(data) ? data : []);
+  return list.map((n: any) => ({ id: n.id, title: n.title, noteType: n.noteType }));
+};
+
+const preloadImage = (src: string): Promise<void> =>
+  new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = src;
+    setTimeout(resolve, 3000);
+  });
+
+// ==================== Component ====================
 export const MapPage: React.FC = () => {
   const { projectId, mapId } = useParams<{ projectId: string; mapId?: string }>();
   const pid = parseInt(projectId!);
@@ -81,84 +117,70 @@ export const MapPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  // Data
   const [project, setProject] = useState<any>(null);
   const [currentMap, setCurrentMap] = useState<MapData | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
+  const [notes, setNotes] = useState<NoteOption[]>([]);
+  const [mapBreadcrumbs, setMapBreadcrumbs] = useState<MapData[]>([]);
   const [loading, setLoading] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
-  const [notes, setNotes] = useState<NoteOption[]>([]);
 
-  // Breadcrumbs для навигации по вложенным картам
-  const [mapBreadcrumbs, setMapBreadcrumbs] = useState<MapData[]>([]);
-
-  // Transform state
+  // Transform
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const panOriginRef = useRef({ x: 0, y: 0 });
-
   const zoomRef = useRef(zoom);
   const panRef = useRef(pan);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = pan; }, [pan]);
 
-  // Drag state
+  // Drag
   const [draggingMarker, setDraggingMarker] = useState<Marker | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
   const dragStartScreenRef = useRef({ x: 0, y: 0 });
-  const dragStartMarkerRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const didDragRef = useRef(false);
 
-  // Marker dialog
+  // Dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
   const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null);
-  const [markerForm, setMarkerForm] = useState({
-    title: '', description: '', icon: 'custom', color: MARKER_COLORS[0],
-    linkedNoteId: null as number | null, createChildMap: false,
-  });
+  const [markerForm, setMarkerForm] = useState({ ...DEFAULT_FORM });
   const [childMapFile, setChildMapFile] = useState<File | null>(null);
   const [childMapPreview, setChildMapPreview] = useState<string | null>(null);
 
-  // Right panel
+  // Panel
   const [selectedMarker, setSelectedMarker] = useState<Marker | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // ==================== Helpers ====================
-  const extractData = (res: any): any => res.data?.data || res.data;
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const normalizeMarker = (m: any): Marker => ({
-    id: m.id,
-    title: m.title,
-    description: m.description || '',
-    x: (m.positionX ?? 0) * 100,
-    y: (m.positionY ?? 0) * 100,
-    icon: m.icon || 'custom',
-    color: m.color || MARKER_COLORS[0],
-    linkedNoteId: m.linkedNoteId || null,
-    childMapId: m.childMapId || null,
-  });
+  // Lookup map for notes — O(1) вместо .find() на каждый рендер
+  const notesMap = useMemo(() => {
+    const m = new Map<number, NoteOption>();
+    notes.forEach(n => m.set(n.id, n));
+    return m;
+  }, [notes]);
 
-  const normalizeMap = (m: any): MapData => ({
-    id: m.id,
-    projectId: m.projectId || m.project_id,
-    parentMapId: m.parentMapId || m.parent_map_id || null,
-    parentMarkerId: m.parentMarkerId || m.parent_marker_id || null,
-    name: m.name,
-    imagePath: m.imagePath || m.image_path || null,
-  });
+  const getLinkedNote = useCallback((noteId: number | null) =>
+    noteId ? notesMap.get(noteId) : undefined
+  , [notesMap]);
 
-  // ==================== Загрузка карты ====================
-  const loadMapData = useCallback(async (mapId: number) => {
+  const mapImageUrl = useMemo(() =>
+    currentMap?.imagePath ? `/api${currentMap.imagePath}` : project?.mapImagePath || null
+  , [currentMap?.imagePath, project?.mapImagePath]);
+
+  // ==================== Data loading ====================
+  const loadMapData = useCallback(async (loadMapId: number) => {
     setTransitioning(true);
     setSelectedMarker(null);
     setPanelOpen(false);
 
     try {
-      // Загружаем все данные ДО обновления стейта
-      const mapRes = await mapApi.getMapById(mapId);
+      const mapRes = await mapApi.getMapById(loadMapId);
       const mapData = normalizeMap(extractData(mapRes));
 
       const [markersRes, notesRes] = await Promise.all([
@@ -166,26 +188,13 @@ export const MapPage: React.FC = () => {
         notesApi.getAll(pid),
       ]);
 
-      const markersData = extractData(markersRes);
-      const newMarkers = (Array.isArray(markersData) ? markersData : []).map(normalizeMarker);
+      const newMarkers = parseMarkers(extractData(markersRes));
+      const newNotes = parseNotes(extractData(notesRes));
 
-      const notesData = extractData(notesRes);
-      const notesList = notesData?.items || (Array.isArray(notesData) ? notesData : []);
-      const newNotes = notesList.map((n: any) => ({ id: n.id, title: n.title, noteType: n.noteType }));
-
-      // Предзагружаем изображение если есть
       if (mapData.imagePath) {
-        await new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          img.src = `/api${mapData.imagePath}`;
-          // Таймаут на случай долгой загрузки
-          setTimeout(resolve, 3000);
-        });
+        await preloadImage(`/api${mapData.imagePath}`);
       }
 
-      // Обновляем всё разом
       setCurrentMap(mapData);
       setMarkers(newMarkers);
       setNotes(newNotes);
@@ -194,33 +203,28 @@ export const MapPage: React.FC = () => {
     } catch {
       showSnackbar('Ошибка загрузки карты', 'error');
     }
-
     setTransitioning(false);
   }, [pid, showSnackbar]);
 
   useEffect(() => {
+    let cancelled = false;
     const init = async () => {
       try {
         const projRes = await projectsApi.getById(pid);
+        if (cancelled) return;
         setProject(extractData(projRes));
 
         let mapToLoad: MapData;
-
         if (mid) {
-          const mapRes = await mapApi.getMapById(mid);
-          mapToLoad = normalizeMap(extractData(mapRes));
+          mapToLoad = normalizeMap(extractData(await mapApi.getMapById(mid)));
         } else {
           try {
-            const mapRes = await mapApi.getRootMap(pid);
-            mapToLoad = normalizeMap(extractData(mapRes));
+            mapToLoad = normalizeMap(extractData(await mapApi.getRootMap(pid)));
           } catch {
-            const createRes = await mapApi.createMap({
-              projectId: pid,
-              name: 'Корневая карта',
-            });
-            mapToLoad = normalizeMap(extractData(createRes));
+            mapToLoad = normalizeMap(extractData(await mapApi.createMap({ projectId: pid, name: 'Корневая карта' })));
           }
         }
+        if (cancelled) return;
 
         setCurrentMap(mapToLoad);
         setMapBreadcrumbs([mapToLoad]);
@@ -229,75 +233,60 @@ export const MapPage: React.FC = () => {
           mapApi.getMarkersByMapId(mapToLoad.id),
           notesApi.getAll(pid),
         ]);
+        if (cancelled) return;
 
-        const markersData = extractData(markersRes);
-        setMarkers((Array.isArray(markersData) ? markersData : []).map(normalizeMarker));
-
-        const notesData = extractData(notesRes);
-        const notesList = notesData?.items || (Array.isArray(notesData) ? notesData : []);
-        setNotes(notesList.map((n: any) => ({ id: n.id, title: n.title, noteType: n.noteType })));
-      } catch {
-        // ignore
-      }
-      setLoading(false);
+        setMarkers(parseMarkers(extractData(markersRes)));
+        setNotes(parseNotes(extractData(notesRes)));
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
     };
 
     init();
+    return () => { cancelled = true; };
   }, [pid, mid]);
 
-  // ==================== Навигация по вложенным картам ====================
-  const navigateToChildMap = async (childMapId: number) => {
-    // Сначала получаем данные для breadcrumb
+  // ==================== Navigation ====================
+  const navigateToChildMap = useCallback(async (childMapId: number) => {
     const mapRes = await mapApi.getMapById(childMapId);
     const childMap = normalizeMap(extractData(mapRes));
     setMapBreadcrumbs(prev => [...prev, childMap]);
-
     await loadMapData(childMapId);
-  };
+  }, [loadMapData]);
 
-  const navigateToBreadcrumb = async (index: number) => {
+  const navigateToBreadcrumb = useCallback(async (index: number) => {
     const target = mapBreadcrumbs[index];
     if (!target) return;
     await loadMapData(target.id);
     setMapBreadcrumbs(prev => prev.slice(0, index + 1));
-  };
+  }, [mapBreadcrumbs, loadMapData]);
 
-  const navigateToParent = () => {
-    if (mapBreadcrumbs.length > 1) {
-      navigateToBreadcrumb(mapBreadcrumbs.length - 2);
-    }
-  };
+  const navigateToParent = useCallback(() => {
+    if (mapBreadcrumbs.length > 1) navigateToBreadcrumb(mapBreadcrumbs.length - 2);
+  }, [mapBreadcrumbs, navigateToBreadcrumb]);
 
-  // ==================== Создание вложенной карты ====================
-  const handleCreateChildMap = async (marker: Marker) => {
+  // ==================== Child map ops ====================
+  const handleCreateChildMap = useCallback(async (marker: Marker) => {
+    if (!currentMap) return;
     try {
-      if (!currentMap) return;
       const res = await mapApi.createMap({
-        projectId: pid,
-        parentMapId: currentMap.id,
-        parentMarkerId: marker.id,
-        name: `Карта: ${marker.title}`,
+        projectId: pid, parentMapId: currentMap.id,
+        parentMarkerId: marker.id, name: `Карта: ${marker.title}`,
       });
       const newMap = normalizeMap(extractData(res));
-
-      // Привязываем child_map_id к маркеру
       await mapApi.updateMarker(marker.id, { childMapId: newMap.id });
 
-      // Обновляем маркер в стейте
-      setMarkers(prev => prev.map(m =>
-        m.id === marker.id ? { ...m, childMapId: newMap.id } : m
-      ));
+      const updater = (m: Marker) => m.id === marker.id ? { ...m, childMapId: newMap.id } : m;
+      setMarkers(prev => prev.map(updater));
       if (selectedMarker?.id === marker.id) {
         setSelectedMarker(prev => prev ? { ...prev, childMapId: newMap.id } : prev);
       }
-
       showSnackbar('Вложенная карта создана', 'success');
     } catch {
       showSnackbar('Ошибка создания карты', 'error');
     }
-  };
+  }, [currentMap, pid, selectedMarker?.id, showSnackbar]);
 
-  const handleUploadChildMapImage = async (marker: Marker, file: File) => {
+  const handleUploadChildMapImage = useCallback(async (marker: Marker, file: File) => {
     if (!marker.childMapId) return;
     try {
       await mapApi.uploadMapImage(marker.childMapId, file);
@@ -305,7 +294,7 @@ export const MapPage: React.FC = () => {
     } catch {
       showSnackbar('Ошибка загрузки изображения', 'error');
     }
-  };
+  }, [showSnackbar]);
 
   // ==================== Zoom ====================
   useEffect(() => {
@@ -322,16 +311,17 @@ export const MapPage: React.FC = () => {
       if (newZoom === oldZoom) return;
 
       const rect = container.getBoundingClientRect();
-      const cursorX = e.clientX - rect.left;
-      const cursorY = e.clientY - rect.top;
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
       const oldPan = panRef.current;
-      const newPanX = cursorX - ((cursorX - oldPan.x) / oldZoom) * newZoom;
-      const newPanY = cursorY - ((cursorY - oldPan.y) / oldZoom) * newZoom;
+
+      const nx = cx - ((cx - oldPan.x) / oldZoom) * newZoom;
+      const ny = cy - ((cy - oldPan.y) / oldZoom) * newZoom;
 
       zoomRef.current = newZoom;
-      panRef.current = { x: newPanX, y: newPanY };
+      panRef.current = { x: nx, y: ny };
       setZoom(newZoom);
-      setPan({ x: newPanX, y: newPanY });
+      setPan({ x: nx, y: ny });
     };
 
     container.addEventListener('wheel', onWheel, { passive: false });
@@ -343,52 +333,51 @@ export const MapPage: React.FC = () => {
     if (!container) { setZoom(newZoom); return; }
     const rect = container.getBoundingClientRect();
     const cx = rect.width / 2, cy = rect.height / 2;
-    const oldZoom = zoomRef.current;
-    const oldPan = panRef.current;
     setZoom(newZoom);
     setPan({
-      x: cx - ((cx - oldPan.x) / oldZoom) * newZoom,
-      y: cy - ((cy - oldPan.y) / oldZoom) * newZoom,
+      x: cx - ((cx - panRef.current.x) / zoomRef.current) * newZoom,
+      y: cy - ((cy - panRef.current.y) / zoomRef.current) * newZoom,
     });
   }, []);
 
-  const zoomIn = () => zoomToCenter(Math.min(MAX_ZOOM, zoomRef.current + 0.2));
-  const zoomOut = () => zoomToCenter(Math.max(MIN_ZOOM, zoomRef.current - 0.2));
-  const resetView = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+  const zoomIn = useCallback(() => zoomToCenter(Math.min(MAX_ZOOM, zoomRef.current + 0.2)), [zoomToCenter]);
+  const zoomOut = useCallback(() => zoomToCenter(Math.max(MIN_ZOOM, zoomRef.current - 0.2)), [zoomToCenter]);
+  const resetView = useCallback(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, []);
 
-  // ==================== Pan ====================
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // ==================== Pan & Drag ====================
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
       setIsPanning(true);
       panStartRef.current = { x: e.clientX, y: e.clientY };
       panOriginRef.current = { ...panRef.current };
       e.preventDefault();
     }
-  };
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanning) {
-      const dx = e.clientX - panStartRef.current.x;
-      const dy = e.clientY - panStartRef.current.y;
-      setPan({ x: panOriginRef.current.x + dx, y: panOriginRef.current.y + dy });
+      setPan({
+        x: panOriginRef.current.x + e.clientX - panStartRef.current.x,
+        y: panOriginRef.current.y + e.clientY - panStartRef.current.y,
+      });
       return;
     }
 
     if (isDraggingRef.current && draggingMarker && imgRef.current) {
       const dx = e.clientX - dragStartScreenRef.current.x;
       const dy = e.clientY - dragStartScreenRef.current.y;
-
       if (!didDragRef.current && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
       didDragRef.current = true;
 
       const rect = imgRef.current.getBoundingClientRect();
-      const newX = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-      const newY = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-      setDragPreview({ x: newX, y: newY });
+      setDragPreview({
+        x: Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100)),
+        y: Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100)),
+      });
     }
-  };
+  }, [isPanning, draggingMarker]);
 
-  const handleMouseUp = async () => {
+  const handleMouseUp = useCallback(async () => {
     setIsPanning(false);
 
     if (isDraggingRef.current && draggingMarker) {
@@ -397,14 +386,12 @@ export const MapPage: React.FC = () => {
       if (didDragRef.current && dragPreview) {
         try {
           await mapApi.updateMarker(draggingMarker.id, {
-            positionX: dragPreview.x / 100,
-            positionY: dragPreview.y / 100,
+            positionX: dragPreview.x / 100, positionY: dragPreview.y / 100,
           });
-          setMarkers(prev => prev.map(m =>
-            m.id === draggingMarker.id ? { ...m, x: dragPreview.x, y: dragPreview.y } : m
-          ));
+          const pos = { x: dragPreview.x, y: dragPreview.y };
+          setMarkers(prev => prev.map(m => m.id === draggingMarker.id ? { ...m, ...pos } : m));
           if (selectedMarker?.id === draggingMarker.id) {
-            setSelectedMarker(prev => prev ? { ...prev, x: dragPreview.x, y: dragPreview.y } : prev);
+            setSelectedMarker(prev => prev ? { ...prev, ...pos } : prev);
           }
           showSnackbar('Маркер перемещён', 'success');
         } catch {
@@ -415,97 +402,86 @@ export const MapPage: React.FC = () => {
       setDraggingMarker(null);
       setDragPreview(null);
       didDragRef.current = false;
-      return;
     }
-  };
+  }, [draggingMarker, dragPreview, selectedMarker?.id, showSnackbar]);
 
   // ==================== Marker interactions ====================
-  const handleMarkerMouseDown = (e: React.MouseEvent, marker: Marker) => {
+  const handleMarkerMouseDown = useCallback((e: React.MouseEvent, marker: Marker) => {
     if (e.button !== 0 || e.altKey) return;
     e.stopPropagation();
-
     isDraggingRef.current = true;
     didDragRef.current = false;
     dragStartScreenRef.current = { x: e.clientX, y: e.clientY };
-    dragStartMarkerRef.current = { x: marker.x, y: marker.y };
     setDraggingMarker(marker);
     setDragPreview(null);
-  };
+  }, []);
 
-  const handleMarkerClick = (e: React.MouseEvent, marker: Marker) => {
+  const handleMarkerClick = useCallback((e: React.MouseEvent, marker: Marker) => {
     e.stopPropagation();
-    if (!didDragRef.current && !transitioning) {
+    if (didDragRef.current || transitioning) return;
+
+    // Откладываем одинарный клик — если за 250ms придёт двойной, отменяем
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
       setSelectedMarker(marker);
       setPanelOpen(true);
-    }
-  };
+    }, 250);
+  }, [transitioning]);
 
-  const handleMapClick = (e: React.MouseEvent) => {
+  const handleMapClick = useCallback((e: React.MouseEvent) => {
     if (isPanning || didDragRef.current || transitioning) return;
     if (!imgRef.current || !currentMap) return;
 
     const rect = imgRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    setClickPos({ x, y });
+    setClickPos({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    });
     setEditingMarker(null);
-    setMarkerForm({ title: '', description: '', icon: 'custom', color: MARKER_COLORS[0], linkedNoteId: null, createChildMap: false });
+    setMarkerForm({ ...DEFAULT_FORM });
     setChildMapFile(null);
     setChildMapPreview(null);
     setDialogOpen(true);
-  };
+  }, [isPanning, transitioning, currentMap]);
 
   // ==================== CRUD ====================
-  const handleSaveMarker = async () => {
+  const handleSaveMarker = useCallback(async () => {
     if (!markerForm.title.trim()) return;
     try {
       if (editingMarker) {
         const res = await mapApi.updateMarker(editingMarker.id, {
-          title: markerForm.title,
-          description: markerForm.description,
-          positionX: editingMarker.x / 100,
-          positionY: editingMarker.y / 100,
-          icon: markerForm.icon,
-          color: markerForm.color,
+          title: markerForm.title, description: markerForm.description,
+          positionX: editingMarker.x / 100, positionY: editingMarker.y / 100,
+          icon: markerForm.icon, color: markerForm.color,
           linkedNoteId: markerForm.linkedNoteId,
         });
         const updated = normalizeMarker(extractData(res));
         setMarkers(prev => prev.map(m => m.id === editingMarker.id ? updated : m));
         if (selectedMarker?.id === editingMarker.id) setSelectedMarker(updated);
         showSnackbar('Маркер обновлён', 'success');
-} else if (clickPos && currentMap) {
+      } else if (clickPos && currentMap) {
         const res = await mapApi.createMarker(currentMap.id, {
-          title: markerForm.title,
-          description: markerForm.description,
-          positionX: clickPos.x / 100,
-          positionY: clickPos.y / 100,
-          icon: markerForm.icon,
-          color: markerForm.color,
+          title: markerForm.title, description: markerForm.description,
+          positionX: clickPos.x / 100, positionY: clickPos.y / 100,
+          icon: markerForm.icon, color: markerForm.color,
           linkedNoteId: markerForm.linkedNoteId,
         });
         const newMarker = normalizeMarker(extractData(res));
 
-        // Создаём вложенную карту если отмечено
         if (markerForm.createChildMap && currentMap) {
           try {
             const mapRes = await mapApi.createMap({
-              projectId: pid,
-              parentMapId: currentMap.id,
-              parentMarkerId: newMarker.id,
-              name: `Карта: ${newMarker.title}`,
+              projectId: pid, parentMapId: currentMap.id,
+              parentMarkerId: newMarker.id, name: `Карта: ${newMarker.title}`,
             });
             const childMap = normalizeMap(extractData(mapRes));
             await mapApi.updateMarker(newMarker.id, { childMapId: childMap.id });
             newMarker.childMapId = childMap.id;
 
-            // Загружаем изображение если выбрано
             if (childMapFile) {
-              try {
-                await mapApi.uploadMapImage(childMap.id, childMapFile);
-              } catch {
-                showSnackbar('Карта создана, но ошибка загрузки изображения', 'warning');
-              }
+              try { await mapApi.uploadMapImage(childMap.id, childMapFile); }
+              catch { showSnackbar('Карта создана, но ошибка загрузки изображения', 'warning'); }
             }
           } catch {
             showSnackbar('Маркер создан, но ошибка создания вложенной карты', 'warning');
@@ -521,9 +497,9 @@ export const MapPage: React.FC = () => {
     } catch (err: any) {
       showSnackbar(err.message || 'Ошибка сохранения', 'error');
     }
-  };
+  }, [markerForm, editingMarker, clickPos, currentMap, pid, childMapFile, selectedMarker?.id, showSnackbar]);
 
-  const handleDeleteMarker = (marker: Marker) => {
+  const handleDeleteMarker = useCallback((marker: Marker) => {
     showConfirmDialog('Удалить маркер', `Удалить "${marker.title}"?`, async () => {
       try {
         await mapApi.deleteMarker(marker.id);
@@ -535,51 +511,64 @@ export const MapPage: React.FC = () => {
         showSnackbar('Ошибка удаления', 'error');
       }
     });
-  };
+  }, [showConfirmDialog, showSnackbar]);
 
-  const handleEditMarker = (marker: Marker) => {
+  const handleEditMarker = useCallback((marker: Marker) => {
     setEditingMarker(marker);
     setMarkerForm({
-      title: marker.title,
-      description: marker.description || '',
-      icon: marker.icon || 'custom',
-      color: marker.color || MARKER_COLORS[0],
-      linkedNoteId: marker.linkedNoteId,
-      createChildMap: false,
+      title: marker.title, description: marker.description || '',
+      icon: marker.icon || 'custom', color: marker.color || MARKER_COLORS[0],
+      linkedNoteId: marker.linkedNoteId, createChildMap: false,
     });
     setChildMapFile(null);
     setChildMapPreview(null);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleUploadMap = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadMap = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       if (currentMap) {
         await mapApi.uploadMapImage(currentMap.id, file);
-        const mapRes = await mapApi.getMapById(currentMap.id);
-        const updated = normalizeMap(extractData(mapRes));
+        const updated = normalizeMap(extractData(await mapApi.getMapById(currentMap.id)));
         setCurrentMap(updated);
 
-        // Если это корневая карта — обновляем и project.mapImagePath
         if (!updated.parentMapId) {
           await projectsApi.uploadMap(pid, file);
-          const projRes = await projectsApi.getById(pid);
-          setProject(extractData(projRes));
+          setProject(extractData(await projectsApi.getById(pid)));
         }
       }
       showSnackbar('Карта загружена!', 'success');
     } catch {
       showSnackbar('Ошибка загрузки', 'error');
     }
-  };
+  }, [currentMap, pid, showSnackbar]);
 
-  const getLinkedNote = (noteId: number | null): NoteOption | undefined => {
-    if (!noteId) return undefined;
-    return notes.find(n => n.id === noteId);
-  };
+  const closePanel = useCallback(() => {
+    setPanelOpen(false);
+    setSelectedMarker(null);
+  }, []);
 
+  const closeDialog = useCallback(() => setDialogOpen(false), []);
+
+  const handleChildMapFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setChildMapFile(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => setChildMapPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  }, []);
+
+  const clearChildMapFile = useCallback(() => {
+    setChildMapFile(null);
+    setChildMapPreview(null);
+  }, []);
+
+  // ==================== Loading ====================
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -588,88 +577,70 @@ export const MapPage: React.FC = () => {
     );
   }
 
-  const mapImageUrl = currentMap?.imagePath
-    ? `/api${currentMap.imagePath}`
-    : project?.mapImagePath || null;
+  // ==================== Render helpers ====================
+  const scale = 1 / zoom;
 
-  // ==================== Render marker ====================
   const renderMarker = (marker: Marker) => {
     const isDragging = draggingMarker?.id === marker.id && didDragRef.current;
-    const displayX = isDragging && dragPreview ? dragPreview.x : marker.x;
-    const displayY = isDragging && dragPreview ? dragPreview.y : marker.y;
-
-    const scale = 1 / zoom;
-    const markerSize = 32;
-    const fontSize = 16;
-    const borderWidth = 2;
-    const labelSize = 11;
+    const dx = isDragging && dragPreview ? dragPreview.x : marker.x;
+    const dy = isDragging && dragPreview ? dragPreview.y : marker.y;
+    const isSelected = selectedMarker?.id === marker.id;
     const linkedNote = getLinkedNote(marker.linkedNoteId);
     const hasChildMap = !!marker.childMapId;
-    const isSelected = selectedMarker?.id === marker.id;
 
     return (
       <Box
         key={marker.id}
-        onMouseDown={(e) => handleMarkerMouseDown(e, marker)}
-        onClick={(e) => handleMarkerClick(e, marker)}
-        onDoubleClick={(e) => {
+        onMouseDown={e => handleMarkerMouseDown(e, marker)}
+        onClick={e => handleMarkerClick(e, marker)}
+        onDoubleClick={e => {
           e.stopPropagation();
-          if (marker.childMapId) {
-            navigateToChildMap(marker.childMapId);
+          // Отменяем одинарный клик
+          if (clickTimerRef.current) {
+            clearTimeout(clickTimerRef.current);
+            clickTimerRef.current = null;
           }
+          if (hasChildMap) navigateToChildMap(marker.childMapId!);
         }}
         sx={{
-          position: 'absolute',
-          left: `${displayX}%`,
-          top: `${displayY}%`,
+          position: 'absolute', left: `${dx}%`, top: `${dy}%`,
           transform: `translate(-50%, -50%) scale(${scale})`,
           cursor: isDragging ? 'grabbing' : 'grab',
           zIndex: isDragging ? 100 : isSelected ? 10 : 5,
           opacity: isDragging ? 0.85 : 1,
           transition: isDragging ? 'none' : 'transform 0.15s',
           '&:hover': {
-            transform: isDragging
-              ? `translate(-50%, -50%) scale(${scale})`
-              : `translate(-50%, -50%) scale(${scale * 1.3})`,
+            transform: `translate(-50%, -50%) scale(${isDragging ? scale : scale * 1.3})`,
           },
           userSelect: 'none',
         }}
       >
         <Box sx={{
-          width: markerSize, height: markerSize, borderRadius: '50%',
-          backgroundColor: marker.color || MARKER_COLORS[0],
+          width: 32, height: 32, borderRadius: '50%',
+          backgroundColor: marker.color,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: `${fontSize}px`,
+          fontSize: '16px',
           boxShadow: isDragging
             ? `0 0 16px ${marker.color}cc, 0 4px 16px rgba(0,0,0,0.7)`
             : `0 0 8px ${marker.color}80, 0 2px 8px rgba(0,0,0,0.5)`,
-          border: isSelected
-            ? `${borderWidth}px solid #fff`
-            : `${borderWidth}px solid rgba(0,0,0,0.3)`,
+          border: isSelected ? '2px solid #fff' : '2px solid rgba(0,0,0,0.3)',
         }}>
-          {MARKER_ICONS[marker.icon] || MARKER_ICONS.custom}
+          {MARKER_ICONS[marker.icon] || '📍'}
         </Box>
-
-        {/* Label */}
-        <Typography sx={{
+                <Typography sx={{
           position: 'absolute', top: '100%', left: '50%',
-          transform: 'translateX(-50%)',
-          mt: '3px',
-          fontSize: `${labelSize}px`,
-          color: '#fff',
+          transform: 'translateX(-50%)', mt: '3px',
+          fontSize: '11px', color: '#fff',
           textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7)',
           whiteSpace: 'nowrap', fontWeight: 600, pointerEvents: 'none',
         }}>
           {marker.title}
         </Typography>
 
-        {/* Linked note indicator */}
         {linkedNote && (
           <Box sx={{
-            position: 'absolute', top: '-8px', right: '-8px',
-            width: 14, height: 14,
-            borderRadius: '50%',
-            backgroundColor: '#4ECDC4',
+            position: 'absolute', top: -8, right: -8, width: 14, height: 14,
+            borderRadius: '50%', backgroundColor: '#4ECDC4',
             border: '1.5px solid rgba(0,0,0,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             pointerEvents: 'none',
@@ -678,13 +649,10 @@ export const MapPage: React.FC = () => {
           </Box>
         )}
 
-        {/* Child map indicator */}
         {hasChildMap && (
           <Box sx={{
-            position: 'absolute', top: '-8px', left: '-8px',
-            width: 14, height: 14,
-            borderRadius: '50%',
-            backgroundColor: '#BB8FCE',
+            position: 'absolute', top: -8, left: -8, width: 14, height: 14,
+            borderRadius: '50%', backgroundColor: '#BB8FCE',
             border: '1.5px solid rgba(0,0,0,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             pointerEvents: 'none',
@@ -703,21 +671,9 @@ export const MapPage: React.FC = () => {
     const hasChildMap = !!selectedMarker.childMapId;
 
     return (
-      <Box sx={{
-        width: PANEL_WIDTH,
-        minWidth: PANEL_WIDTH,
-        height: '100%',
-        backgroundColor: 'rgba(15,15,28,0.98)',
-        borderLeft: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
-        {/* Panel Header */}
-        <Box sx={{
-          p: 2, display: 'flex', alignItems: 'center', gap: 1,
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}>
+      <Box sx={sxPanelRoot}>
+        {/* Header */}
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <Box sx={{
             width: 40, height: 40, borderRadius: '50%',
             backgroundColor: selectedMarker.color,
@@ -738,33 +694,27 @@ export const MapPage: React.FC = () => {
               X: {selectedMarker.x.toFixed(1)}% · Y: {selectedMarker.y.toFixed(1)}%
             </Typography>
           </Box>
-          <IconButton size="small" onClick={() => { setPanelOpen(false); setSelectedMarker(null); }}
-            sx={{ color: 'rgba(255,255,255,0.4)' }}>
+          <IconButton size="small" onClick={closePanel} sx={{ color: 'rgba(255,255,255,0.4)' }}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
 
-        {/* Panel Content */}
+        {/* Content */}
         <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-          {/* Description */}
           {selectedMarker.description && (
             <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
-                Описание
-              </Typography>
+              <Typography variant="caption" sx={sxSectionLabel}>Описание</Typography>
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5, lineHeight: 1.6 }}>
                 {selectedMarker.description}
               </Typography>
             </Box>
           )}
 
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)', my: 1.5 }} />
+          <Divider sx={sxDivider} />
 
           {/* Linked Note */}
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Привязанная заметка
-            </Typography>
+            <Typography variant="caption" sx={sxSectionLabel}>Привязанная заметка</Typography>
             {linkedNote ? (
               <Box
                 onClick={() => navigate(`/project/${pid}/notes/${linkedNote.id}`)}
@@ -798,21 +748,18 @@ export const MapPage: React.FC = () => {
             )}
           </Box>
 
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)', my: 1.5 }} />
+          <Divider sx={sxDivider} />
 
           {/* Child Map */}
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Вложенная карта
-            </Typography>
+            <Typography variant="caption" sx={sxSectionLabel}>Вложенная карта</Typography>
             {hasChildMap ? (
               <Box sx={{ mt: 1 }}>
                 <Button
                   fullWidth variant="outlined" startIcon={<MapIcon />}
                   onClick={() => navigateToChildMap(selectedMarker.childMapId!)}
                   sx={{
-                    borderColor: 'rgba(187,143,206,0.3)',
-                    color: '#BB8FCE',
+                    borderColor: 'rgba(187,143,206,0.3)', color: '#BB8FCE',
                     justifyContent: 'flex-start',
                     '&:hover': { borderColor: 'rgba(187,143,206,0.5)', backgroundColor: 'rgba(187,143,206,0.08)' },
                   }}
@@ -825,10 +772,7 @@ export const MapPage: React.FC = () => {
                 >
                   Загрузить изображение
                   <input type="file" hidden accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleUploadChildMapImage(selectedMarker, file);
-                    }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadChildMapImage(selectedMarker, f); }}
                   />
                 </Button>
               </Box>
@@ -838,10 +782,8 @@ export const MapPage: React.FC = () => {
                   fullWidth variant="outlined" startIcon={<AddIcon />} size="small"
                   onClick={() => handleCreateChildMap(selectedMarker)}
                   sx={{
-                    borderColor: 'rgba(255,255,255,0.15)',
-                    color: 'rgba(255,255,255,0.5)',
-                    borderStyle: 'dashed',
-                    justifyContent: 'flex-start',
+                    borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)',
+                    borderStyle: 'dashed', justifyContent: 'flex-start',
                     '&:hover': { borderColor: 'rgba(187,143,206,0.4)', color: '#BB8FCE' },
                   }}
                 >
@@ -851,44 +793,34 @@ export const MapPage: React.FC = () => {
             )}
           </Box>
 
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)', my: 1.5 }} />
+          <Divider sx={sxDivider} />
 
           {/* Info */}
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Информация
-            </Typography>
+            <Typography variant="caption" sx={sxSectionLabel}>Информация</Typography>
             <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>Иконка</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {MARKER_ICONS[selectedMarker.icon] || '📍'} {selectedMarker.icon}
-                </Typography>
-              </Box>
-              <Box display="flex" justifyContent="space-between">
+              {[
+                ['Иконка', `${MARKER_ICONS[selectedMarker.icon] || '📍'} ${selectedMarker.icon}`],
+                ['Позиция', `${selectedMarker.x.toFixed(1)}%, ${selectedMarker.y.toFixed(1)}%`],
+              ].map(([label, value]) => (
+                <Box key={label} display="flex" justifyContent="space-between">
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>{label}</Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>{value}</Typography>
+                </Box>
+              ))}
+              <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>Цвет</Typography>
                 <Box display="flex" alignItems="center" gap={0.5}>
                   <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: selectedMarker.color }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                    {selectedMarker.color}
-                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>{selectedMarker.color}</Typography>
                 </Box>
-              </Box>
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>Позиция</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {selectedMarker.x.toFixed(1)}%, {selectedMarker.y.toFixed(1)}%
-                </Typography>
               </Box>
             </Box>
           </Box>
         </Box>
 
-        {/* Panel Footer */}
-        <Box sx={{
-          p: 2, borderTop: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex', gap: 1,
-        }}>
+        {/* Footer */}
+        <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 1 }}>
           <Button
             fullWidth variant="outlined" startIcon={<EditIcon />} size="small"
             onClick={() => handleEditMarker(selectedMarker)}
@@ -897,7 +829,7 @@ export const MapPage: React.FC = () => {
             Редактировать
           </Button>
           <Button
-            variant="outlined" startIcon={<DeleteIcon />} size="small"
+            variant="outlined" size="small"
             onClick={() => handleDeleteMarker(selectedMarker)}
             sx={{
               borderColor: 'rgba(255,100,100,0.2)', color: 'rgba(255,100,100,0.6)',
@@ -912,6 +844,7 @@ export const MapPage: React.FC = () => {
     );
   };
 
+  // ==================== Main render ====================
   return (
     <Box sx={{ height: 'calc(100vh - 64px - 48px)', display: 'flex', flexDirection: 'column' }}>
       {/* Toolbar */}
@@ -922,53 +855,47 @@ export const MapPage: React.FC = () => {
               <ArrowBackIcon fontSize="small" />
             </IconButton>
           )}
-          {/* Breadcrumbs */}
           <Box display="flex" alignItems="center" gap={0.5}>
-            {mapBreadcrumbs.map((bc, i) => (
-              <React.Fragment key={bc.id}>
-                {i > 0 && <Typography sx={{ color: 'rgba(255,255,255,0.2)', mx: 0.5 }}>›</Typography>}
-                <Typography
-                  onClick={() => i < mapBreadcrumbs.length - 1 ? navigateToBreadcrumb(i) : null}
-                  sx={{
-                    fontFamily: '"Cinzel", serif',
-                    fontWeight: i === mapBreadcrumbs.length - 1 ? 700 : 400,
-                    fontSize: i === mapBreadcrumbs.length - 1 ? '1.3rem' : '0.9rem',
-                    color: i === mapBreadcrumbs.length - 1 ? '#fff' : 'rgba(255,255,255,0.4)',
-                    cursor: i < mapBreadcrumbs.length - 1 ? 'pointer' : 'default',
-                    '&:hover': i < mapBreadcrumbs.length - 1 ? { color: 'rgba(255,255,255,0.7)' } : {},
-                  }}
-                >
-                  {bc.name}
-                </Typography>
-              </React.Fragment>
-            ))}
+            {mapBreadcrumbs.map((bc, i) => {
+              const isLast = i === mapBreadcrumbs.length - 1;
+              return (
+                <React.Fragment key={bc.id}>
+                  {i > 0 && <Typography sx={{ color: 'rgba(255,255,255,0.2)', mx: 0.5 }}>›</Typography>}
+                  <Typography
+                    onClick={isLast ? undefined : () => navigateToBreadcrumb(i)}
+                    sx={{
+                      fontFamily: '"Cinzel", serif',
+                      fontWeight: isLast ? 700 : 400,
+                      fontSize: isLast ? '1.3rem' : '0.9rem',
+                      color: isLast ? '#fff' : 'rgba(255,255,255,0.4)',
+                      cursor: isLast ? 'default' : 'pointer',
+                      ...(!isLast && { '&:hover': { color: 'rgba(255,255,255,0.7)' } }),
+                    }}
+                  >
+                    {bc.name}
+                  </Typography>
+                </React.Fragment>
+              );
+            })}
           </Box>
         </Box>
+
         <Box display="flex" gap={1} alignItems="center">
           <Box display="flex" gap={0.5} sx={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 1, p: 0.5 }}>
-            <IconButton size="small" onClick={zoomOut} sx={{ color: '#fff' }}>
-              <ZoomOutIcon fontSize="small" />
-            </IconButton>
+            <IconButton size="small" onClick={zoomOut} sx={{ color: '#fff' }}><ZoomOutIcon fontSize="small" /></IconButton>
             <Typography sx={{ color: '#fff', fontSize: '0.8rem', lineHeight: '30px', px: 1, minWidth: 40, textAlign: 'center' }}>
               {Math.round(zoom * 100)}%
             </Typography>
-            <IconButton size="small" onClick={zoomIn} sx={{ color: '#fff' }}>
-              <ZoomInIcon fontSize="small" />
-            </IconButton>
-            <IconButton size="small" onClick={resetView} sx={{ color: '#fff' }}>
-              <CenterFocusStrongIcon fontSize="small" />
-            </IconButton>
+            <IconButton size="small" onClick={zoomIn} sx={{ color: '#fff' }}><ZoomInIcon fontSize="small" /></IconButton>
+            <IconButton size="small" onClick={resetView} sx={{ color: '#fff' }}><CenterFocusStrongIcon fontSize="small" /></IconButton>
           </Box>
           <Chip
             icon={<DragIndicatorIcon sx={{ fontSize: 14 }} />}
-            label={`${markers.length} маркеров`}
-            size="small" variant="outlined"
+            label={`${markers.length} маркеров`} size="small" variant="outlined"
             sx={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)' }}
           />
-          <Button
-            component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small"
-            sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
-          >
+          <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small"
+            sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>
             Загрузить карту
             <input type="file" hidden accept="image/*" onChange={handleUploadMap} />
           </Button>
@@ -980,12 +907,11 @@ export const MapPage: React.FC = () => {
       </Typography>
 
       {/* Map + Panel */}
-      <Box sx={{ flexGrow: 1, display: 'flex', overflow: 'hidden', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
-        {/* Map area */}
+      <Box sx={{ ...sxMapContainer, position: 'relative' }}>
         <Box
           ref={containerRef}
           sx={{
-            flexGrow: 1, overflow: 'hidden',
+            width: '100%', height: '100%', overflow: 'hidden',
             backgroundColor: '#0a0a14',
             position: 'relative',
             cursor: isPanning ? 'grabbing' : (draggingMarker && didDragRef.current) ? 'grabbing' : 'crosshair',
@@ -997,22 +923,18 @@ export const MapPage: React.FC = () => {
         >
           {mapImageUrl ? (
             <Box sx={{
-              position: 'absolute',
-              transformOrigin: '0 0',
+              position: 'absolute', transformOrigin: '0 0',
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transition: 'none',
             }}>
               <img
-                ref={imgRef}
-                src={mapImageUrl}
-                alt="Map"
+                ref={imgRef} src={mapImageUrl} alt="Map"
                 onClick={handleMapClick}
                 style={{
                   display: 'block',
-                  maxWidth: containerRef.current ? containerRef.current.clientWidth : '100%',
-                  maxHeight: containerRef.current ? containerRef.current.clientHeight : 'calc(100vh - 200px)',
-                  userSelect: 'none',
-                  pointerEvents: 'auto',
+                  maxWidth: containerRef.current?.clientWidth || '100%',
+                  maxHeight: containerRef.current?.clientHeight || 'calc(100vh - 200px)',
+                  userSelect: 'none', pointerEvents: 'auto',
                 }}
                 draggable={false}
               />
@@ -1028,35 +950,35 @@ export const MapPage: React.FC = () => {
             </Box>
           )}
         </Box>
+
         {/* Transition overlay */}
         {transitioning && (
           <Box sx={{
-            position: 'absolute',
-            inset: 0,
+            position: 'absolute', inset: 0,
             backgroundColor: 'rgba(10,10,20,0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 50, backdropFilter: 'blur(4px)',
           }}>
             <Box sx={{ textAlign: 'center' }}>
               <MapIcon sx={{ fontSize: 40, color: 'rgba(187,143,206,0.5)', mb: 1 }} />
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
-                Загрузка карты...
-              </Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Загрузка карты...</Typography>
             </Box>
           </Box>
         )}
-        {/* Right Panel */}
-        {panelOpen && selectedMarker && renderPanel()}
-      </Box>
 
-      {/* Add/Edit Marker Dialog */}
-      <Dialog
-        open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
-      >
+        {/* Right Panel — absolute, не влияет на размер контейнера карты */}
+        {panelOpen && selectedMarker && (
+          <Box sx={{
+            position: 'absolute', top: 0, right: 0, bottom: 0,
+            zIndex: 20,
+          }}>
+            {renderPanel()}
+          </Box>
+        )}
+      </Box>
+      {/* Dialog */}
+      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth
+        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
           {editingMarker ? 'Редактировать маркер' : 'Добавить маркер'}
         </DialogTitle>
@@ -1069,12 +991,11 @@ export const MapPage: React.FC = () => {
 
           <Autocomplete
             options={notes}
-            getOptionLabel={(option) => option.title}
+            getOptionLabel={o => o.title}
             value={notes.find(n => n.id === markerForm.linkedNoteId) || null}
-            onChange={(_, newValue) => setMarkerForm(prev => ({ ...prev, linkedNoteId: newValue?.id || null }))}
-            renderInput={(params) => (
-              <TextField {...params} label="Привязанная заметка" margin="normal"
-                placeholder="Начните вводить название..." />
+            onChange={(_, v) => setMarkerForm(prev => ({ ...prev, linkedNoteId: v?.id || null }))}
+            renderInput={params => (
+              <TextField {...params} label="Привязанная заметка" margin="normal" placeholder="Начните вводить название..." />
             )}
             renderOption={(props, option) => (
               <li {...props}>
@@ -1086,39 +1007,32 @@ export const MapPage: React.FC = () => {
                 </Box>
               </li>
             )}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            noOptionsText="Нет заметок"
-            clearText="Очистить"
-            sx={{ mt: 1 }}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            noOptionsText="Нет заметок" clearText="Очистить" sx={{ mt: 1 }}
           />
-          {/* Вложенная карта — только при создании нового маркера */}
+
+          {/* Child map checkbox */}
           {!editingMarker && (
             <Box sx={{ mt: 2 }}>
-              {/* Чекбокс */}
-              <Box sx={{
-                p: 1.5, borderRadius: 1,
-                backgroundColor: markerForm.createChildMap ? 'rgba(187,143,206,0.08)' : 'transparent',
-                border: markerForm.createChildMap ? '1px solid rgba(187,143,206,0.3)' : '1px solid rgba(255,255,255,0.08)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                '&:hover': { borderColor: 'rgba(187,143,206,0.4)' },
-              }}
+              <Box
                 onClick={() => {
                   const next = !markerForm.createChildMap;
                   setMarkerForm(prev => ({ ...prev, createChildMap: next }));
-                  if (!next) {
-                    setChildMapFile(null);
-                    setChildMapPreview(null);
-                  }
+                  if (!next) clearChildMapFile();
+                }}
+                sx={{
+                  p: 1.5, borderRadius: 1, cursor: 'pointer', transition: 'all 0.2s',
+                  backgroundColor: markerForm.createChildMap ? 'rgba(187,143,206,0.08)' : 'transparent',
+                  border: markerForm.createChildMap ? '1px solid rgba(187,143,206,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                  '&:hover': { borderColor: 'rgba(187,143,206,0.4)' },
                 }}
               >
                 <Box display="flex" alignItems="center" gap={1.5}>
                   <Box sx={{
-                    width: 20, height: 20, borderRadius: '4px',
+                    width: 20, height: 20, borderRadius: '4px', transition: 'all 0.2s',
                     border: markerForm.createChildMap ? '2px solid #BB8FCE' : '2px solid rgba(255,255,255,0.2)',
                     backgroundColor: markerForm.createChildMap ? '#BB8FCE' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s',
                   }}>
                     {markerForm.createChildMap && (
                       <Typography sx={{ color: '#fff', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>✓</Typography>
@@ -1136,54 +1050,30 @@ export const MapPage: React.FC = () => {
                 </Box>
               </Box>
 
-              {/* Загрузка изображения вложенной карты */}
               {markerForm.createChildMap && (
                 <Box sx={{ mt: 1.5, ml: 0.5 }}>
                   {childMapPreview ? (
-                    <Box sx={{ position: 'relative' }}>
-                      <Box sx={{
-                        width: '100%', height: 120, borderRadius: 1, overflow: 'hidden',
-                        border: '1px solid rgba(187,143,206,0.3)',
-                      }}>
-                        <img
-                          src={childMapPreview}
-                          alt="Preview"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                    <>
+                      <Box sx={{ width: '100%', height: 120, borderRadius: 1, overflow: 'hidden', border: '1px solid rgba(187,143,206,0.3)' }}>
+                        <img src={childMapPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </Box>
                       <Box display="flex" justifyContent="space-between" alignItems="center" mt={0.5}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-                          {childMapFile?.name}
-                        </Typography>
-                        <Button
-                          size="small"
-                          onClick={() => { setChildMapFile(null); setChildMapPreview(null); }}
-                          sx={{ color: 'rgba(255,100,100,0.6)', minWidth: 'auto', fontSize: '0.75rem' }}
-                        >
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>{childMapFile?.name}</Typography>
+                        <Button size="small" onClick={clearChildMapFile}
+                          sx={{ color: 'rgba(255,100,100,0.6)', minWidth: 'auto', fontSize: '0.75rem' }}>
                           Удалить
                         </Button>
                       </Box>
-                    </Box>
+                    </>
                   ) : (
-                    <Button
-                      component="label" fullWidth variant="outlined" startIcon={<ImageIcon />} size="small"
+                    <Button component="label" fullWidth variant="outlined" startIcon={<ImageIcon />} size="small"
                       sx={{
                         borderColor: 'rgba(187,143,206,0.2)', color: 'rgba(187,143,206,0.6)',
                         borderStyle: 'dashed', py: 1.5,
                         '&:hover': { borderColor: 'rgba(187,143,206,0.4)', backgroundColor: 'rgba(187,143,206,0.05)' },
-                      }}
-                    >
+                      }}>
                       Загрузить изображение карты
-                      <input type="file" hidden accept="image/*" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setChildMapFile(file);
-                          const reader = new FileReader();
-                          reader.onload = (ev) => setChildMapPreview(ev.target?.result as string);
-                          reader.readAsDataURL(file);
-                        }
-                        e.target.value = '';
-                      }} />
+                      <input type="file" hidden accept="image/*" onChange={handleChildMapFileChange} />
                     </Button>
                   )}
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', display: 'block', mt: 0.5 }}>
@@ -1193,11 +1083,12 @@ export const MapPage: React.FC = () => {
               )}
             </Box>
           )}
+
           <FormControl fullWidth margin="normal">
             <InputLabel>Иконка</InputLabel>
             <Select value={markerForm.icon} label="Иконка"
               onChange={e => setMarkerForm(prev => ({ ...prev, icon: e.target.value }))}>
-              {Object.entries(MARKER_ICONS).map(([key, emoji]) => (
+              {MARKER_ICON_ENTRIES.map(([key, emoji]) => (
                 <MenuItem key={key} value={key}>
                   <Box display="flex" alignItems="center" gap={1}>
                     <Typography fontSize="1.2rem">{emoji}</Typography>
@@ -1220,6 +1111,7 @@ export const MapPage: React.FC = () => {
             ))}
           </Box>
 
+          {/* Preview */}
           <Box display="flex" alignItems="center" gap={1} mt={2} p={1.5}
             sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
             <Box sx={{
@@ -1235,14 +1127,14 @@ export const MapPage: React.FC = () => {
               </Typography>
               {markerForm.linkedNoteId && (
                 <Typography variant="caption" sx={{ color: '#4ECDC4' }}>
-                  📎 {notes.find(n => n.id === markerForm.linkedNoteId)?.title}
+                  📎 {notesMap.get(markerForm.linkedNoteId)?.title}
                 </Typography>
               )}
             </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} color="inherit">Отмена</Button>
+          <Button onClick={closeDialog} color="inherit">Отмена</Button>
           <DndButton variant="contained" onClick={handleSaveMarker} disabled={!markerForm.title.trim()}>
             {editingMarker ? 'Сохранить' : 'Добавить'}
           </DndButton>
