@@ -218,6 +218,33 @@ export function initializeDatabase(): void {
     );
   `);
 
+  // === Миграция: обновить tag_associations CHECK для поддержки dogma ===
+  try {
+    const tableInfo = database.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='tag_associations'"
+    ).get() as any;
+    
+    if (tableInfo && tableInfo.sql && !tableInfo.sql.includes("'dogma'")) {
+      console.log('🔄 Migrating tag_associations to support dogma...');
+      database.exec(`
+        CREATE TABLE tag_associations_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tag_id INTEGER NOT NULL,
+          entity_type TEXT NOT NULL CHECK(entity_type IN ('character', 'note', 'timeline_event', 'dogma')),
+          entity_id INTEGER NOT NULL,
+          FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+          UNIQUE(tag_id, entity_type, entity_id)
+        );
+        INSERT INTO tag_associations_new SELECT * FROM tag_associations;
+        DROP TABLE tag_associations;
+        ALTER TABLE tag_associations_new RENAME TO tag_associations;
+      `);
+      console.log('✅ tag_associations migrated');
+    }
+  } catch (e) {
+    console.warn('⚠️ tag_associations migration skipped:', e);
+  }
+
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
     CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(project_id, name);

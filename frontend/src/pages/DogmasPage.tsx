@@ -4,7 +4,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Chip, Select, MenuItem, FormControl,
   InputAdornment, Collapse, Tooltip, Switch,
-  FormControlLabel, InputLabel, Autocomplete,
+  FormControlLabel, InputLabel,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -28,7 +28,6 @@ import {
   DOGMA_CATEGORY_LABELS,
   DOGMA_CATEGORY_ICONS,
   DOGMA_IMPORTANCE_LABELS,
-  DOGMA_STATUS_LABELS,
 } from '@campaigner/shared';
 import type { Dogma } from '@campaigner/shared';
 
@@ -45,9 +44,12 @@ export const DogmasPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const {
     dogmas, total, loading, loadingMore,
-    fetchDogmas, createDogma, updateDogma, deleteDogma, setTags, reset,
+    fetchDogmas, createDogma, updateDogma, deleteDogma, setTags,
   } = useDogmaStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
+
+  // Флаг: была ли хотя бы одна успешная загрузка (чтобы отличить "ещё не грузили" от "загрузили и пусто")
+  const [initialized, setInitialized] = useState(false);
 
   // Dialog form
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,26 +71,39 @@ export const DogmasPage: React.FC = () => {
   const [filterImportance, setFilterImportance] = useState('');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
+  // Для отслеживания: есть ли вообще догмы (без фильтров)
+  const [totalUnfiltered, setTotalUnfiltered] = useState(0);
+
   // Infinite scroll
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const loadDogmas = useCallback((append = false) => {
-    fetchDogmas(pid, {
+  // Стабильная функция загрузки (без dogmas.length в deps)
+  const loadDogmas = useCallback(async (append = false) => {
+    const offset = append ? useDogmaStore.getState().dogmas.length : 0;
+    await fetchDogmas(pid, {
       category: filterCategory || undefined,
       importance: filterImportance || undefined,
       search: debouncedSearch || undefined,
       limit: PAGE_SIZE,
-      offset: append ? dogmas.length : 0,
+      offset,
       append,
     });
-  }, [pid, filterCategory, filterImportance, debouncedSearch, dogmas.length, fetchDogmas]);
+    setInitialized(true);
+  }, [pid, filterCategory, filterImportance, debouncedSearch, fetchDogmas]);
 
-  // Initial load & filter change
+  // Начальная загрузка без фильтров — узнаём общее количество
   useEffect(() => {
+    fetchDogmas(pid, { limit: 1, offset: 0 }).then(() => {
+      setTotalUnfiltered(useDogmaStore.getState().total);
+    });
+  }, [pid, fetchDogmas]);
+
+  // Загрузка при смене фильтров
+  useEffect(() => {
+    setInitialized(false);
     loadDogmas(false);
-    return () => reset();
-  }, [pid, filterCategory, filterImportance, debouncedSearch]);
+  }, [loadDogmas]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -96,7 +111,8 @@ export const DogmasPage: React.FC = () => {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && !loading && dogmas.length < total) {
+        const state = useDogmaStore.getState();
+        if (entries[0].isIntersecting && !state.loadingMore && !state.loading && state.dogmas.length < state.total) {
           loadDogmas(true);
         }
       },
@@ -108,7 +124,10 @@ export const DogmasPage: React.FC = () => {
     }
 
     return () => observerRef.current?.disconnect();
-  }, [dogmas.length, total, loading, loadingMore, loadDogmas]);
+  }, [loadDogmas]);
+
+  // Есть ли активные фильтры
+  const hasFilters = !!(debouncedSearch || filterCategory || filterImportance);
 
   // Group by category
   const groupedCategories: { key: string; label: string; icon: string; dogmas: Dogma[] }[] = [];
@@ -119,7 +138,6 @@ export const DogmasPage: React.FC = () => {
     categoryMap.get(key)!.push(d);
   }
 
-  // Sort categories by predefined order
   const categoryOrder = DOGMA_CATEGORIES as readonly string[];
   const sortedKeys = [...categoryMap.keys()].sort(
     (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b)
@@ -141,6 +159,14 @@ export const DogmasPage: React.FC = () => {
       return next;
     });
   };
+
+  const clearFilters = () => {
+    setSearch('');
+    setFilterCategory('');
+    setFilterImportance('');
+  };
+
+  // ==================== Form ====================
 
   const resetForm = () => {
     setTitle('');
@@ -213,6 +239,8 @@ export const DogmasPage: React.FC = () => {
         });
         if (tagsStr.trim()) await saveTags(created.id, tagsStr);
         showSnackbar('Догма создана', 'success');
+        // Обновить totalUnfiltered
+        setTotalUnfiltered(prev => prev + 1);
       }
       setDialogOpen(false);
       resetForm();
@@ -227,11 +255,15 @@ export const DogmasPage: React.FC = () => {
       try {
         await deleteDogma(id);
         showSnackbar('Догма удалена', 'success');
+        setTotalUnfiltered(prev => Math.max(0, prev - 1));
       } catch { showSnackbar('Ошибка', 'error'); }
     });
   };
 
-  if (loading && dogmas.length === 0) {
+  // ==================== Render ====================
+
+  // Первая загрузка — показываем спиннер
+  if (!initialized && loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
         <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography>
@@ -256,81 +288,102 @@ export const DogmasPage: React.FC = () => {
         </DndButton>
       </Box>
 
+      {/* Filters — видны если есть хотя бы одна догма в проекте или активны фильтры */}
+      {(totalUnfiltered > 0 || hasFilters) && (
+        <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
+          <TextField
+            placeholder="Поиск догм..."
+            value={search} onChange={e => setSearch(e.target.value)}
+            sx={{
+              flexGrow: 1, maxWidth: 400,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
+                </InputAdornment>
+              ),
+            }}
+            size="small"
+          />
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <Select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} displayEmpty
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+                color: '#fff',
+              }}>
+              <MenuItem value="">Все категории</MenuItem>
+              {DOGMA_CATEGORIES.map(cat => (
+                <MenuItem key={cat} value={cat}>
+                  {DOGMA_CATEGORY_ICONS[cat]} {DOGMA_CATEGORY_LABELS[cat]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <Select value={filterImportance} onChange={e => setFilterImportance(e.target.value)} displayEmpty
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+                color: '#fff',
+              }}>
+              <MenuItem value="">Любая важность</MenuItem>
+              {DOGMA_IMPORTANCE.map(imp => (
+                <MenuItem key={imp} value={imp}>{DOGMA_IMPORTANCE_LABELS[imp]}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {hasFilters && (
+            <Button variant="outlined" onClick={clearFilters}
+              size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
+              Сброс
+            </Button>
+          )}
+
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+            {dogmas.length} из {total}
+          </Typography>
+        </Box>
+      )}
+
+      {/* Content */}
       {dogmas.length === 0 && !loading ? (
-        <EmptyState
-          icon={<GavelIcon sx={{ fontSize: 64 }} />}
-          title="Догм пока нет"
-          description="Определите фундаментальные законы вашего мира — как работает магия, какие правила общества, что определяет реальность"
-          actionLabel="Добавить догму"
-          onAction={handleOpenCreate}
-        />
+        hasFilters ? (
+          /* Пустой результат фильтрации */
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <SearchIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.15)', mb: 2 }} />
+            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '1.1rem', mb: 1 }}>
+              Ничего не найдено
+            </Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.9rem', mb: 2 }}>
+              Попробуйте изменить параметры поиска или фильтры
+            </Typography>
+            <Button variant="outlined" onClick={clearFilters}
+              size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
+              Сбросить фильтры
+            </Button>
+          </Box>
+        ) : (
+          /* Вообще нет догм в проекте */
+          <EmptyState
+            icon={<GavelIcon sx={{ fontSize: 64 }} />}
+            title="Догм пока нет"
+            description="Определите фундаментальные законы вашего мира — как работает магия, какие правила общества, что определяет реальность"
+            actionLabel="Добавить догму"
+            onAction={handleOpenCreate}
+          />
+        )
       ) : (
         <>
-          {/* Filters */}
-          <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
-            <TextField
-              placeholder="Поиск догм..."
-              value={search} onChange={e => setSearch(e.target.value)}
-              sx={{
-                flexGrow: 1, maxWidth: 400,
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
-                },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
-                  </InputAdornment>
-                ),
-              }}
-              size="small"
-            />
-
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <Select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} displayEmpty
-                sx={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                  color: '#fff',
-                }}>
-                <MenuItem value="">Все категории</MenuItem>
-                {DOGMA_CATEGORIES.map(cat => (
-                  <MenuItem key={cat} value={cat}>
-                    {DOGMA_CATEGORY_ICONS[cat]} {DOGMA_CATEGORY_LABELS[cat]}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl size="small" sx={{ minWidth: 180 }}>
-              <Select value={filterImportance} onChange={e => setFilterImportance(e.target.value)} displayEmpty
-                sx={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                  color: '#fff',
-                }}>
-                <MenuItem value="">Любая важность</MenuItem>
-                {DOGMA_IMPORTANCE.map(imp => (
-                  <MenuItem key={imp} value={imp}>{DOGMA_IMPORTANCE_LABELS[imp]}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {(search || filterCategory || filterImportance) && (
-              <Button variant="outlined" onClick={() => { setSearch(''); setFilterCategory(''); setFilterImportance(''); }}
-                size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
-                Сброс
-              </Button>
-            )}
-
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-              {dogmas.length} из {total}
-            </Typography>
-          </Box>
-
-          {/* Dogmas Dashboard grouped by category */}
+          {/* Dogmas grouped by category */}
           {groupedCategories.map((group) => {
             const collapsed = collapsedCategories.has(group.key);
 
@@ -398,8 +451,6 @@ export const DogmasPage: React.FC = () => {
                               <Typography sx={{ fontWeight: 700, color: '#fff', fontSize: '1.05rem' }}>
                                 {dogma.title}
                               </Typography>
-
-                              {/* Importance badge */}
                               <Chip
                                 label={DOGMA_IMPORTANCE_LABELS[dogma.importance]}
                                 size="small"
@@ -409,8 +460,6 @@ export const DogmasPage: React.FC = () => {
                                   color: '#fff', borderRadius: 1,
                                 }}
                               />
-
-                              {/* Public/hidden indicator */}
                               {!dogma.isPublic && (
                                 <Tooltip title="Не известна жителям мира">
                                   <VisibilityOffIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.3)' }} />
@@ -425,24 +474,40 @@ export const DogmasPage: React.FC = () => {
                                 overflow: 'hidden', textOverflow: 'ellipsis',
                                 display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
                               }}>
-                                {dogma.description.replace(/<[^>]*>/g, '')}
+                                {dogma.description}
                               </Typography>
                             )}
 
-                            {/* Impact preview */}
+                            {/* Impact */}
                             {dogma.impact && (
                               <Box display="flex" alignItems="center" gap={0.5} mt={1}>
                                 <Typography variant="caption" sx={{
-                                  color: 'rgba(255,200,100,0.7)', fontWeight: 600,
+                                  color: 'rgba(255,200,100,0.7)', fontWeight: 600, flexShrink: 0,
                                 }}>
                                   Влияние:
                                 </Typography>
                                 <Typography variant="caption" sx={{
                                   color: 'rgba(255,255,255,0.4)',
                                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                  maxWidth: 500,
                                 }}>
-                                  {dogma.impact.replace(/<[^>]*>/g, '')}
+                                  {dogma.impact}
+                                </Typography>
+                              </Box>
+                            )}
+
+                            {/* Exceptions */}
+                            {dogma.exceptions && (
+                              <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
+                                <Typography variant="caption" sx={{
+                                  color: 'rgba(255,107,107,0.7)', fontWeight: 600, flexShrink: 0,
+                                }}>
+                                  Исключения:
+                                </Typography>
+                                <Typography variant="caption" sx={{
+                                  color: 'rgba(255,255,255,0.4)',
+                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}>
+                                  {dogma.exceptions}
                                 </Typography>
                               </Box>
                             )}

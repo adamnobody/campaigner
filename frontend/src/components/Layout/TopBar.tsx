@@ -12,6 +12,20 @@ import { useProjectStore } from '@/store/useProjectStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { SearchDialog } from '@/components/ui/SearchDialog';
 
+const PAGE_LABELS: Record<string, string> = {
+  map: 'Карта',
+  characters: 'Персонажи',
+  notes: 'Заметки',
+  wiki: 'Вики',
+  timeline: 'Хронология',
+  files: 'Файлы',
+  settings: 'Настройки',
+  appearance: 'Внешний вид',
+  dogmas: 'Догмы',
+  graph: 'Граф связей',
+  new: 'Создание',
+};
+
 export const TopBar: React.FC = () => {
   const { toggleSidebar, searchOpen, setSearchOpen } = useUIStore();
   const { currentProject } = useProjectStore();
@@ -73,8 +87,8 @@ export const TopBar: React.FC = () => {
               </MuiLink>
             )}
             {pathParts.length > 2 && (
-              <Typography color="text.primary" sx={{ textTransform: 'capitalize' }}>
-                {pathParts[pathParts.length - 1]}
+              <Typography color="text.primary">
+                {PAGE_LABELS[pathParts[pathParts.length - 1]] || pathParts[pathParts.length - 1]}
               </Typography>
             )}
           </Breadcrumbs>
