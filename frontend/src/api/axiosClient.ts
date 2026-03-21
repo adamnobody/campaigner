@@ -164,3 +164,23 @@ export const wikiApi = {
   getCategories: (projectId: number) =>
     apiClient.get('/wiki/categories', { params: { projectId } }),
 };
+
+export const dogmasApi = {
+  getAll: (projectId: number, params?: {
+    category?: string;
+    importance?: string;
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    apiClient.get('/dogmas', { params: { projectId, ...params } }),
+  getById: (id: number) => apiClient.get(`/dogmas/${id}`),
+  create: (data: any) => apiClient.post('/dogmas', data),
+  update: (id: number, data: any) => apiClient.put(`/dogmas/${id}`, data),
+  delete: (id: number) => apiClient.delete(`/dogmas/${id}`),
+  reorder: (projectId: number, orderedIds: number[]) =>
+    apiClient.post('/dogmas/reorder', { projectId, orderedIds }),
+  setTags: (id: number, tagIds: number[]) =>
+    apiClient.put(`/dogmas/${id}/tags`, { tagIds }),
+};

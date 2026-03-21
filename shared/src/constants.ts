@@ -14,6 +14,11 @@ export const LIMITS = {
   MARKER_TITLE_MIN: 1,
   MARKER_TITLE_MAX: 200,
   MARKER_DESCRIPTION_MAX: 10000,
+  DOGMA_TITLE_MIN: 1,
+  DOGMA_TITLE_MAX: 300,
+  DOGMA_DESCRIPTION_MAX: 100000,
+  DOGMA_IMPACT_MAX: 50000,
+  DOGMA_EXCEPTIONS_MAX: 50000,
   TIMELINE_EVENT_TITLE_MIN: 1,
   TIMELINE_EVENT_TITLE_MAX: 300,
   TIMELINE_EVENT_DESCRIPTION_MAX: 20000,
@@ -63,3 +68,70 @@ export const MARKER_ICONS = [
   'ruins', 'port', 'bridge', 'tower', 'camp',
   'battlefield', 'mine', 'farm', 'graveyard', 'custom',
 ] as const;
+
+// ==================== Догмы ====================
+export const DOGMA_CATEGORIES = [
+  'cosmology',
+  'magic',
+  'religion',
+  'society',
+  'politics',
+  'economy',
+  'history',
+  'nature',
+  'races',
+  'technology',
+  'other',
+] as const;
+
+export const DOGMA_IMPORTANCE = [
+  'fundamental',
+  'major',
+  'minor',
+] as const;
+
+export const DOGMA_STATUSES = [
+  'active',
+  'deprecated',
+  'hidden',
+] as const;
+
+export const DOGMA_CATEGORY_LABELS: Record<string, string> = {
+  cosmology: 'Космология и физика мира',
+  magic: 'Магия и сверхъестественное',
+  religion: 'Религия и метафизика',
+  society: 'Общество и уклад жизни',
+  politics: 'Политика и законы',
+  economy: 'Экономика и ресурсы',
+  history: 'Историческая аксиома',
+  nature: 'Природа и география',
+  races: 'Расы и народы',
+  technology: 'Технологии и ремёсла',
+  other: 'Другое',
+};
+
+export const DOGMA_CATEGORY_ICONS: Record<string, string> = {
+  cosmology: '🌌',
+  magic: '✨',
+  religion: '⛪',
+  society: '🏛️',
+  politics: '👑',
+  economy: '💰',
+  history: '📜',
+  nature: '🌿',
+  races: '🧝',
+  technology: '⚙️',
+  other: '📋',
+};
+
+export const DOGMA_IMPORTANCE_LABELS: Record<string, string> = {
+  fundamental: 'Фундаментальная',
+  major: 'Важная',
+  minor: 'Второстепенная',
+};
+
+export const DOGMA_STATUS_LABELS: Record<string, string> = {
+  active: 'Активна',
+  deprecated: 'Устарела',
+  hidden: 'Скрыта',
+};

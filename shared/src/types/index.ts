@@ -37,6 +37,11 @@ import {
   createTagSchema,
   paginationSchema,
 } from '../schemas/common.schema.js';
+import {
+  dogmaSchema,
+  createDogmaSchema,
+  updateDogmaSchema,
+} from '../schemas/dogma.schema.js';
 
 // ==================== Project ====================
 export type Project = z.infer<typeof projectSchema>;
@@ -70,6 +75,11 @@ export type UpdateMarker = z.input<typeof updateMarkerSchema>;
 export type TimelineEvent = z.infer<typeof timelineEventSchema>;
 export type CreateTimelineEvent = z.input<typeof createTimelineEventSchema>;
 export type UpdateTimelineEvent = z.input<typeof updateTimelineEventSchema>;
+
+// ==================== Dogma ====================
+export type Dogma = z.infer<typeof dogmaSchema>;
+export type CreateDogma = z.input<typeof createDogmaSchema>;
+export type UpdateDogma = z.input<typeof updateDogmaSchema>;
 
 // ==================== Common ====================
 export type Tag = z.infer<typeof tagSchema>;

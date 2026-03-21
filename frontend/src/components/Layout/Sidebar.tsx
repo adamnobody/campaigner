@@ -21,6 +21,7 @@ import PaletteIcon from '@mui/icons-material/Palette';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
+import GavelIcon from '@mui/icons-material/Gavel';
 
 const projectMenuItems = [
   { label: 'Карта', icon: <MapIcon />, path: 'map' },
@@ -28,6 +29,7 @@ const projectMenuItems = [
   { label: 'Заметки', icon: <DescriptionIcon />, path: 'notes' },
   { label: 'Вики', icon: <MenuBookIcon />, path: 'wiki' },
   { label: 'Хронология', icon: <TimelineIcon />, path: 'timeline' },
+  { label: 'Догмы', icon: <GavelIcon />, path: 'dogmas' },
   { label: 'Файлы', icon: <FolderIcon />, path: 'files' },
 ];
 

@@ -16,7 +16,9 @@ campaigner
 │  │  │  └─ wiki.controller.ts
 │  │  ├─ db
 │  │  │  ├─ connection.ts
-│  │  │  └─ migrate.ts
+│  │  │  ├─ migrate.ts
+│  │  │  └─ migrations
+│  │  │     └─ 001_create_maps_table.ts
 │  │  ├─ index.ts
 │  │  ├─ middleware
 │  │  │  ├─ errorHandler.ts
@@ -59,6 +61,10 @@ campaigner
 │  │  │  │  ├─ AppLayout.tsx
 │  │  │  │  ├─ Sidebar.tsx
 │  │  │  │  └─ TopBar.tsx
+│  │  │  ├─ settings
+│  │  │  │  ├─ ThemePresetSelector.tsx
+│  │  │  │  ├─ ThemePreviewCard.tsx
+│  │  │  │  └─ ThemeSliderControl.tsx
 │  │  │  └─ ui
 │  │  │     ├─ ConfirmDialog.tsx
 │  │  │     ├─ DndButton.tsx
@@ -67,7 +73,8 @@ campaigner
 │  │  │     ├─ GlobalSnackbar.tsx
 │  │  │     ├─ LoadingScreen.tsx
 │  │  │     ├─ SearchDialog.tsx
-│  │  │     └─ SplashScreen.tsx
+│  │  │     ├─ SplashScreen.tsx
+│  │  │     └─ StyleCustomizer.tsx
 │  │  ├─ hooks
 │  │  │  ├─ useDebounce.ts
 │  │  │  ├─ useHistory.ts
@@ -94,6 +101,7 @@ campaigner
 │  │  │  ├─ useNoteStore.ts
 │  │  │  ├─ usePreferencesStore.ts
 │  │  │  ├─ useProjectStore.ts
+│  │  │  ├─ useStyleStore.ts
 │  │  │  ├─ useTagStore.ts
 │  │  │  ├─ useTimelineStore.ts
 │  │  │  ├─ useUIStore.ts
@@ -102,6 +110,7 @@ campaigner
 │  │     ├─ AppThemeProvider.tsx
 │  │     ├─ componentOverrides.ts
 │  │     ├─ createAppTheme.ts
+│  │     ├─ muiTheme.ts
 │  │     ├─ presets.ts
 │  │     └─ tokens.ts
 │  ├─ tsconfig.json
