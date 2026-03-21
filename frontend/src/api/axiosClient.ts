@@ -184,3 +184,55 @@ export const dogmasApi = {
   setTags: (id: number, tagIds: number[]) =>
     apiClient.put(`/dogmas/${id}/tags`, { tagIds }),
 };
+
+export const factionsApi = {
+  getAll: (projectId: number, params?: any) =>
+    apiClient.get('/factions', { params: { projectId, ...params } }),
+  getById: (id: number) => apiClient.get(`/factions/${id}`),
+  create: (data: any) => apiClient.post('/factions', data),
+  update: (id: number, data: any) => apiClient.put(`/factions/${id}`, data),
+  delete: (id: number) => apiClient.delete(`/factions/${id}`),
+  uploadImage: (id: number, file: File) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return apiClient.post(`/factions/${id}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadBanner: (id: number, file: File) => {
+    const fd = new FormData();
+    fd.append('banner', file);
+    return apiClient.post(`/factions/${id}/banner`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  setTags: (id: number, tagIds: number[]) =>
+    apiClient.put(`/factions/${id}/tags`, { tagIds }),
+  // Ranks
+  getRanks: (factionId: number) => apiClient.get(`/factions/${factionId}/ranks`),
+  createRank: (factionId: number, data: any) =>
+    apiClient.post(`/factions/${factionId}/ranks`, data),
+  updateRank: (factionId: number, rankId: number, data: any) =>
+    apiClient.put(`/factions/${factionId}/ranks/${rankId}`, data),
+  deleteRank: (factionId: number, rankId: number) =>
+    apiClient.delete(`/factions/${factionId}/ranks/${rankId}`),
+  // Members
+  getMembers: (factionId: number) => apiClient.get(`/factions/${factionId}/members`),
+  addMember: (factionId: number, data: any) =>
+    apiClient.post(`/factions/${factionId}/members`, data),
+  updateMember: (factionId: number, memberId: number, data: any) =>
+    apiClient.put(`/factions/${factionId}/members/${memberId}`, data),
+  removeMember: (factionId: number, memberId: number) =>
+    apiClient.delete(`/factions/${factionId}/members/${memberId}`),
+  // Relations
+  getRelations: (projectId: number) =>
+    apiClient.get('/factions/relations', { params: { projectId } }),
+  createRelation: (data: any) => apiClient.post('/factions/relations', data),
+  updateRelation: (relationId: number, data: any) =>
+    apiClient.put(`/factions/relations/${relationId}`, data),
+  deleteRelation: (relationId: number) =>
+    apiClient.delete(`/factions/relations/${relationId}`),
+  // Graph
+  getGraph: (projectId: number) =>
+    apiClient.get('/factions/graph', { params: { projectId } }),
+};

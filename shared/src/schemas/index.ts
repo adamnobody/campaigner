@@ -5,3 +5,4 @@ export * from './map.schema.js';
 export * from './timeline.schema.js';
 export * from './dogma.schema.js';
 export * from './common.schema.js';
+export * from './faction.schema.js';

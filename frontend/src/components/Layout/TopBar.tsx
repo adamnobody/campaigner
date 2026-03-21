@@ -15,6 +15,7 @@ import { SearchDialog } from '@/components/ui/SearchDialog';
 const PAGE_LABELS: Record<string, string> = {
   map: 'Карта',
   characters: 'Персонажи',
+  factions: 'Фракции',
   notes: 'Заметки',
   wiki: 'Вики',
   timeline: 'Хронология',

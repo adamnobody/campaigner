@@ -127,3 +127,83 @@ export interface CharacterGraph {
   nodes: CharacterNode[];
   edges: CharacterEdge[];
 }
+
+// ==================== FACTIONS ====================
+
+export interface Faction {
+  id: number;
+  projectId: number;
+  name: string;
+  type: string;
+  customType?: string;
+  stateType?: string;
+  customStateType?: string;
+  motto?: string;
+  description?: string;
+  history?: string;
+  goals?: string;
+  headquarters?: string;
+  territory?: string;
+  status: string;
+  color?: string;
+  secondaryColor?: string;
+  imagePath?: string;
+  bannerPath?: string;
+  foundedDate?: string;
+  disbandedDate?: string;
+  parentFactionId?: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  // Joined
+  tags?: any[];
+  ranks?: FactionRank[];
+  members?: FactionMember[];
+  memberCount?: number;
+  parentFaction?: { id: number; name: string };
+  childFactions?: { id: number; name: string }[];
+}
+
+export interface FactionRank {
+  id: number;
+  factionId: number;
+  name: string;
+  level: number;
+  description?: string;
+  permissions?: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface FactionMember {
+  id: number;
+  factionId: number;
+  characterId: number;
+  rankId?: number;
+  role?: string;
+  joinedDate?: string;
+  leftDate?: string;
+  isActive: boolean;
+  notes?: string;
+  // Joined
+  characterName?: string;
+  characterImagePath?: string;
+  rankName?: string;
+  rankLevel?: number;
+}
+
+export interface FactionRelation {
+  id: number;
+  projectId: number;
+  sourceFactionId: number;
+  targetFactionId: number;
+  relationType: string;
+  customLabel?: string;
+  description?: string;
+  startedDate?: string;
+  isBidirectional: boolean;
+  createdAt: string;
+  // Joined
+  sourceFactionName?: string;
+  targetFactionName?: string;
+}

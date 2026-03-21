@@ -6,6 +6,8 @@ campaigner
 │  ├─ src
 │  │  ├─ controllers
 │  │  │  ├─ character.controller.ts
+│  │  │  ├─ dogma.controller.ts
+│  │  │  ├─ faction.controller.ts
 │  │  │  ├─ folder.controller.ts
 │  │  │  ├─ map.controller.ts
 │  │  │  ├─ note.controller.ts
@@ -26,6 +28,8 @@ campaigner
 │  │  │  └─ validateRequest.ts
 │  │  ├─ routes
 │  │  │  ├─ character.routes.ts
+│  │  │  ├─ dogma.routes.ts
+│  │  │  ├─ faction.routes.ts
 │  │  │  ├─ folder.routes.ts
 │  │  │  ├─ map.routes.ts
 │  │  │  ├─ note.routes.ts
@@ -37,6 +41,8 @@ campaigner
 │  │  │  └─ wiki.routes.ts
 │  │  └─ services
 │  │     ├─ character.service.ts
+│  │     ├─ dogma.service.ts
+│  │     ├─ faction.service.ts
 │  │     ├─ folder.service.ts
 │  │     ├─ map.service.ts
 │  │     ├─ note.service.ts
@@ -85,6 +91,7 @@ campaigner
 │  │  │  ├─ CharacterDetailPage.tsx
 │  │  │  ├─ CharacterGraphPage.tsx
 │  │  │  ├─ CharactersPage.tsx
+│  │  │  ├─ DogmasPage.tsx
 │  │  │  ├─ FilesPage.tsx
 │  │  │  ├─ HomePage.tsx
 │  │  │  ├─ MapPage.tsx
@@ -96,6 +103,8 @@ campaigner
 │  │  │  └─ WikiPage.tsx
 │  │  ├─ store
 │  │  │  ├─ useCharacterStore.ts
+│  │  │  ├─ useDogmaStore.ts
+│  │  │  ├─ useFactionStore.ts
 │  │  │  ├─ useFolderStore.ts
 │  │  │  ├─ useMapStore.ts
 │  │  │  ├─ useNoteStore.ts
@@ -129,6 +138,8 @@ campaigner
 │  │  ├─ schemas
 │  │  │  ├─ character.schema.ts
 │  │  │  ├─ common.schema.ts
+│  │  │  ├─ dogma.schema.ts
+│  │  │  ├─ faction.schema.ts
 │  │  │  ├─ index.ts
 │  │  │  ├─ map.schema.ts
 │  │  │  ├─ note.schema.ts

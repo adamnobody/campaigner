@@ -126,6 +126,26 @@ export class SearchService {
       });
     }
 
+    // Factions
+    const factions = db.prepare(`
+      SELECT id, name, type, custom_type, motto, description, status
+      FROM factions
+      WHERE project_id = ? AND (name LIKE ? OR motto LIKE ? OR description LIKE ? OR headquarters LIKE ?)
+      LIMIT ?
+    `).all(projectId, like, like, like, like, limit) as any[];
+
+    for (const f of factions) {
+      const subtitle = f.motto || f.description?.substring(0, 80) || f.status;
+      results.push({
+        type: 'faction' as any,
+        id: f.id,
+        title: f.name,
+        subtitle,
+        icon: '🏛️',
+        url: `/project/${projectId}/factions/${f.id}`,
+      });
+    }
+
     // Tags
     const tags = db.prepare(`
       SELECT id, name, color FROM tags
@@ -146,7 +166,7 @@ export class SearchService {
 
     // Sort: exact matches first, then by type priority
     const typePriority: Record<string, number> = {
-      character: 0, note: 1, marker: 2, event: 3, dogma: 4, tag: 5,
+      character: 0, faction: 1, note: 2, marker: 3, event: 4, dogma: 5, tag: 6,
     };
 
     results.sort((a, b) => {
