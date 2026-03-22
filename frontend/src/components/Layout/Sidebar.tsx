@@ -14,7 +14,6 @@ import PeopleIcon from '@mui/icons-material/People';
 import DescriptionIcon from '@mui/icons-material/Description';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import FolderIcon from '@mui/icons-material/Folder';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import PaletteIcon from '@mui/icons-material/Palette';
@@ -32,7 +31,6 @@ const projectMenuItems = [
   { label: 'Вики', icon: <MenuBookIcon />, path: 'wiki' },
   { label: 'Хронология', icon: <TimelineIcon />, path: 'timeline' },
   { label: 'Догмы', icon: <GavelIcon />, path: 'dogmas' },
-  { label: 'Файлы', icon: <FolderIcon />, path: 'files' },
 ];
 
 export const Sidebar: React.FC = () => {

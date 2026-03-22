@@ -133,16 +133,6 @@ export const timelineApi = {
     apiClient.put(`/timeline/${id}/tags`, { tagIds }),
 };
 
-export const foldersApi = {
-  getAll: (projectId: number) =>
-    apiClient.get('/folders', { params: { projectId } }),
-  getTree: (projectId: number) =>
-    apiClient.get('/folders/tree', { params: { projectId } }),
-  create: (data: any) => apiClient.post('/folders', data),
-  update: (id: number, name: string) => apiClient.put(`/folders/${id}`, { name }),
-  delete: (id: number) => apiClient.delete(`/folders/${id}`),
-};
-
 export const tagsApi = {
   getAll: (projectId: number) =>
     apiClient.get('/tags', { params: { projectId } }),

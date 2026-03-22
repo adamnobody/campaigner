@@ -12,7 +12,6 @@ import { NotesPage } from './pages/NotesPage';
 import { NoteEditorPage } from './pages/NoteEditorPage';
 import { WikiPage } from './pages/WikiPage';
 import { TimelinePage } from './pages/TimelinePage';
-import { FilesPage } from './pages/FilesPage';
 import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
 import { WikiGraphPage } from './pages/WikiGraphPage';
 import { AppearanceSettingsPage } from './pages/AppearanceSettingsPage';
@@ -50,7 +49,6 @@ const App: React.FC = () => {
             <Route path="factions" element={<ErrorBoundary><FactionsPage /></ErrorBoundary>} />
             <Route path="factions/new" element={<ErrorBoundary><FactionDetailPage /></ErrorBoundary>} />
             <Route path="factions/:factionId" element={<ErrorBoundary><FactionDetailPage /></ErrorBoundary>} />
-            <Route path="files" element={<ErrorBoundary><FilesPage /></ErrorBoundary>} />
             <Route path="settings" element={<ErrorBoundary><ProjectSettingsPage /></ErrorBoundary>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

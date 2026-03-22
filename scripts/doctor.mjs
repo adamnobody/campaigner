@@ -268,7 +268,7 @@ function checkBackend() {
   if (allOk) ok('Все ключевые файлы backend на месте');
 
   // Check controllers match services match routes
-  const entities = ['character', 'note', 'map', 'project', 'timeline', 'tag', 'folder'];
+  const entities = ['character', 'note', 'map', 'project', 'timeline', 'tag', 'faction', 'dogma'];
   let mismatch = [];
   for (const e of entities) {
     const hasController = fileExists(`backend/src/controllers/${e}.controller.ts`);
@@ -309,11 +309,12 @@ function checkFrontend() {
   section('Frontend');
 
   // Check key page files
-  const pages = [
-    'HomePage', 'MapPage', 'CharactersPage', 'CharacterDetailPage',
-    'CharacterGraphPage', 'NotesPage', 'NoteEditorPage', 'WikiPage',
-    'TimelinePage', 'FilesPage', 'ProjectSettingsPage',
-  ];
+const pages = [
+  'HomePage', 'MapPage', 'CharactersPage', 'CharacterDetailPage',
+  'CharacterGraphPage', 'NotesPage', 'NoteEditorPage', 'WikiPage',
+  'TimelinePage', 'ProjectSettingsPage', 'FactionsPage',
+  'FactionDetailPage', 'DogmasPage',
+];
 
   let missingPages = [];
   for (const p of pages) {
@@ -352,7 +353,9 @@ function checkFrontend() {
   }
 
   // Check stores
-  const stores = ['useProjectStore', 'useCharacterStore', 'useNoteStore', 'useMapStore', 'useTimelineStore', 'useUIStore', 'useStyleStore'];
+  const stores = ['useProjectStore', 'useCharacterStore', 'useNoteStore', 
+  'useMapStore', 'useTimelineStore', 'useUIStore', 'useStyleStore', 
+  'useFactionStore', 'useDogmaStore', 'useTagStore'];
   let missingStores = [];
   for (const s of stores) {
     if (!fileExists(`frontend/src/store/${s}.ts`)) {
