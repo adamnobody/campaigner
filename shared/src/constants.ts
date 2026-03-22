@@ -248,3 +248,54 @@ export const FACTION_RELATION_COLORS: Record<string, string> = {
   federation: 'rgba(130,130,255,0.7)',
   custom: 'rgba(180,180,180,0.5)',
 };
+
+// ==================== Династии ====================
+
+export const DYNASTY_STATUSES = [
+  'active', 'extinct', 'exiled', 'declining', 'rising',
+] as const;
+
+export const DYNASTY_STATUS_LABELS: Record<string, string> = {
+  active: 'Правящая',
+  extinct: 'Угасшая',
+  exiled: 'В изгнании',
+  declining: 'В упадке',
+  rising: 'Восходящая',
+};
+
+export const DYNASTY_STATUS_ICONS: Record<string, string> = {
+  active: '👑',
+  extinct: '💀',
+  exiled: '🏃',
+  declining: '📉',
+  rising: '📈',
+};
+
+export const DYNASTY_FAMILY_RELATION_TYPES = [
+  'parent', 'child', 'spouse', 'sibling',
+] as const;
+
+export const DYNASTY_FAMILY_RELATION_LABELS: Record<string, string> = {
+  parent: 'Родитель',
+  child: 'Ребёнок',
+  spouse: 'Супруг(а)',
+  sibling: 'Брат/Сестра',
+};
+
+export const DYNASTY_EVENT_IMPORTANCE = [
+  'critical', 'major', 'normal', 'minor',
+] as const;
+
+export const DYNASTY_EVENT_IMPORTANCE_LABELS: Record<string, string> = {
+  critical: 'Переломный момент',
+  major: 'Важное',
+  normal: 'Обычное',
+  minor: 'Незначительное',
+};
+
+export const DYNASTY_EVENT_IMPORTANCE_COLORS: Record<string, string> = {
+  critical: '#FF6B6B',
+  major: '#F7DC6F',
+  normal: '#82E0AA',
+  minor: '#85C1E9',
+};
