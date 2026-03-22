@@ -58,7 +58,7 @@ const EMPTY_FORM: FactionForm = {
   name: '', type: 'other', customType: '', stateType: '', customStateType: '',
   motto: '', description: '', history: '', goals: '',
   headquarters: '', territory: '', status: 'active',
-  color: '', secondaryColor: '', foundedDate: '', disbandedDate: '',
+  color: '#4e8a6e', secondaryColor: '#2a2a4a', foundedDate: '', disbandedDate: '',
   parentFactionId: '', tagsStr: '',
 };
 
@@ -348,6 +348,38 @@ export const FactionDetailPage: React.FC = () => {
 
   return (
     <Box>
+      {/* Banner */}
+      {currentFaction?.bannerPath && (
+        <Box sx={{
+          position: 'relative',
+          height: 200,
+          mx: -3,
+          mt: -3,
+          mb: 3,
+          borderRadius: 2,
+          overflow: 'hidden',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0, left: 0, right: 0,
+            height: '60%',
+            background: 'linear-gradient(transparent, rgba(15,15,25,0.95))',
+          },
+        }}>
+          <Box
+            component="img"
+            src={currentFaction.bannerPath}
+            alt="Banner"
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        </Box>
+      )}
+
+      {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box display="flex" alignItems="center" gap={2}>
           <IconButton onClick={() => navigate(`/project/${pid}/factions`)}>
@@ -541,11 +573,11 @@ export const FactionDetailPage: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                <Grid item xs={6} sm={3}>
-                    <TextField fullWidth label="Основной цвет" value={form.color} onChange={e => handleChange('color', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
+                  <Grid item xs={6} sm={3}>
+                    <TextField fullWidth label="Основной цвет" value={form.color || '#000000'} onChange={e => handleChange('color', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
                   </Grid>
                   <Grid item xs={6} sm={3}>
-                    <TextField fullWidth label="Вторичный цвет" value={form.secondaryColor} onChange={e => handleChange('secondaryColor', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
+                    <TextField fullWidth label="Вторичный цвет" value={form.secondaryColor || '#000000'} onChange={e => handleChange('secondaryColor', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
                   </Grid>
                   <Grid item xs={12}>
                     <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={value => handleChange('tagsStr', value)} onPendingInputChange={setTagsInput} />
@@ -725,7 +757,7 @@ export const FactionDetailPage: React.FC = () => {
           <TextField fullWidth label="Описание" value={rankForm.description} onChange={e => setRankForm(p => ({ ...p, description: e.target.value }))} margin="normal" multiline rows={2} />
           <Box display="flex" gap={2}>
             <TextField fullWidth label="Иконка (эмоджи)" value={rankForm.icon} onChange={e => setRankForm(p => ({ ...p, icon: e.target.value }))} margin="normal" placeholder="👑" />
-            <TextField fullWidth label="Цвет" value={rankForm.color} onChange={e => setRankForm(p => ({ ...p, color: e.target.value }))} margin="normal" type="color" InputLabelProps={{ shrink: true }} />
+            <TextField fullWidth label="Цвет" value={rankForm.color || '#000000'} onChange={e => setRankForm(p => ({ ...p, color: e.target.value }))} margin="normal" type="color" InputLabelProps={{ shrink: true }} />
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
