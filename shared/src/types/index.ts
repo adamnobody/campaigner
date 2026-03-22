@@ -207,3 +207,76 @@ export interface FactionRelation {
   sourceFactionName?: string;
   targetFactionName?: string;
 }
+
+// ==================== DYNASTY ====================
+
+export interface Dynasty {
+  id: number;
+  projectId: number;
+  name: string;
+  motto?: string;
+  description?: string;
+  history?: string;
+  status: string;
+  color?: string;
+  secondaryColor?: string;
+  imagePath?: string;
+  foundedDate?: string;
+  extinctDate?: string;
+  founderId?: number;
+  currentLeaderId?: number;
+  heirId?: number;
+  linkedFactionId?: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  // Joined
+  tags?: any[];
+  members?: DynastyMember[];
+  memberCount?: number;
+  events?: DynastyEvent[];
+  familyLinks?: DynastyFamilyLink[];
+  founderName?: string;
+  currentLeaderName?: string;
+  heirName?: string;
+  linkedFactionName?: string;
+}
+
+export interface DynastyMember {
+  id: number;
+  dynastyId: number;
+  characterId: number;
+  generation: number;
+  role?: string;
+  birthDate?: string;
+  deathDate?: string;
+  isMainLine: boolean;
+  notes?: string;
+  // Joined
+  characterName?: string;
+  characterImagePath?: string;
+  characterStatus?: string;
+}
+
+export interface DynastyFamilyLink {
+  id: number;
+  dynastyId: number;
+  sourceCharacterId: number;
+  targetCharacterId: number;
+  relationType: string;
+  customLabel?: string;
+  // Joined
+  sourceCharacterName?: string;
+  targetCharacterName?: string;
+}
+
+export interface DynastyEvent {
+  id: number;
+  dynastyId: number;
+  title: string;
+  description?: string;
+  eventDate: string;
+  importance: string;
+  sortOrder: number;
+  createdAt: string;
+}

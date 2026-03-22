@@ -22,6 +22,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
 import GavelIcon from '@mui/icons-material/Gavel';
 import GroupsIcon from '@mui/icons-material/Groups';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 
 const projectMenuItems = [
   { label: 'Карта', icon: <MapIcon />, path: 'map' },
@@ -31,6 +32,7 @@ const projectMenuItems = [
   { label: 'Вики', icon: <MenuBookIcon />, path: 'wiki' },
   { label: 'Хронология', icon: <TimelineIcon />, path: 'timeline' },
   { label: 'Догмы', icon: <GavelIcon />, path: 'dogmas' },
+  { label: 'Династии', icon: <AccountTreeIcon />, path: 'dynasties' },
 ];
 
 export const Sidebar: React.FC = () => {

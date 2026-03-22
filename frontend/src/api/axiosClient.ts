@@ -226,3 +226,40 @@ export const factionsApi = {
   getGraph: (projectId: number) =>
     apiClient.get('/factions/graph', { params: { projectId } }),
 };
+
+export const dynastiesApi = {
+  getAll: (projectId: number, params?: any) =>
+    apiClient.get('/dynasties', { params: { projectId, ...params } }),
+  getById: (id: number) => apiClient.get(`/dynasties/${id}`),
+  create: (data: any) => apiClient.post('/dynasties', data),
+  update: (id: number, data: any) => apiClient.put(`/dynasties/${id}`, data),
+  delete: (id: number) => apiClient.delete(`/dynasties/${id}`),
+  uploadImage: (id: number, file: File) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return apiClient.post(`/dynasties/${id}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  setTags: (id: number, tagIds: number[]) =>
+    apiClient.put(`/dynasties/${id}/tags`, { tagIds }),
+  // Members
+  addMember: (dynastyId: number, data: any) =>
+    apiClient.post(`/dynasties/${dynastyId}/members`, data),
+  updateMember: (dynastyId: number, memberId: number, data: any) =>
+    apiClient.put(`/dynasties/${dynastyId}/members/${memberId}`, data),
+  removeMember: (dynastyId: number, memberId: number) =>
+    apiClient.delete(`/dynasties/${dynastyId}/members/${memberId}`),
+  // Family links
+  addFamilyLink: (dynastyId: number, data: any) =>
+    apiClient.post(`/dynasties/${dynastyId}/family-links`, data),
+  deleteFamilyLink: (dynastyId: number, linkId: number) =>
+    apiClient.delete(`/dynasties/${dynastyId}/family-links/${linkId}`),
+  // Events
+  addEvent: (dynastyId: number, data: any) =>
+    apiClient.post(`/dynasties/${dynastyId}/events`, data),
+  updateEvent: (dynastyId: number, eventId: number, data: any) =>
+    apiClient.put(`/dynasties/${dynastyId}/events/${eventId}`, data),
+  deleteEvent: (dynastyId: number, eventId: number) =>
+    apiClient.delete(`/dynasties/${dynastyId}/events/${eventId}`),
+};

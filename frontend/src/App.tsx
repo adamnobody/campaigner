@@ -18,6 +18,8 @@ import { AppearanceSettingsPage } from './pages/AppearanceSettingsPage';
 import { DogmasPage } from './pages/DogmasPage';
 import { FactionsPage } from './pages/FactionsPage';
 import { FactionDetailPage } from './pages/FactionDetailPage';
+import { DynastiesPage } from './pages/DynastiesPage';
+import { DynastyDetailPage } from './pages/DynastyDetailPage';
 
 const App: React.FC = () => {
   const [splashDone, setSplashDone] = useState(false);
@@ -49,6 +51,9 @@ const App: React.FC = () => {
             <Route path="factions" element={<ErrorBoundary><FactionsPage /></ErrorBoundary>} />
             <Route path="factions/new" element={<ErrorBoundary><FactionDetailPage /></ErrorBoundary>} />
             <Route path="factions/:factionId" element={<ErrorBoundary><FactionDetailPage /></ErrorBoundary>} />
+            <Route path="dynasties" element={<ErrorBoundary><DynastiesPage /></ErrorBoundary>} />
+            <Route path="dynasties/new" element={<ErrorBoundary><DynastyDetailPage /></ErrorBoundary>} />
+            <Route path="dynasties/:dynastyId" element={<ErrorBoundary><DynastyDetailPage /></ErrorBoundary>} />
             <Route path="settings" element={<ErrorBoundary><ProjectSettingsPage /></ErrorBoundary>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

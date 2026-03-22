@@ -299,19 +299,93 @@ export function initializeDatabase(): void {
     );
   `);
 
-  // === Миграция: обновить tag_associations CHECK ===
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS dynasties (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      motto TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      history TEXT DEFAULT '',
+      status TEXT DEFAULT 'active' CHECK(status IN ('active','extinct','exiled','declining','rising')),
+      color TEXT DEFAULT '',
+      secondary_color TEXT DEFAULT '',
+      image_path TEXT,
+      founded_date TEXT DEFAULT '',
+      extinct_date TEXT DEFAULT '',
+      founder_id INTEGER,
+      current_leader_id INTEGER,
+      heir_id INTEGER,
+      linked_faction_id INTEGER,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (founder_id) REFERENCES characters(id) ON DELETE SET NULL,
+      FOREIGN KEY (current_leader_id) REFERENCES characters(id) ON DELETE SET NULL,
+      FOREIGN KEY (heir_id) REFERENCES characters(id) ON DELETE SET NULL,
+      FOREIGN KEY (linked_faction_id) REFERENCES factions(id) ON DELETE SET NULL
+    );
+  `);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS dynasty_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dynasty_id INTEGER NOT NULL,
+      character_id INTEGER NOT NULL,
+      generation INTEGER DEFAULT 0,
+      role TEXT DEFAULT '',
+      birth_date TEXT DEFAULT '',
+      death_date TEXT DEFAULT '',
+      is_main_line INTEGER DEFAULT 1,
+      notes TEXT DEFAULT '',
+      FOREIGN KEY (dynasty_id) REFERENCES dynasties(id) ON DELETE CASCADE,
+      FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      UNIQUE(dynasty_id, character_id)
+    );
+  `);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS dynasty_family_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dynasty_id INTEGER NOT NULL,
+      source_character_id INTEGER NOT NULL,
+      target_character_id INTEGER NOT NULL,
+      relation_type TEXT NOT NULL CHECK(relation_type IN ('parent','child','spouse','sibling')),
+      custom_label TEXT DEFAULT '',
+      FOREIGN KEY (dynasty_id) REFERENCES dynasties(id) ON DELETE CASCADE,
+      FOREIGN KEY (source_character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      FOREIGN KEY (target_character_id) REFERENCES characters(id) ON DELETE CASCADE
+    );
+  `);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS dynasty_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dynasty_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      event_date TEXT NOT NULL,
+      importance TEXT DEFAULT 'normal' CHECK(importance IN ('critical','major','normal','minor')),
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (dynasty_id) REFERENCES dynasties(id) ON DELETE CASCADE
+    );
+  `);
+
+  // === Миграция: обновить tag_associations CHECK для dynasty ===
   try {
     const tableInfo = database.prepare(
       "SELECT sql FROM sqlite_master WHERE type='table' AND name='tag_associations'"
     ).get() as any;
 
-    if (tableInfo && tableInfo.sql && !tableInfo.sql.includes("'faction'")) {
-      console.log('🔄 Migrating tag_associations to support faction...');
+    if (tableInfo && tableInfo.sql && !tableInfo.sql.includes("'dynasty'")) {
+      console.log('🔄 Migrating tag_associations to support dynasty...');
       database.exec(`
         CREATE TABLE tag_associations_new (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           tag_id INTEGER NOT NULL,
-          entity_type TEXT NOT NULL CHECK(entity_type IN ('character', 'note', 'timeline_event', 'dogma', 'faction')),
+          entity_type TEXT NOT NULL CHECK(entity_type IN ('character', 'note', 'timeline_event', 'dogma', 'faction', 'dynasty')),
           entity_id INTEGER NOT NULL,
           FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
           UNIQUE(tag_id, entity_type, entity_id)
@@ -320,7 +394,7 @@ export function initializeDatabase(): void {
         DROP TABLE tag_associations;
         ALTER TABLE tag_associations_new RENAME TO tag_associations;
       `);
-      console.log('✅ tag_associations migrated for faction');
+      console.log('✅ tag_associations migrated for dynasty');
     }
   } catch (e) {
     console.warn('⚠️ tag_associations migration skipped:', e);
@@ -368,6 +442,13 @@ export function initializeDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_faction_relations_project ON faction_relations(project_id);
     CREATE INDEX IF NOT EXISTS idx_faction_relations_source ON faction_relations(source_faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_relations_target ON faction_relations(target_faction_id);
+    CREATE INDEX IF NOT EXISTS idx_dynasties_project ON dynasties(project_id);
+    CREATE INDEX IF NOT EXISTS idx_dynasties_status ON dynasties(project_id, status);
+    CREATE INDEX IF NOT EXISTS idx_dynasty_members_dynasty ON dynasty_members(dynasty_id);
+    CREATE INDEX IF NOT EXISTS idx_dynasty_members_character ON dynasty_members(character_id);
+    CREATE INDEX IF NOT EXISTS idx_dynasty_family_links_dynasty ON dynasty_family_links(dynasty_id);
+    CREATE INDEX IF NOT EXISTS idx_dynasty_events_dynasty ON dynasty_events(dynasty_id);
+    CREATE INDEX IF NOT EXISTS idx_dynasty_events_sort ON dynasty_events(dynasty_id, sort_order);
   `);
 
   console.log('✅ Database initialized successfully');

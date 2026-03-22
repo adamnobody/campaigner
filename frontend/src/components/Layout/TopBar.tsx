@@ -11,6 +11,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useFactionStore } from '@/store/useFactionStore';
+import { useDynastyStore } from '@/store/useDynastyStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { SearchDialog } from '@/components/ui/SearchDialog';
 
@@ -18,6 +19,7 @@ const PAGE_LABELS: Record<string, string> = {
   map: 'Карта',
   characters: 'Персонажи',
   factions: 'Фракции',
+  dynasties: 'Династии',
   notes: 'Заметки',
   wiki: 'Вики',
   timeline: 'Хронология',
@@ -34,6 +36,7 @@ export const TopBar: React.FC = () => {
   const { currentProject } = useProjectStore();
   const { currentCharacter } = useCharacterStore();
   const { currentFaction } = useFactionStore();
+  const { currentDynasty } = useDynastyStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,26 +46,20 @@ export const TopBar: React.FC = () => {
 
   const pathParts = location.pathname.split('/').filter(Boolean);
 
-  // Determine breadcrumb items after project name
   const breadcrumbItems = useMemo(() => {
     const items: { label: string; path?: string }[] = [];
     if (pathParts.length < 3) return items;
 
-    // pathParts: ["project", "1", "factions", "3"]
-    const section = pathParts[2]; // "factions", "characters", etc.
-    const entityId = pathParts[3]; // "3", "new", undefined
-
-    // Section label (clickable if we're deeper)
+    const section = pathParts[2];
+    const entityId = pathParts[3];
     const sectionLabel = PAGE_LABELS[section] || section;
 
     if (entityId) {
-      // We're on a detail page — section is a link, entity is text
       items.push({
         label: sectionLabel,
         path: `/project/${pathParts[1]}/${section}`,
       });
 
-      // Entity name
       if (entityId === 'new') {
         items.push({ label: 'Создание' });
       } else {
@@ -72,17 +69,18 @@ export const TopBar: React.FC = () => {
           entityName = currentCharacter.name || entityId;
         } else if (section === 'factions' && currentFaction && String(currentFaction.id) === entityId) {
           entityName = currentFaction.name || entityId;
+        } else if (section === 'dynasties' && currentDynasty && String(currentDynasty.id) === entityId) {
+          entityName = currentDynasty.name || entityId;
         }
 
         items.push({ label: entityName });
       }
     } else {
-      // We're on a list page
       items.push({ label: sectionLabel });
     }
 
     return items;
-  }, [pathParts, currentCharacter, currentFaction]);
+  }, [pathParts, currentCharacter, currentFaction, currentDynasty]);
 
   return (
     <>

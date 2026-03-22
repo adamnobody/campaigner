@@ -16,6 +16,7 @@ import { searchRoutes } from './routes/search.routes';
 import { dogmaRoutes } from './routes/dogma.routes';
 import factionRoutes from './routes/faction.routes';
 import wikiRoutes from './routes/wiki.routes';
+import dynastyRoutes from './routes/dynasty.routes';
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,8 +33,9 @@ const uploadsDir = path.resolve(dataDir, 'uploads');
 const mapsDir = path.resolve(uploadsDir, 'maps');
 const charactersDir = path.resolve(uploadsDir, 'characters');
 const factionsDir = path.resolve(uploadsDir, 'factions');
+const dynastiesDir = path.resolve(uploadsDir, 'dynasties');
 
-[dataDir, uploadsDir, mapsDir, charactersDir, factionsDir].forEach(dir => {
+[dataDir, uploadsDir, mapsDir, charactersDir, factionsDir, dynastiesDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -66,6 +68,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/wiki', wikiRoutes);
 app.use('/api/dogmas', dogmaRoutes);
 app.use('/api/factions', factionRoutes);
+app.use('/api/dynasties', dynastyRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
