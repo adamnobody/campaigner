@@ -1,8 +1,8 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import ReactFlow, {
   Node, Edge, Background,
   useNodesState, useEdgesState, Position, MarkerType,
-  Handle,
+  Handle, NodeChange,
 } from 'reactflow';
 import dagre from 'dagre';
 import { Box, Typography, Avatar, Chip } from '@mui/material';
@@ -104,6 +104,20 @@ function buildLayout(
   familyLinks: DynastyFamilyLink[],
   dynastyColor?: string,
 ) {
+  const hasSavedPositions = members.some(m => m.graphX != null && m.graphY != null);
+
+  if (hasSavedPositions) {
+    const nodes: Node[] = members.map(m => ({
+      id: String(m.characterId),
+      type: 'member',
+      position: { x: m.graphX ?? 0, y: m.graphY ?? 0 },
+      data: buildNodeData(m),
+    }));
+
+    const edges: Edge[] = buildEdges(familyLinks, dynastyColor);
+    return { nodes, edges };
+  }
+
   const spouseLinks = familyLinks.filter(l => l.relationType === 'spouse');
   const hierarchyLinks = familyLinks.filter(l => l.relationType !== 'spouse');
 
@@ -170,7 +184,12 @@ function buildLayout(
     });
   });
 
-  const edges: Edge[] = familyLinks.map(link => {
+  const edges: Edge[] = buildEdges(familyLinks, dynastyColor);
+  return { nodes, edges };
+}
+
+function buildEdges(familyLinks: DynastyFamilyLink[], dynastyColor?: string): Edge[] {
+  return familyLinks.map(link => {
     const relType = link.relationType;
     const isSpouse = relType === 'spouse';
     const isSibling = relType === 'sibling';
@@ -202,17 +221,19 @@ function buildLayout(
       } : undefined,
     };
   });
-
-  return { nodes, edges };
 }
 
 interface FamilyTreeProps {
   members: DynastyMember[];
   familyLinks: DynastyFamilyLink[];
   dynastyColor?: string;
+  dynastyId?: number;
+  onSavePositions?: (positions: { characterId: number; graphX: number; graphY: number }[]) => void;
 }
 
-export const FamilyTree: React.FC<FamilyTreeProps> = ({ members, familyLinks, dynastyColor }) => {
+export const FamilyTree: React.FC<FamilyTreeProps> = ({
+  members, familyLinks, dynastyColor, onSavePositions,
+}) => {
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
     () => buildLayout(members, familyLinks, dynastyColor),
     [members, familyLinks, dynastyColor]
@@ -220,11 +241,37 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({ members, familyLinks, dy
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
 
   useEffect(() => {
     setNodes(layoutNodes);
     setEdges(layoutEdges);
   }, [layoutNodes, layoutEdges, setNodes, setEdges]);
+
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    onNodesChange(changes);
+
+    const hasDrag = changes.some(c => c.type === 'position' && c.dragging === false);
+    if (hasDrag && onSavePositions) {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        const positions = nodesRef.current.map(n => ({
+          characterId: parseInt(n.id),
+          graphX: n.position.x,
+          graphY: n.position.y,
+        }));
+        onSavePositions(positions);
+      }, 500);
+    }
+  }, [onNodesChange, onSavePositions]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   if (members.length === 0) return null;
 
@@ -244,7 +291,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({ members, familyLinks, dy
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView

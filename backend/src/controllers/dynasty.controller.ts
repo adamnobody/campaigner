@@ -98,6 +98,14 @@ export class DynastyController {
     } catch (e) { next(e); }
   }
 
+  static saveGraphPositions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const dynastyId = parseInt(req.params.id);
+      DynastyService.saveGraphPositions(dynastyId, req.body.positions || []);
+      res.json({ success: true, message: 'Positions saved' });
+    } catch (e) { next(e); }
+  }
+  
   // Family links
   static addFamilyLink(req: Request, res: Response, next: NextFunction) {
     try {

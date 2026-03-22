@@ -400,6 +400,19 @@ export function initializeDatabase(): void {
     console.warn('⚠️ tag_associations migration skipped:', e);
   }
 
+  try {
+    const colInfo = database.prepare("PRAGMA table_info(dynasty_members)").all() as any[];
+    const hasGraphX = colInfo.some((c: any) => c.name === 'graph_x');
+    if (!hasGraphX) {
+      console.log('🔄 Migrating dynasty_members: adding graph_x, graph_y...');
+      database.exec(`ALTER TABLE dynasty_members ADD COLUMN graph_x REAL DEFAULT NULL`);
+      database.exec(`ALTER TABLE dynasty_members ADD COLUMN graph_y REAL DEFAULT NULL`);
+      console.log('✅ dynasty_members migrated');
+    }
+  } catch (e) {
+    console.warn('⚠️ dynasty_members graph migration skipped:', e);
+  }
+
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
     CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(project_id, name);

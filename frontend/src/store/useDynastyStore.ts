@@ -30,6 +30,8 @@ interface DynastyState {
   updateEvent: (dynastyId: number, eventId: number, data: any) => Promise<DynastyEvent>;
   deleteEvent: (dynastyId: number, eventId: number) => Promise<void>;
 
+  saveGraphPositions: (dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) => Promise<void>;
+
   setCurrentDynasty: (d: Dynasty | null) => void;
   reset: () => void;
 }
@@ -170,6 +172,10 @@ export const useDynastyStore = create<DynastyState>((set) => ({
     await dynastiesApi.deleteEvent(dynastyId, eventId);
     const dRes = await dynastiesApi.getById(dynastyId);
     set({ currentDynasty: dRes.data.data });
+  },
+
+  saveGraphPositions: async (dynastyId, positions) => {
+    await dynastiesApi.saveGraphPositions(dynastyId, positions);
   },
 
   setCurrentDynasty: (d) => set({ currentDynasty: d }),

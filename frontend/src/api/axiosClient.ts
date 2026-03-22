@@ -255,6 +255,8 @@ export const dynastiesApi = {
     apiClient.post(`/dynasties/${dynastyId}/family-links`, data),
   deleteFamilyLink: (dynastyId: number, linkId: number) =>
     apiClient.delete(`/dynasties/${dynastyId}/family-links/${linkId}`),
+  saveGraphPositions: (dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) =>
+    apiClient.put(`/dynasties/${dynastyId}/graph-positions`, { positions }),
   // Events
   addEvent: (dynastyId: number, data: any) =>
     apiClient.post(`/dynasties/${dynastyId}/events`, data),

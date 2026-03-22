@@ -252,7 +252,8 @@ export interface DynastyMember {
   deathDate?: string;
   isMainLine: boolean;
   notes?: string;
-  // Joined
+  graphX?: number | null;
+  graphY?: number | null;
   characterName?: string;
   characterImagePath?: string;
   characterStatus?: string;

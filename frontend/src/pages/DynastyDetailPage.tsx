@@ -127,6 +127,7 @@ export const DynastyDetailPage: React.FC = () => {
     addMember, updateMember, removeMember,
     addFamilyLink, deleteFamilyLink,
     addEvent, updateEvent, deleteEvent,
+    saveGraphPositions,
     setCurrentDynasty,
   } = useDynastyStore();
 
@@ -767,6 +768,12 @@ export const DynastyDetailPage: React.FC = () => {
               members={currentMembers}
               familyLinks={currentFamilyLinks}
               dynastyColor={form.color}
+              dynastyId={currentDynasty?.id}
+              onSavePositions={(positions) => {
+                if (currentDynasty?.id) {
+                  saveGraphPositions(currentDynasty.id, positions);
+                }
+              }}
             />
           </Section>
         )}

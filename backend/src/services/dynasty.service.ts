@@ -63,6 +63,8 @@ export class DynastyService {
       deathDate: m.death_date || '',
       isMainLine: !!m.is_main_line,
       notes: m.notes || '',
+      graphX: m.graph_x ?? null,
+      graphY: m.graph_y ?? null,
       characterName: m.character_name,
       characterImagePath: m.character_image_path,
       characterStatus: m.character_status,
@@ -240,6 +242,8 @@ export class DynastyService {
       generation: m.generation, role: m.role || '', birthDate: m.birth_date || '',
       deathDate: m.death_date || '', isMainLine: !!m.is_main_line, notes: m.notes || '',
       characterName: m.character_name, characterImagePath: m.character_image_path,
+      graphX: m.graph_x ?? null,
+      graphY: m.graph_y ?? null,
       characterStatus: m.character_status,
     };
   }
@@ -332,6 +336,20 @@ export class DynastyService {
     for (const tagId of tagIds) {
       insert.run(tagId, 'dynasty', id);
     }
+  }
+
+  static saveGraphPositions(dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      UPDATE dynasty_members SET graph_x = ?, graph_y = ?
+      WHERE dynasty_id = ? AND character_id = ?
+    `);
+    const transaction = db.transaction(() => {
+      for (const pos of positions) {
+        stmt.run(pos.graphX, pos.graphY, dynastyId, pos.characterId);
+      }
+    });
+    transaction();
   }
 
   private static mapRow(row: any) {
