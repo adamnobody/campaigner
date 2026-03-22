@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AppBar, Toolbar, Typography, IconButton, Box,
   Breadcrumbs, Link as MuiLink, Button, Tooltip,
@@ -9,26 +9,80 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useFactionStore } from '@/store/useFactionStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { SearchDialog } from '@/components/ui/SearchDialog';
+
+const PAGE_LABELS: Record<string, string> = {
+  map: 'Карта',
+  characters: 'Персонажи',
+  factions: 'Фракции',
+  notes: 'Заметки',
+  wiki: 'Вики',
+  timeline: 'Хронология',
+  files: 'Файлы',
+  settings: 'Настройки',
+  appearance: 'Внешний вид',
+  dogmas: 'Догмы',
+  graph: 'Граф связей',
+  new: 'Создание',
+};
 
 export const TopBar: React.FC = () => {
   const { toggleSidebar, searchOpen, setSearchOpen } = useUIStore();
   const { currentProject } = useProjectStore();
+  const { currentCharacter } = useCharacterStore();
+  const { currentFaction } = useFactionStore();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Global hotkeys
   useHotkeys([
-    {
-      key: 'k',
-      ctrl: true,
-      handler: () => setSearchOpen(true),
-      description: 'Open search',
-    },
+    { key: 'k', ctrl: true, handler: () => setSearchOpen(true), description: 'Open search' },
   ]);
 
   const pathParts = location.pathname.split('/').filter(Boolean);
+
+  // Determine breadcrumb items after project name
+  const breadcrumbItems = useMemo(() => {
+    const items: { label: string; path?: string }[] = [];
+    if (pathParts.length < 3) return items;
+
+    // pathParts: ["project", "1", "factions", "3"]
+    const section = pathParts[2]; // "factions", "characters", etc.
+    const entityId = pathParts[3]; // "3", "new", undefined
+
+    // Section label (clickable if we're deeper)
+    const sectionLabel = PAGE_LABELS[section] || section;
+
+    if (entityId) {
+      // We're on a detail page — section is a link, entity is text
+      items.push({
+        label: sectionLabel,
+        path: `/project/${pathParts[1]}/${section}`,
+      });
+
+      // Entity name
+      if (entityId === 'new') {
+        items.push({ label: 'Создание' });
+      } else {
+        let entityName = entityId;
+
+        if (section === 'characters' && currentCharacter && String(currentCharacter.id) === entityId) {
+          entityName = currentCharacter.name || entityId;
+        } else if (section === 'factions' && currentFaction && String(currentFaction.id) === entityId) {
+          entityName = currentFaction.name || entityId;
+        }
+
+        items.push({ label: entityName });
+      }
+    } else {
+      // We're on a list page
+      items.push({ label: sectionLabel });
+    }
+
+    return items;
+  }, [pathParts, currentCharacter, currentFaction]);
 
   return (
     <>
@@ -40,12 +94,7 @@ export const TopBar: React.FC = () => {
 
           <Typography
             variant="h6"
-            sx={{
-              fontFamily: '"Cinzel", serif',
-              color: 'primary.main',
-              cursor: 'pointer',
-              mr: 3,
-            }}
+            sx={{ fontFamily: '"Cinzel", serif', color: 'primary.main', cursor: 'pointer', mr: 3 }}
             onClick={() => navigate('/')}
           >
             ⚔️ Campaigner
@@ -62,6 +111,7 @@ export const TopBar: React.FC = () => {
               <HomeIcon fontSize="small" />
               Home
             </MuiLink>
+
             {currentProject && pathParts.length > 1 && (
               <MuiLink
                 component="button"
@@ -72,14 +122,28 @@ export const TopBar: React.FC = () => {
                 {currentProject.name}
               </MuiLink>
             )}
-            {pathParts.length > 2 && (
-              <Typography color="text.primary" sx={{ textTransform: 'capitalize' }}>
-                {pathParts[pathParts.length - 1]}
-              </Typography>
+
+            {breadcrumbItems.map((item, i) =>
+              item.path ? (
+                <MuiLink
+                  key={i}
+                  component="button"
+                  underline="hover"
+                  color="inherit"
+                  onClick={() => navigate(item.path!)}
+                >
+                  {item.label}
+                </MuiLink>
+              ) : (
+                <Typography key={i} color="text.primary" sx={{
+                  maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {item.label}
+                </Typography>
+              )
             )}
           </Breadcrumbs>
 
-          {/* Search button */}
           {currentProject && (
             <Tooltip title="Поиск (Ctrl+K)">
               <Button
@@ -88,32 +152,17 @@ export const TopBar: React.FC = () => {
                 sx={{
                   color: 'rgba(255,255,255,0.5)',
                   border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 1.5,
-                  px: 2,
-                  py: 0.5,
-                  textTransform: 'none',
-                  fontSize: '0.8rem',
-                  gap: 1,
-                  '&:hover': {
-                    borderColor: 'rgba(255,255,255,0.25)',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                  },
+                  borderRadius: 1.5, px: 2, py: 0.5,
+                  textTransform: 'none', fontSize: '0.8rem', gap: 1,
+                  '&:hover': { borderColor: 'rgba(255,255,255,0.25)', backgroundColor: 'rgba(255,255,255,0.05)' },
                 }}
               >
                 <SearchIcon fontSize="small" />
                 Поиск...
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: '0.6rem',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 0.5,
-                    px: 0.6,
-                    py: 0.1,
-                    ml: 1,
-                    color: 'rgba(255,255,255,0.3)',
-                  }}
-                >
+                <Typography component="span" sx={{
+                  fontSize: '0.6rem', border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: 0.5, px: 0.6, py: 0.1, ml: 1, color: 'rgba(255,255,255,0.3)',
+                }}>
                   Ctrl+K
                 </Typography>
               </Button>
@@ -122,7 +171,6 @@ export const TopBar: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Search Dialog */}
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );

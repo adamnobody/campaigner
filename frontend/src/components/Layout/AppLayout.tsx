@@ -9,19 +9,18 @@ export const AppLayout: React.FC = () => {
   const { sidebarOpen, sidebarWidth } = useUIStore();
   const location = useLocation();
 
-  // На домашней странице — полноэкранный layout без TopBar/Sidebar
   const isHomePage = location.pathname === '/';
 
   if (isHomePage) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#0F0F1A' }}>
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#0F0F1A', position: 'relative' }}>
         <Outlet />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', position: 'relative' }}>
       <TopBar />
       <Sidebar />
       <Box
@@ -33,6 +32,7 @@ export const AppLayout: React.FC = () => {
           transition: 'margin-left 0.3s ease',
           p: 3,
           minHeight: 'calc(100vh - 64px)',
+          minWidth: 0,
         }}
       >
         <Outlet />

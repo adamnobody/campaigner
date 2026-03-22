@@ -1,7 +1,13 @@
 import React, { useEffect } from 'react';
 import {
-  Drawer, List, ListItemButton, ListItemIcon,
-  ListItemText, Divider, Box, Typography,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Box,
+  Typography,
 } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import PeopleIcon from '@mui/icons-material/People';
@@ -11,17 +17,22 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import FolderIcon from '@mui/icons-material/Folder';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
+import PaletteIcon from '@mui/icons-material/Palette';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
+import GavelIcon from '@mui/icons-material/Gavel';
+import GroupsIcon from '@mui/icons-material/Groups';
 
 const projectMenuItems = [
-  { label: 'Map', icon: <MapIcon />, path: 'map' },
-  { label: 'Characters', icon: <PeopleIcon />, path: 'characters' },
-  { label: 'Notes', icon: <DescriptionIcon />, path: 'notes' },
-  { label: 'Wiki', icon: <MenuBookIcon />, path: 'wiki' },
-  { label: 'Timeline', icon: <TimelineIcon />, path: 'timeline' },
-  { label: 'Files', icon: <FolderIcon />, path: 'files' },
+  { label: 'Карта', icon: <MapIcon />, path: 'map' },
+  { label: 'Персонажи', icon: <PeopleIcon />, path: 'characters' },
+  { label: 'Фракции', icon: <GroupsIcon />, path: 'factions' },
+  { label: 'Заметки', icon: <DescriptionIcon />, path: 'notes' },
+  { label: 'Вики', icon: <MenuBookIcon />, path: 'wiki' },
+  { label: 'Хронология', icon: <TimelineIcon />, path: 'timeline' },
+  { label: 'Догмы', icon: <GavelIcon />, path: 'dogmas' },
+  { label: 'Файлы', icon: <FolderIcon />, path: 'files' },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -32,11 +43,11 @@ export const Sidebar: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
 
   const isProjectPage = !!projectId;
+  const isAppearancePage = location.pathname === '/appearance';
 
-  // Подгружаем проект если его нет в store
   useEffect(() => {
-    if (projectId && (!currentProject || currentProject.id !== parseInt(projectId))) {
-      fetchProject(parseInt(projectId));
+    if (projectId && (!currentProject || currentProject.id !== parseInt(projectId, 10))) {
+      fetchProject(parseInt(projectId, 10));
     }
   }, [projectId, currentProject, fetchProject]);
 
@@ -55,7 +66,6 @@ export const Sidebar: React.FC = () => {
         },
       }}
     >
-      {/* Back to Home */}
       <List>
         <ListItemButton
           selected={location.pathname === '/'}
@@ -66,8 +76,27 @@ export const Sidebar: React.FC = () => {
             },
           }}
         >
-          <ListItemIcon><HomeIcon color="primary" /></ListItemIcon>
-          <ListItemText primary="All Campaigns" />
+          <ListItemIcon>
+            <HomeIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Все кампании" />
+        </ListItemButton>
+
+        <ListItemButton
+          selected={isAppearancePage}
+          onClick={() => navigate('/appearance')}
+          sx={{
+            '&.Mui-selected': {
+              backgroundColor: 'rgba(201, 169, 89, 0.1)',
+              borderRight: '3px solid',
+              borderRightColor: 'primary.main',
+            },
+          }}
+        >
+          <ListItemIcon sx={{ color: isAppearancePage ? 'primary.main' : 'text.secondary' }}>
+            <PaletteIcon />
+          </ListItemIcon>
+          <ListItemText primary="Внешний вид" />
         </ListItemButton>
       </List>
 
@@ -80,12 +109,19 @@ export const Sidebar: React.FC = () => {
               {currentProject.name}
             </Typography>
             {currentProject.description && (
-              <Typography variant="body2" color="text.secondary" noWrap sx={{ mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                noWrap
+                sx={{ mt: 0.5 }}
+              >
                 {currentProject.description}
               </Typography>
             )}
           </Box>
+
           <Divider />
+
           <List>
             {projectMenuItems.map((item) => {
               const fullPath = `/project/${projectId}/${item.path}`;
@@ -112,21 +148,39 @@ export const Sidebar: React.FC = () => {
               );
             })}
           </List>
+
           <Divider />
+
           <List>
             <ListItemButton
-              selected={location.pathname.includes('/settings')}
+              selected={location.pathname === `/project/${projectId}/settings`}
               onClick={() => navigate(`/project/${projectId}/settings`)}
+              sx={{
+                '&.Mui-selected': {
+                  backgroundColor: 'rgba(201, 169, 89, 0.1)',
+                  borderRight: '3px solid',
+                  borderRightColor: 'primary.main',
+                },
+              }}
             >
-              <ListItemIcon><SettingsIcon /></ListItemIcon>
-              <ListItemText primary="Settings" />
+              <ListItemIcon
+                sx={{
+                  color:
+                    location.pathname === `/project/${projectId}/settings`
+                      ? 'primary.main'
+                      : 'text.secondary',
+                }}
+              >
+                <SettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="Настройки проекта" />
             </ListItemButton>
           </List>
         </>
       ) : (
         <Box sx={{ p: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Select a campaign to start exploring your world
+            Выберите кампанию, чтобы начать работу с миром
           </Typography>
         </Box>
       )}

@@ -33,6 +33,8 @@ const exclude = [
   '**/build/**',
   '**/*.map',
   '**/*.lock',
+  '**/package.json',
+  '**/package-lock.json',
   '**/data/**/*.sqlite',
   '**/data/uploads/**',
 ];

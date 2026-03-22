@@ -1,28 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, IconButton, Paper, Chip, Container,
+  Box,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  Paper,
+  Chip,
+  Container,
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
+import PaletteIcon from '@mui/icons-material/Palette';
 import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
-import { useStyleStore } from '@/store/useStyleStore';
 import { projectsApi } from '@/api/axiosClient';
 import { DndButton } from '@/components/ui/DndButton';
-import { StyleCustomizer } from '@/components/ui/StyleCustomizer';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 
 export const HomePage: React.FC = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { projects, loading, fetchProjects, createProject, deleteProject } = useProjectStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
-  const {
-    backgroundImage, backgroundOpacity, accentColor,
-    cardBackground, textOpacity, headerFont,
-  } = useStyleStore();
+  const { homeBackgroundImage, homeBackgroundOpacity } = usePreferencesStore();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -35,9 +44,14 @@ export const HomePage: React.FC = () => {
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
+
     setCreating(true);
     try {
-      const project = await createProject({ name: newName.trim(), description: newDescription.trim() });
+      const project = await createProject({
+        name: newName.trim(),
+        description: newDescription.trim(),
+      });
+
       setCreateDialogOpen(false);
       setNewName('');
       setNewDescription('');
@@ -66,11 +80,11 @@ export const HomePage: React.FC = () => {
     );
   };
 
-  // ==================== Import ====================
   const handleImportClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
+
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -86,7 +100,7 @@ export const HomePage: React.FC = () => {
 
         const res = await projectsApi.importProject(data);
         showSnackbar(`Проект "${res.data.data.name}" импортирован!`, 'success');
-        fetchProjects(); // Refresh list
+        fetchProjects();
         navigate(`/project/${res.data.data.id}/map`);
       } catch (err: any) {
         if (err instanceof SyntaxError) {
@@ -96,10 +110,13 @@ export const HomePage: React.FC = () => {
         }
       }
     };
+
     input.click();
   };
 
-  if (loading && projects.length === 0) return <LoadingScreen message="Загрузка кампаний..." />;
+  if (loading && projects.length === 0) {
+    return <LoadingScreen message="Загрузка кампаний..." />;
+  }
 
   return (
     <Box
@@ -108,116 +125,162 @@ export const HomePage: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      {/* Background image */}
-      {backgroundImage && (
+      {homeBackgroundImage && (
         <Box
           sx={{
             position: 'fixed',
             inset: 0,
             zIndex: 0,
-            backgroundImage: `url(${backgroundImage})`,
+            pointerEvents: 'none',
+            backgroundImage: `url(${homeBackgroundImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            opacity: backgroundOpacity,
-            pointerEvents: 'none',
+            backgroundRepeat: 'no-repeat',
+            opacity: homeBackgroundOpacity,
+            transform: 'scale(1.02)',
           }}
         />
       )}
 
-      {/* Overlay gradient */}
       <Box
         sx={{
           position: 'fixed',
           inset: 0,
           zIndex: 0,
-          background: backgroundImage
-            ? 'linear-gradient(to bottom, rgba(15,15,26,0.92) 0%, rgba(15,15,26,0.5) 50%, rgba(15,15,26,0.95) 100%)'
-            : 'transparent',
           pointerEvents: 'none',
+          background: `
+            radial-gradient(circle at 15% 20%, ${alpha(theme.palette.primary.main, 0.16)} 0%, transparent 28%),
+            radial-gradient(circle at 85% 18%, ${alpha(theme.palette.secondary.main, 0.1)} 0%, transparent 24%),
+            radial-gradient(circle at 50% 75%, rgba(255,255,255,0.04) 0%, transparent 22%)
+          `,
         }}
       />
 
-      {/* Content */}
-      <Box sx={{ position: 'relative', zIndex: 1, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          background: homeBackgroundImage
+            ? `
+              linear-gradient(
+                180deg,
+                ${alpha(theme.palette.background.default, 0.84)} 0%,
+                ${alpha(theme.palette.background.default, 0.62)} 45%,
+                ${alpha(theme.palette.background.default, 0.92)} 100%
+              )
+            `
+            : `
+              linear-gradient(
+                180deg,
+                ${alpha(theme.palette.background.default, 0.78)} 0%,
+                ${alpha(theme.palette.background.default, 0.58)} 45%,
+                ${alpha(theme.palette.background.default, 0.9)} 100%
+              )
+            `,
+        }}
+      />
 
-        {/* Header */}
-        <Container maxWidth="md" sx={{ pt: 5, pb: 1 }}>
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <Container maxWidth="md" sx={{ pt: { xs: 5, md: 7 }, pb: 2 }}>
           <Typography
             sx={{
-              fontFamily: headerFont,
+              fontFamily: '"Cinzel", serif',
               fontWeight: 700,
-              fontSize: { xs: '2.2rem', md: '3.2rem' },
-              color: '#fff',
-              lineHeight: 1.1,
+              fontSize: { xs: '2.4rem', md: '3.6rem' },
+              color: 'text.primary',
+              lineHeight: 1.05,
+              letterSpacing: '0.02em',
             }}
           >
             Campaigner
           </Typography>
+
           <Typography
             variant="body1"
             sx={{
-              color: `rgba(255,255,255,${textOpacity})`,
-              mt: 1,
+              color: 'text.secondary',
+              mt: 1.5,
+              maxWidth: 720,
+              fontSize: { xs: '1rem', md: '1.05rem' },
             }}
           >
-            Среда для создания интерактивных карт вашего мира
+            Среда для создания интерактивных карт, заметок, связей и истории вашего мира.
           </Typography>
         </Container>
 
-        {/* Projects section */}
         <Container maxWidth="md" sx={{ pt: 3, pb: 4, flexGrow: 1 }}>
-          {/* Section header */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2.5}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            mb={2.5}
+            gap={2}
+            flexWrap="wrap"
+          >
             <Typography
               variant="h5"
-              sx={{ fontFamily: headerFont, fontWeight: 600, color: '#fff' }}
+              sx={{
+                fontFamily: '"Cinzel", serif',
+                fontWeight: 600,
+                color: 'text.primary',
+              }}
             >
               Проекты
             </Typography>
-            <Box display="flex" gap={1}>
+
+            <Box display="flex" gap={1} flexWrap="wrap">
+              <DndButton
+                variant="outlined"
+                startIcon={<PaletteIcon />}
+                onClick={() => navigate('/appearance')}
+                sx={{
+                  fontWeight: 600,
+                  letterSpacing: '0.03em',
+                }}
+              >
+                Внешний вид
+              </DndButton>
+
               <DndButton
                 variant="outlined"
                 startIcon={<FileUploadIcon />}
                 onClick={handleImportClick}
                 sx={{
-                  borderColor: 'rgba(255,255,255,0.15)',
-                  color: 'rgba(255,255,255,0.6)',
                   fontWeight: 600,
-                  letterSpacing: '0.05em',
-                  '&:hover': {
-                    borderColor: 'rgba(255,255,255,0.3)',
-                    color: '#fff',
-                  },
+                  letterSpacing: '0.04em',
                 }}
               >
-                ИМПОРТ
+                Импорт
               </DndButton>
+
               <DndButton
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setCreateDialogOpen(true)}
                 sx={{
-                  backgroundColor: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  color: '#fff',
-                  fontWeight: 600,
-                  letterSpacing: '0.05em',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.14)',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                  },
-                  boxShadow: 'none',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
                 }}
               >
-                СОЗДАТЬ ПРОЕКТ
+                Создать проект
               </DndButton>
             </Box>
           </Box>
 
-          {/* Project list */}
-          <Box display="flex" flexDirection="column" gap={1.2}>
+          <Box display="flex" flexDirection="column" gap={1.5}>
             {projects.map((project) => (
               <Paper
                 key={project.id}
@@ -230,48 +293,52 @@ export const HomePage: React.FC = () => {
                   px: 3,
                   py: 2.2,
                   cursor: 'pointer',
-                  backgroundColor: cardBackground,
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: 2,
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  borderRadius: 3,
+                  minWidth: 0,
+                  backgroundColor: alpha(theme.palette.background.paper, homeBackgroundImage ? 0.82 : 0.9),
+                  border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
+                  transition: 'all 0.22s ease',
                   transform: 'translateY(0)',
                   '&:hover': {
                     transform: 'translateY(-3px)',
-                    backgroundColor: 'rgba(255,255,255,0.07)',
-                    borderColor: 'rgba(255,255,255,0.14)',
-                    boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+                    borderColor: alpha(theme.palette.primary.main, 0.45),
+                    boxShadow: `0 14px 32px ${alpha(theme.palette.common.black, 0.28)}`,
                   },
                 }}
               >
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, flexGrow: 1, pr: 2 }}>
                   <Typography
                     sx={{
-                      fontFamily: headerFont,
+                      fontFamily: '"Cinzel", serif',
                       fontWeight: 700,
                       fontSize: '1.1rem',
-                      color: '#fff',
+                      color: 'text.primary',
                     }}
                     noWrap
                   >
                     {project.name}
                   </Typography>
-                  <Box display="flex" alignItems="center" gap={1.5} mt={0.6}>
+
+                  <Box display="flex" alignItems="center" gap={1.5} mt={0.75} flexWrap="wrap">
                     <Chip
-                      label={project.status === 'active' ? 'Active' : String(project.status)}
+                      label={project.status === 'active' ? 'Активный' : String(project.status)}
                       size="small"
                       sx={{
-                        backgroundColor: `${accentColor}22`,
-                        color: accentColor,
-                        fontSize: '0.7rem',
+                        backgroundColor: alpha(theme.palette.primary.main, 0.14),
+                        color: theme.palette.primary.main,
+                        fontSize: '0.72rem',
                         height: 22,
-                        fontWeight: 600,
+                        fontWeight: 700,
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
                       }}
                     />
+
                     {project.description && (
                       <Typography
                         variant="caption"
                         sx={{
-                          color: `rgba(255,255,255,${textOpacity * 0.7})`,
+                          color: 'text.secondary',
+                          fontSize: '0.78rem',
                         }}
                         noWrap
                       >
@@ -280,15 +347,19 @@ export const HomePage: React.FC = () => {
                     )}
                   </Box>
                 </Box>
+
                 <IconButton
                   size="small"
                   onClick={(e) => handleDelete(project.id, project.name, e)}
                   sx={{
-                    color: 'rgba(255,255,255,0.2)',
+                    color: alpha(theme.palette.text.primary, 0.28),
                     flexShrink: 0,
                     ml: 2,
-                    transition: 'color 0.2s',
-                    '&:hover': { color: 'rgba(255,100,100,0.8)' },
+                    transition: 'color 0.2s ease, background-color 0.2s ease',
+                    '&:hover': {
+                      color: theme.palette.error.main,
+                      backgroundColor: alpha(theme.palette.error.main, 0.08),
+                    },
                   }}
                 >
                   <DeleteIcon fontSize="small" />
@@ -298,25 +369,30 @@ export const HomePage: React.FC = () => {
           </Box>
 
           {projects.length === 0 && (
-            <Box
+            <Paper
+              elevation={0}
               sx={{
+                mt: 1,
                 textAlign: 'center',
                 py: 8,
-                color: `rgba(255,255,255,${textOpacity * 0.6})`,
+                px: 3,
+                borderRadius: 3,
+                backgroundColor: alpha(theme.palette.background.paper, homeBackgroundImage ? 0.74 : 0.72),
+                border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
               }}
             >
-              <Typography variant="h6">Нет проектов</Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                Создайте первый проект или импортируйте из JSON.
+              <Typography variant="h6" sx={{ color: 'text.primary' }}>
+                Нет проектов
               </Typography>
-            </Box>
+              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                Создайте первый проект или импортируйте его из JSON.
+              </Typography>
+            </Paper>
           )}
         </Container>
 
-        {/* Spacer */}
         <Box sx={{ flexGrow: 1 }} />
 
-        {/* Footer */}
         <Container maxWidth="md">
           <Box
             sx={{
@@ -324,54 +400,44 @@ export const HomePage: React.FC = () => {
               justifyContent: 'space-between',
               alignItems: 'center',
               py: 2.5,
-              borderTop: '1px solid rgba(255,255,255,0.06)',
+              gap: 2,
+              flexWrap: 'wrap',
+              borderTop: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
             }}
           >
             <Box>
               <Typography
                 sx={{
-                  fontFamily: headerFont,
+                  fontFamily: '"Cinzel", serif',
                   fontWeight: 600,
-                  color: '#fff',
-                  fontSize: '0.9rem',
+                  color: 'text.primary',
+                  fontSize: '0.95rem',
                 }}
               >
                 Campaigner
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{ color: `rgba(255,255,255,${textOpacity * 0.7})` }}
-              >
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 Среда для создания интерактивных карт вашего мира
               </Typography>
             </Box>
-            <Typography
-              variant="caption"
-              sx={{ color: `rgba(255,255,255,${textOpacity * 0.6})` }}
-            >
+
+            <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.9) }}>
               © {new Date().getFullYear()}
             </Typography>
           </Box>
         </Container>
       </Box>
 
-      {/* Style Customizer button */}
-      <StyleCustomizer />
-
-      {/* Create Dialog */}
       <Dialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: '#1a1a2e',
-            border: '1px solid rgba(255,255,255,0.1)',
-          },
-        }}
       >
-        <DialogTitle sx={{ fontFamily: headerFont }}>Создать новый проект</DialogTitle>
+        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+          Создать новый проект
+        </DialogTitle>
+
         <DialogContent>
           <TextField
             autoFocus
@@ -382,6 +448,7 @@ export const HomePage: React.FC = () => {
             margin="normal"
             placeholder="например, Затерянные Рудники Фанделвера"
           />
+
           <TextField
             fullWidth
             label="Описание"
@@ -393,10 +460,12 @@ export const HomePage: React.FC = () => {
             placeholder="Краткое описание кампании..."
           />
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setCreateDialogOpen(false)} color="inherit">
             Отмена
           </Button>
+
           <DndButton
             variant="contained"
             onClick={handleCreate}

@@ -10,7 +10,6 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Interceptor для обработки ошибок
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -19,7 +18,6 @@ apiClient.interceptors.response.use(
       const message = data?.error || data?.message || 'An error occurred';
       console.error(`API Error [${status}]:`, message);
 
-      // Создаём ошибку с более полезной информацией
       const enrichedError = new Error(message);
       (enrichedError as any).status = status;
       (enrichedError as any).details = data?.details;
@@ -37,7 +35,6 @@ apiClient.interceptors.response.use(
 
 // ==================== API методы ====================
 
-// Projects
 export const projectsApi = {
   getAll: () => apiClient.get('/projects'),
   getById: (id: number) => apiClient.get(`/projects/${id}`),
@@ -57,7 +54,6 @@ export const projectsApi = {
     apiClient.post('/projects/import', data),
 };
 
-// Characters
 export const charactersApi = {
   getAll: (projectId: number, params?: any) =>
     apiClient.get('/characters', { params: { projectId, ...params } }),
@@ -83,7 +79,6 @@ export const charactersApi = {
   deleteRelationship: (id: number) => apiClient.delete(`/characters/relationships/${id}`),
 };
 
-// Notes
 export const notesApi = {
   getAll: (projectId: number, params?: any) =>
     apiClient.get('/notes', { params: { projectId, ...params } }),
@@ -95,17 +90,36 @@ export const notesApi = {
     apiClient.put(`/notes/${id}/tags`, { tagIds }),
 };
 
-// Map markers
 export const mapApi = {
-  getMarkers: (projectId: number) =>
-    apiClient.get('/maps', { params: { projectId } }),
-  getById: (id: number) => apiClient.get(`/maps/${id}`),
-  create: (data: any) => apiClient.post('/maps', data),
-  update: (id: number, data: any) => apiClient.put(`/maps/${id}`, data),
-  delete: (id: number) => apiClient.delete(`/maps/${id}`),
+  getRootMap: (projectId: number) =>
+    apiClient.get(`/projects/${projectId}/maps/root`),
+  getMapById: (mapId: number) =>
+    apiClient.get(`/maps/${mapId}`),
+  getMapTree: (projectId: number) =>
+    apiClient.get(`/projects/${projectId}/maps/tree`),
+  createMap: (data: any) =>
+    apiClient.post('/maps', data),
+  updateMap: (mapId: number, data: any) =>
+    apiClient.put(`/maps/${mapId}`, data),
+  deleteMap: (mapId: number) =>
+    apiClient.delete(`/maps/${mapId}`),
+  uploadMapImage: (mapId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiClient.post(`/maps/${mapId}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getMarkersByMapId: (mapId: number) =>
+    apiClient.get(`/maps/${mapId}/markers`),
+  createMarker: (mapId: number, data: any) =>
+    apiClient.post(`/maps/${mapId}/markers`, data),
+  updateMarker: (markerId: number, data: any) =>
+    apiClient.put(`/markers/${markerId}`, data),
+  deleteMarker: (markerId: number) =>
+    apiClient.delete(`/markers/${markerId}`),
 };
 
-// Timeline
 export const timelineApi = {
   getAll: (projectId: number, era?: string) =>
     apiClient.get('/timeline', { params: { projectId, era } }),
@@ -119,7 +133,6 @@ export const timelineApi = {
     apiClient.put(`/timeline/${id}/tags`, { tagIds }),
 };
 
-// Folders
 export const foldersApi = {
   getAll: (projectId: number) =>
     apiClient.get('/folders', { params: { projectId } }),
@@ -130,7 +143,6 @@ export const foldersApi = {
   delete: (id: number) => apiClient.delete(`/folders/${id}`),
 };
 
-// Tags
 export const tagsApi = {
   getAll: (projectId: number) =>
     apiClient.get('/tags', { params: { projectId } }),
@@ -138,7 +150,6 @@ export const tagsApi = {
   delete: (id: number) => apiClient.delete(`/tags/${id}`),
 };
 
-// Search
 export const searchApi = {
   search: (projectId: number, query: string) =>
     apiClient.get('/search', { params: { projectId, q: query } }),
@@ -152,4 +163,76 @@ export const wikiApi = {
   deleteLink: (id: number) => apiClient.delete(`/wiki/links/${id}`),
   getCategories: (projectId: number) =>
     apiClient.get('/wiki/categories', { params: { projectId } }),
+};
+
+export const dogmasApi = {
+  getAll: (projectId: number, params?: {
+    category?: string;
+    importance?: string;
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    apiClient.get('/dogmas', { params: { projectId, ...params } }),
+  getById: (id: number) => apiClient.get(`/dogmas/${id}`),
+  create: (data: any) => apiClient.post('/dogmas', data),
+  update: (id: number, data: any) => apiClient.put(`/dogmas/${id}`, data),
+  delete: (id: number) => apiClient.delete(`/dogmas/${id}`),
+  reorder: (projectId: number, orderedIds: number[]) =>
+    apiClient.post('/dogmas/reorder', { projectId, orderedIds }),
+  setTags: (id: number, tagIds: number[]) =>
+    apiClient.put(`/dogmas/${id}/tags`, { tagIds }),
+};
+
+export const factionsApi = {
+  getAll: (projectId: number, params?: any) =>
+    apiClient.get('/factions', { params: { projectId, ...params } }),
+  getById: (id: number) => apiClient.get(`/factions/${id}`),
+  create: (data: any) => apiClient.post('/factions', data),
+  update: (id: number, data: any) => apiClient.put(`/factions/${id}`, data),
+  delete: (id: number) => apiClient.delete(`/factions/${id}`),
+  uploadImage: (id: number, file: File) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return apiClient.post(`/factions/${id}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadBanner: (id: number, file: File) => {
+    const fd = new FormData();
+    fd.append('banner', file);
+    return apiClient.post(`/factions/${id}/banner`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  setTags: (id: number, tagIds: number[]) =>
+    apiClient.put(`/factions/${id}/tags`, { tagIds }),
+  // Ranks
+  getRanks: (factionId: number) => apiClient.get(`/factions/${factionId}/ranks`),
+  createRank: (factionId: number, data: any) =>
+    apiClient.post(`/factions/${factionId}/ranks`, data),
+  updateRank: (factionId: number, rankId: number, data: any) =>
+    apiClient.put(`/factions/${factionId}/ranks/${rankId}`, data),
+  deleteRank: (factionId: number, rankId: number) =>
+    apiClient.delete(`/factions/${factionId}/ranks/${rankId}`),
+  // Members
+  getMembers: (factionId: number) => apiClient.get(`/factions/${factionId}/members`),
+  addMember: (factionId: number, data: any) =>
+    apiClient.post(`/factions/${factionId}/members`, data),
+  updateMember: (factionId: number, memberId: number, data: any) =>
+    apiClient.put(`/factions/${factionId}/members/${memberId}`, data),
+  removeMember: (factionId: number, memberId: number) =>
+    apiClient.delete(`/factions/${factionId}/members/${memberId}`),
+  // Relations
+  getRelations: (projectId: number) =>
+    apiClient.get('/factions/relations', { params: { projectId } }),
+  createRelation: (data: any) => apiClient.post('/factions/relations', data),
+  updateRelation: (relationId: number, data: any) =>
+    apiClient.put(`/factions/relations/${relationId}`, data),
+  deleteRelation: (relationId: number) =>
+    apiClient.delete(`/factions/relations/${relationId}`),
+  // Graph
+  getGraph: (projectId: number) =>
+    apiClient.get('/factions/graph', { params: { projectId } }),
 };

@@ -1,18 +1,30 @@
 import React from 'react';
 import {
-  Box, Typography, Card, CardContent, 
-  Stack, ToggleButton, ToggleButtonGroup,
-  Slider, FormControl, FormLabel,
-  Divider, Button, Chip,
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Slider,
+  FormControl,
+  FormLabel,
+  Divider,
+  Button,
+  Chip,
+  TextField,
 } from '@mui/material';
 import PaletteIcon from '@mui/icons-material/Palette';
 import BlurOnIcon from '@mui/icons-material/BlurOn';
-import RoundedCornerIcon from '@mui/icons-material/RoundedCorner';
 import AnimationIcon from '@mui/icons-material/Animation';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
-import ViewCompactIcon from '@mui/icons-material/ViewCompact';
 import LayersIcon from '@mui/icons-material/Layers';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import WallpaperIcon from '@mui/icons-material/Wallpaper';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ImageIcon from '@mui/icons-material/Image';
 import { usePreferencesStore, type ThemePreset } from '@/store/usePreferencesStore';
 import { THEME_PRESETS } from '@/theme/presets';
 import { DndButton } from '@/components/ui/DndButton';
@@ -22,18 +34,63 @@ const presetOrder: ThemePreset[] = [
   'midnight-cyan',
   'royal-violet',
   'ember-crimson',
+  'forest-emerald',
+  'moonstone-silver',
+  'sable-rose',
+  'deep-amber',
+  'storm-indigo',
+  'ashen-teal',
 ];
 
 export const AppearanceSettingsPage: React.FC = () => {
   const {
-    themePreset, surfaceMode, fontMode, uiDensity,
-    motionMode, transparency, blur, borderRadius,
-    setThemePreset, setSurfaceMode, setFontMode, 
-    setUiDensity, setMotionMode, setTransparency, 
-    setBlur, setBorderRadius, resetAppearance,
+    themePreset,
+    surfaceMode,
+    fontMode,
+    uiDensity,
+    motionMode,
+    transparency,
+    blur,
+    borderRadius,
+    homeBackgroundImage,
+    homeBackgroundOpacity,
+    setThemePreset,
+    setSurfaceMode,
+    setFontMode,
+    setUiDensity,
+    setMotionMode,
+    setTransparency,
+    setBlur,
+    setBorderRadius,
+    setHomeBackgroundImage,
+    setHomeBackgroundOpacity,
+    clearHomeBackgroundImage,
+    resetAppearance,
   } = usePreferencesStore();
 
   const currentPreset = THEME_PRESETS[themePreset];
+
+  const handleBackgroundFileUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/avif,image/gif';
+
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          setHomeBackgroundImage(result);
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+
+    input.click();
+  };
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', minWidth: 0 }}>
@@ -57,7 +114,7 @@ export const AppearanceSettingsPage: React.FC = () => {
             Настройки внешнего вида
           </Typography>
           <Typography sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Управляйте темой, прозрачностью, анимациями и общим стилем всего приложения.
+            Управляйте темой, прозрачностью, анимациями, фоном главной страницы и общим стилем всего приложения.
           </Typography>
         </Box>
 
@@ -103,9 +160,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       onClick={() => setThemePreset(preset.id)}
                       sx={{
                         cursor: 'pointer',
-                        border: selected
-                          ? '1px solid'
-                          : '1px solid transparent',
+                        border: selected ? '1px solid' : '1px solid transparent',
                         borderColor: selected ? 'primary.main' : 'divider',
                         transition: 'all 180ms ease',
                       }}
@@ -132,6 +187,93 @@ export const AppearanceSettingsPage: React.FC = () => {
                   );
                 })}
               </Box>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" gap={1} mb={2}>
+                <WallpaperIcon sx={{ color: 'primary.main' }} />
+                <Typography variant="h6">Фон главной страницы</Typography>
+              </Box>
+
+              <Stack spacing={2.5}>
+                <TextField
+                  fullWidth
+                  label="Ссылка на изображение"
+                  value={homeBackgroundImage}
+                  onChange={(e) => setHomeBackgroundImage(e.target.value)}
+                  placeholder="https://example.com/background.jpg"
+                  helperText="Можно вставить URL изображения или загрузить файл с устройства."
+                />
+
+                <Box display="flex" gap={1} flexWrap="wrap">
+                  <DndButton
+                    variant="outlined"
+                    startIcon={<UploadFileIcon />}
+                    onClick={handleBackgroundFileUpload}
+                  >
+                    Загрузить файл
+                  </DndButton>
+
+                  <Button
+                    variant="outlined"
+                    color="inherit"
+                    startIcon={<DeleteOutlineIcon />}
+                    onClick={clearHomeBackgroundImage}
+                    disabled={!homeBackgroundImage}
+                  >
+                    Убрать фон
+                  </Button>
+                </Box>
+
+                <Box>
+                  <FormLabel>Прозрачность фонового изображения</FormLabel>
+                  <Slider
+                    value={homeBackgroundOpacity}
+                    min={0.1}
+                    max={1}
+                    step={0.01}
+                    onChange={(_, value) => setHomeBackgroundOpacity(value as number)}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(v) => `${Math.round(v * 100)}%`}
+                    sx={{ mt: 1 }}
+                    disabled={!homeBackgroundImage}
+                  />
+                </Box>
+
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    background: homeBackgroundImage
+                      ? `
+                        linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.42)),
+                        url(${homeBackgroundImage})
+                      `
+                      : 'rgba(255,255,255,0.02)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    minHeight: 140,
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                  }}
+                >
+                  <Box>
+                    <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                      <ImageIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                      <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
+                        {homeBackgroundImage ? 'Фон установлен' : 'Фон не выбран'}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>
+                      Главная страница Campaigner
+                    </Typography>
+                  </Box>
+                </Box>
+              </Stack>
             </CardContent>
           </Card>
 
@@ -307,28 +449,64 @@ export const AppearanceSettingsPage: React.FC = () => {
 
               <Stack spacing={1.25}>
                 <Typography color="text.secondary">
-                  Пресет: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{currentPreset.label}</Box>
+                  Пресет:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {currentPreset.label}
+                  </Box>
                 </Typography>
                 <Typography color="text.secondary">
-                  Поверхность: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{surfaceMode}</Box>
+                  Поверхность:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {surfaceMode}
+                  </Box>
                 </Typography>
                 <Typography color="text.secondary">
-                  Шрифт: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{fontMode}</Box>
+                  Шрифт:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {fontMode}
+                  </Box>
                 </Typography>
                 <Typography color="text.secondary">
-                  Плотность: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{uiDensity}</Box>
+                  Плотность:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {uiDensity}
+                  </Box>
                 </Typography>
                 <Typography color="text.secondary">
-                  Анимации: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{motionMode}</Box>
+                  Анимации:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {motionMode}
+                  </Box>
                 </Typography>
                 <Typography color="text.secondary">
-                  Прозрачность: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{Math.round(transparency * 100)}%</Box>
+                  Прозрачность:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {Math.round(transparency * 100)}%
+                  </Box>
                 </Typography>
                 <Typography color="text.secondary">
-                  Blur: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{blur}px</Box>
+                  Blur:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {blur}px
+                  </Box>
                 </Typography>
                 <Typography color="text.secondary">
-                  Радиус: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{borderRadius}px</Box>
+                  Радиус:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {borderRadius}px
+                  </Box>
+                </Typography>
+                <Typography color="text.secondary">
+                  Фон главной:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {homeBackgroundImage ? 'установлен' : 'не выбран'}
+                  </Box>
+                </Typography>
+                <Typography color="text.secondary">
+                  Прозрачность фона:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {Math.round(homeBackgroundOpacity * 100)}%
+                  </Box>
                 </Typography>
               </Stack>
 
@@ -349,16 +527,19 @@ export const AppearanceSettingsPage: React.FC = () => {
 
               <Stack spacing={1.5}>
                 <Typography sx={{ color: 'text.secondary' }}>
-                  • Для строгого интерфейса лучше подходят пресеты <b>Obsidian Gold</b> и <b>Midnight Cyan</b>.
+                  • Для строгого интерфейса лучше подходят <b>Obsidian Gold</b> и <b>Midnight Cyan</b>.
                 </Typography>
                 <Typography sx={{ color: 'text.secondary' }}>
                   • Если хочется меньше “стекла” — переключи режим поверхности на <b>Плотный</b>.
                 </Typography>
                 <Typography sx={{ color: 'text.secondary' }}>
-                  • Для более кинематографичного вида хорошо работает blur 10–16 и прозрачность 65–78%.
+                  • Для фонового изображения главной лучше использовать тёмные, не слишком контрастные арты.
                 </Typography>
                 <Typography sx={{ color: 'text.secondary' }}>
-                  • Если интерфейс должен быть максимально собранным — ставь compact + reduced motion.
+                  • Если фон слишком активный — опусти его прозрачность до 20–45%.
+                </Typography>
+                <Typography sx={{ color: 'text.secondary' }}>
+                  • Для более кинематографичного вида хорошо работает blur 10–16 и прозрачность 65–78%.
                 </Typography>
               </Stack>
             </CardContent>

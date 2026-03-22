@@ -1,7 +1,7 @@
 import { getDb } from '../db/connection';
 
 export interface SearchResult {
-  type: 'character' | 'note' | 'marker' | 'event' | 'tag';
+  type: 'character' | 'note' | 'marker' | 'event' | 'dogma' | 'tag';
   id: number;
   title: string;
   subtitle: string;
@@ -48,7 +48,6 @@ export class SearchService {
 
     for (const note of notes) {
       const typeIcons: Record<string, string> = { wiki: '📖', note: '📝', marker_note: '📌' };
-      // Extract snippet from content
       let snippet = '';
       if (note.content) {
         const idx = note.content.toLowerCase().indexOf(query.toLowerCase());
@@ -68,11 +67,12 @@ export class SearchService {
       });
     }
 
-    // Map markers
+    // Map markers (JOIN через maps для фильтра по project_id)
     const markers = db.prepare(`
-      SELECT id, title, description, icon
-      FROM map_markers
-      WHERE project_id = ? AND (title LIKE ? OR description LIKE ?)
+      SELECT mm.id, mm.title, mm.description, mm.icon
+      FROM map_markers mm
+      JOIN maps m ON mm.map_id = m.id
+      WHERE m.project_id = ? AND (mm.title LIKE ? OR mm.description LIKE ?)
       LIMIT ?
     `).all(projectId, like, like, limit) as any[];
 
@@ -107,6 +107,45 @@ export class SearchService {
       });
     }
 
+    // Dogmas
+    const dogmas = db.prepare(`
+      SELECT id, title, description, category, importance
+      FROM dogmas
+      WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR impact LIKE ? OR exceptions LIKE ?)
+      LIMIT ?
+    `).all(projectId, like, like, like, like, limit) as any[];
+
+    for (const d of dogmas) {
+      results.push({
+        type: 'dogma',
+        id: d.id,
+        title: d.title,
+        subtitle: d.description ? d.description.substring(0, 80) : 'Догма',
+        icon: '⚖️',
+        url: `/project/${projectId}/dogmas`,
+      });
+    }
+
+    // Factions
+    const factions = db.prepare(`
+      SELECT id, name, type, custom_type, motto, description, status
+      FROM factions
+      WHERE project_id = ? AND (name LIKE ? OR motto LIKE ? OR description LIKE ? OR headquarters LIKE ?)
+      LIMIT ?
+    `).all(projectId, like, like, like, like, limit) as any[];
+
+    for (const f of factions) {
+      const subtitle = f.motto || f.description?.substring(0, 80) || f.status;
+      results.push({
+        type: 'faction' as any,
+        id: f.id,
+        title: f.name,
+        subtitle,
+        icon: '🏛️',
+        url: `/project/${projectId}/factions/${f.id}`,
+      });
+    }
+
     // Tags
     const tags = db.prepare(`
       SELECT id, name, color FROM tags
@@ -127,7 +166,7 @@ export class SearchService {
 
     // Sort: exact matches first, then by type priority
     const typePriority: Record<string, number> = {
-      character: 0, note: 1, marker: 2, event: 3, tag: 4,
+      character: 0, faction: 1, note: 2, marker: 3, event: 4, dogma: 5, tag: 6,
     };
 
     results.sort((a, b) => {
