@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { mapService } from '../services/map.service.js';
-import { createMapSchema, updateMapSchema, createMarkerSchema, updateMarkerSchema } from '@campaigner/shared';
+import { createMapSchema, updateMapSchema, createMarkerSchema, updateMarkerSchema, 
+createTerritorySchema, updateTerritorySchema } from '@campaigner/shared';
 
 export class MapController {
   // ==================== Карты ====================
@@ -318,6 +319,62 @@ export class MapController {
         success: false,
         error: error.message,
       });
+    }
+  }
+
+  // ==================== Территории ====================
+
+  async getTerritories(req: Request, res: Response): Promise<void> {
+    try {
+      const { mapId } = req.params;
+      const territories = mapService.getTerritoriesByMapId(parseInt(mapId));
+      res.json({ success: true, data: territories });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  async createTerritory(req: Request, res: Response): Promise<void> {
+    try {
+      const { mapId } = req.params;
+      const mid = parseInt(mapId);
+      const map = mapService.getMapById(mid);
+      if (!map) { res.status(404).json({ success: false, error: 'Карта не найдена' }); return; }
+
+      const validated = createTerritorySchema.parse(req.body);
+      const territory = mapService.createTerritory(mid, validated);
+      res.status(201).json({ success: true, data: territory });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
+
+  async updateTerritory(req: Request, res: Response): Promise<void> {
+    try {
+      const { territoryId } = req.params;
+      const tid = parseInt(territoryId);
+      const territory = mapService.getTerritoryById(tid);
+      if (!territory) { res.status(404).json({ success: false, error: 'Территория не найдена' }); return; }
+
+      const validated = updateTerritorySchema.parse(req.body);
+      const updated = mapService.updateTerritory(tid, validated);
+      res.json({ success: true, data: updated });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
+
+  async deleteTerritory(req: Request, res: Response): Promise<void> {
+    try {
+      const { territoryId } = req.params;
+      const tid = parseInt(territoryId);
+      const territory = mapService.getTerritoryById(tid);
+      if (!territory) { res.status(404).json({ success: false, error: 'Территория не найдена' }); return; }
+
+      mapService.deleteTerritory(tid);
+      res.json({ success: true, message: 'Территория удалена' });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }

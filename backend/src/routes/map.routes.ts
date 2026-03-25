@@ -51,4 +51,21 @@ router.delete('/markers/:markerId', (req, res) =>
   mapController.deleteMarker(req, res)
 );
 
+// ==================== Территории ====================
+router.get('/maps/:mapId/territories', (req, res) =>
+  mapController.getTerritories(req, res)
+);
+
+router.post('/maps/:mapId/territories', (req, res) =>
+  mapController.createTerritory(req, res)
+);
+
+router.put('/territories/:territoryId', (req, res) =>
+  mapController.updateTerritory(req, res)
+);
+
+router.delete('/territories/:territoryId', (req, res) =>
+  mapController.deleteTerritory(req, res)
+);
+
 export default router;

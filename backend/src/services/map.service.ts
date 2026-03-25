@@ -308,6 +308,96 @@ export class MapService {
     `);
     return stmt.get(childMapId) as MapMarker | undefined || null;
   }
+  
+  // ==================== Территории ====================
+
+  getTerritoriesByMapId(mapId: number): any[] {
+    const db = getDb();
+    const stmt = db.prepare(`
+      SELECT
+        id, map_id as mapId, name, description,
+        color, opacity, border_color as borderColor,
+        border_width as borderWidth, points,
+        faction_id as factionId, sort_order as sortOrder,
+        created_at as createdAt, updated_at as updatedAt
+      FROM map_territories
+      WHERE map_id = ?
+      ORDER BY sort_order, created_at
+    `);
+    const rows = stmt.all(mapId) as any[];
+    return rows.map(r => ({
+      ...r,
+      points: JSON.parse(r.points || '[]'),
+    }));
+  }
+
+  getTerritoryById(territoryId: number): any | null {
+    const db = getDb();
+    const stmt = db.prepare(`
+      SELECT
+        id, map_id as mapId, name, description,
+        color, opacity, border_color as borderColor,
+        border_width as borderWidth, points,
+        faction_id as factionId, sort_order as sortOrder,
+        created_at as createdAt, updated_at as updatedAt
+      FROM map_territories
+      WHERE id = ?
+    `);
+    const row = stmt.get(territoryId) as any | undefined;
+    if (!row) return null;
+    return { ...row, points: JSON.parse(row.points || '[]') };
+  }
+
+  createTerritory(mapId: number, data: any): any {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT INTO map_territories
+      (map_id, name, description, color, opacity, border_color, border_width, points, faction_id, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      mapId,
+      data.name,
+      data.description || '',
+      data.color || '#4ECDC4',
+      data.opacity ?? 0.25,
+      data.borderColor || '#4ECDC4',
+      data.borderWidth ?? 2,
+      JSON.stringify(data.points || []),
+      data.factionId || null,
+      data.sortOrder ?? 0,
+    );
+    return this.getTerritoryById(result.lastInsertRowid as number)!;
+  }
+
+  updateTerritory(territoryId: number, data: any): any {
+    const db = getDb();
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (data.name !== undefined) { updates.push('name = ?'); values.push(data.name); }
+    if (data.description !== undefined) { updates.push('description = ?'); values.push(data.description); }
+    if (data.color !== undefined) { updates.push('color = ?'); values.push(data.color); }
+    if (data.opacity !== undefined) { updates.push('opacity = ?'); values.push(data.opacity); }
+    if (data.borderColor !== undefined) { updates.push('border_color = ?'); values.push(data.borderColor); }
+    if (data.borderWidth !== undefined) { updates.push('border_width = ?'); values.push(data.borderWidth); }
+    if (data.points !== undefined) { updates.push('points = ?'); values.push(JSON.stringify(data.points)); }
+    if (data.factionId !== undefined) { updates.push('faction_id = ?'); values.push(data.factionId); }
+    if (data.sortOrder !== undefined) { updates.push('sort_order = ?'); values.push(data.sortOrder); }
+
+    if (updates.length > 0) {
+      updates.push("updated_at = datetime('now')");
+      const stmt = db.prepare(`UPDATE map_territories SET ${updates.join(', ')} WHERE id = ?`);
+      stmt.run(...values, territoryId);
+    }
+
+    return this.getTerritoryById(territoryId)!;
+  }
+
+  deleteTerritory(territoryId: number): void {
+    const db = getDb();
+    db.prepare('DELETE FROM map_territories WHERE id = ?').run(territoryId);
+  }
 }
 
 export const mapService = new MapService();

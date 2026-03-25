@@ -50,3 +50,36 @@ export const createMarkerSchema = mapMarkerSchema.omit({
 export const updateMarkerSchema = mapMarkerSchema
   .omit({ id: true, mapId: true, createdAt: true, updatedAt: true })
   .partial();
+
+// ==================== Территории (полигоны) ====================
+export const territoryPointSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+});
+
+export const mapTerritorySchema = z.object({
+  id: idSchema,
+  mapId: idSchema,
+  name: z.string().min(1).max(200).trim(),
+  description: z.string().max(2000).optional().default(''),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#4ECDC4'),
+  opacity: z.number().min(0.05).max(1).default(0.25),
+  borderColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#4ECDC4'),
+  borderWidth: z.number().min(0.5).max(5).default(2),
+  points: z.array(territoryPointSchema).min(3),
+  factionId: z.number().int().positive().nullable().optional(),
+  sortOrder: z.number().int().default(0),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const createTerritorySchema = mapTerritorySchema.omit({
+  id: true,
+  mapId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateTerritorySchema = mapTerritorySchema
+  .omit({ id: true, mapId: true, createdAt: true, updatedAt: true })
+  .partial();

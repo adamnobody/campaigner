@@ -7,8 +7,8 @@ campaigner
 │  │  ├─ controllers
 │  │  │  ├─ character.controller.ts
 │  │  │  ├─ dogma.controller.ts
+│  │  │  ├─ dynasty.controller.ts
 │  │  │  ├─ faction.controller.ts
-│  │  │  ├─ folder.controller.ts
 │  │  │  ├─ map.controller.ts
 │  │  │  ├─ note.controller.ts
 │  │  │  ├─ project.controller.ts
@@ -29,8 +29,8 @@ campaigner
 │  │  ├─ routes
 │  │  │  ├─ character.routes.ts
 │  │  │  ├─ dogma.routes.ts
+│  │  │  ├─ dynasty.routes.ts
 │  │  │  ├─ faction.routes.ts
-│  │  │  ├─ folder.routes.ts
 │  │  │  ├─ map.routes.ts
 │  │  │  ├─ note.routes.ts
 │  │  │  ├─ project.routes.ts
@@ -42,8 +42,8 @@ campaigner
 │  │  └─ services
 │  │     ├─ character.service.ts
 │  │     ├─ dogma.service.ts
+│  │     ├─ dynasty.service.ts
 │  │     ├─ faction.service.ts
-│  │     ├─ folder.service.ts
 │  │     ├─ map.service.ts
 │  │     ├─ note.service.ts
 │  │     ├─ project.service.ts
@@ -51,7 +51,10 @@ campaigner
 │  │     ├─ tag.service.ts
 │  │     ├─ timeline.service.ts
 │  │     └─ wiki.service.ts
-│  └─ tsconfig.json
+│  ├─ tsconfig.json
+│  └─ uploads
+│     └─ factions
+│        └─ faction-1774159645120-b70l7n.png
 ├─ data
 ├─ frontend
 │  ├─ index.html
@@ -61,6 +64,9 @@ campaigner
 │  │  │  └─ axiosClient.ts
 │  │  ├─ App.tsx
 │  │  ├─ components
+│  │  │  ├─ dynasty
+│  │  │  │  ├─ DynastyEventsTimeline.tsx
+│  │  │  │  └─ FamilyTree.tsx
 │  │  │  ├─ forms
 │  │  │  │  └─ TagAutocompleteField.tsx
 │  │  │  ├─ Layout
@@ -92,7 +98,10 @@ campaigner
 │  │  │  ├─ CharacterGraphPage.tsx
 │  │  │  ├─ CharactersPage.tsx
 │  │  │  ├─ DogmasPage.tsx
-│  │  │  ├─ FilesPage.tsx
+│  │  │  ├─ DynastiesPage.tsx
+│  │  │  ├─ DynastyDetailPage.tsx
+│  │  │  ├─ FactionDetailPage.tsx
+│  │  │  ├─ FactionsPage.tsx
 │  │  │  ├─ HomePage.tsx
 │  │  │  ├─ MapPage.tsx
 │  │  │  ├─ NoteEditorPage.tsx
@@ -104,8 +113,8 @@ campaigner
 │  │  ├─ store
 │  │  │  ├─ useCharacterStore.ts
 │  │  │  ├─ useDogmaStore.ts
+│  │  │  ├─ useDynastyStore.ts
 │  │  │  ├─ useFactionStore.ts
-│  │  │  ├─ useFolderStore.ts
 │  │  │  ├─ useMapStore.ts
 │  │  │  ├─ useNoteStore.ts
 │  │  │  ├─ usePreferencesStore.ts
@@ -139,6 +148,7 @@ campaigner
 │  │  │  ├─ character.schema.ts
 │  │  │  ├─ common.schema.ts
 │  │  │  ├─ dogma.schema.ts
+│  │  │  ├─ dynasty.schema.ts
 │  │  │  ├─ faction.schema.ts
 │  │  │  ├─ index.ts
 │  │  │  ├─ map.schema.ts
