@@ -373,6 +373,26 @@ export function initializeDatabase(): void {
     );
   `);
 
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS map_territories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      map_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      color TEXT DEFAULT '#4ECDC4',
+      opacity REAL DEFAULT 0.25,
+      border_color TEXT DEFAULT '#4ECDC4',
+      border_width REAL DEFAULT 2,
+      points TEXT NOT NULL DEFAULT '[]',
+      faction_id INTEGER,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
+      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE SET NULL
+    );
+  `);
+
   // === Миграция: обновить tag_associations CHECK для dynasty ===
   try {
     const tableInfo = database.prepare(
@@ -439,6 +459,8 @@ export function initializeDatabase(): void {
     CREATE INDEX IF NOT EXISTS idx_maps_parent ON maps(parent_map_id);
     CREATE INDEX IF NOT EXISTS idx_map_markers_map ON map_markers(map_id);
     CREATE INDEX IF NOT EXISTS idx_map_markers_child_map ON map_markers(child_map_id);
+    CREATE INDEX IF NOT EXISTS idx_map_territories_map ON map_territories(map_id);
+    CREATE INDEX IF NOT EXISTS idx_map_territories_faction ON map_territories(faction_id);
     CREATE INDEX IF NOT EXISTS idx_dogmas_project ON dogmas(project_id);
     CREATE INDEX IF NOT EXISTS idx_dogmas_category ON dogmas(project_id, category);
     CREATE INDEX IF NOT EXISTS idx_dogmas_importance ON dogmas(project_id, importance);

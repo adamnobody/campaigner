@@ -118,6 +118,15 @@ export const mapApi = {
     apiClient.put(`/markers/${markerId}`, data),
   deleteMarker: (markerId: number) =>
     apiClient.delete(`/markers/${markerId}`),
+  // Территории
+  getTerritoriesByMapId: (mapId: number) =>
+    apiClient.get(`/maps/${mapId}/territories`),
+  createTerritory: (mapId: number, data: any) =>
+    apiClient.post(`/maps/${mapId}/territories`, data),
+  updateTerritory: (territoryId: number, data: any) =>
+    apiClient.put(`/territories/${territoryId}`, data),
+  deleteTerritory: (territoryId: number) =>
+    apiClient.delete(`/territories/${territoryId}`),
 };
 
 export const timelineApi = {

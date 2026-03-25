@@ -26,6 +26,9 @@ import {
   mapMarkerSchema,
   createMarkerSchema,
   updateMarkerSchema,
+  mapTerritorySchema,
+  createTerritorySchema,
+  updateTerritorySchema,
 } from '../schemas/map.schema.js';
 import {
   timelineEventSchema,
@@ -70,6 +73,9 @@ export type UpdateMap = z.input<typeof updateMapSchema>;
 export type MapMarker = z.infer<typeof mapMarkerSchema>;
 export type CreateMarker = z.input<typeof createMarkerSchema>;
 export type UpdateMarker = z.input<typeof updateMarkerSchema>;
+export type MapTerritory = z.infer<typeof mapTerritorySchema>;
+export type CreateTerritory = z.input<typeof createTerritorySchema>;
+export type UpdateTerritory = z.input<typeof updateTerritorySchema>;
 
 // ==================== Timeline ====================
 export type TimelineEvent = z.infer<typeof timelineEventSchema>;
