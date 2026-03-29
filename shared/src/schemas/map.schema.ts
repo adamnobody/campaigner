@@ -66,6 +66,7 @@ export const mapTerritorySchema = z.object({
   opacity: z.number().min(0.05).max(1).default(0.25),
   borderColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#4ECDC4'),
   borderWidth: z.number().min(0.5).max(5).default(2),
+  smoothing: z.number().min(0).max(1).default(0),
   points: z.array(territoryPointSchema).min(3),
   factionId: z.number().int().positive().nullable().optional(),
   sortOrder: z.number().int().default(0),

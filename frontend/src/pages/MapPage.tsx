@@ -82,7 +82,7 @@ interface Marker {
 }
 interface Territory {
   id: number; mapId: number; name: string; description: string;
-  color: string; opacity: number; borderColor: string; borderWidth: number;
+  color: string; opacity: number; borderColor: string; borderWidth: number; smoothing: number;
   points: { x: number; y: number }[];
   factionId: number | null; sortOrder: number;
 }
@@ -107,6 +107,7 @@ const normalizeTerritory = (t: any): Territory => ({
   id: t.id, mapId: t.mapId, name: t.name, description: t.description || '',
   color: t.color || '#4ECDC4', opacity: t.opacity ?? 0.25,
   borderColor: t.borderColor || '#4ECDC4', borderWidth: t.borderWidth ?? 1.5,
+  smoothing: t.smoothing ?? 0,
   points: (t.points || []).map((p: any) => ({ x: p.x * 100, y: p.y * 100 })),
   factionId: t.factionId || null, sortOrder: t.sortOrder || 0,
 });
@@ -230,7 +231,7 @@ export const MapPage: React.FC = () => {
   const [editingTerritory, setEditingTerritory] = useState<Territory | null>(null);
   const [territoryForm, setTerritoryForm] = useState({
     name: '', description: '', color: '#4ECDC4', opacity: 0.25,
-    borderColor: '#4ECDC4', borderWidth: 1.5, factionId: null as number | null,
+    borderColor: '#4ECDC4', borderWidth: 1.5, smoothing: 0, factionId: null as number | null,
   });
 
   // Panel
@@ -593,7 +594,7 @@ export const MapPage: React.FC = () => {
     }
     setTerritoryForm({
       name: '', description: '', color: '#4ECDC4', opacity: 0.25,
-      borderColor: '#4ECDC4', borderWidth: 2, factionId: null,
+      borderColor: '#4ECDC4', borderWidth: 2, smoothing: 0, factionId: null,
     });
     setEditingTerritory(null);
     setTerritoryDialogOpen(true);
@@ -616,6 +617,7 @@ export const MapPage: React.FC = () => {
           opacity: territoryForm.opacity,
           borderColor: territoryForm.borderColor,
           borderWidth: territoryForm.borderWidth,
+          smoothing: territoryForm.smoothing,
           factionId: territoryForm.factionId,
         });
         const updated = normalizeTerritory(extractData(res));
@@ -631,6 +633,7 @@ export const MapPage: React.FC = () => {
           opacity: territoryForm.opacity,
           borderColor: territoryForm.borderColor,
           borderWidth: territoryForm.borderWidth,
+          smoothing: territoryForm.smoothing,
           factionId: territoryForm.factionId,
           points: apiPoints,
         });
@@ -655,6 +658,7 @@ export const MapPage: React.FC = () => {
       opacity: territory.opacity,
       borderColor: territory.borderColor,
       borderWidth: territory.borderWidth,
+      smoothing: territory.smoothing,
       factionId: territory.factionId,
     });
     setTerritoryDialogOpen(true);
@@ -814,6 +818,65 @@ export const MapPage: React.FC = () => {
     const h = imgRef.current.clientHeight;
     if (!w || !h) return null;
 
+    const hexToRgbStr = (hex: string) => {
+      const c = hex.replace('#', '');
+      const r = parseInt(c.substring(0, 2), 16);
+      const g = parseInt(c.substring(2, 4), 16);
+      const b = parseInt(c.substring(4, 6), 16);
+      return `${r},${g},${b}`;
+    };
+
+    const getCentroid = (pts: { x: number; y: number }[]) => {
+      const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+      return { cx, cy };
+    };
+
+    // Build smooth path with rounded corners via quadratic bezier
+    const buildSmoothPath = (pts: { x: number; y: number }[], smoothing: number): string => {
+      if (pts.length < 3 || smoothing === 0) {
+        return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+      }
+
+      const n = pts.length;
+      const s = smoothing; // 0..1 — how far toward midpoint we shift the corner
+      const parts: string[] = [];
+
+      for (let i = 0; i < n; i++) {
+        const prev = pts[(i - 1 + n) % n];
+        const curr = pts[i];
+        const next = pts[(i + 1) % n];
+
+        // Points along edges, pulled toward curr by (1-s)
+        const startX = curr.x + (prev.x - curr.x) * s * 0.5;
+        const startY = curr.y + (prev.y - curr.y) * s * 0.5;
+        const endX = curr.x + (next.x - curr.x) * s * 0.5;
+        const endY = curr.y + (next.y - curr.y) * s * 0.5;
+
+        if (i === 0) {
+          parts.push(`M ${endX} ${endY}`);
+        } else {
+          parts.push(`L ${startX} ${startY}`);
+          parts.push(`Q ${curr.x} ${curr.y} ${endX} ${endY}`);
+        }
+      }
+
+      // Close: line to first start, then curve around first point
+      const first = pts[0];
+      const last = pts[n - 1];
+      const second = pts[1];
+      const closeStartX = first.x + (last.x - first.x) * s * 0.5;
+      const closeStartY = first.y + (last.y - first.y) * s * 0.5;
+      const closeEndX = first.x + (second.x - first.x) * s * 0.5;
+      const closeEndY = first.y + (second.y - first.y) * s * 0.5;
+
+      parts.push(`L ${closeStartX} ${closeStartY}`);
+      parts.push(`Q ${first.x} ${first.y} ${closeEndX} ${closeEndY}`);
+      parts.push('Z');
+
+      return parts.join(' ');
+    };
+
     return (
       <svg
         style={{
@@ -824,42 +887,171 @@ export const MapPage: React.FC = () => {
         }}
         viewBox={`0 0 ${w} ${h}`}
       >
+        <defs>
+          {/* Shared hatch pattern */}
+          <pattern id="territory-hatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5" />
+          </pattern>
+
+          {territories.map(t => {
+            const gradId = `grad-${t.id}`;
+            const filterId = `filter-${t.id}`;
+            const innerGlowId = `innerglow-${t.id}`;
+            const rgb = hexToRgbStr(t.color);
+            const svgPts = t.points.map(p => ({
+              x: (p.x / 100) * w,
+              y: (p.y / 100) * h,
+            }));
+            const { cx, cy } = getCentroid(svgPts);
+
+            return (
+              <React.Fragment key={`defs-${t.id}`}>
+                {/* Radial gradient — lighter center, darker edges */}
+                <radialGradient id={gradId} cx="50%" cy="50%" r="70%">
+                  <stop offset="0%" stopColor={`rgba(${rgb}, ${Math.min(t.opacity * 1.4, 0.6)})`} />
+                  <stop offset="100%" stopColor={`rgba(${rgb}, ${t.opacity * 0.5})`} />
+                </radialGradient>
+
+                {/* Outer glow + drop shadow */}
+                <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur" />
+                  <feFlood floodColor={t.borderColor} floodOpacity="0.4" result="color" />
+                  <feComposite in="color" in2="blur" operator="in" result="shadow" />
+                  <feMerge>
+                    <feMergeNode in="shadow" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+
+                {/* Inner glow */}
+                <filter id={innerGlowId} x="-10%" y="-10%" width="120%" height="120%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
+                  <feFlood floodColor={`rgb(${rgb})`} floodOpacity="0.3" result="color" />
+                  <feComposite in="color" in2="blur" operator="in" result="glow" />
+                  <feComposite in="glow" in2="SourceAlpha" operator="in" />
+                </filter>
+              </React.Fragment>
+            );
+          })}
+        </defs>
+
         {territories.map(t => {
           const svgPts = t.points.map(p => ({
             x: (p.x / 100) * w,
             y: (p.y / 100) * h,
           }));
-          const pathD = svgPts.map((p, i) =>
-            `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-          ).join(' ') + ' Z';
-          const filterId = `shadow-${t.id}`;
+          const pathD = buildSmoothPath(svgPts, t.smoothing);
+
+          const gradId = `grad-${t.id}`;
+          const filterId = `filter-${t.id}`;
+          const innerGlowId = `innerglow-${t.id}`;
+          const clipId = `clip-${t.id}`;
+          const isSelected = selectedTerritory?.id === t.id;
+          const { cx, cy } = getCentroid(svgPts);
 
           return (
-            <g key={t.id}>
-              <defs>
-                <filter id={filterId} x="-10%" y="-10%" width="120%" height="120%">
-                  <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={t.borderColor} floodOpacity="0.5" />
-                </filter>
-              </defs>
-              {/* Shadow border */}
+            <g key={t.id} filter={`url(#${filterId})`}>
+              {/* Clip path for inner effects */}
+              <clipPath id={clipId}>
+                <path d={pathD} />
+              </clipPath>
+
+              {/* Main fill with gradient */}
+              <path
+                d={pathD}
+                fill={`url(#${gradId})`}
+                stroke="none"
+              />
+
+              {/* Hatch overlay */}
+              <path
+                d={pathD}
+                fill="url(#territory-hatch)"
+                stroke="none"
+                opacity={0.6}
+              />
+
+              {/* Inner glow clipped to territory */}
+              <g clipPath={`url(#${clipId})`}>
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke={t.color}
+                  strokeWidth={12}
+                  opacity={0.15}
+                  filter={`url(#${innerGlowId})`}
+                />
+              </g>
+
+              {/* Outer border — dark shadow line */}
+              <path
+                d={pathD}
+                fill="none"
+                stroke="rgba(0,0,0,0.4)"
+                strokeWidth={t.borderWidth + 2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+
+              {/* Main border */}
               <path
                 d={pathD}
                 fill="none"
                 stroke={t.borderColor}
-                strokeWidth={t.borderWidth + 2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                opacity={0.3}
-                filter={`url(#${filterId})`}
-              />
-              {/* Main fill + border */}
-              <path
-                d={pathD}
-                fill={`rgba(${hexToRgb(t.color)}, ${t.opacity})`}
-                stroke={t.borderColor}
                 strokeWidth={t.borderWidth}
                 strokeLinejoin="round"
                 strokeLinecap="round"
+              />
+
+              {/* Highlight inner edge */}
+              <g clipPath={`url(#${clipId})`}>
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.12)"
+                  strokeWidth={t.borderWidth + 1}
+                  strokeLinejoin="round"
+                />
+              </g>
+
+              {/* Selection glow */}
+              {isSelected && (
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="#fff"
+                  strokeWidth={t.borderWidth + 1}
+                  strokeLinejoin="round"
+                  strokeDasharray="6 4"
+                  opacity={0.7}
+                />
+              )}
+
+              {/* Territory name label */}
+              <text
+                x={cx}
+                y={cy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill="rgba(255,255,255,0.85)"
+                fontSize={14}
+                fontWeight={600}
+                fontFamily="inherit"
+                style={{ pointerEvents: 'none', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}
+                paintOrder="stroke"
+                stroke="rgba(0,0,0,0.5)"
+                strokeWidth={3}
+                strokeLinejoin="round"
+              >
+                {t.name}
+              </text>
+
+              {/* Clickable invisible overlay */}
+              <path
+                d={pathD}
+                fill="transparent"
+                stroke="transparent"
+                strokeWidth={Math.max(t.borderWidth + 6, 10)}
                 style={{
                   pointerEvents: mode === 'select' ? 'auto' : 'none',
                   cursor: mode === 'select' ? 'pointer' : 'default',
@@ -870,6 +1062,7 @@ export const MapPage: React.FC = () => {
           );
         })}
 
+        {/* Drawing mode preview — unchanged */}
         {mode === 'draw_territory' && drawingPoints.length > 0 && (() => {
           const svgPts = drawingPoints.map(p => ({
             x: (p.x / 100) * w,
@@ -1703,20 +1896,67 @@ export const MapPage: React.FC = () => {
             }}
           />
 
+          {/* Smoothing */}
+          <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 2, mb: 0.5 }}>
+            Сглаживание углов: {Math.round(territoryForm.smoothing * 100)}%
+          </Typography>
+          <Slider
+            value={territoryForm.smoothing}
+            onChange={(_, v) => setTerritoryForm(prev => ({ ...prev, smoothing: v as number }))}
+            min={0} max={1} step={0.05}
+            sx={{
+              color: territoryForm.color,
+              '& .MuiSlider-thumb': { width: 16, height: 16 },
+            }}
+          />
+
           {/* Preview */}
           <Box mt={2} p={2} sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mb: 1, display: 'block' }}>Превью</Typography>
             <svg width="100%" height="60" viewBox="0 0 200 60">
-              <polygon
-                points="20,50 50,10 100,5 150,15 180,45 140,55 60,55"
-                fill={`rgba(${hexToRgb(territoryForm.color)}, ${territoryForm.opacity})`}
-                stroke={territoryForm.borderColor}
-                strokeWidth={territoryForm.borderWidth}
-                strokeLinejoin="round"
-              />
-              <text x="100" y="35" textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
-                {territoryForm.name || 'Территория'}
-              </text>
+              {(() => {
+                const pts = [
+                  { x: 20, y: 50 }, { x: 50, y: 10 }, { x: 100, y: 5 },
+                  { x: 150, y: 15 }, { x: 180, y: 45 }, { x: 140, y: 55 }, { x: 60, y: 55 },
+                ];
+                const s = territoryForm.smoothing;
+                let d: string;
+                if (s === 0 || pts.length < 3) {
+                  d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+                } else {
+                  const n = pts.length;
+                  const parts: string[] = [];
+                  for (let i = 0; i < n; i++) {
+                    const prev = pts[(i - 1 + n) % n];
+                    const curr = pts[i];
+                    const next = pts[(i + 1) % n];
+                    const sx1 = curr.x + (prev.x - curr.x) * s * 0.5;
+                    const sy1 = curr.y + (prev.y - curr.y) * s * 0.5;
+                    const ex = curr.x + (next.x - curr.x) * s * 0.5;
+                    const ey = curr.y + (next.y - curr.y) * s * 0.5;
+                    if (i === 0) { parts.push(`M ${ex} ${ey}`); }
+                    else { parts.push(`L ${sx1} ${sy1}`); parts.push(`Q ${curr.x} ${curr.y} ${ex} ${ey}`); }
+                  }
+                  const first = pts[0], last = pts[n - 1], second = pts[1];
+                  parts.push(`L ${first.x + (last.x - first.x) * s * 0.5} ${first.y + (last.y - first.y) * s * 0.5}`);
+                  parts.push(`Q ${first.x} ${first.y} ${first.x + (second.x - first.x) * s * 0.5} ${first.y + (second.y - first.y) * s * 0.5}`);
+                  parts.push('Z');
+                  d = parts.join(' ');
+                }
+                return (
+                  <>
+                    <path d={d}
+                      fill={`rgba(${hexToRgb(territoryForm.color)}, ${territoryForm.opacity})`}
+                      stroke={territoryForm.borderColor}
+                      strokeWidth={territoryForm.borderWidth}
+                      strokeLinejoin="round"
+                    />
+                    <text x="100" y="35" textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
+                      {territoryForm.name || 'Территория'}
+                    </text>
+                  </>
+                );
+              })()}
             </svg>
           </Box>
         </DialogContent>
