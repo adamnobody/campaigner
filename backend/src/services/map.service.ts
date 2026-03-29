@@ -337,7 +337,7 @@ export class MapService {
       SELECT
         id, map_id as mapId, name, description,
         color, opacity, border_color as borderColor,
-        border_width as borderWidth, points,
+        border_width as borderWidth, smoothing, points,
         faction_id as factionId, sort_order as sortOrder,
         created_at as createdAt, updated_at as updatedAt
       FROM map_territories
@@ -352,8 +352,8 @@ export class MapService {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO map_territories
-      (map_id, name, description, color, opacity, border_color, border_width, points, faction_id, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (map_id, name, description, color, opacity, border_color, border_width, smoothing, points, faction_id, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       mapId,
@@ -363,6 +363,7 @@ export class MapService {
       data.opacity ?? 0.25,
       data.borderColor || '#4ECDC4',
       data.borderWidth ?? 2,
+      data.smoothing ?? 0,
       JSON.stringify(data.points || []),
       data.factionId || null,
       data.sortOrder ?? 0,
@@ -381,6 +382,7 @@ export class MapService {
     if (data.opacity !== undefined) { updates.push('opacity = ?'); values.push(data.opacity); }
     if (data.borderColor !== undefined) { updates.push('border_color = ?'); values.push(data.borderColor); }
     if (data.borderWidth !== undefined) { updates.push('border_width = ?'); values.push(data.borderWidth); }
+    if (data.smoothing !== undefined) { updates.push('smoothing = ?'); values.push(data.smoothing); }
     if (data.points !== undefined) { updates.push('points = ?'); values.push(JSON.stringify(data.points)); }
     if (data.factionId !== undefined) { updates.push('faction_id = ?'); values.push(data.factionId); }
     if (data.sortOrder !== undefined) { updates.push('sort_order = ?'); values.push(data.sortOrder); }

@@ -385,6 +385,7 @@ export function initializeDatabase(): void {
       border_width REAL DEFAULT 2,
       points TEXT NOT NULL DEFAULT '[]',
       faction_id INTEGER,
+      smoothing REAL DEFAULT 0,
       sort_order INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
