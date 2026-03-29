@@ -218,6 +218,10 @@ export const MapPage: React.FC = () => {
   const isDraggingRef = useRef(false);
   const didDragRef = useRef(false);
 
+  // Drag territory points
+  const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
+  const [editingTerritoryPoints, setEditingTerritoryPoints] = useState<Territory | null>(null);
+
   // Dialog (markers)
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
@@ -460,6 +464,12 @@ export const MapPage: React.FC = () => {
     }
   }, []);
 
+  const handlePointDragStart = useCallback((e: React.MouseEvent, index: number, isDrawing: boolean) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDraggingPointIndex(index);
+  }, []);
+
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanningRef.current) {
       panRef.current = {
@@ -467,6 +477,31 @@ export const MapPage: React.FC = () => {
         y: panOriginRef.current.y + e.clientY - panStartRef.current.y,
       };
       applyTransform();
+      return;
+    }
+
+    // Drag territory point
+    if (draggingPointIndex !== null && imgRef.current) {
+      const rect = imgRef.current.getBoundingClientRect();
+      const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+      if (editingTerritoryPoints) {
+        // Editing existing territory points
+        setEditingTerritoryPoints(prev => {
+          if (!prev) return prev;
+          const newPoints = [...prev.points];
+          newPoints[draggingPointIndex] = { x: px, y: py };
+          return { ...prev, points: newPoints };
+        });
+      } else {
+        // Drawing new territory points
+        setDrawingPoints(prev => {
+          const newPts = [...prev];
+          newPts[draggingPointIndex] = { x: px, y: py };
+          return newPts;
+        });
+      }
       return;
     }
 
@@ -482,9 +517,14 @@ export const MapPage: React.FC = () => {
         y: Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100)),
       });
     }
-  }, [draggingMarker, applyTransform]);
+  }, [draggingMarker, draggingPointIndex, editingTerritoryPoints, applyTransform]);
 
   const handleMouseUp = useCallback(async () => {
+    if (draggingPointIndex !== null) {
+      setDraggingPointIndex(null);
+      return;
+    }
+
     if (isPanningRef.current) {
       isPanningRef.current = false;
       return;
@@ -511,7 +551,7 @@ export const MapPage: React.FC = () => {
       setDragPreview(null);
       didDragRef.current = false;
     }
-  }, [draggingMarker, dragPreview, selectedMarker?.id, showSnackbar]);
+  }, [draggingMarker, draggingPointIndex, dragPreview, selectedMarker?.id, showSnackbar]);
 
   // ==================== Marker interactions ====================
   const handleMarkerMouseDown = useCallback((e: React.MouseEvent, marker: Marker) => {
@@ -648,6 +688,72 @@ export const MapPage: React.FC = () => {
       showSnackbar(err.message || 'Ошибка сохранения территории', 'error');
     }
   }, [territoryForm, editingTerritory, currentMap, drawingPoints, selectedTerritory?.id, showSnackbar]);
+
+  const startEditingPoints = useCallback((territory: Territory) => {
+    setEditingTerritoryPoints(territory);
+    setPanelOpen(false);
+  }, []);
+
+  const saveEditingPoints = useCallback(async () => {
+    if (!editingTerritoryPoints) return;
+    try {
+      const apiPoints = editingTerritoryPoints.points.map(p => ({ x: p.x / 100, y: p.y / 100 }));
+      const res = await mapApi.updateTerritory(editingTerritoryPoints.id, { points: apiPoints });
+      const updated = normalizeTerritory(extractData(res));
+      setTerritories(prev => prev.map(t => t.id === editingTerritoryPoints.id ? updated : t));
+      if (selectedTerritory?.id === editingTerritoryPoints.id) setSelectedTerritory(updated);
+      setEditingTerritoryPoints(null);
+      showSnackbar('Точки территории обновлены', 'success');
+    } catch {
+      showSnackbar('Ошибка сохранения точек', 'error');
+    }
+  }, [editingTerritoryPoints, selectedTerritory?.id, showSnackbar]);
+
+  const cancelEditingPoints = useCallback(() => {
+    setEditingTerritoryPoints(null);
+  }, []);
+
+  const deletePoint = useCallback((index: number, isDrawing: boolean) => {
+    if (isDrawing) {
+      setDrawingPoints(prev => {
+        if (prev.length <= 1) return prev;
+        return prev.filter((_, i) => i !== index);
+      });
+    } else {
+      setEditingTerritoryPoints(prev => {
+        if (!prev || prev.points.length <= 3) return prev;
+        return { ...prev, points: prev.points.filter((_, i) => i !== index) };
+      });
+    }
+  }, []);
+
+  const addPointOnEdge = useCallback((index: number, isDrawing: boolean) => {
+    if (isDrawing) {
+      setDrawingPoints(prev => {
+        const nextIdx = (index + 1) % prev.length;
+        const mid = {
+          x: (prev[index].x + prev[nextIdx].x) / 2,
+          y: (prev[index].y + prev[nextIdx].y) / 2,
+        };
+        const newPts = [...prev];
+        newPts.splice(index + 1, 0, mid);
+        return newPts;
+      });
+    } else {
+      setEditingTerritoryPoints(prev => {
+        if (!prev) return prev;
+        const pts = prev.points;
+        const nextIdx = (index + 1) % pts.length;
+        const mid = {
+          x: (pts[index].x + pts[nextIdx].x) / 2,
+          y: (pts[index].y + pts[nextIdx].y) / 2,
+        };
+        const newPts = [...pts];
+        newPts.splice(index + 1, 0, mid);
+        return { ...prev, points: newPts };
+      });
+    }
+  }, []);
 
   const handleEditTerritory = useCallback((territory: Territory) => {
     setEditingTerritory(territory);
@@ -1062,7 +1168,7 @@ export const MapPage: React.FC = () => {
           );
         })}
 
-        {/* Drawing mode preview — unchanged */}
+        {/* Drawing mode preview */}
         {mode === 'draw_territory' && drawingPoints.length > 0 && (() => {
           const svgPts = drawingPoints.map(p => ({
             x: (p.x / 100) * w,
@@ -1089,12 +1195,80 @@ export const MapPage: React.FC = () => {
                 />
               )}
               {svgPts.map((p, i) => (
-                <circle
-                  key={i}
-                  cx={p.x} cy={p.y} r={5}
-                  fill={i === 0 ? '#FF6B6B' : '#4ECDC4'}
-                  stroke="#fff" strokeWidth={2}
-                />
+                <g key={i}>
+                  {/* Invisible larger hit area */}
+                  <circle
+                    cx={p.x} cy={p.y} r={10}
+                    fill="transparent"
+                    style={{ cursor: 'grab', pointerEvents: 'auto' }}
+                    onMouseDown={e => handlePointDragStart(e, i, true)}
+                    onContextMenu={e => {
+                      e.preventDefault();
+                      if (drawingPoints.length > 1) deletePoint(i, true);
+                    }}
+                    onDoubleClick={e => {
+                      e.stopPropagation();
+                      addPointOnEdge(i, true);
+                    }}
+                  />
+                  {/* Visible small dot */}
+                  <circle
+                    cx={p.x} cy={p.y}
+                    r={draggingPointIndex === i && !editingTerritoryPoints ? 4 : 3}
+                    fill={i === 0 ? '#FF6B6B' : '#4ECDC4'}
+                    stroke="#fff" strokeWidth={1.5}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                </g>
+              ))}
+            </>
+          );
+        })()}
+
+        {/* Editing existing territory points */}
+        {editingTerritoryPoints && (() => {
+          const svgPts = editingTerritoryPoints.points.map(p => ({
+            x: (p.x / 100) * w,
+            y: (p.y / 100) * h,
+          }));
+          const pathD = svgPts.map((p, i) =>
+            `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+          ).join(' ') + ' Z';
+
+          return (
+            <>
+              <path
+                d={pathD}
+                fill={`rgba(${hexToRgbStr(editingTerritoryPoints.color)}, 0.2)`}
+                stroke="#FFD700"
+                strokeWidth={2}
+                strokeDasharray="6 3"
+                strokeLinejoin="round"
+              />
+              {svgPts.map((p, i) => (
+                <g key={i}>
+                  <circle
+                    cx={p.x} cy={p.y} r={10}
+                    fill="transparent"
+                    style={{ cursor: 'grab', pointerEvents: 'auto' }}
+                    onMouseDown={e => handlePointDragStart(e, i, false)}
+                    onContextMenu={e => {
+                      e.preventDefault();
+                      if (editingTerritoryPoints.points.length > 3) deletePoint(i, false);
+                    }}
+                    onDoubleClick={e => {
+                      e.stopPropagation();
+                      addPointOnEdge(i, false);
+                    }}
+                  />
+                  <circle
+                    cx={p.x} cy={p.y}
+                    r={draggingPointIndex === i && editingTerritoryPoints ? 4 : 3}
+                    fill="#FFD700"
+                    stroke="#fff" strokeWidth={1.5}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                </g>
               ))}
             </>
           );
@@ -1414,17 +1588,25 @@ export const MapPage: React.FC = () => {
           </Box>
         </Box>
 
-        <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 1 }}>
+        <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button fullWidth variant="outlined" startIcon={<EditIcon />} size="small"
+              onClick={() => handleEditTerritory(selectedTerritory)}
+              sx={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}>
+              Настройки
+            </Button>
+            <Button variant="outlined" size="small"
+              onClick={() => handleDeleteTerritory(selectedTerritory)}
+              sx={{ borderColor: 'rgba(255,100,100,0.2)', color: 'rgba(255,100,100,0.6)', minWidth: 'auto', px: 1.5,
+                '&:hover': { borderColor: 'rgba(255,100,100,0.4)', backgroundColor: 'rgba(255,100,100,0.05)' } }}>
+              <DeleteIcon fontSize="small" />
+            </Button>
+          </Box>
           <Button fullWidth variant="outlined" startIcon={<EditIcon />} size="small"
-            onClick={() => handleEditTerritory(selectedTerritory)}
-            sx={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}>
-            Редактировать
-          </Button>
-          <Button variant="outlined" size="small"
-            onClick={() => handleDeleteTerritory(selectedTerritory)}
-            sx={{ borderColor: 'rgba(255,100,100,0.2)', color: 'rgba(255,100,100,0.6)', minWidth: 'auto', px: 1.5,
-              '&:hover': { borderColor: 'rgba(255,100,100,0.4)', backgroundColor: 'rgba(255,100,100,0.05)' } }}>
-            <DeleteIcon fontSize="small" />
+            onClick={() => startEditingPoints(selectedTerritory!)}
+            sx={{ borderColor: 'rgba(255,215,0,0.3)', color: '#FFD700',
+              '&:hover': { borderColor: 'rgba(255,215,0,0.5)', backgroundColor: 'rgba(255,215,0,0.05)' } }}>
+            Редактировать форму
           </Button>
         </Box>
       </Box>
@@ -1554,8 +1736,10 @@ export const MapPage: React.FC = () => {
       </Box>
 
       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mb: 1, display: 'block' }}>
-        {mode === 'draw_territory'
-          ? 'Кликайте по карте чтобы добавить точки территории · Минимум 3 точки · «Завершить» для сохранения'
+        {editingTerritoryPoints
+          ? 'Перетащите точки для изменения формы · ПКМ — удалить точку · Двойной клик — добавить точку на ребре'
+          : mode === 'draw_territory'
+          ? 'Кликайте по карте чтобы добавить точки · Перетащите для коррекции · ПКМ — удалить · Двойной клик — добавить'
           : 'Клик — добавить маркер · Клик по территории — настройки · Перетаскивание — переместить · Двойной клик — вложенная карта · Alt+drag / СКМ — пан · Колёсико — зум'
         }
       </Typography>
@@ -1621,6 +1805,30 @@ export const MapPage: React.FC = () => {
             </Box>
           )}
         </Box>
+
+        {/* Editing territory points floating panel */}
+        {editingTerritoryPoints && (
+          <Box sx={{
+            position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 30, display: 'flex', alignItems: 'center', gap: 1.5,
+            backgroundColor: 'rgba(26,26,46,0.95)', padding: '10px 20px',
+            borderRadius: 2, border: '1px solid rgba(255,215,0,0.3)',
+            backdropFilter: 'blur(8px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          }}>
+            <Typography variant="body2" sx={{ color: '#FFD700', mr: 1, whiteSpace: 'nowrap' }}>
+              ✏️ {editingTerritoryPoints.name} — {editingTerritoryPoints.points.length} точек
+            </Typography>
+            <Button size="small" variant="outlined" onClick={cancelEditingPoints}
+              sx={{ borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)',
+                '&:hover': { borderColor: 'rgba(255,255,255,0.4)' } }}>
+              Отмена
+            </Button>
+            <DndButton size="small" variant="contained" onClick={saveEditingPoints}
+              sx={{ minWidth: 100 }}>
+              Сохранить
+            </DndButton>
+          </Box>
+        )}
 
         {/* Transition overlay */}
         {transitioning && (
