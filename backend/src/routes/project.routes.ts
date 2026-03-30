@@ -1,18 +1,44 @@
 import { Router } from 'express';
-import { ProjectController } from '../controllers/project.controller';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+import { createDiskUpload } from '../middleware/createUpload';
+
+const upload = createDiskUpload({ folder: 'maps' });
+
+import {
+  getProjects,
+  getProjectById,
+  createProject,
+  updateProject,
+  deleteProject,
+  uploadProjectMap,
+  exportProject,
+  importProject,
+} from '../controllers/project.controller';
+
 import { validateRequest } from '../middleware/validateRequest';
-import { createProjectSchema, updateProjectSchema } from '@campaigner/shared';
-import { uploadMapImage } from '../middleware/upload';
+import {
+  createProjectSchema,
+  updateProjectSchema,
+} from '@campaigner/shared';
 
 const router = Router();
 
-router.get('/', ProjectController.getAll);
-router.get('/:id', ProjectController.getById);
-router.get('/:id/export', ProjectController.exportProject);
-router.post('/', validateRequest({ body: createProjectSchema }), ProjectController.create);
-router.post('/import', ProjectController.importProject);
-router.put('/:id', validateRequest({ body: updateProjectSchema }), ProjectController.update);
-router.delete('/:id', ProjectController.delete);
-router.post('/:id/map', uploadMapImage, ProjectController.uploadMap);
+const uploadsDir = path.resolve('data/uploads/maps');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
-export { router as projectRoutes };
+router.get('/', getProjects);
+router.get('/:id', getProjectById);
+router.post('/', validateRequest({ body: createProjectSchema }), createProject);
+router.put('/:id', validateRequest({ body: updateProjectSchema }), updateProject);
+router.delete('/:id', deleteProject);
+
+router.post('/:id/map', upload.single('mapImage'), uploadProjectMap);
+router.get('/:id/export', exportProject);
+router.post('/import', importProject);
+
+export default router;

@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { MapService } from './map.service.js';
+import { ValidationError } from '../middleware/errorHandler';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -232,7 +233,7 @@ export class ProjectService {
     const db = getDb();
 
     if (!data.version || !data.project?.name) {
-      throw new Error('Invalid export file format');
+      throw new ValidationError('Invalid export file format');
     }
 
     const transaction = db.transaction(() => {
