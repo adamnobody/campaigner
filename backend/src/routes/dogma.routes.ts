@@ -77,4 +77,4 @@ router.put(
   DogmaController.setTags
 );
 
-export { router as dogmaRoutes };
+export default router;

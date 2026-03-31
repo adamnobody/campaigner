@@ -17,4 +17,4 @@ router.get(
   SearchController.search
 );
 
-export { router as searchRoutes };
+export default router;

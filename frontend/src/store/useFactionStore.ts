@@ -49,9 +49,11 @@ export const useFactionStore = create<FactionState>((set, get) => ({
 
   fetchFactions: async (projectId, params = {}) => {
     const isAppend = params.append;
+    const { append, ...queryParams } = params;
+
     set({ [isAppend ? 'loadingMore' : 'loading']: true });
     try {
-      const res = await factionsApi.getAll(projectId, params);
+      const res = await factionsApi.getAll(projectId, queryParams);
       const items = res.data.data || [];
       const total = res.data.total || 0;
       set(state => ({

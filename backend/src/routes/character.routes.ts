@@ -117,4 +117,4 @@ router.delete(
   CharacterController.deleteRelationship
 );
 
-export { router as characterRoutes };
+export default router;

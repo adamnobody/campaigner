@@ -11,10 +11,10 @@ export const createDynastySchema = z.object({
   secondaryColor: z.string().max(50).optional(),
   foundedDate: z.string().max(100).optional(),
   extinctDate: z.string().max(100).optional(),
-  founderId: z.number().int().positive().optional(),
-  currentLeaderId: z.number().int().positive().optional(),
-  heirId: z.number().int().positive().optional(),
-  linkedFactionId: z.number().int().positive().optional(),
+  founderId: z.number().int().positive().nullable().optional(),
+  currentLeaderId: z.number().int().positive().nullable().optional(),
+  heirId: z.number().int().positive().nullable().optional(),
+  linkedFactionId: z.number().int().positive().nullable().optional(),
   sortOrder: z.number().int().default(0),
 });
 

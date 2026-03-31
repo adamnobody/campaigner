@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 
 interface Hotkey {
-  /** Physical key code (e.g. 'KeyK', 'KeyS', 'Slash') or logical key (e.g. 'Escape') */
   code?: string;
-  /** Logical key — fallback if code not set (e.g. 'k', 'Escape') */
   key?: string;
   ctrl?: boolean;
   shift?: boolean;
@@ -15,20 +13,30 @@ interface Hotkey {
 export function useHotkeys(hotkeys: Hotkey[]) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      const target = e.target;
+      const element = target instanceof HTMLElement ? target : null;
+
+      const tagName = element?.tagName?.toLowerCase?.() ?? '';
+      const isInput =
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        element?.isContentEditable === true;
+
+      const eventKey = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+      const eventCode = typeof e.code === 'string' ? e.code : '';
 
       for (const hk of hotkeys) {
         const ctrlMatch = hk.ctrl ? (e.ctrlKey || e.metaKey) : !(e.ctrlKey || e.metaKey);
         const shiftMatch = hk.shift ? e.shiftKey : !e.shiftKey;
         const altMatch = hk.alt ? e.altKey : !e.altKey;
 
-        // Match by physical code first (layout-independent), fallback to logical key
         let keyMatch = false;
+
         if (hk.code) {
-          keyMatch = e.code === hk.code;
+          keyMatch = eventCode === hk.code;
         } else if (hk.key) {
-          keyMatch = e.key.toLowerCase() === hk.key.toLowerCase() || e.code === `Key${hk.key.toUpperCase()}`;
+          const hotkey = hk.key.toLowerCase();
+          keyMatch = eventKey === hotkey || eventCode === `Key${hk.key.toUpperCase()}`;
         }
 
         if (keyMatch && ctrlMatch && shiftMatch && altMatch) {

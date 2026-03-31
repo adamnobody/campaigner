@@ -75,4 +75,4 @@ router.put(
   TimelineController.setTags
 );
 
-export { router as timelineRoutes };
+export default router;

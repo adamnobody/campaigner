@@ -67,4 +67,4 @@ router.put(
   NoteController.setTags
 );
 
-export { router as noteRoutes };
+export default router;
