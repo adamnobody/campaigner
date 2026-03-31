@@ -1,71 +1,150 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { mapController } from '../controllers/map.controller.js';
+import { z } from 'zod';
+import { MapController } from '../controllers/map.controller.js';
+import { validateRequest } from '../middleware/validateRequest';
+import {
+  createMapSchema,
+  updateMapSchema,
+  createMarkerSchema,
+  updateMarkerSchema,
+  createTerritorySchema,
+  updateTerritorySchema,
+} from '@campaigner/shared';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
+
+const projectIdParamsSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+});
+
+const mapIdParamsSchema = z.object({
+  mapId: z.coerce.number().int().positive(),
+});
+
+const markerIdParamsSchema = z.object({
+  markerId: z.coerce.number().int().positive(),
+});
+
+const territoryIdParamsSchema = z.object({
+  territoryId: z.coerce.number().int().positive(),
+});
 
 // ==================== Карты ====================
-router.get('/projects/:projectId/maps/root', (req, res) =>
-  mapController.getRootMap(req, res)
+
+router.get(
+  '/projects/:projectId/maps/root',
+  validateRequest({ params: projectIdParamsSchema }),
+  MapController.getRootMap
 );
 
-router.get('/projects/:projectId/maps/tree', (req, res) =>
-  mapController.getMapTree(req, res)
+router.get(
+  '/projects/:projectId/maps/tree',
+  validateRequest({ params: projectIdParamsSchema }),
+  MapController.getMapTree
 );
 
-router.get('/maps/:mapId', (req, res) =>
-  mapController.getMapById(req, res)
+router.get(
+  '/maps/:mapId',
+  validateRequest({ params: mapIdParamsSchema }),
+  MapController.getMapById
 );
 
-router.post('/maps', (req, res) =>
-  mapController.createMap(req, res)
+router.post(
+  '/maps',
+  validateRequest({ body: createMapSchema }),
+  MapController.createMap
 );
 
-router.put('/maps/:mapId', (req, res) =>
-  mapController.updateMap(req, res)
+router.put(
+  '/maps/:mapId',
+  validateRequest({
+    params: mapIdParamsSchema,
+    body: updateMapSchema,
+  }),
+  MapController.updateMap
 );
 
-router.delete('/maps/:mapId', (req, res) =>
-  mapController.deleteMap(req, res)
+router.delete(
+  '/maps/:mapId',
+  validateRequest({ params: mapIdParamsSchema }),
+  MapController.deleteMap
 );
 
-router.post('/maps/:mapId/image', upload.single('image'), (req, res) =>
-  mapController.uploadMapImage(req, res)
+router.post(
+  '/maps/:mapId/image',
+  validateRequest({ params: mapIdParamsSchema }),
+  upload.single('image'),
+  MapController.uploadMapImage
 );
 
 // ==================== Маркеры ====================
-router.get('/maps/:mapId/markers', (req, res) =>
-  mapController.getMarkers(req, res)
+
+router.get(
+  '/maps/:mapId/markers',
+  validateRequest({ params: mapIdParamsSchema }),
+  MapController.getMarkers
 );
 
-router.post('/maps/:mapId/markers', (req, res) =>
-  mapController.createMarker(req, res)
+router.post(
+  '/maps/:mapId/markers',
+  validateRequest({
+    params: mapIdParamsSchema,
+    body: createMarkerSchema,
+  }),
+  MapController.createMarker
 );
 
-router.put('/markers/:markerId', (req, res) =>
-  mapController.updateMarker(req, res)
+router.put(
+  '/markers/:markerId',
+  validateRequest({
+    params: markerIdParamsSchema,
+    body: updateMarkerSchema,
+  }),
+  MapController.updateMarker
 );
 
-router.delete('/markers/:markerId', (req, res) =>
-  mapController.deleteMarker(req, res)
+router.delete(
+  '/markers/:markerId',
+  validateRequest({ params: markerIdParamsSchema }),
+  MapController.deleteMarker
 );
 
 // ==================== Территории ====================
-router.get('/maps/:mapId/territories', (req, res) =>
-  mapController.getTerritories(req, res)
+
+router.get(
+  '/maps/:mapId/territories',
+  validateRequest({ params: mapIdParamsSchema }),
+  MapController.getTerritories
 );
 
-router.post('/maps/:mapId/territories', (req, res) =>
-  mapController.createTerritory(req, res)
+router.post(
+  '/maps/:mapId/territories',
+  validateRequest({
+    params: mapIdParamsSchema,
+    body: createTerritorySchema,
+  }),
+  MapController.createTerritory
 );
 
-router.put('/territories/:territoryId', (req, res) =>
-  mapController.updateTerritory(req, res)
+router.put(
+  '/territories/:territoryId',
+  validateRequest({
+    params: territoryIdParamsSchema,
+    body: updateTerritorySchema,
+  }),
+  MapController.updateTerritory
 );
 
-router.delete('/territories/:territoryId', (req, res) =>
-  mapController.deleteTerritory(req, res)
+router.delete(
+  '/territories/:territoryId',
+  validateRequest({ params: territoryIdParamsSchema }),
+  MapController.deleteTerritory
 );
 
 export default router;

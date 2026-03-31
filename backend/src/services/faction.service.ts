@@ -1,4 +1,5 @@
 import { getDb } from '../db/connection';
+import { NotFoundError } from '../middleware/errorHandler';
 
 interface FactionFilters {
   type?: string;
@@ -90,8 +91,25 @@ function toRelation(row: any) {
   };
 }
 
-export class FactionService {
+function ensureRankExists(id: number) {
+  const db = getDb();
+  const row = db.prepare('SELECT id FROM faction_ranks WHERE id = ?').get(id) as { id: number } | undefined;
+  if (!row) throw new NotFoundError('Faction rank');
+}
 
+function ensureMemberExists(id: number) {
+  const db = getDb();
+  const row = db.prepare('SELECT id FROM faction_members WHERE id = ?').get(id) as { id: number } | undefined;
+  if (!row) throw new NotFoundError('Faction member');
+}
+
+function ensureRelationExists(id: number) {
+  const db = getDb();
+  const row = db.prepare('SELECT id FROM faction_relations WHERE id = ?').get(id) as { id: number } | undefined;
+  if (!row) throw new NotFoundError('Faction relation');
+}
+
+export class FactionService {
   // ==================== FACTIONS CRUD ====================
 
   static getAll(projectId: number, filters: FactionFilters = {}) {
@@ -133,7 +151,7 @@ export class FactionService {
 
     const factions = rows.map(row => {
       const faction = toFaction(row);
-      // Get tags
+
       const tags = db.prepare(`
         SELECT t.id, t.name, t.color
         FROM tags t
@@ -165,11 +183,10 @@ export class FactionService {
       WHERE f.id = ?
     `).get(id) as any;
 
-    if (!row) throw new Error('Faction not found');
+    if (!row) throw new NotFoundError('Faction');
 
     const faction = toFaction(row);
 
-    // Tags
     const tags = db.prepare(`
       SELECT t.id, t.name, t.color
       FROM tags t
@@ -177,12 +194,10 @@ export class FactionService {
       WHERE ta.entity_type = 'faction' AND ta.entity_id = ?
     `).all(id) as any[];
 
-    // Ranks
     const rankRows = db.prepare(`
       SELECT * FROM faction_ranks WHERE faction_id = ? ORDER BY level DESC
     `).all(id) as any[];
 
-    // Members
     const memberRows = db.prepare(`
       SELECT fm.*,
         c.name as character_name,
@@ -196,7 +211,6 @@ export class FactionService {
       ORDER BY COALESCE(fr.level, -1) DESC, c.name ASC
     `).all(id) as any[];
 
-    // Child factions
     const childRows = db.prepare(`
       SELECT id, name FROM factions WHERE parent_faction_id = ? ORDER BY name
     `).all(id) as any[];
@@ -216,6 +230,7 @@ export class FactionService {
 
   static create(data: any) {
     const db = getDb();
+
     const result = db.prepare(`
       INSERT INTO factions (
         project_id, name, type, custom_type, state_type, custom_state_type,
@@ -224,33 +239,56 @@ export class FactionService {
         parent_faction_id, sort_order
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      data.projectId, data.name, data.type || 'other',
-      data.customType || '', data.stateType || '', data.customStateType || '',
-      data.motto || '', data.description || '', data.history || '',
-      data.goals || '', data.headquarters || '', data.territory || '',
-      data.status || 'active', data.color || '', data.secondaryColor || '',
-      data.foundedDate || '', data.disbandedDate || '',
-      data.parentFactionId || null, data.sortOrder || 0,
+      data.projectId,
+      data.name,
+      data.type || 'other',
+      data.customType || '',
+      data.stateType || '',
+      data.customStateType || '',
+      data.motto || '',
+      data.description || '',
+      data.history || '',
+      data.goals || '',
+      data.headquarters || '',
+      data.territory || '',
+      data.status || 'active',
+      data.color || '',
+      data.secondaryColor || '',
+      data.foundedDate || '',
+      data.disbandedDate || '',
+      data.parentFactionId || null,
+      data.sortOrder || 0,
     );
+
     return this.getById(result.lastInsertRowid as number);
   }
 
   static update(id: number, data: any) {
     const db = getDb();
-    const existing = this.getById(id);
-    if (!existing) throw new Error('Faction not found');
+    this.getById(id);
 
     const fields: string[] = [];
     const values: any[] = [];
 
     const map: Record<string, string> = {
-      name: 'name', type: 'type', customType: 'custom_type',
-      stateType: 'state_type', customStateType: 'custom_state_type',
-      motto: 'motto', description: 'description', history: 'history',
-      goals: 'goals', headquarters: 'headquarters', territory: 'territory',
-      status: 'status', color: 'color', secondaryColor: 'secondary_color',
-      foundedDate: 'founded_date', disbandedDate: 'disbanded_date',
-      parentFactionId: 'parent_faction_id', sortOrder: 'sort_order',
+      name: 'name',
+      type: 'type',
+      customType: 'custom_type',
+      stateType: 'state_type',
+      customStateType: 'custom_state_type',
+      motto: 'motto',
+      description: 'description',
+      history: 'history',
+      goals: 'goals',
+      headquarters: 'headquarters',
+      territory: 'territory',
+      status: 'status',
+      color: 'color',
+      secondaryColor: 'secondary_color',
+      foundedDate: 'founded_date',
+      disbandedDate: 'disbanded_date',
+      parentFactionId: 'parent_faction_id',
+      sortOrder: 'sort_order',
     };
 
     for (const [key, col] of Object.entries(map)) {
@@ -270,11 +308,13 @@ export class FactionService {
   }
 
   static delete(id: number) {
+    this.getById(id);
     const db = getDb();
     db.prepare('DELETE FROM factions WHERE id = ?').run(id);
   }
 
   static updateImage(id: number, field: 'image_path' | 'banner_path', imagePath: string) {
+    this.getById(id);
     const db = getDb();
     db.prepare(`UPDATE factions SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`).run(imagePath, id);
     return this.getById(id);
@@ -284,31 +324,48 @@ export class FactionService {
 
   static getRanks(factionId: number) {
     const db = getDb();
-    const rows = db.prepare('SELECT * FROM faction_ranks WHERE faction_id = ? ORDER BY level DESC').all(factionId) as any[];
+    const rows = db.prepare(`
+      SELECT * FROM faction_ranks WHERE faction_id = ? ORDER BY level DESC
+    `).all(factionId) as any[];
+
     return rows.map(toRank);
   }
 
   static createRank(data: any) {
     const db = getDb();
+
     const result = db.prepare(`
       INSERT INTO faction_ranks (faction_id, name, level, description, permissions, icon, color)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
-      data.factionId, data.name, data.level ?? 0,
-      data.description || '', data.permissions || '',
-      data.icon || '', data.color || '',
+      data.factionId,
+      data.name,
+      data.level ?? 0,
+      data.description || '',
+      data.permissions || '',
+      data.icon || '',
+      data.color || '',
     );
-    return toRank(db.prepare('SELECT * FROM faction_ranks WHERE id = ?').get(result.lastInsertRowid));
+
+    return toRank(
+      db.prepare('SELECT * FROM faction_ranks WHERE id = ?').get(result.lastInsertRowid)
+    );
   }
 
   static updateRank(id: number, data: any) {
+    ensureRankExists(id);
     const db = getDb();
+
     const fields: string[] = [];
     const values: any[] = [];
 
     const map: Record<string, string> = {
-      name: 'name', level: 'level', description: 'description',
-      permissions: 'permissions', icon: 'icon', color: 'color',
+      name: 'name',
+      level: 'level',
+      description: 'description',
+      permissions: 'permissions',
+      icon: 'icon',
+      color: 'color',
     };
 
     for (const [key, col] of Object.entries(map)) {
@@ -322,10 +379,12 @@ export class FactionService {
       values.push(id);
       db.prepare(`UPDATE faction_ranks SET ${fields.join(', ')} WHERE id = ?`).run(...values);
     }
+
     return toRank(db.prepare('SELECT * FROM faction_ranks WHERE id = ?').get(id));
   }
 
   static deleteRank(id: number) {
+    ensureRankExists(id);
     const db = getDb();
     db.prepare('UPDATE faction_members SET rank_id = NULL WHERE rank_id = ?').run(id);
     db.prepare('DELETE FROM faction_ranks WHERE id = ?').run(id);
@@ -335,6 +394,7 @@ export class FactionService {
 
   static getMembers(factionId: number) {
     const db = getDb();
+
     const rows = db.prepare(`
       SELECT fm.*,
         c.name as character_name,
@@ -347,18 +407,25 @@ export class FactionService {
       WHERE fm.faction_id = ?
       ORDER BY COALESCE(fr.level, -1) DESC, c.name ASC
     `).all(factionId) as any[];
+
     return rows.map(toMember);
   }
 
   static addMember(data: any) {
     const db = getDb();
+
     const result = db.prepare(`
       INSERT INTO faction_members (faction_id, character_id, rank_id, role, joined_date, left_date, is_active, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      data.factionId, data.characterId, data.rankId || null,
-      data.role || '', data.joinedDate || '', data.leftDate || '',
-      data.isActive !== false ? 1 : 0, data.notes || '',
+      data.factionId,
+      data.characterId,
+      data.rankId || null,
+      data.role || '',
+      data.joinedDate || '',
+      data.leftDate || '',
+      data.isActive !== false ? 1 : 0,
+      data.notes || '',
     );
 
     const row = db.prepare(`
@@ -377,13 +444,19 @@ export class FactionService {
   }
 
   static updateMember(id: number, data: any) {
+    ensureMemberExists(id);
     const db = getDb();
+
     const fields: string[] = [];
     const values: any[] = [];
 
     const map: Record<string, string> = {
-      rankId: 'rank_id', role: 'role', joinedDate: 'joined_date',
-      leftDate: 'left_date', isActive: 'is_active', notes: 'notes',
+      rankId: 'rank_id',
+      role: 'role',
+      joinedDate: 'joined_date',
+      leftDate: 'left_date',
+      isActive: 'is_active',
+      notes: 'notes',
     };
 
     for (const [key, col] of Object.entries(map)) {
@@ -414,6 +487,7 @@ export class FactionService {
   }
 
   static removeMember(id: number) {
+    ensureMemberExists(id);
     const db = getDb();
     db.prepare('DELETE FROM faction_members WHERE id = ?').run(id);
   }
@@ -422,6 +496,7 @@ export class FactionService {
 
   static getRelations(projectId: number) {
     const db = getDb();
+
     const rows = db.prepare(`
       SELECT fr.*,
         sf.name as source_faction_name,
@@ -432,20 +507,26 @@ export class FactionService {
       WHERE fr.project_id = ?
       ORDER BY fr.created_at DESC
     `).all(projectId) as any[];
+
     return rows.map(toRelation);
   }
 
   static createRelation(data: any) {
     const db = getDb();
+
     const result = db.prepare(`
       INSERT INTO faction_relations (
         project_id, source_faction_id, target_faction_id,
         relation_type, custom_label, description, started_date, is_bidirectional
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      data.projectId, data.sourceFactionId, data.targetFactionId,
-      data.relationType || 'neutral', data.customLabel || '',
-      data.description || '', data.startedDate || '',
+      data.projectId,
+      data.sourceFactionId,
+      data.targetFactionId,
+      data.relationType || 'neutral',
+      data.customLabel || '',
+      data.description || '',
+      data.startedDate || '',
       data.isBidirectional !== false ? 1 : 0,
     );
 
@@ -463,13 +544,17 @@ export class FactionService {
   }
 
   static updateRelation(id: number, data: any) {
+    ensureRelationExists(id);
     const db = getDb();
+
     const fields: string[] = [];
     const values: any[] = [];
 
     const map: Record<string, string> = {
-      relationType: 'relation_type', customLabel: 'custom_label',
-      description: 'description', startedDate: 'started_date',
+      relationType: 'relation_type',
+      customLabel: 'custom_label',
+      description: 'description',
+      startedDate: 'started_date',
       isBidirectional: 'is_bidirectional',
     };
 
@@ -499,6 +584,7 @@ export class FactionService {
   }
 
   static deleteRelation(id: number) {
+    ensureRelationExists(id);
     const db = getDb();
     db.prepare('DELETE FROM faction_relations WHERE id = ?').run(id);
   }

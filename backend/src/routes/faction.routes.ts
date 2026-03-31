@@ -1,68 +1,227 @@
 import { Router } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import { z } from 'zod';
 import { FactionController } from '../controllers/faction.controller';
+import { validateRequest } from '../middleware/validateRequest';
+import { createDiskUpload } from '../middleware/createUpload';
+import {
+  createFactionSchema,
+  updateFactionSchema,
+  createFactionRankSchema,
+  updateFactionRankSchema,
+  createFactionMemberSchema,
+  updateFactionMemberSchema,
+  createFactionRelationSchema,
+} from '@campaigner/shared';
 
 const router = Router();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = path.resolve(__dirname, '../../../data/uploads/factions');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `faction-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
-  },
+const upload = createDiskUpload({
+  folder: 'factions',
+  maxFileSize: 10 * 1024 * 1024,
+  filenamePrefix: 'faction',
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.svg'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, allowed.includes(ext));
-  },
+const idParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
 });
 
-// CRUD
-router.get('/', FactionController.getAll);
-router.get('/relations', FactionController.getRelations);
-router.get('/graph', FactionController.getGraph);
-router.get('/:id', FactionController.getById);
-router.post('/', FactionController.create);
-router.put('/:id', FactionController.update);
-router.delete('/:id', FactionController.delete);
+const rankParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  rankId: z.coerce.number().int().positive(),
+});
 
-// Images
-router.post('/:id/image', upload.single('image'), FactionController.uploadImage);
-router.post('/:id/banner', upload.single('banner'), FactionController.uploadBanner);
+const memberParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  memberId: z.coerce.number().int().positive(),
+});
 
-// Tags
-router.put('/:id/tags', FactionController.setTags);
+const relationParamsSchema = z.object({
+  relationId: z.coerce.number().int().positive(),
+});
 
-// Ranks
-router.get('/:id/ranks', FactionController.getRanks);
-router.post('/:id/ranks', FactionController.createRank);
-router.put('/:id/ranks/:rankId', FactionController.updateRank);
-router.delete('/:id/ranks/:rankId', FactionController.deleteRank);
+const getAllQuerySchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  type: z.string().optional(),
+  status: z.string().optional(),
+  search: z.string().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
 
-// Members
-router.get('/:id/members', FactionController.getMembers);
-router.post('/:id/members', FactionController.addMember);
-router.put('/:id/members/:memberId', FactionController.updateMember);
-router.delete('/:id/members/:memberId', FactionController.removeMember);
+const projectQuerySchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+});
 
-// Relations
-router.post('/relations', FactionController.createRelation);
-router.put('/relations/:relationId', FactionController.updateRelation);
-router.delete('/relations/:relationId', FactionController.deleteRelation);
+const setTagsSchema = z.object({
+  tagIds: z.array(z.number().int().positive()),
+});
+
+const updateRelationSchema = z.object({
+  relationType: z.string().min(1).max(50).optional(),
+  customLabel: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  startedDate: z.string().max(100).optional(),
+  isBidirectional: z.boolean().optional(),
+});
+
+// ==================== CRUD ====================
+
+router.get(
+  '/',
+  validateRequest({ query: getAllQuerySchema }),
+  FactionController.getAll
+);
+
+router.get(
+  '/relations',
+  validateRequest({ query: projectQuerySchema }),
+  FactionController.getRelations
+);
+
+router.get(
+  '/graph',
+  validateRequest({ query: projectQuerySchema }),
+  FactionController.getGraph
+);
+
+router.get(
+  '/:id',
+  validateRequest({ params: idParamsSchema }),
+  FactionController.getById
+);
+
+router.post(
+  '/',
+  validateRequest({ body: createFactionSchema }),
+  FactionController.create
+);
+
+router.put(
+  '/:id',
+  validateRequest({
+    params: idParamsSchema,
+    body: updateFactionSchema,
+  }),
+  FactionController.update
+);
+
+router.delete(
+  '/:id',
+  validateRequest({ params: idParamsSchema }),
+  FactionController.delete
+);
+
+// ==================== IMAGES ====================
+
+router.post(
+  '/:id/image',
+  validateRequest({ params: idParamsSchema }),
+  upload.single('image'),
+  FactionController.uploadImage
+);
+
+router.post(
+  '/:id/banner',
+  validateRequest({ params: idParamsSchema }),
+  upload.single('banner'),
+  FactionController.uploadBanner
+);
+
+// ==================== TAGS ====================
+
+router.put(
+  '/:id/tags',
+  validateRequest({
+    params: idParamsSchema,
+    body: setTagsSchema,
+  }),
+  FactionController.setTags
+);
+
+// ==================== RANKS ====================
+
+router.get(
+  '/:id/ranks',
+  validateRequest({ params: idParamsSchema }),
+  FactionController.getRanks
+);
+
+router.post(
+  '/:id/ranks',
+  validateRequest({
+    params: idParamsSchema,
+    body: createFactionRankSchema.omit({ factionId: true }),
+  }),
+  FactionController.createRank
+);
+
+router.put(
+  '/:id/ranks/:rankId',
+  validateRequest({
+    params: rankParamsSchema,
+    body: updateFactionRankSchema,
+  }),
+  FactionController.updateRank
+);
+
+router.delete(
+  '/:id/ranks/:rankId',
+  validateRequest({ params: rankParamsSchema }),
+  FactionController.deleteRank
+);
+
+// ==================== MEMBERS ====================
+
+router.get(
+  '/:id/members',
+  validateRequest({ params: idParamsSchema }),
+  FactionController.getMembers
+);
+
+router.post(
+  '/:id/members',
+  validateRequest({
+    params: idParamsSchema,
+    body: createFactionMemberSchema.omit({ factionId: true }),
+  }),
+  FactionController.addMember
+);
+
+router.put(
+  '/:id/members/:memberId',
+  validateRequest({
+    params: memberParamsSchema,
+    body: updateFactionMemberSchema,
+  }),
+  FactionController.updateMember
+);
+
+router.delete(
+  '/:id/members/:memberId',
+  validateRequest({ params: memberParamsSchema }),
+  FactionController.removeMember
+);
+
+// ==================== RELATIONS ====================
+
+router.post(
+  '/relations',
+  validateRequest({ body: createFactionRelationSchema }),
+  FactionController.createRelation
+);
+
+router.put(
+  '/relations/:relationId',
+  validateRequest({
+    params: relationParamsSchema,
+    body: updateRelationSchema,
+  }),
+  FactionController.updateRelation
+);
+
+router.delete(
+  '/relations/:relationId',
+  validateRequest({ params: relationParamsSchema }),
+  FactionController.deleteRelation
+);
 
 export default router;

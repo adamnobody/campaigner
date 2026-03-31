@@ -70,6 +70,14 @@ export function errorHandler(
     });
   }
 
+  if (err && typeof err === 'object' && 'name' in err && err.name === 'MulterError') {
+    const multerError = err as { message?: string };
+    return res.status(400).json({
+      success: false,
+      error: multerError.message || 'File upload error',
+    });
+  }
+
   console.error('[Unhandled Error]', err);
 
   return res.status(500).json({

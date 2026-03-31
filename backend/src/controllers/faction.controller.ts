@@ -1,247 +1,185 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { FactionService } from '../services/faction.service';
 import { TagService } from '../services/tag.service';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ok, created } from '../utils/apiResponse';
+import { parseId } from '../utils/parseId';
+import { BadRequestError } from '../middleware/errorHandler';
 
 export class FactionController {
-
   // ==================== FACTIONS CRUD ====================
 
-  static async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const filters = {
-        type: req.query.type as string,
-        status: req.query.status as string,
-        search: req.query.search as string,
-        limit: parseInt(req.query.limit as string) || 50,
-        offset: parseInt(req.query.offset as string) || 0,
-      };
-      const result = FactionService.getAll(projectId, filters);
-      res.json({ success: true, data: result.items, total: result.total });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getAll = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
 
-  static async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const faction = FactionService.getById(id);
-      res.json({ success: true, data: faction });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const limit = Number(req.query.limit);
+    const offset = Number(req.query.offset);
 
-  static async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const faction = FactionService.create(req.body);
-      res.status(201).json({ success: true, data: faction });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const filters = {
+      type: typeof req.query.type === 'string' ? req.query.type : undefined,
+      status: typeof req.query.status === 'string' ? req.query.status : undefined,
+      search: typeof req.query.search === 'string' ? req.query.search : undefined,
+      limit: Number.isFinite(limit) ? limit : 50,
+      offset: Number.isFinite(offset) ? offset : 0,
+    };
 
-  static async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const faction = FactionService.update(id, req.body);
-      res.json({ success: true, data: faction });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const result = FactionService.getAll(projectId, filters);
 
-  static async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      FactionService.delete(id);
-      res.json({ success: true, message: 'Faction deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+    return res.status(200).json({
+      success: true,
+      data: result.items,
+      total: result.total,
+    });
+  });
+
+  static getById = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'faction id');
+    const faction = FactionService.getById(id);
+    return ok(res, faction);
+  });
+
+  static create = asyncHandler(async (req: Request, res: Response) => {
+    const faction = FactionService.create(req.body);
+    return created(res, faction);
+  });
+
+  static update = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'faction id');
+    const faction = FactionService.update(id, req.body);
+    return ok(res, faction);
+  });
+
+  static delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'faction id');
+    FactionService.delete(id);
+    return ok(res, undefined, 'Faction deleted');
+  });
 
   // ==================== IMAGES ====================
 
-  static async uploadImage(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      if (!req.file) {
-        res.status(400).json({ success: false, error: 'No file uploaded' });
-        return;
-      }
-      const imagePath = `/uploads/factions/${req.file.filename}`;
-      const faction = FactionService.updateImage(id, 'image_path', imagePath);
-      res.json({ success: true, data: faction });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static uploadImage = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'faction id');
 
-  static async uploadBanner(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      if (!req.file) {
-        res.status(400).json({ success: false, error: 'No file uploaded' });
-        return;
-      }
-      const bannerPath = `/uploads/factions/${req.file.filename}`;
-      const faction = FactionService.updateImage(id, 'banner_path', bannerPath);
-      res.json({ success: true, data: faction });
-    } catch (error) {
-      next(error);
+    if (!req.file) {
+      throw new BadRequestError('No file uploaded');
     }
-  }
+
+    const imagePath = `/uploads/factions/${req.file.filename}`;
+    const faction = FactionService.updateImage(id, 'image_path', imagePath);
+
+    return ok(res, faction);
+  });
+
+  static uploadBanner = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'faction id');
+
+    if (!req.file) {
+      throw new BadRequestError('No file uploaded');
+    }
+
+    const bannerPath = `/uploads/factions/${req.file.filename}`;
+    const faction = FactionService.updateImage(id, 'banner_path', bannerPath);
+
+    return ok(res, faction);
+  });
 
   // ==================== TAGS ====================
 
-  static async setTags(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const faction = FactionService.getById(id);
-      const { tagIds } = req.body;
-      const tags = TagService.setTagsForEntity(faction.projectId, 'faction', id, tagIds);
-      res.json({ success: true, data: tags });
-    } catch (error) {
-      next(error);
+  static setTags = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'faction id');
+    const faction = FactionService.getById(id);
+    const tagIds = req.body?.tagIds;
+
+    if (!Array.isArray(tagIds)) {
+      throw new BadRequestError('tagIds must be an array');
     }
-  }
+
+    const tags = TagService.setTagsForEntity(faction.projectId, 'faction', id, tagIds);
+    return ok(res, tags);
+  });
 
   // ==================== RANKS ====================
 
-  static async getRanks(req: Request, res: Response, next: NextFunction) {
-    try {
-      const factionId = parseInt(req.params.id);
-      const ranks = FactionService.getRanks(factionId);
-      res.json({ success: true, data: ranks });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getRanks = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const ranks = FactionService.getRanks(factionId);
+    return ok(res, ranks);
+  });
 
-  static async createRank(req: Request, res: Response, next: NextFunction) {
-    try {
-      const factionId = parseInt(req.params.id);
-      const rank = FactionService.createRank({ ...req.body, factionId });
-      res.status(201).json({ success: true, data: rank });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static createRank = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const rank = FactionService.createRank({ ...req.body, factionId });
+    return created(res, rank);
+  });
 
-  static async updateRank(req: Request, res: Response, next: NextFunction) {
-    try {
-      const rankId = parseInt(req.params.rankId);
-      const rank = FactionService.updateRank(rankId, req.body);
-      res.json({ success: true, data: rank });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static updateRank = asyncHandler(async (req: Request, res: Response) => {
+    const rankId = parseId(req.params.rankId, 'rank id');
+    const rank = FactionService.updateRank(rankId, req.body);
+    return ok(res, rank);
+  });
 
-  static async deleteRank(req: Request, res: Response, next: NextFunction) {
-    try {
-      const rankId = parseInt(req.params.rankId);
-      FactionService.deleteRank(rankId);
-      res.json({ success: true, message: 'Rank deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static deleteRank = asyncHandler(async (req: Request, res: Response) => {
+    const rankId = parseId(req.params.rankId, 'rank id');
+    FactionService.deleteRank(rankId);
+    return ok(res, undefined, 'Rank deleted');
+  });
 
   // ==================== MEMBERS ====================
 
-  static async getMembers(req: Request, res: Response, next: NextFunction) {
-    try {
-      const factionId = parseInt(req.params.id);
-      const members = FactionService.getMembers(factionId);
-      res.json({ success: true, data: members });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getMembers = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const members = FactionService.getMembers(factionId);
+    return ok(res, members);
+  });
 
-  static async addMember(req: Request, res: Response, next: NextFunction) {
-    try {
-      const factionId = parseInt(req.params.id);
-      const member = FactionService.addMember({ ...req.body, factionId });
-      res.status(201).json({ success: true, data: member });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static addMember = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const member = FactionService.addMember({ ...req.body, factionId });
+    return created(res, member);
+  });
 
-  static async updateMember(req: Request, res: Response, next: NextFunction) {
-    try {
-      const memberId = parseInt(req.params.memberId);
-      const member = FactionService.updateMember(memberId, req.body);
-      res.json({ success: true, data: member });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static updateMember = asyncHandler(async (req: Request, res: Response) => {
+    const memberId = parseId(req.params.memberId, 'member id');
+    const member = FactionService.updateMember(memberId, req.body);
+    return ok(res, member);
+  });
 
-  static async removeMember(req: Request, res: Response, next: NextFunction) {
-    try {
-      const memberId = parseInt(req.params.memberId);
-      FactionService.removeMember(memberId);
-      res.json({ success: true, message: 'Member removed' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static removeMember = asyncHandler(async (req: Request, res: Response) => {
+    const memberId = parseId(req.params.memberId, 'member id');
+    FactionService.removeMember(memberId);
+    return ok(res, undefined, 'Member removed');
+  });
 
   // ==================== RELATIONS ====================
 
-  static async getRelations(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const relations = FactionService.getRelations(projectId);
-      res.json({ success: true, data: relations });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getRelations = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
+    const relations = FactionService.getRelations(projectId);
+    return ok(res, relations);
+  });
 
-  static async createRelation(req: Request, res: Response, next: NextFunction) {
-    try {
-      const relation = FactionService.createRelation(req.body);
-      res.status(201).json({ success: true, data: relation });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static createRelation = asyncHandler(async (req: Request, res: Response) => {
+    const relation = FactionService.createRelation(req.body);
+    return created(res, relation);
+  });
 
-  static async updateRelation(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.relationId);
-      const relation = FactionService.updateRelation(id, req.body);
-      res.json({ success: true, data: relation });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static updateRelation = asyncHandler(async (req: Request, res: Response) => {
+    const relationId = parseId(req.params.relationId, 'relation id');
+    const relation = FactionService.updateRelation(relationId, req.body);
+    return ok(res, relation);
+  });
 
-  static async deleteRelation(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.relationId);
-      FactionService.deleteRelation(id);
-      res.json({ success: true, message: 'Relation deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static deleteRelation = asyncHandler(async (req: Request, res: Response) => {
+    const relationId = parseId(req.params.relationId, 'relation id');
+    FactionService.deleteRelation(relationId);
+    return ok(res, undefined, 'Relation deleted');
+  });
 
   // ==================== GRAPH ====================
 
-  static async getGraph(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const graph = FactionService.getGraph(projectId);
-      res.json({ success: true, data: graph });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getGraph = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
+    const graph = FactionService.getGraph(projectId);
+    return ok(res, graph);
+  });
 }

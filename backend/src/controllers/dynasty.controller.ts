@@ -1,147 +1,139 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { DynastyService } from '../services/dynasty.service';
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const storage = multer.diskStorage({
-  destination: path.resolve(__dirname, '../../../data/uploads/dynasties'),
-  filename: (_req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+import { asyncHandler } from '../utils/asyncHandler';
+import { ok, created } from '../utils/apiResponse';
+import { parseId } from '../utils/parseId';
+import { BadRequestError } from '../middleware/errorHandler';
 
 export class DynastyController {
-  static getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const result = DynastyService.getAll(projectId, req.query);
-      res.json({ success: true, data: result.items, total: result.total });
-    } catch (e) { next(e); }
-  }
+  static getAll = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
 
-  static getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const dynasty = DynastyService.getById(parseInt(req.params.id));
-      res.json({ success: true, data: dynasty });
-    } catch (e) { next(e); }
-  }
+    const limit = Number(req.query.limit);
+    const offset = Number(req.query.offset);
 
-  static create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const dynasty = DynastyService.create(req.body);
-      res.status(201).json({ success: true, data: dynasty });
-    } catch (e) { next(e); }
-  }
+    const result = DynastyService.getAll(projectId, {
+      search: typeof req.query.search === 'string' ? req.query.search : undefined,
+      status: typeof req.query.status === 'string' ? req.query.status : undefined,
+      limit: Number.isFinite(limit) ? limit : 50,
+      offset: Number.isFinite(offset) ? offset : 0,
+    });
 
-  static update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const dynasty = DynastyService.update(parseInt(req.params.id), req.body);
-      res.json({ success: true, data: dynasty });
-    } catch (e) { next(e); }
-  }
+    return res.status(200).json({
+      success: true,
+      data: result.items,
+      total: result.total,
+    });
+  });
 
-  static delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      DynastyService.delete(parseInt(req.params.id));
-      res.json({ success: true, message: 'Dynasty deleted' });
-    } catch (e) { next(e); }
-  }
+  static getById = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'dynasty id');
+    const dynasty = DynastyService.getById(id);
+    return ok(res, dynasty);
+  });
 
-  static uploadImage = [
-    upload.single('image'),
-    (req: Request, res: Response, next: NextFunction) => {
-      try {
-        if (!req.file) throw new Error('No file uploaded');
-        const imagePath = `/uploads/dynasties/${req.file.filename}`;
-        const dynasty = DynastyService.uploadImage(parseInt(req.params.id), imagePath);
-        res.json({ success: true, data: dynasty });
-      } catch (e) { next(e); }
-    },
-  ];
+  static create = asyncHandler(async (req: Request, res: Response) => {
+    const dynasty = DynastyService.create(req.body);
+    return created(res, dynasty);
+  });
 
-  static setTags(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      DynastyService.setTags(id, req.body.tagIds || []);
-      const dynasty = DynastyService.getById(id);
-      res.json({ success: true, data: dynasty });
-    } catch (e) { next(e); }
-  }
+  static update = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'dynasty id');
+    const dynasty = DynastyService.update(id, req.body);
+    return ok(res, dynasty);
+  });
+
+  static delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'dynasty id');
+    DynastyService.delete(id);
+    return ok(res, undefined, 'Dynasty deleted');
+  });
+
+  static uploadImage = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'dynasty id');
+
+    if (!req.file) {
+      throw new BadRequestError('No file uploaded');
+    }
+
+    const imagePath = `/uploads/dynasties/${req.file.filename}`;
+    const dynasty = DynastyService.uploadImage(id, imagePath);
+    return ok(res, dynasty);
+  });
+
+  static setTags = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'dynasty id');
+    const tagIds = req.body?.tagIds;
+
+    if (!Array.isArray(tagIds)) {
+      throw new BadRequestError('tagIds must be an array');
+    }
+
+    DynastyService.setTags(id, tagIds);
+    const dynasty = DynastyService.getById(id);
+    return ok(res, dynasty);
+  });
 
   // Members
-  static addMember(req: Request, res: Response, next: NextFunction) {
-    try {
-      const dynastyId = parseInt(req.params.id);
-      const member = DynastyService.addMember(dynastyId, req.body);
-      res.status(201).json({ success: true, data: member });
-    } catch (e) { next(e); }
-  }
+  static addMember = asyncHandler(async (req: Request, res: Response) => {
+    const dynastyId = parseId(req.params.id, 'dynasty id');
+    const member = DynastyService.addMember(dynastyId, req.body);
+    return created(res, member);
+  });
 
-  static updateMember(req: Request, res: Response, next: NextFunction) {
-    try {
-      const member = DynastyService.updateMember(parseInt(req.params.memberId), req.body);
-      res.json({ success: true, data: member });
-    } catch (e) { next(e); }
-  }
+  static updateMember = asyncHandler(async (req: Request, res: Response) => {
+    const memberId = parseId(req.params.memberId, 'member id');
+    const member = DynastyService.updateMember(memberId, req.body);
+    return ok(res, member);
+  });
 
-  static removeMember(req: Request, res: Response, next: NextFunction) {
-    try {
-      DynastyService.removeMember(parseInt(req.params.memberId));
-      res.json({ success: true, message: 'Member removed' });
-    } catch (e) { next(e); }
-  }
+  static removeMember = asyncHandler(async (req: Request, res: Response) => {
+    const memberId = parseId(req.params.memberId, 'member id');
+    DynastyService.removeMember(memberId);
+    return ok(res, undefined, 'Member removed');
+  });
 
-  static saveGraphPositions(req: Request, res: Response, next: NextFunction) {
-    try {
-      const dynastyId = parseInt(req.params.id);
-      DynastyService.saveGraphPositions(dynastyId, req.body.positions || []);
-      res.json({ success: true, message: 'Positions saved' });
-    } catch (e) { next(e); }
-  }
-  
+  static saveGraphPositions = asyncHandler(async (req: Request, res: Response) => {
+    const dynastyId = parseId(req.params.id, 'dynasty id');
+    const positions = req.body?.positions;
+
+    if (!Array.isArray(positions)) {
+      throw new BadRequestError('positions must be an array');
+    }
+
+    DynastyService.saveGraphPositions(dynastyId, positions);
+    return ok(res, undefined, 'Positions saved');
+  });
+
   // Family links
-  static addFamilyLink(req: Request, res: Response, next: NextFunction) {
-    try {
-      const dynastyId = parseInt(req.params.id);
-      const link = DynastyService.addFamilyLink(dynastyId, req.body);
-      res.status(201).json({ success: true, data: link });
-    } catch (e) { next(e); }
-  }
+  static addFamilyLink = asyncHandler(async (req: Request, res: Response) => {
+    const dynastyId = parseId(req.params.id, 'dynasty id');
+    const link = DynastyService.addFamilyLink(dynastyId, req.body);
+    return created(res, link);
+  });
 
-  static deleteFamilyLink(req: Request, res: Response, next: NextFunction) {
-    try {
-      DynastyService.deleteFamilyLink(parseInt(req.params.linkId));
-      res.json({ success: true, message: 'Family link deleted' });
-    } catch (e) { next(e); }
-  }
+  static deleteFamilyLink = asyncHandler(async (req: Request, res: Response) => {
+    const linkId = parseId(req.params.linkId, 'family link id');
+    DynastyService.deleteFamilyLink(linkId);
+    return ok(res, undefined, 'Family link deleted');
+  });
 
   // Events
-  static addEvent(req: Request, res: Response, next: NextFunction) {
-    try {
-      const dynastyId = parseInt(req.params.id);
-      const event = DynastyService.addEvent(dynastyId, req.body);
-      res.status(201).json({ success: true, data: event });
-    } catch (e) { next(e); }
-  }
+  static addEvent = asyncHandler(async (req: Request, res: Response) => {
+    const dynastyId = parseId(req.params.id, 'dynasty id');
+    const event = DynastyService.addEvent(dynastyId, req.body);
+    return created(res, event);
+  });
 
-  static updateEvent(req: Request, res: Response, next: NextFunction) {
-    try {
-      const event = DynastyService.updateEvent(parseInt(req.params.eventId), req.body);
-      res.json({ success: true, data: event });
-    } catch (e) { next(e); }
-  }
+  static updateEvent = asyncHandler(async (req: Request, res: Response) => {
+    const eventId = parseId(req.params.eventId, 'event id');
+    const event = DynastyService.updateEvent(eventId, req.body);
+    return ok(res, event);
+  });
 
-  static deleteEvent(req: Request, res: Response, next: NextFunction) {
-    try {
-      DynastyService.deleteEvent(parseInt(req.params.eventId));
-      res.json({ success: true, message: 'Event deleted' });
-    } catch (e) { next(e); }
-  }
+  static deleteEvent = asyncHandler(async (req: Request, res: Response) => {
+    const eventId = parseId(req.params.eventId, 'event id');
+    DynastyService.deleteEvent(eventId);
+    return ok(res, undefined, 'Event deleted');
+  });
 }

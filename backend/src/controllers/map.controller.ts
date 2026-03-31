@@ -1,382 +1,108 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { mapService } from '../services/map.service.js';
-import { createMapSchema, updateMapSchema, createMarkerSchema, updateMarkerSchema, 
-createTerritorySchema, updateTerritorySchema } from '@campaigner/shared';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ok, created } from '../utils/apiResponse';
+import { parseId } from '../utils/parseId';
+import { BadRequestError } from '../middleware/errorHandler';
 
 export class MapController {
   // ==================== Карты ====================
 
-  /**
-   * GET /api/projects/:projectId/maps/root
-   * Получить корневую карту проекта
-   */
-  async getRootMap(req: Request, res: Response): Promise<void> {
-    try {
-      const { projectId } = req.params;
-      const pid = parseInt(projectId);
+  static getRootMap = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.params.projectId, 'project id');
+    const map = mapService.getRootMap(projectId);
+    return ok(res, map);
+  });
 
-      const map = mapService.getRootMap(pid);
-      
-      res.json({
-        success: true,
-        data: map,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
+  static getMapById = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+    const map = mapService.getMapByIdOrThrow(mapId);
+    return ok(res, map);
+  });
+
+  static getMapTree = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.params.projectId, 'project id');
+    const maps = mapService.getMapTree(projectId);
+    return ok(res, maps);
+  });
+
+  static createMap = asyncHandler(async (req: Request, res: Response) => {
+    const map = mapService.createMap(req.body);
+    return created(res, map);
+  });
+
+  static updateMap = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+    const updated = mapService.updateMap(mapId, req.body);
+    return ok(res, updated);
+  });
+
+  static uploadMapImage = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+
+    if (!req.file) {
+      throw new BadRequestError('File is required');
     }
-  }
 
-  /**
-   * GET /api/maps/:mapId
-   * Получить карту по ID
-   */
-  async getMapById(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const mid = parseInt(mapId);
+    const map = mapService.uploadMapImage(mapId, req.file);
+    return ok(res, map);
+  });
 
-      const map = mapService.getMapById(mid);
-      if (!map) {
-        res.status(404).json({
-          success: false,
-          error: 'Карта не найдена',
-        });
-        return;
-      }
-
-      res.json({
-        success: true,
-        data: map,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  /**
-   * GET /api/projects/:projectId/maps/tree
-   * Получить иерархию всех карт проекта
-   */
-  async getMapTree(req: Request, res: Response): Promise<void> {
-    try {
-      const { projectId } = req.params;
-      const pid = parseInt(projectId);
-
-      const maps = mapService.getMapTree(pid);
-
-      res.json({
-        success: true,
-        data: maps,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  /**
-   * POST /api/maps
-   * Создать новую карту
-   */
-  async createMap(req: Request, res: Response): Promise<void> {
-    try {
-      const validated = createMapSchema.parse(req.body);
-      const map = mapService.createMap(validated);
-
-      res.status(201).json({
-        success: true,
-        data: map,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  /**
-   * PUT /api/maps/:mapId
-   * Обновить карту
-   */
-  async updateMap(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const mid = parseInt(mapId);
-
-      const map = mapService.getMapById(mid);
-      if (!map) {
-        res.status(404).json({
-          success: false,
-          error: 'Карта не найдена',
-        });
-        return;
-      }
-
-      const validated = updateMapSchema.parse(req.body);
-      const updated = mapService.updateMap(mid, validated);
-
-      res.json({
-        success: true,
-        data: updated,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  /**
-   * POST /api/maps/:mapId/image
-   * Загрузить изображение карты
-   */
-  async uploadMapImage(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const mid = parseInt(mapId);
-
-      if (!req.file) {
-        res.status(400).json({
-          success: false,
-          error: 'Файл не загружен',
-        });
-        return;
-      }
-
-      const map = mapService.uploadMapImage(mid, req.file);
-
-      res.json({
-        success: true,
-        data: map,
-      });
-    } catch (error: any) {
-      res.status(error.message === 'Карта не найдена' ? 404 : 500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  /**
-   * DELETE /api/maps/:mapId
-   * Удалить карту
-   */
-  async deleteMap(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const mid = parseInt(mapId);
-
-      const map = mapService.getMapById(mid);
-      if (!map) {
-        res.status(404).json({
-          success: false,
-          error: 'Карта не найдена',
-        });
-        return;
-      }
-
-      mapService.deleteMap(mid);
-
-      res.json({
-        success: true,
-        message: 'Карта удалена',
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
+  static deleteMap = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+    mapService.deleteMap(mapId);
+    return ok(res, undefined, 'Map deleted');
+  });
 
   // ==================== Маркеры ====================
 
-  /**
-   * GET /api/maps/:mapId/markers
-   * Получить все маркеры карты
-   */
-  async getMarkers(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const mid = parseInt(mapId);
+  static getMarkers = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+    const markers = mapService.getMarkersByMapId(mapId);
+    return ok(res, markers);
+  });
 
-      const markers = mapService.getMarkersByMapId(mid);
+  static createMarker = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+    const marker = mapService.createMarker(mapId, req.body);
+    return created(res, marker);
+  });
 
-      res.json({
-        success: true,
-        data: markers,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
+  static updateMarker = asyncHandler(async (req: Request, res: Response) => {
+    const markerId = parseId(req.params.markerId, 'marker id');
+    const updated = mapService.updateMarker(markerId, req.body);
+    return ok(res, updated);
+  });
 
-  /**
-   * POST /api/maps/:mapId/markers
-   * Создать маркер на карте
-   */
-  async createMarker(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const mid = parseInt(mapId);
-
-      const map = mapService.getMapById(mid);
-      if (!map) {
-        res.status(404).json({
-          success: false,
-          error: 'Карта не найдена',
-        });
-        return;
-      }
-
-      const validated = createMarkerSchema.parse(req.body);
-      const marker = mapService.createMarker(mid, validated);
-
-      res.status(201).json({
-        success: true,
-        data: marker,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  /**
-   * PUT /api/markers/:markerId
-   * Обновить маркер
-   */
-  async updateMarker(req: Request, res: Response): Promise<void> {
-    try {
-      const { markerId } = req.params;
-      const mid = parseInt(markerId);
-
-      const marker = mapService.getMarkerById(mid);
-      if (!marker) {
-        res.status(404).json({
-          success: false,
-          error: 'Маркер не найден',
-        });
-        return;
-      }
-
-      const validated = updateMarkerSchema.parse(req.body);
-      const updated = mapService.updateMarker(mid, validated);
-
-      res.json({
-        success: true,
-        data: updated,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  /**
-   * DELETE /api/markers/:markerId
-   * Удалить маркер
-   */
-  async deleteMarker(req: Request, res: Response): Promise<void> {
-    try {
-      const { markerId } = req.params;
-      const mid = parseInt(markerId);
-
-      const marker = mapService.getMarkerById(mid);
-      if (!marker) {
-        res.status(404).json({
-          success: false,
-          error: 'Маркер не найден',
-        });
-        return;
-      }
-
-      mapService.deleteMarker(mid);
-
-      res.json({
-        success: true,
-        message: 'Маркер удалён',
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
+  static deleteMarker = asyncHandler(async (req: Request, res: Response) => {
+    const markerId = parseId(req.params.markerId, 'marker id');
+    mapService.deleteMarker(markerId);
+    return ok(res, undefined, 'Marker deleted');
+  });
 
   // ==================== Территории ====================
 
-  async getTerritories(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const territories = mapService.getTerritoriesByMapId(parseInt(mapId));
-      res.json({ success: true, data: territories });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
+  static getTerritories = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+    const territories = mapService.getTerritoriesByMapId(mapId);
+    return ok(res, territories);
+  });
 
-  async createTerritory(req: Request, res: Response): Promise<void> {
-    try {
-      const { mapId } = req.params;
-      const mid = parseInt(mapId);
-      const map = mapService.getMapById(mid);
-      if (!map) { res.status(404).json({ success: false, error: 'Карта не найдена' }); return; }
+  static createTerritory = asyncHandler(async (req: Request, res: Response) => {
+    const mapId = parseId(req.params.mapId, 'map id');
+    const territory = mapService.createTerritory(mapId, req.body);
+    return created(res, territory);
+  });
 
-      const validated = createTerritorySchema.parse(req.body);
-      const territory = mapService.createTerritory(mid, validated);
-      res.status(201).json({ success: true, data: territory });
-    } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
-    }
-  }
+  static updateTerritory = asyncHandler(async (req: Request, res: Response) => {
+    const territoryId = parseId(req.params.territoryId, 'territory id');
+    const updated = mapService.updateTerritory(territoryId, req.body);
+    return ok(res, updated);
+  });
 
-  async updateTerritory(req: Request, res: Response): Promise<void> {
-    try {
-      const { territoryId } = req.params;
-      const tid = parseInt(territoryId);
-      const territory = mapService.getTerritoryById(tid);
-      if (!territory) { res.status(404).json({ success: false, error: 'Территория не найдена' }); return; }
-
-      const validated = updateTerritorySchema.parse(req.body);
-      const updated = mapService.updateTerritory(tid, validated);
-      res.json({ success: true, data: updated });
-    } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
-    }
-  }
-
-  async deleteTerritory(req: Request, res: Response): Promise<void> {
-    try {
-      const { territoryId } = req.params;
-      const tid = parseInt(territoryId);
-      const territory = mapService.getTerritoryById(tid);
-      if (!territory) { res.status(404).json({ success: false, error: 'Территория не найдена' }); return; }
-
-      mapService.deleteTerritory(tid);
-      res.json({ success: true, message: 'Территория удалена' });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
+  static deleteTerritory = asyncHandler(async (req: Request, res: Response) => {
+    const territoryId = parseId(req.params.territoryId, 'territory id');
+    mapService.deleteTerritory(territoryId);
+    return ok(res, undefined, 'Territory deleted');
+  });
 }
-
-export const mapController = new MapController();
