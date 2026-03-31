@@ -1,31 +1,236 @@
 import { getDb } from '../db/connection';
 import { NotFoundError } from '../middleware/errorHandler';
 
-function ensureDynastyMemberExists(id: number) {
+interface DynastyFilters {
+  search?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+interface CountRow {
+  count: number;
+}
+
+interface NameRow {
+  name: string;
+}
+
+interface TagRow {
+  id: number;
+  name: string;
+  color: string;
+}
+
+interface DynastyRow {
+  id: number;
+  project_id: number;
+  name: string;
+  motto: string | null;
+  description: string | null;
+  history: string | null;
+  status: string;
+  color: string | null;
+  secondary_color: string | null;
+  image_path: string | null;
+  founded_date: string | null;
+  extinct_date: string | null;
+  founder_id: number | null;
+  current_leader_id: number | null;
+  heir_id: number | null;
+  linked_faction_id: number | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  member_count?: number;
+}
+
+interface DynastyMemberRow {
+  id: number;
+  dynasty_id: number;
+  character_id: number;
+  generation: number;
+  role: string | null;
+  birth_date: string | null;
+  death_date: string | null;
+  is_main_line: number | boolean;
+  notes: string | null;
+  graph_x: number | null;
+  graph_y: number | null;
+  character_name: string;
+  character_image_path: string | null;
+  character_status: string;
+}
+
+interface DynastyFamilyLinkRow {
+  id: number;
+  dynasty_id: number;
+  source_character_id: number;
+  target_character_id: number;
+  relation_type: string;
+  custom_label: string | null;
+  source_character_name: string;
+  target_character_name: string;
+}
+
+interface DynastyEventRow {
+  id: number;
+  dynasty_id: number;
+  title: string;
+  description: string | null;
+  event_date: string;
+  importance: string;
+  sort_order: number;
+  created_at: string;
+}
+
+interface DynastyCreateData {
+  projectId: number;
+  name: string;
+  motto?: string;
+  description?: string;
+  history?: string;
+  status?: string;
+  color?: string;
+  secondaryColor?: string;
+  foundedDate?: string;
+  extinctDate?: string;
+  founderId?: number | null;
+  currentLeaderId?: number | null;
+  heirId?: number | null;
+  linkedFactionId?: number | null;
+  sortOrder?: number;
+}
+
+interface DynastyUpdateData {
+  name?: string;
+  motto?: string;
+  description?: string;
+  history?: string;
+  status?: string;
+  color?: string;
+  secondaryColor?: string;
+  foundedDate?: string;
+  extinctDate?: string;
+  founderId?: number | null;
+  currentLeaderId?: number | null;
+  heirId?: number | null;
+  linkedFactionId?: number | null;
+  sortOrder?: number;
+}
+
+interface DynastyMemberCreateData {
+  characterId: number;
+  generation?: number;
+  role?: string;
+  birthDate?: string;
+  deathDate?: string;
+  isMainLine?: boolean;
+  notes?: string;
+}
+
+interface DynastyMemberUpdateData {
+  generation?: number;
+  role?: string;
+  birthDate?: string;
+  deathDate?: string;
+  isMainLine?: boolean;
+  notes?: string;
+}
+
+interface DynastyFamilyLinkCreateData {
+  sourceCharacterId: number;
+  targetCharacterId: number;
+  relationType: string;
+  customLabel?: string;
+}
+
+interface DynastyEventCreateData {
+  title: string;
+  description?: string;
+  eventDate: string;
+  importance?: string;
+  sortOrder?: number;
+}
+
+interface DynastyEventUpdateData {
+  title?: string;
+  description?: string;
+  eventDate?: string;
+  importance?: string;
+  sortOrder?: number;
+}
+
+function ensureDynastyMemberExists(id: number): void {
   const db = getDb();
   const row = db.prepare('SELECT id FROM dynasty_members WHERE id = ?').get(id) as { id: number } | undefined;
   if (!row) throw new NotFoundError('DynastyMember');
 }
 
-function ensureDynastyFamilyLinkExists(id: number) {
+function ensureDynastyFamilyLinkExists(id: number): void {
   const db = getDb();
   const row = db.prepare('SELECT id FROM dynasty_family_links WHERE id = ?').get(id) as { id: number } | undefined;
   if (!row) throw new NotFoundError('DynastyFamilyLink');
 }
 
-function ensureDynastyEventExists(id: number) {
+function ensureDynastyEventExists(id: number): void {
   const db = getDb();
   const row = db.prepare('SELECT id FROM dynasty_events WHERE id = ?').get(id) as { id: number } | undefined;
   if (!row) throw new NotFoundError('DynastyEvent');
 }
 
+function mapDynastyMember(row: DynastyMemberRow) {
+  return {
+    id: row.id,
+    dynastyId: row.dynasty_id,
+    characterId: row.character_id,
+    generation: row.generation,
+    role: row.role || '',
+    birthDate: row.birth_date || '',
+    deathDate: row.death_date || '',
+    isMainLine: !!row.is_main_line,
+    notes: row.notes || '',
+    graphX: row.graph_x ?? null,
+    graphY: row.graph_y ?? null,
+    characterName: row.character_name,
+    characterImagePath: row.character_image_path,
+    characterStatus: row.character_status,
+  };
+}
+
+function mapDynastyFamilyLink(row: DynastyFamilyLinkRow) {
+  return {
+    id: row.id,
+    dynastyId: row.dynasty_id,
+    sourceCharacterId: row.source_character_id,
+    targetCharacterId: row.target_character_id,
+    relationType: row.relation_type,
+    customLabel: row.custom_label || '',
+    sourceCharacterName: row.source_character_name,
+    targetCharacterName: row.target_character_name,
+  };
+}
+
+function mapDynastyEvent(row: DynastyEventRow) {
+  return {
+    id: row.id,
+    dynastyId: row.dynasty_id,
+    title: row.title,
+    description: row.description || '',
+    eventDate: row.event_date,
+    importance: row.importance,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+  };
+}
+
 export class DynastyService {
-  static getAll(projectId: number, params: any = {}) {
+  static getAll(projectId: number, params: DynastyFilters = {}) {
     const db = getDb();
     const { search, status, limit = 50, offset = 0 } = params;
 
     let where = 'WHERE d.project_id = ?';
-    const args: any[] = [projectId];
+    const args: Array<number | string> = [projectId];
 
     if (status) {
       where += ' AND d.status = ?';
@@ -37,9 +242,11 @@ export class DynastyService {
       args.push(`%${search}%`, `%${search}%`);
     }
 
-    const total = db.prepare(
-      `SELECT COUNT(*) as count FROM dynasties d ${where}`
-    ).get(...args) as any;
+    const totalRow = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM dynasties d
+      ${where}
+    `).get(...args) as CountRow;
 
     const rows = db.prepare(`
       SELECT d.*,
@@ -48,11 +255,11 @@ export class DynastyService {
       ${where}
       ORDER BY d.sort_order ASC, d.name ASC
       LIMIT ? OFFSET ?
-    `).all(...args, limit, offset) as any[];
+    `).all(...args, limit, offset) as DynastyRow[];
 
     return {
       items: rows.map((row) => this.mapRow(row)),
-      total: total.count,
+      total: totalRow.count,
     };
   }
 
@@ -64,38 +271,34 @@ export class DynastyService {
         (SELECT COUNT(*) FROM dynasty_members WHERE dynasty_id = d.id) as member_count
       FROM dynasties d
       WHERE d.id = ?
-    `).get(id) as any;
+    `).get(id) as DynastyRow | undefined;
 
     if (!row) {
       throw new NotFoundError('Dynasty');
     }
 
-    const dynasty: any = this.mapRow(row);
+    const dynasty = this.mapRow(row) as ReturnType<typeof DynastyService.mapRow> & {
+      members?: ReturnType<typeof mapDynastyMember>[];
+      familyLinks?: ReturnType<typeof mapDynastyFamilyLink>[];
+      events?: ReturnType<typeof mapDynastyEvent>[];
+      tags?: TagRow[];
+      founderName?: string | null;
+      currentLeaderName?: string | null;
+      heirName?: string | null;
+      linkedFactionName?: string | null;
+    };
 
-    dynasty.members = db.prepare(`
+    const memberRows = db.prepare(`
       SELECT dm.*, c.name as character_name, c.image_path as character_image_path, c.status as character_status
       FROM dynasty_members dm
       JOIN characters c ON c.id = dm.character_id
       WHERE dm.dynasty_id = ?
       ORDER BY dm.generation ASC, c.name ASC
-    `).all(id).map((m: any) => ({
-      id: m.id,
-      dynastyId: m.dynasty_id,
-      characterId: m.character_id,
-      generation: m.generation,
-      role: m.role || '',
-      birthDate: m.birth_date || '',
-      deathDate: m.death_date || '',
-      isMainLine: !!m.is_main_line,
-      notes: m.notes || '',
-      graphX: m.graph_x ?? null,
-      graphY: m.graph_y ?? null,
-      characterName: m.character_name,
-      characterImagePath: m.character_image_path,
-      characterStatus: m.character_status,
-    }));
+    `).all(id) as DynastyMemberRow[];
 
-    dynasty.familyLinks = db.prepare(`
+    dynasty.members = memberRows.map(mapDynastyMember);
+
+    const familyLinkRows = db.prepare(`
       SELECT fl.*,
         cs.name as source_character_name,
         ct.name as target_character_name
@@ -103,61 +306,50 @@ export class DynastyService {
       JOIN characters cs ON cs.id = fl.source_character_id
       JOIN characters ct ON ct.id = fl.target_character_id
       WHERE fl.dynasty_id = ?
-    `).all(id).map((l: any) => ({
-      id: l.id,
-      dynastyId: l.dynasty_id,
-      sourceCharacterId: l.source_character_id,
-      targetCharacterId: l.target_character_id,
-      relationType: l.relation_type,
-      customLabel: l.custom_label || '',
-      sourceCharacterName: l.source_character_name,
-      targetCharacterName: l.target_character_name,
-    }));
+    `).all(id) as DynastyFamilyLinkRow[];
 
-    dynasty.events = db.prepare(`
-      SELECT * FROM dynasty_events WHERE dynasty_id = ?
+    dynasty.familyLinks = familyLinkRows.map(mapDynastyFamilyLink);
+
+    const eventRows = db.prepare(`
+      SELECT *
+      FROM dynasty_events
+      WHERE dynasty_id = ?
       ORDER BY sort_order ASC, event_date ASC
-    `).all(id).map((e: any) => ({
-      id: e.id,
-      dynastyId: e.dynasty_id,
-      title: e.title,
-      description: e.description || '',
-      eventDate: e.event_date,
-      importance: e.importance,
-      sortOrder: e.sort_order,
-      createdAt: e.created_at,
-    }));
+    `).all(id) as DynastyEventRow[];
+
+    dynasty.events = eventRows.map(mapDynastyEvent);
 
     dynasty.tags = db.prepare(`
-      SELECT t.* FROM tags t
+      SELECT t.id, t.name, t.color
+      FROM tags t
       JOIN tag_associations ta ON ta.tag_id = t.id
       WHERE ta.entity_type = 'dynasty' AND ta.entity_id = ?
-    `).all(id);
+    `).all(id) as TagRow[];
 
     if (dynasty.founderId) {
-      const founder = db.prepare('SELECT name FROM characters WHERE id = ?').get(dynasty.founderId) as any;
+      const founder = db.prepare('SELECT name FROM characters WHERE id = ?').get(dynasty.founderId) as NameRow | undefined;
       dynasty.founderName = founder?.name || null;
     }
 
     if (dynasty.currentLeaderId) {
-      const currentLeader = db.prepare('SELECT name FROM characters WHERE id = ?').get(dynasty.currentLeaderId) as any;
+      const currentLeader = db.prepare('SELECT name FROM characters WHERE id = ?').get(dynasty.currentLeaderId) as NameRow | undefined;
       dynasty.currentLeaderName = currentLeader?.name || null;
     }
 
     if (dynasty.heirId) {
-      const heir = db.prepare('SELECT name FROM characters WHERE id = ?').get(dynasty.heirId) as any;
+      const heir = db.prepare('SELECT name FROM characters WHERE id = ?').get(dynasty.heirId) as NameRow | undefined;
       dynasty.heirName = heir?.name || null;
     }
 
     if (dynasty.linkedFactionId) {
-      const linkedFaction = db.prepare('SELECT name FROM factions WHERE id = ?').get(dynasty.linkedFactionId) as any;
+      const linkedFaction = db.prepare('SELECT name FROM factions WHERE id = ?').get(dynasty.linkedFactionId) as NameRow | undefined;
       dynasty.linkedFactionName = linkedFaction?.name || null;
     }
 
     return dynasty;
   }
 
-  static create(data: any) {
+  static create(data: DynastyCreateData) {
     const db = getDb();
 
     const result = db.prepare(`
@@ -181,20 +373,20 @@ export class DynastyService {
       data.currentLeaderId || null,
       data.heirId || null,
       data.linkedFactionId || null,
-      data.sortOrder || 0,
+      data.sortOrder || 0
     );
 
     return this.getById(result.lastInsertRowid as number);
   }
 
-  static update(id: number, data: any) {
+  static update(id: number, data: DynastyUpdateData) {
     this.getById(id);
     const db = getDb();
 
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
-    const mapping: Record<string, string> = {
+    const mapping: Record<keyof DynastyUpdateData, string> = {
       name: 'name',
       motto: 'motto',
       description: 'description',
@@ -211,7 +403,7 @@ export class DynastyService {
       sortOrder: 'sort_order',
     };
 
-    for (const [key, col] of Object.entries(mapping)) {
+    for (const [key, col] of Object.entries(mapping) as Array<[keyof DynastyUpdateData, string]>) {
       if (data[key] !== undefined) {
         fields.push(`${col} = ?`);
         values.push(data[key]);
@@ -236,16 +428,19 @@ export class DynastyService {
   static uploadImage(id: number, imagePath: string) {
     this.getById(id);
     const db = getDb();
+
     db.prepare(`
       UPDATE dynasties
       SET image_path = ?, updated_at = datetime('now')
       WHERE id = ?
     `).run(imagePath, id);
+
     return this.getById(id);
   }
 
   // Members
-  static addMember(dynastyId: number, data: any) {
+
+  static addMember(dynastyId: number, data: DynastyMemberCreateData) {
     this.getById(dynastyId);
     const db = getDb();
 
@@ -262,20 +457,20 @@ export class DynastyService {
       data.birthDate || '',
       data.deathDate || '',
       data.isMainLine !== false ? 1 : 0,
-      data.notes || '',
+      data.notes || ''
     );
 
     return this.getMember(result.lastInsertRowid as number);
   }
 
-  static updateMember(memberId: number, data: any) {
+  static updateMember(memberId: number, data: DynastyMemberUpdateData) {
     ensureDynastyMemberExists(memberId);
     const db = getDb();
 
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
-    const mapping: Record<string, string> = {
+    const mapping: Record<keyof DynastyMemberUpdateData, string> = {
       generation: 'generation',
       role: 'role',
       birthDate: 'birth_date',
@@ -284,7 +479,7 @@ export class DynastyService {
       notes: 'notes',
     };
 
-    for (const [key, col] of Object.entries(mapping)) {
+    for (const [key, col] of Object.entries(mapping) as Array<[keyof DynastyMemberUpdateData, string]>) {
       if (data[key] !== undefined) {
         fields.push(`${col} = ?`);
         values.push(key === 'isMainLine' ? (data[key] ? 1 : 0) : data[key]);
@@ -313,32 +508,18 @@ export class DynastyService {
       FROM dynasty_members dm
       JOIN characters c ON c.id = dm.character_id
       WHERE dm.id = ?
-    `).get(memberId) as any;
+    `).get(memberId) as DynastyMemberRow | undefined;
 
     if (!member) {
       throw new NotFoundError('DynastyMember');
     }
 
-    return {
-      id: member.id,
-      dynastyId: member.dynasty_id,
-      characterId: member.character_id,
-      generation: member.generation,
-      role: member.role || '',
-      birthDate: member.birth_date || '',
-      deathDate: member.death_date || '',
-      isMainLine: !!member.is_main_line,
-      notes: member.notes || '',
-      characterName: member.character_name,
-      characterImagePath: member.character_image_path,
-      graphX: member.graph_x ?? null,
-      graphY: member.graph_y ?? null,
-      characterStatus: member.character_status,
-    };
+    return mapDynastyMember(member);
   }
 
   // Family links
-  static addFamilyLink(dynastyId: number, data: any) {
+
+  static addFamilyLink(dynastyId: number, data: DynastyFamilyLinkCreateData) {
     this.getById(dynastyId);
     const db = getDb();
 
@@ -352,7 +533,7 @@ export class DynastyService {
       data.sourceCharacterId,
       data.targetCharacterId,
       data.relationType,
-      data.customLabel || '',
+      data.customLabel || ''
     );
 
     return this.getFamilyLink(result.lastInsertRowid as number);
@@ -373,26 +554,18 @@ export class DynastyService {
       JOIN characters cs ON cs.id = fl.source_character_id
       JOIN characters ct ON ct.id = fl.target_character_id
       WHERE fl.id = ?
-    `).get(linkId) as any;
+    `).get(linkId) as DynastyFamilyLinkRow | undefined;
 
     if (!link) {
       throw new NotFoundError('DynastyFamilyLink');
     }
 
-    return {
-      id: link.id,
-      dynastyId: link.dynasty_id,
-      sourceCharacterId: link.source_character_id,
-      targetCharacterId: link.target_character_id,
-      relationType: link.relation_type,
-      customLabel: link.custom_label || '',
-      sourceCharacterName: link.source_character_name,
-      targetCharacterName: link.target_character_name,
-    };
+    return mapDynastyFamilyLink(link);
   }
 
   // Events
-  static addEvent(dynastyId: number, data: any) {
+
+  static addEvent(dynastyId: number, data: DynastyEventCreateData) {
     this.getById(dynastyId);
     const db = getDb();
 
@@ -407,20 +580,20 @@ export class DynastyService {
       data.description || '',
       data.eventDate,
       data.importance || 'normal',
-      data.sortOrder || 0,
+      data.sortOrder || 0
     );
 
     return this.getEvent(result.lastInsertRowid as number);
   }
 
-  static updateEvent(eventId: number, data: any) {
+  static updateEvent(eventId: number, data: DynastyEventUpdateData) {
     ensureDynastyEventExists(eventId);
     const db = getDb();
 
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
-    const mapping: Record<string, string> = {
+    const mapping: Record<keyof DynastyEventUpdateData, string> = {
       title: 'title',
       description: 'description',
       eventDate: 'event_date',
@@ -428,7 +601,7 @@ export class DynastyService {
       sortOrder: 'sort_order',
     };
 
-    for (const [key, col] of Object.entries(mapping)) {
+    for (const [key, col] of Object.entries(mapping) as Array<[keyof DynastyEventUpdateData, string]>) {
       if (data[key] !== undefined) {
         fields.push(`${col} = ?`);
         values.push(data[key]);
@@ -451,25 +624,22 @@ export class DynastyService {
 
   static getEvent(eventId: number) {
     const db = getDb();
-    const event = db.prepare('SELECT * FROM dynasty_events WHERE id = ?').get(eventId) as any;
+
+    const event = db.prepare(`
+      SELECT *
+      FROM dynasty_events
+      WHERE id = ?
+    `).get(eventId) as DynastyEventRow | undefined;
 
     if (!event) {
       throw new NotFoundError('DynastyEvent');
     }
 
-    return {
-      id: event.id,
-      dynastyId: event.dynasty_id,
-      title: event.title,
-      description: event.description || '',
-      eventDate: event.event_date,
-      importance: event.importance,
-      sortOrder: event.sort_order,
-      createdAt: event.created_at,
-    };
+    return mapDynastyEvent(event);
   }
 
   // Tags
+
   static setTags(id: number, tagIds: number[]) {
     this.getById(id);
     const db = getDb();
@@ -511,7 +681,7 @@ export class DynastyService {
     transaction();
   }
 
-  private static mapRow(row: any) {
+  private static mapRow(row: DynastyRow) {
     return {
       id: row.id,
       projectId: row.project_id,

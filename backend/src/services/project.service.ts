@@ -1,28 +1,158 @@
 import { getDb } from '../db/connection';
 import { CreateProject, UpdateProject, Project } from '@campaigner/shared';
-import { NotFoundError } from '../middleware/errorHandler';
+import { NotFoundError, ValidationError } from '../middleware/errorHandler';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { MapService } from './map.service.js';
-import { ValidationError } from '../middleware/errorHandler';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../../../data');
 
+interface ExportCharacterRow {
+  id: number;
+  name: string;
+  title: string;
+  race: string;
+  characterClass: string;
+  level: number | null;
+  status: string;
+  bio: string;
+  appearance: string;
+  personality: string;
+  backstory: string;
+  notes: string;
+  imagePath: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ExportRelationshipRow {
+  id: number;
+  sourceCharacterId: number;
+  targetCharacterId: number;
+  relationshipType: string;
+  customLabel: string;
+  description: string;
+  isBidirectional: number | boolean;
+  createdAt: string;
+}
+
+interface ExportNoteRow {
+  id: number;
+  folderId: number | null;
+  title: string;
+  content: string;
+  format: string;
+  noteType: string;
+  isPinned: number | boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ExportFolderRow {
+  id: number;
+  name: string;
+  parentId: number | null;
+  createdAt: string;
+}
+
+interface ExportMapRow {
+  id: number;
+  projectId: number;
+  parentMapId: number | null;
+  parentMarkerId: number | null;
+  name: string;
+  imagePath: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ExportMarkerRow {
+  id: number;
+  mapId: number;
+  title: string;
+  description: string;
+  positionX: number;
+  positionY: number;
+  color: string;
+  icon: string;
+  linkedNoteId: number | null;
+  childMapId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ExportTimelineEventRow {
+  id: number;
+  title: string;
+  description: string;
+  eventDate: string;
+  sortOrder: number;
+  era: string;
+  linkedNoteId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ExportTagRow {
+  id: number;
+  name: string;
+  color: string;
+}
+
+interface ExportTagAssociationRow {
+  tagId: number;
+  entityType: string;
+  entityId: number;
+}
+
+interface ImportedProjectPayload {
+  version: string;
+  project: {
+    name: string;
+    description?: string;
+    status?: string;
+    mapImageBase64?: string | null;
+  };
+  characters?: Array<ExportCharacterRow & { imageBase64?: string | null }>;
+  relationships?: ExportRelationshipRow[];
+  notes?: ExportNoteRow[];
+  folders?: ExportFolderRow[];
+  maps?: ExportMapRow[];
+  markers?: ExportMarkerRow[];
+  timelineEvents?: ExportTimelineEventRow[];
+  tags?: ExportTagRow[];
+  tagAssociations?: ExportTagAssociationRow[];
+}
+
 function readFileAsBase64(relativePath: string | null): string | null {
-  if (!relativePath) return null;
+  if (!relativePath) {
+    return null;
+  }
+
   try {
-    const fullPath = path.join(DATA_DIR, relativePath);
-    if (!fs.existsSync(fullPath)) return null;
+    const normalizedPath = relativePath.replace(/^\/+/, '');
+    const fullPath = path.join(DATA_DIR, normalizedPath);
+
+    if (!fs.existsSync(fullPath)) {
+      return null;
+    }
+
     const buffer = fs.readFileSync(fullPath);
     const ext = path.extname(relativePath).toLowerCase().replace('.', '');
+
     const mimeMap: Record<string, string> = {
-      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
-      svg: 'image/svg+xml', webp: 'image/webp', gif: 'image/gif',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      svg: 'image/svg+xml',
+      webp: 'image/webp',
+      gif: 'image/gif',
     };
+
     const mime = mimeMap[ext] || 'application/octet-stream';
     return `data:${mime};base64,${buffer.toString('base64')}`;
   } catch {
@@ -33,14 +163,22 @@ function readFileAsBase64(relativePath: string | null): string | null {
 function saveBase64ToFile(base64: string, subDir: string): string | null {
   try {
     const match = base64.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) return null;
+
+    if (!match) {
+      return null;
+    }
 
     const mime = match[1];
     const data = match[2];
+
     const extMap: Record<string, string> = {
-      'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg',
-      'image/webp': 'webp', 'image/gif': 'gif',
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/svg+xml': 'svg',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
     };
+
     const ext = extMap[mime] || 'png';
     const filename = `${uuidv4()}.${ext}`;
     const dirPath = path.join(DATA_DIR, 'uploads', subDir);
@@ -51,6 +189,7 @@ function saveBase64ToFile(base64: string, subDir: string): string | null {
 
     const filePath = path.join(dirPath, filename);
     fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
+
     return `/uploads/${subDir}/${filename}`;
   } catch {
     return null;
@@ -60,32 +199,43 @@ function saveBase64ToFile(base64: string, subDir: string): string | null {
 export class ProjectService {
   static getAll(): Project[] {
     const db = getDb();
-    const rows = db.prepare(`
+
+    return db.prepare(`
       SELECT id, name, description, status, map_image_path as mapImagePath,
              created_at as createdAt, updated_at as updatedAt
-      FROM projects ORDER BY updated_at DESC
+      FROM projects
+      ORDER BY updated_at DESC
     `).all() as Project[];
-    return rows;
   }
 
   static getById(id: number): Project {
     const db = getDb();
+
     const row = db.prepare(`
       SELECT id, name, description, status, map_image_path as mapImagePath,
              created_at as createdAt, updated_at as updatedAt
-      FROM projects WHERE id = ?
+      FROM projects
+      WHERE id = ?
     `).get(id) as Project | undefined;
 
-    if (!row) throw new NotFoundError('Project');
+    if (!row) {
+      throw new NotFoundError('Project');
+    }
+
     return row;
   }
 
   static create(data: CreateProject): Project {
     const db = getDb();
+
     const result = db.prepare(`
       INSERT INTO projects (name, description, status)
       VALUES (?, ?, ?)
-    `).run(data.name, data.description || '', data.status || 'active');
+    `).run(
+      data.name,
+      data.description || '',
+      data.status || 'active'
+    );
 
     const projectId = result.lastInsertRowid as number;
     const mapService = new MapService();
@@ -99,12 +249,24 @@ export class ProjectService {
     const db = getDb();
 
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
-    if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
-    if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description); }
-    if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
-    if (data.mapImagePath !== undefined) { fields.push('map_image_path = ?'); values.push(data.mapImagePath); }
+    if (data.name !== undefined) {
+      fields.push('name = ?');
+      values.push(data.name);
+    }
+    if (data.description !== undefined) {
+      fields.push('description = ?');
+      values.push(data.description);
+    }
+    if (data.status !== undefined) {
+      fields.push('status = ?');
+      values.push(data.status);
+    }
+    if (data.mapImagePath !== undefined) {
+      fields.push('map_image_path = ?');
+      values.push(data.mapImagePath);
+    }
 
     if (fields.length > 0) {
       fields.push("updated_at = datetime('now')");
@@ -124,13 +286,20 @@ export class ProjectService {
   static updateMapImage(id: number, imagePath: string): Project {
     this.getById(id);
     const db = getDb();
-    db.prepare(`UPDATE projects SET map_image_path = ?, updated_at = datetime('now') WHERE id = ?`).run(imagePath, id);
+
+    db.prepare(`
+      UPDATE projects
+      SET map_image_path = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(imagePath, id);
+
     return this.getById(id);
   }
 
-  // ==================== Export ====================
-
-  static exportProject(id: number): any {
+  static exportProject(id: number): ImportedProjectPayload & {
+    exportedAt: string;
+    project: ImportedProjectPayload['project'];
+  } {
     const db = getDb();
     const project = this.getById(id);
 
@@ -138,8 +307,9 @@ export class ProjectService {
       SELECT id, name, title, race, character_class as characterClass,
              level, status, bio, appearance, personality, backstory, notes,
              image_path as imagePath, created_at as createdAt, updated_at as updatedAt
-      FROM characters WHERE project_id = ?
-    `).all(id) as any[];
+      FROM characters
+      WHERE project_id = ?
+    `).all(id) as ExportCharacterRow[];
 
     const relationships = db.prepare(`
       SELECT id, source_character_id as sourceCharacterId,
@@ -148,62 +318,70 @@ export class ProjectService {
              custom_label as customLabel, description,
              is_bidirectional as isBidirectional,
              created_at as createdAt
-      FROM character_relationships WHERE project_id = ?
-    `).all(id) as any[];
+      FROM character_relationships
+      WHERE project_id = ?
+    `).all(id) as ExportRelationshipRow[];
 
     const notes = db.prepare(`
       SELECT id, folder_id as folderId, title, content, format,
              note_type as noteType, is_pinned as isPinned,
              created_at as createdAt, updated_at as updatedAt
-      FROM notes WHERE project_id = ?
-    `).all(id) as any[];
+      FROM notes
+      WHERE project_id = ?
+    `).all(id) as ExportNoteRow[];
 
     const folders = db.prepare(`
       SELECT id, name, parent_id as parentId, created_at as createdAt
-      FROM folders WHERE project_id = ?
-    `).all(id) as any[];
+      FROM folders
+      WHERE project_id = ?
+    `).all(id) as ExportFolderRow[];
 
     const maps = db.prepare(`
       SELECT id, project_id as projectId, parent_map_id as parentMapId,
              parent_marker_id as parentMarkerId, name, image_path as imagePath,
              created_at as createdAt, updated_at as updatedAt
-      FROM maps WHERE project_id = ?
-    `).all(id) as any[];
+      FROM maps
+      WHERE project_id = ?
+    `).all(id) as ExportMapRow[];
 
     const markers = db.prepare(`
-      SELECT id, map_id as mapId, title, description,
-             position_x as positionX, position_y as positionY,
-             color, icon, linked_note_id as linkedNoteId,
-             child_map_id as childMapId,
-             created_at as createdAt, updated_at as updatedAt
-      FROM map_markers
-    `).all() as any[];
+      SELECT mm.id, mm.map_id as mapId, mm.title, mm.description,
+             mm.position_x as positionX, mm.position_y as positionY,
+             mm.color, mm.icon, mm.linked_note_id as linkedNoteId,
+             mm.child_map_id as childMapId,
+             mm.created_at as createdAt, mm.updated_at as updatedAt
+      FROM map_markers mm
+      JOIN maps m ON mm.map_id = m.id
+      WHERE m.project_id = ?
+    `).all(id) as ExportMarkerRow[];
 
     const timelineEvents = db.prepare(`
       SELECT id, title, description, event_date as eventDate,
              sort_order as sortOrder, era,
              linked_note_id as linkedNoteId,
              created_at as createdAt, updated_at as updatedAt
-      FROM timeline_events WHERE project_id = ?
-    `).all(id) as any[];
+      FROM timeline_events
+      WHERE project_id = ?
+    `).all(id) as ExportTimelineEventRow[];
 
     const tags = db.prepare(`
-      SELECT id, name, color FROM tags WHERE project_id = ?
-    `).all(id) as any[];
+      SELECT id, name, color
+      FROM tags
+      WHERE project_id = ?
+    `).all(id) as ExportTagRow[];
 
     const tagAssociations = db.prepare(`
       SELECT ta.tag_id as tagId, ta.entity_type as entityType, ta.entity_id as entityId
       FROM tag_associations ta
       JOIN tags t ON ta.tag_id = t.id
       WHERE t.project_id = ?
-    `).all(id) as any[];
+    `).all(id) as ExportTagAssociationRow[];
 
-    // Encode images as base64
     const mapImageBase64 = readFileAsBase64(project.mapImagePath || null);
 
-    const charactersWithImages = characters.map(ch => ({
-      ...ch,
-      imageBase64: readFileAsBase64(ch.imagePath),
+    const charactersWithImages = characters.map((character) => ({
+      ...character,
+      imageBase64: readFileAsBase64(character.imagePath),
     }));
 
     return {
@@ -227,9 +405,7 @@ export class ProjectService {
     };
   }
 
-  // ==================== Import ====================
-
-  static importProject(data: any): Project {
+  static importProject(data: ImportedProjectPayload): Project {
     const db = getDb();
 
     if (!data.version || !data.project?.name) {
@@ -237,44 +413,43 @@ export class ProjectService {
     }
 
     const transaction = db.transaction(() => {
-      // 1. Create project
       const projectResult = db.prepare(`
         INSERT INTO projects (name, description, status)
         VALUES (?, ?, ?)
       `).run(
-        data.project.name + ' (импорт)',
+        `${data.project.name} (импорт)`,
         data.project.description || '',
         data.project.status || 'active'
       );
+
       const projectId = projectResult.lastInsertRowid as number;
 
-      // Create root map
       const mapService = new MapService();
       mapService.createRootMapForProject(projectId);
 
-      // Restore map image
       if (data.project.mapImageBase64) {
         const mapPath = saveBase64ToFile(data.project.mapImageBase64, 'maps');
         if (mapPath) {
-          db.prepare(`UPDATE projects SET map_image_path = ? WHERE id = ?`).run(mapPath, projectId);
+          db.prepare('UPDATE projects SET map_image_path = ? WHERE id = ?').run(mapPath, projectId);
         }
       }
 
-      // ID maps: old ID → new ID
       const folderIdMap = new Map<number, number>();
       const characterIdMap = new Map<number, number>();
       const noteIdMap = new Map<number, number>();
       const tagIdMap = new Map<number, number>();
       const mapIdMap = new Map<number, number>();
 
-      // 2. Folders
       if (data.folders?.length) {
         for (const folder of data.folders) {
-          const r = db.prepare(`
-            INSERT INTO folders (project_id, name, parent_id) VALUES (?, ?, NULL)
+          const result = db.prepare(`
+            INSERT INTO folders (project_id, name, parent_id)
+            VALUES (?, ?, NULL)
           `).run(projectId, folder.name);
-          folderIdMap.set(folder.id, r.lastInsertRowid as number);
+
+          folderIdMap.set(folder.id, result.lastInsertRowid as number);
         }
+
         for (const folder of data.folders) {
           if (folder.parentId && folderIdMap.has(folder.parentId)) {
             db.prepare('UPDATE folders SET parent_id = ? WHERE id = ?').run(
@@ -284,137 +459,207 @@ export class ProjectService {
           }
         }
       }
-      // 3. Maps
+
       if (data.maps?.length) {
         for (const map of data.maps) {
-          const newParentMapId = map.parentMapId ? (mapIdMap.get(map.parentMapId) || null) : null;
-          const r = db.prepare(`
+          const newParentMapId = map.parentMapId
+            ? (mapIdMap.get(map.parentMapId) || null)
+            : null;
+
+          const result = db.prepare(`
             INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path)
             VALUES (?, ?, NULL, ?, ?)
-          `).run(projectId, newParentMapId, map.name, map.imagePath || null);
-          mapIdMap.set(map.id, r.lastInsertRowid as number);
+          `).run(
+            projectId,
+            newParentMapId,
+            map.name,
+            map.imagePath || null
+          );
+
+          mapIdMap.set(map.id, result.lastInsertRowid as number);
         }
       }
 
-      // 4. Tags
       if (data.tags?.length) {
         for (const tag of data.tags) {
-          const r = db.prepare(`
-            INSERT INTO tags (project_id, name, color) VALUES (?, ?, ?)
-          `).run(projectId, tag.name, tag.color || '#808080');
-          tagIdMap.set(tag.id, r.lastInsertRowid as number);
+          const result = db.prepare(`
+            INSERT INTO tags (project_id, name, color)
+            VALUES (?, ?, ?)
+          `).run(
+            projectId,
+            tag.name,
+            tag.color || '#808080'
+          );
+
+          tagIdMap.set(tag.id, result.lastInsertRowid as number);
         }
       }
 
-      // 5. Characters (with image restore)
       if (data.characters?.length) {
-        for (const ch of data.characters) {
+        for (const character of data.characters) {
           let newImagePath: string | null = null;
-          if (ch.imageBase64) {
-            newImagePath = saveBase64ToFile(ch.imageBase64, 'characters');
+
+          if (character.imageBase64) {
+            newImagePath = saveBase64ToFile(character.imageBase64, 'characters');
           }
 
-          const r = db.prepare(`
-            INSERT INTO characters (project_id, name, title, race, character_class,
-                                    level, status, bio, appearance, personality, backstory, notes, image_path)
+          const result = db.prepare(`
+            INSERT INTO characters (
+              project_id, name, title, race, character_class,
+              level, status, bio, appearance, personality, backstory, notes, image_path
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
-            projectId, ch.name, ch.title || '', ch.race || '',
-            ch.characterClass || '', ch.level || null, ch.status || 'alive',
-            ch.bio || '', ch.appearance || '', ch.personality || '',
-            ch.backstory || '', ch.notes || '', newImagePath
+            projectId,
+            character.name,
+            character.title || '',
+            character.race || '',
+            character.characterClass || '',
+            character.level || null,
+            character.status || 'alive',
+            character.bio || '',
+            character.appearance || '',
+            character.personality || '',
+            character.backstory || '',
+            character.notes || '',
+            newImagePath
           );
-          characterIdMap.set(ch.id, r.lastInsertRowid as number);
+
+          characterIdMap.set(character.id, result.lastInsertRowid as number);
         }
       }
 
-      // 6. Notes
       if (data.notes?.length) {
         for (const note of data.notes) {
-          const newFolderId = note.folderId ? (folderIdMap.get(note.folderId) || null) : null;
-          const r = db.prepare(`
+          const newFolderId = note.folderId
+            ? (folderIdMap.get(note.folderId) || null)
+            : null;
+
+          const result = db.prepare(`
             INSERT INTO notes (project_id, folder_id, title, content, format, note_type, is_pinned)
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `).run(
-            projectId, newFolderId, note.title,
-            note.content || '', note.format || 'md',
-            note.noteType || 'note', note.isPinned ? 1 : 0
+            projectId,
+            newFolderId,
+            note.title,
+            note.content || '',
+            note.format || 'md',
+            note.noteType || 'note',
+            note.isPinned ? 1 : 0
           );
-          noteIdMap.set(note.id, r.lastInsertRowid as number);
+
+          noteIdMap.set(note.id, result.lastInsertRowid as number);
         }
       }
 
-      // 7. Relationships
       if (data.relationships?.length) {
-        for (const rel of data.relationships) {
-          const newSource = characterIdMap.get(rel.sourceCharacterId);
-          const newTarget = characterIdMap.get(rel.targetCharacterId);
+        for (const relationship of data.relationships) {
+          const newSource = characterIdMap.get(relationship.sourceCharacterId);
+          const newTarget = characterIdMap.get(relationship.targetCharacterId);
+
           if (newSource && newTarget) {
             db.prepare(`
-              INSERT INTO character_relationships (project_id, source_character_id, target_character_id,
-                                                   relationship_type, custom_label, description, is_bidirectional)
+              INSERT INTO character_relationships (
+                project_id, source_character_id, target_character_id,
+                relationship_type, custom_label, description, is_bidirectional
+              )
               VALUES (?, ?, ?, ?, ?, ?, ?)
             `).run(
-              projectId, newSource, newTarget,
-              rel.relationshipType, rel.customLabel || '',
-              rel.description || '', rel.isBidirectional ? 1 : 0
+              projectId,
+              newSource,
+              newTarget,
+              relationship.relationshipType,
+              relationship.customLabel || '',
+              relationship.description || '',
+              relationship.isBidirectional ? 1 : 0
             );
           }
         }
       }
 
-      // 8. Markers
       if (data.markers?.length) {
-        for (const m of data.markers) {
-          const newLinkedNoteId = m.linkedNoteId ? (noteIdMap.get(m.linkedNoteId) || null) : null;
-          const newChildMapId = m.childMapId ? (mapIdMap.get(m.childMapId) || null) : null;
-          const newMapId = m.mapId ? (mapIdMap.get(m.mapId) || null) : null;
-          
+        for (const marker of data.markers) {
+          const newLinkedNoteId = marker.linkedNoteId
+            ? (noteIdMap.get(marker.linkedNoteId) || null)
+            : null;
+
+          const newChildMapId = marker.childMapId
+            ? (mapIdMap.get(marker.childMapId) || null)
+            : null;
+
+          const newMapId = marker.mapId
+            ? (mapIdMap.get(marker.mapId) || null)
+            : null;
+
           if (newMapId) {
             db.prepare(`
-              INSERT INTO map_markers (map_id, title, description, position_x, position_y,
-                                       color, icon, linked_note_id, child_map_id)
+              INSERT INTO map_markers (
+                map_id, title, description, position_x, position_y,
+                color, icon, linked_note_id, child_map_id
+              )
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
-              newMapId, m.title, m.description || '',
-              m.positionX, m.positionY, m.color || '#FF6B6B',
-              m.icon || 'custom', newLinkedNoteId, newChildMapId
+              newMapId,
+              marker.title,
+              marker.description || '',
+              marker.positionX,
+              marker.positionY,
+              marker.color || '#FF6B6B',
+              marker.icon || 'custom',
+              newLinkedNoteId,
+              newChildMapId
             );
           }
         }
       }
 
-      // 9. Timeline events
       if (data.timelineEvents?.length) {
-        for (const ev of data.timelineEvents) {
-          const newLinkedNoteId = ev.linkedNoteId ? (noteIdMap.get(ev.linkedNoteId) || null) : null;
+        for (const event of data.timelineEvents) {
+          const newLinkedNoteId = event.linkedNoteId
+            ? (noteIdMap.get(event.linkedNoteId) || null)
+            : null;
+
           db.prepare(`
-            INSERT INTO timeline_events (project_id, title, description, event_date,
-                                         sort_order, era, linked_note_id)
+            INSERT INTO timeline_events (
+              project_id, title, description, event_date,
+              sort_order, era, linked_note_id
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `).run(
-            projectId, ev.title, ev.description || '',
-            ev.eventDate, ev.sortOrder || 0, ev.era || '',
+            projectId,
+            event.title,
+            event.description || '',
+            event.eventDate,
+            event.sortOrder || 0,
+            event.era || '',
             newLinkedNoteId
           );
         }
       }
 
-      // 10. Tag associations
       if (data.tagAssociations?.length) {
-        const insertTA = db.prepare(`
-          INSERT OR IGNORE INTO tag_associations (tag_id, entity_type, entity_id) VALUES (?, ?, ?)
+        const insertTagAssociation = db.prepare(`
+          INSERT OR IGNORE INTO tag_associations (tag_id, entity_type, entity_id)
+          VALUES (?, ?, ?)
         `);
-        for (const ta of data.tagAssociations) {
-          const newTagId = tagIdMap.get(ta.tagId);
-          if (!newTagId) continue;
+
+        for (const tagAssociation of data.tagAssociations) {
+          const newTagId = tagIdMap.get(tagAssociation.tagId);
+
+          if (!newTagId) {
+            continue;
+          }
 
           let newEntityId: number | undefined;
-          if (ta.entityType === 'character') newEntityId = characterIdMap.get(ta.entityId);
-          else if (ta.entityType === 'note') newEntityId = noteIdMap.get(ta.entityId);
+
+          if (tagAssociation.entityType === 'character') {
+            newEntityId = characterIdMap.get(tagAssociation.entityId);
+          } else if (tagAssociation.entityType === 'note') {
+            newEntityId = noteIdMap.get(tagAssociation.entityId);
+          }
 
           if (newEntityId) {
-            insertTA.run(newTagId, ta.entityType, newEntityId);
+            insertTagAssociation.run(newTagId, tagAssociation.entityType, newEntityId);
           }
         }
       }

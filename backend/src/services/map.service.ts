@@ -38,6 +38,32 @@ interface MapTerritory {
   updatedAt: string;
 }
 
+interface CreateMapTerritoryData {
+  name: string;
+  description?: string;
+  color?: string;
+  opacity?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  smoothing?: number;
+  points?: MapTerritoryPoint[];
+  factionId?: number | null;
+  sortOrder?: number;
+}
+
+interface UpdateMapTerritoryData {
+  name?: string;
+  description?: string;
+  color?: string;
+  opacity?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  smoothing?: number;
+  points?: MapTerritoryPoint[];
+  factionId?: number | null;
+  sortOrder?: number;
+}
+
 function parseTerritoryPoints(value: string | null | undefined): MapTerritoryPoint[] {
   if (!value) return [];
 
@@ -441,7 +467,7 @@ export class MapService {
     return territory;
   }
 
-  createTerritory(mapId: number, data: any): MapTerritory {
+  createTerritory(mapId: number, data: CreateMapTerritoryData): MapTerritory {
     this.getMapByIdOrThrow(mapId);
 
     const db = getDb();
@@ -468,7 +494,7 @@ export class MapService {
     return this.getTerritoryByIdOrThrow(result.lastInsertRowid as number);
   }
 
-  updateTerritory(territoryId: number, data: any): MapTerritory {
+  updateTerritory(territoryId: number, data: UpdateMapTerritoryData): MapTerritory {
     this.getTerritoryByIdOrThrow(territoryId);
 
     const db = getDb();
