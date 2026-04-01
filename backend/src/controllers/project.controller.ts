@@ -1,99 +1,64 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { ProjectService } from '../services/project.service';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ok, created, noContent } from '../utils/apiResponse';
+import { parseId } from '../utils/parseId';
+import { BadRequestError } from '../middleware/errorHandler';
 
-export class ProjectController {
-  static async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projects = ProjectService.getAll();
-      res.json({ success: true, data: projects });
-    } catch (error) {
-      next(error);
-    }
+export const getProjects = asyncHandler(async (_req: Request, res: Response) => {
+  const projects = ProjectService.getAll();
+  return ok(res, projects);
+});
+
+export const getProjectById = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseId(req.params.id, 'project id');
+  const project = ProjectService.getById(id);
+  return ok(res, project);
+});
+
+export const createProject = asyncHandler(async (req: Request, res: Response) => {
+  const project = ProjectService.create(req.body);
+  return created(res, project);
+});
+
+export const updateProject = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseId(req.params.id, 'project id');
+  const project = ProjectService.update(id, req.body);
+  return ok(res, project);
+});
+
+export const deleteProject = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseId(req.params.id, 'project id');
+  ProjectService.delete(id);
+  return noContent(res);
+});
+
+export const uploadProjectMap = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseId(req.params.id, 'project id');
+  const file = req.file as Express.Multer.File | undefined;
+
+  if (!file) {
+    throw new BadRequestError('Map image file is required');
   }
 
-  static async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const project = ProjectService.getById(id);
-      res.json({ success: true, data: project });
-    } catch (error) {
-      next(error);
-    }
-  }
+  const project = ProjectService.updateMapImage(id, file.path.replace(/^.*data/, ''));
+  return ok(res, project);
+});
 
-  static async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const project = ProjectService.create(req.body);
-      res.status(201).json({ success: true, data: project });
-    } catch (error) {
-      next(error);
-    }
-  }
+export const exportProject = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseId(req.params.id, 'project id');
+  const exported = ProjectService.exportProject(id);
 
-  static async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const project = ProjectService.update(id, req.body);
-      res.json({ success: true, data: project });
-    } catch (error) {
-      next(error);
-    }
-  }
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="project-${id}.json"`);
 
-  static async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      ProjectService.delete(id);
-      res.json({ success: true, message: 'Project deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  return res.status(200).send(JSON.stringify({
+    success: true,
+    data: exported,
+  }, null, 2));
+});
 
-  static async uploadMap(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      if (!req.file) {
-        res.status(400).json({ success: false, error: 'No file uploaded' });
-        return;
-      }
-      const imagePath = `/uploads/maps/${req.file.filename}`;
-      const project = ProjectService.updateMapImage(id, imagePath);
-      res.json({ success: true, data: project });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async exportProject(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const data = ProjectService.exportProject(id);
-      const safeName = (data.project.name || 'project')
-        .replace(/[^a-zA-Z0-9_-]/g, '_')
-        .substring(0, 50);
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="campaigner-${safeName}-${Date.now()}.json"`
-      );
-      res.json(data);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async importProject(req: Request, res: Response, next: NextFunction) {
-    try {
-      const data = req.body;
-      if (!data || !data.version || !data.project) {
-        res.status(400).json({ success: false, error: 'Invalid import file' });
-        return;
-      }
-      const project = ProjectService.importProject(data);
-      res.status(201).json({ success: true, data: project });
-    } catch (error) {
-      next(error);
-    }
-  }
-}
+export const importProject = asyncHandler(async (req: Request, res: Response) => {
+  const project = ProjectService.importProject(req.body);
+  return created(res, project);
+});

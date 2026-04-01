@@ -1,47 +1,57 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { WikiService } from '../services/wiki.service';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ok, created } from '../utils/apiResponse';
+import { parseId } from '../utils/parseId';
+import { BadRequestError } from '../middleware/errorHandler';
 
 export class WikiController {
-  static async getLinks(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const noteId = req.query.noteId ? parseInt(req.query.noteId as string) : undefined;
-      const links = noteId
-        ? WikiService.getLinksForNote(noteId)
-        : WikiService.getAllLinks(projectId);
-      res.json({ success: true, data: links });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getLinks = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
+    const noteIdRaw = req.query.noteId as string | undefined;
+    const noteId = noteIdRaw ? parseId(noteIdRaw, 'note id') : undefined;
 
-  static async createLink(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { projectId, sourceNoteId, targetNoteId, label } = req.body;
-      const link = WikiService.createLink(projectId, sourceNoteId, targetNoteId, label || '');
-      res.status(201).json({ success: true, data: link });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const links = noteId
+      ? WikiService.getLinksForNote(noteId)
+      : WikiService.getAllLinks(projectId);
 
-  static async deleteLink(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      WikiService.deleteLink(id);
-      res.json({ success: true, message: 'Link deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+    return ok(res, links);
+  });
 
-  static async getCategories(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const categories = WikiService.getCategories(projectId);
-      res.json({ success: true, data: categories });
-    } catch (error) {
-      next(error);
+  static createLink = asyncHandler(async (req: Request, res: Response) => {
+    const { projectId, sourceNoteId, targetNoteId, label } = req.body;
+
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      throw new BadRequestError('Valid projectId is required');
     }
-  }
+
+    if (!Number.isInteger(sourceNoteId) || sourceNoteId <= 0) {
+      throw new BadRequestError('Valid sourceNoteId is required');
+    }
+
+    if (!Number.isInteger(targetNoteId) || targetNoteId <= 0) {
+      throw new BadRequestError('Valid targetNoteId is required');
+    }
+
+    const link = WikiService.createLink(
+      projectId,
+      sourceNoteId,
+      targetNoteId,
+      label || ''
+    );
+
+    return created(res, link);
+  });
+
+  static deleteLink = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'wiki link id');
+    WikiService.deleteLink(id);
+    return ok(res, undefined, 'Link deleted');
+  });
+
+  static getCategories = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
+    const categories = WikiService.getCategories(projectId);
+    return ok(res, categories);
+  });
 }

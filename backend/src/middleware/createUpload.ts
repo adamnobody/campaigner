@@ -1,0 +1,86 @@
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { BadRequestError } from './errorHandler';
+
+const DEFAULT_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.svg'];
+const DEFAULT_ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/svg+xml',
+];
+
+interface CreateDiskUploadOptions {
+  folder: string;
+  maxFileSize?: number;
+  allowedExtensions?: string[];
+  allowedMimeTypes?: string[];
+  filenamePrefix?: string;
+}
+
+function ensureDirExists(dir: string) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+function sanitizeBaseName(name: string): string {
+  return name
+    .replace(/\.[^/.]+$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50) || 'file';
+}
+
+export function createDiskUpload(options: CreateDiskUploadOptions) {
+  const {
+    folder,
+    maxFileSize,
+    allowedExtensions = DEFAULT_ALLOWED_EXTENSIONS,
+    allowedMimeTypes = DEFAULT_ALLOWED_MIME_TYPES,
+    filenamePrefix = 'upload',
+  } = options;
+
+  const uploadDir = path.resolve(`data/uploads/${folder}`);
+  ensureDirExists(uploadDir);
+
+  const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const safeBase = sanitizeBaseName(file.originalname);
+      const unique = `${filenamePrefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}${ext}`;
+      cb(null, unique);
+    },
+  });
+
+  const fileFilter: multer.Options['fileFilter'] = (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mime = file.mimetype.toLowerCase();
+
+    const extAllowed = allowedExtensions.includes(ext);
+    const mimeAllowed = allowedMimeTypes.includes(mime);
+
+    if (!extAllowed || !mimeAllowed) {
+      cb(
+        new BadRequestError(
+          `Invalid file type. Allowed extensions: ${allowedExtensions.join(', ')}`
+        ) as unknown as Error
+      );
+      return;
+    }
+
+    cb(null, true);
+  };
+
+  return multer({
+    storage,
+    limits: maxFileSize ? { fileSize: maxFileSize } : undefined,
+    fileFilter,
+  });
+}

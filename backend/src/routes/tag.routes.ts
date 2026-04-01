@@ -1,10 +1,40 @@
 import { Router } from 'express';
-import { TagController } from '../controllers/tag.controller';
+import { z } from 'zod';
+import { getTags, createTag, deleteTag } from '../controllers/tag.controller';
+import { validateRequest } from '../middleware/validateRequest';
 
 const router = Router();
 
-router.get('/', TagController.getAll);
-router.post('/', TagController.create);
-router.delete('/:id', TagController.delete);
+const getTagsQuerySchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+});
 
-export { router as tagRoutes };
+const deleteTagParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+const createTagBodySchema = z.object({
+  projectId: z.number().int().positive(),
+  name: z.string().min(1),
+  color: z.string().optional(),
+});
+
+router.get(
+  '/',
+  validateRequest({ query: getTagsQuerySchema }),
+  getTags
+);
+
+router.post(
+  '/',
+  validateRequest({ body: createTagBodySchema }),
+  createTag
+);
+
+router.delete(
+  '/:id',
+  validateRequest({ params: deleteTagParamsSchema }),
+  deleteTag
+);
+
+export default router;

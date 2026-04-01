@@ -1,73 +1,87 @@
-import { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 export class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    public message: string,
-    public details?: unknown
-  ) {
+  statusCode: number;
+  details?: unknown;
+
+  constructor(message: string, statusCode = 500, details?: unknown) {
     super(message);
-    this.name = 'AppError';
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
+    this.details = details;
   }
 }
 
-export class NotFoundError extends AppError {
-  constructor(resource: string = 'Resource') {
-    super(404, `${resource} not found`);
+export class BadRequestError extends AppError {
+  constructor(message = 'Bad Request', details?: unknown) {
+    super(message, 400, details);
   }
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, details?: unknown) {
-    super(400, message, details);
+  constructor(message = 'Validation Error', details?: unknown) {
+    super(message, 400, details);
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(resource = 'Resource', details?: unknown) {
+    super(`${resource} not found`, 404, details);
   }
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(409, message);
+  constructor(message = 'Conflict', details?: unknown) {
+    super(message, 409, details);
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized', details?: unknown) {
+    super(message, 401, details);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden', details?: unknown) {
+    super(message, 403, details);
   }
 }
 
 export function errorHandler(
-  err: Error,
+  err: unknown,
   _req: Request,
   res: Response,
   _next: NextFunction
-): void {
-  console.error('❌ Error:', err);
-
+) {
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
+    return res.status(err.statusCode).json({
       success: false,
       error: err.message,
-      details: err.details,
+      ...(err.details !== undefined ? { details: err.details } : {}),
     });
-    return;
   }
 
-  // Ошибки SQLite
-  if (err.message?.includes('SQLITE_CONSTRAINT')) {
-    res.status(409).json({
+  if (err && typeof err === 'object' && 'name' in err && err.name === 'ZodError') {
+    return res.status(400).json({
       success: false,
-      error: 'Database constraint violation',
-      details: err.message,
+      error: 'Validation Error',
+      details: err,
     });
-    return;
   }
 
-  // Ошибки Multer
-  if (err.message?.includes('File too large')) {
-    res.status(413).json({
+  if (err && typeof err === 'object' && 'name' in err && err.name === 'MulterError') {
+    const multerError = err as { message?: string };
+    return res.status(400).json({
       success: false,
-      error: 'File too large',
+      error: multerError.message || 'File upload error',
     });
-    return;
   }
 
-  // Дефолтная ошибка
-  res.status(500).json({
+  console.error('[Unhandled Error]', err);
+
+  return res.status(500).json({
     success: false,
-    error: 'Internal server error',
+    error: 'Internal Server Error',
   });
 }

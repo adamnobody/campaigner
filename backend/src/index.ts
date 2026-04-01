@@ -3,21 +3,23 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import fs from 'fs';
+
 import { initializeDatabase } from './db/connection';
 import { errorHandler } from './middleware/errorHandler';
-import { projectRoutes } from './routes/project.routes';
-import { characterRoutes } from './routes/character.routes';
-import { noteRoutes } from './routes/note.routes';
+
+import projectRoutes from './routes/project.routes.js';
+import characterRoutes from './routes/character.routes.js';
+import noteRoutes from './routes/note.routes.js';
 import mapRoutes from './routes/map.routes.js';
-import { timelineRoutes } from './routes/timeline.routes';
-import { tagRoutes } from './routes/tag.routes';
-import { uploadRoutes } from './routes/upload.routes';
-import { searchRoutes } from './routes/search.routes';
-import { dogmaRoutes } from './routes/dogma.routes';
-import factionRoutes from './routes/faction.routes';
-import wikiRoutes from './routes/wiki.routes';
-import dynastyRoutes from './routes/dynasty.routes';
-import fs from 'fs';
+import timelineRoutes from './routes/timeline.routes.js';
+import tagRoutes from './routes/tag.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+import searchRoutes from './routes/search.routes.js';
+import dogmaRoutes from './routes/dogma.routes.js';
+import factionRoutes from './routes/faction.routes.js';
+import wikiRoutes from './routes/wiki.routes.js';
+import dynastyRoutes from './routes/dynasty.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,9 +80,36 @@ app.get('/api/health', (_req, res) => {
 // Error handler (must be last)
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🏰 Campaigner server running on http://localhost:${PORT}`);
   console.log(`📁 Data directory: ${dataDir}`);
 });
+
+let isShuttingDown = false;
+
+const shutdown = (signal: string) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
+
+  server.close((err) => {
+    if (err) {
+      console.error('❌ Error during server shutdown:', err);
+      process.exit(1);
+    }
+
+    console.log('✅ Server stopped gracefully');
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    console.error('⚠ Forced shutdown after timeout');
+    process.exit(1);
+  }, 5000).unref();
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 export default app;

@@ -356,12 +356,6 @@ export const DynastyDetailPage: React.FC = () => {
     }
   };
 
-  // ==================== Render ====================
-
-  if (loading && !isNew && !currentDynasty) {
-    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography></Box>;
-  }
-
   // Group members by generation
   const membersByGeneration = useMemo(() => {
     const map = new Map<number, DynastyMember[]>();
@@ -372,6 +366,18 @@ export const DynastyDetailPage: React.FC = () => {
     }
     return [...map.entries()].sort((a, b) => a[0] - b[0]);
   }, [currentMembers]);
+
+  // ==================== Render ====================
+
+  if (loading && !isNew && !currentDynasty) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
+          Загрузка...
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box>

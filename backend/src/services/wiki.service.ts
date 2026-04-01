@@ -1,4 +1,5 @@
 import { getDb } from '../db/connection';
+import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
 
 export interface WikiLink {
   id: number;
@@ -7,17 +8,15 @@ export interface WikiLink {
   targetNoteId: number;
   label: string;
   createdAt: string;
-  // joined fields
   sourceTitle?: string;
   targetTitle?: string;
 }
 
 export class WikiService {
-
-  /** Get all links for a note (both directions) */
   static getLinksForNote(noteId: number): WikiLink[] {
     const db = getDb();
-    const rows = db.prepare(`
+
+    return db.prepare(`
       SELECT
         wl.id, wl.project_id as projectId,
         wl.source_note_id as sourceNoteId,
@@ -31,13 +30,12 @@ export class WikiService {
       WHERE wl.source_note_id = ? OR wl.target_note_id = ?
       ORDER BY wl.created_at DESC
     `).all(noteId, noteId) as WikiLink[];
-    return rows;
   }
 
-  /** Get all links for a project */
   static getAllLinks(projectId: number): WikiLink[] {
     const db = getDb();
-    const rows = db.prepare(`
+
+    return db.prepare(`
       SELECT
         wl.id, wl.project_id as projectId,
         wl.source_note_id as sourceNoteId,
@@ -51,37 +49,53 @@ export class WikiService {
       WHERE wl.project_id = ?
       ORDER BY wl.created_at DESC
     `).all(projectId) as WikiLink[];
-    return rows;
   }
 
-  /** Create a link between two wiki notes */
-  static createLink(projectId: number, sourceNoteId: number, targetNoteId: number, label: string = ''): WikiLink {
+  static createLink(
+    projectId: number,
+    sourceNoteId: number,
+    targetNoteId: number,
+    label: string = ''
+  ): WikiLink {
     const db = getDb();
+
     if (sourceNoteId === targetNoteId) {
-      throw new Error('Cannot link a note to itself');
+      throw new BadRequestError('Cannot link a note to itself');
     }
-    // Normalize direction: smaller id is always source
-    const [sId, tId] = sourceNoteId < targetNoteId
-      ? [sourceNoteId, targetNoteId]
-      : [targetNoteId, sourceNoteId];
+
+    const [sId, tId] =
+      sourceNoteId < targetNoteId
+        ? [sourceNoteId, targetNoteId]
+        : [targetNoteId, sourceNoteId];
 
     const result = db.prepare(`
       INSERT INTO wiki_links (project_id, source_note_id, target_note_id, label)
       VALUES (?, ?, ?, ?)
     `).run(projectId, sId, tId, label);
 
-    return WikiService.getLinkById(result.lastInsertRowid as number)!;
+    const link = WikiService.getLinkById(result.lastInsertRowid as number);
+
+    if (!link) {
+      throw new NotFoundError('Wiki link');
+    }
+
+    return link;
   }
 
-  /** Delete a link */
   static deleteLink(id: number): void {
     const db = getDb();
+
+    const existing = WikiService.getLinkById(id);
+    if (!existing) {
+      throw new NotFoundError('Wiki link');
+    }
+
     db.prepare('DELETE FROM wiki_links WHERE id = ?').run(id);
   }
 
-  /** Get link by id */
   static getLinkById(id: number): WikiLink | undefined {
     const db = getDb();
+
     return db.prepare(`
       SELECT
         wl.id, wl.project_id as projectId,
@@ -97,10 +111,10 @@ export class WikiService {
     `).get(id) as WikiLink | undefined;
   }
 
-  /** Get wiki categories (distinct first tags of wiki notes) */
   static getCategories(projectId: number): { name: string; count: number }[] {
     const db = getDb();
-    const rows = db.prepare(`
+
+    return db.prepare(`
       SELECT t.name, COUNT(DISTINCT ta.entity_id) as count
       FROM tags t
       JOIN tag_associations ta ON ta.tag_id = t.id AND ta.entity_type = 'note'
@@ -109,6 +123,5 @@ export class WikiService {
       GROUP BY t.name
       ORDER BY count DESC
     `).all(projectId) as { name: string; count: number }[];
-    return rows;
   }
 }

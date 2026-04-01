@@ -1,12 +1,86 @@
 import { getDb } from '../db/connection';
 
 export interface SearchResult {
-  type: 'character' | 'note' | 'marker' | 'event' | 'dogma' | 'tag';
+  type: 'character' | 'note' | 'marker' | 'event' | 'dogma' | 'tag' | 'faction';
   id: number;
   title: string;
   subtitle: string;
   icon: string;
   url: string;
+}
+
+interface CharacterSearchRow {
+  id: number;
+  name: string;
+  title: string;
+  race: string;
+  characterClass: string;
+  status: string;
+}
+
+interface NoteSearchRow {
+  id: number;
+  title: string;
+  content: string;
+  noteType: 'wiki' | 'note' | 'marker_note';
+}
+
+interface MarkerSearchRow {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+interface EventSearchRow {
+  id: number;
+  title: string;
+  description: string;
+  eventDate: string;
+  era: string;
+}
+
+interface DogmaSearchRow {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  importance: string;
+}
+
+interface FactionSearchRow {
+  id: number;
+  name: string;
+  type: string;
+  custom_type: string;
+  motto: string;
+  description: string;
+  status: string;
+}
+
+interface TagSearchRow {
+  id: number;
+  name: string;
+  color: string;
+}
+
+function createSnippet(content: string, query: string, radius = 30): string {
+  if (!content) {
+    return '';
+  }
+
+  const lowerContent = content.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const idx = lowerContent.indexOf(lowerQuery);
+
+  if (idx < 0) {
+    return '';
+  }
+
+  const start = Math.max(0, idx - radius);
+  const end = Math.min(content.length, idx + query.length + radius);
+
+  return `${start > 0 ? '...' : ''}${content.substring(start, end)}${end < content.length ? '...' : ''}`;
 }
 
 export class SearchService {
@@ -15,7 +89,6 @@ export class SearchService {
     const like = `%${query}%`;
     const results: SearchResult[] = [];
 
-    // Characters
     const characters = db.prepare(`
       SELECT id, name, title, race, character_class as characterClass, status
       FROM characters
@@ -24,39 +97,37 @@ export class SearchService {
         character_class LIKE ? OR bio LIKE ? OR backstory LIKE ?
       )
       LIMIT ?
-    `).all(projectId, like, like, like, like, like, like, limit) as any[];
+    `).all(projectId, like, like, like, like, like, like, limit) as CharacterSearchRow[];
 
-    for (const ch of characters) {
-      const parts = [ch.race, ch.characterClass, ch.title].filter(Boolean);
+    for (const character of characters) {
+      const parts = [character.race, character.characterClass, character.title].filter(Boolean);
+
       results.push({
         type: 'character',
-        id: ch.id,
-        title: ch.name,
-        subtitle: parts.join(' · ') || ch.status,
+        id: character.id,
+        title: character.name,
+        subtitle: parts.join(' · ') || character.status,
         icon: '👤',
-        url: `/project/${projectId}/characters/${ch.id}`,
+        url: `/project/${projectId}/characters/${character.id}`,
       });
     }
 
-    // Notes
     const notes = db.prepare(`
       SELECT id, title, content, note_type as noteType
       FROM notes
       WHERE project_id = ? AND (title LIKE ? OR content LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, limit) as any[];
+    `).all(projectId, like, like, limit) as NoteSearchRow[];
 
     for (const note of notes) {
-      const typeIcons: Record<string, string> = { wiki: '📖', note: '📝', marker_note: '📌' };
-      let snippet = '';
-      if (note.content) {
-        const idx = note.content.toLowerCase().indexOf(query.toLowerCase());
-        if (idx >= 0) {
-          const start = Math.max(0, idx - 30);
-          const end = Math.min(note.content.length, idx + query.length + 30);
-          snippet = (start > 0 ? '...' : '') + note.content.substring(start, end) + (end < note.content.length ? '...' : '');
-        }
-      }
+      const typeIcons: Record<NoteSearchRow['noteType'], string> = {
+        wiki: '📖',
+        note: '📝',
+        marker_note: '📌',
+      };
+
+      const snippet = createSnippet(note.content, query);
+
       results.push({
         type: 'note',
         id: note.id,
@@ -67,91 +138,92 @@ export class SearchService {
       });
     }
 
-    // Map markers (JOIN через maps для фильтра по project_id)
     const markers = db.prepare(`
       SELECT mm.id, mm.title, mm.description, mm.icon
       FROM map_markers mm
       JOIN maps m ON mm.map_id = m.id
       WHERE m.project_id = ? AND (mm.title LIKE ? OR mm.description LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, limit) as any[];
+    `).all(projectId, like, like, limit) as MarkerSearchRow[];
 
-    for (const m of markers) {
+    for (const marker of markers) {
       results.push({
         type: 'marker',
-        id: m.id,
-        title: m.title,
-        subtitle: m.description || 'Маркер на карте',
+        id: marker.id,
+        title: marker.title,
+        subtitle: marker.description || 'Маркер на карте',
         icon: '📍',
         url: `/project/${projectId}/map`,
       });
     }
 
-    // Timeline events
     const events = db.prepare(`
       SELECT id, title, description, event_date as eventDate, era
       FROM timeline_events
       WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR era LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, like, limit) as any[];
+    `).all(projectId, like, like, like, limit) as EventSearchRow[];
 
-    for (const ev of events) {
-      const parts = [ev.eventDate, ev.era].filter(Boolean);
+    for (const event of events) {
+      const parts = [event.eventDate, event.era].filter(Boolean);
+
       results.push({
         type: 'event',
-        id: ev.id,
-        title: ev.title,
+        id: event.id,
+        title: event.title,
         subtitle: parts.join(' · ') || 'Событие',
         icon: '📅',
         url: `/project/${projectId}/timeline`,
       });
     }
 
-    // Dogmas
     const dogmas = db.prepare(`
       SELECT id, title, description, category, importance
       FROM dogmas
       WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR impact LIKE ? OR exceptions LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, like, like, limit) as any[];
+    `).all(projectId, like, like, like, like, limit) as DogmaSearchRow[];
 
-    for (const d of dogmas) {
+    for (const dogma of dogmas) {
       results.push({
         type: 'dogma',
-        id: d.id,
-        title: d.title,
-        subtitle: d.description ? d.description.substring(0, 80) : 'Догма',
+        id: dogma.id,
+        title: dogma.title,
+        subtitle: dogma.description ? dogma.description.substring(0, 80) : 'Догма',
         icon: '⚖️',
         url: `/project/${projectId}/dogmas`,
       });
     }
 
-    // Factions
     const factions = db.prepare(`
       SELECT id, name, type, custom_type, motto, description, status
       FROM factions
       WHERE project_id = ? AND (name LIKE ? OR motto LIKE ? OR description LIKE ? OR headquarters LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, like, like, limit) as any[];
+    `).all(projectId, like, like, like, like, limit) as FactionSearchRow[];
 
-    for (const f of factions) {
-      const subtitle = f.motto || f.description?.substring(0, 80) || f.status;
+    for (const faction of factions) {
+      const subtitle =
+        faction.motto ||
+        faction.description?.substring(0, 80) ||
+        faction.status;
+
       results.push({
-        type: 'faction' as any,
-        id: f.id,
-        title: f.name,
+        type: 'faction',
+        id: faction.id,
+        title: faction.name,
         subtitle,
         icon: '🏛️',
-        url: `/project/${projectId}/factions/${f.id}`,
+        url: `/project/${projectId}/factions/${faction.id}`,
       });
     }
 
-    // Tags
     const tags = db.prepare(`
-      SELECT id, name, color FROM tags
+      SELECT id, name, color
+      FROM tags
       WHERE project_id = ? AND name LIKE ?
       LIMIT ?
-    `).all(projectId, like, limit) as any[];
+    `).all(projectId, like, limit) as TagSearchRow[];
 
     for (const tag of tags) {
       results.push({
@@ -164,19 +236,32 @@ export class SearchService {
       });
     }
 
-    // Sort: exact matches first, then by type priority
-    const typePriority: Record<string, number> = {
-      character: 0, faction: 1, note: 2, marker: 3, event: 4, dogma: 5, tag: 6,
+    const lowerQuery = query.toLowerCase();
+
+    const typePriority: Record<SearchResult['type'], number> = {
+      character: 0,
+      faction: 1,
+      note: 2,
+      marker: 3,
+      event: 4,
+      dogma: 5,
+      tag: 6,
     };
 
     results.sort((a, b) => {
-      const aExact = a.title.toLowerCase() === query.toLowerCase() ? 0 : 1;
-      const bExact = b.title.toLowerCase() === query.toLowerCase() ? 0 : 1;
-      if (aExact !== bExact) return aExact - bExact;
+      const aExact = a.title.toLowerCase() === lowerQuery ? 0 : 1;
+      const bExact = b.title.toLowerCase() === lowerQuery ? 0 : 1;
 
-      const aStarts = a.title.toLowerCase().startsWith(query.toLowerCase()) ? 0 : 1;
-      const bStarts = b.title.toLowerCase().startsWith(query.toLowerCase()) ? 0 : 1;
-      if (aStarts !== bStarts) return aStarts - bStarts;
+      if (aExact !== bExact) {
+        return aExact - bExact;
+      }
+
+      const aStarts = a.title.toLowerCase().startsWith(lowerQuery) ? 0 : 1;
+      const bStarts = b.title.toLowerCase().startsWith(lowerQuery) ? 0 : 1;
+
+      if (aStarts !== bStarts) {
+        return aStarts - bStarts;
+      }
 
       return typePriority[a.type] - typePriority[b.type];
     });

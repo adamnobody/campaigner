@@ -1,85 +1,80 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { NoteService } from '../services/note.service';
 import { TagService } from '../services/tag.service';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ok, created } from '../utils/apiResponse';
+import { parseId } from '../utils/parseId';
+import { BadRequestError } from '../middleware/errorHandler';
 
 export class NoteController {
-  static async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const pagination = {
-        page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 50,
-        search: req.query.search as string,
-        sortBy: req.query.sortBy as string,
-        sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'desc',
-        noteType: req.query.noteType as string,
-        folderId: req.query.folderId ? parseInt(req.query.folderId as string) : undefined,
-      };
+  static getAll = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
 
-      const result = NoteService.getAll(projectId, pagination);
-      res.json({
-        success: true,
-        data: {
-          items: result.items,
-          total: result.total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(result.total / pagination.limit),
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const page = Number(req.query.page);
+    const limit = Number(req.query.limit);
 
-  static async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const note = NoteService.getById(id);
-      res.json({ success: true, data: note });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const pagination = {
+      page: Number.isFinite(page) ? page : 1,
+      limit: Number.isFinite(limit) ? limit : 50,
+      search: typeof req.query.search === 'string' ? req.query.search : undefined,
+      sortBy: typeof req.query.sortBy === 'string' ? req.query.sortBy : undefined,
+      sortOrder: req.query.sortOrder === 'asc' ? 'asc' : 'desc' as 'asc' | 'desc',
+      noteType: typeof req.query.noteType === 'string' ? req.query.noteType : undefined,
+      folderId:
+        req.query.folderId === 'null'
+          ? null
+          : req.query.folderId !== undefined
+            ? Number(req.query.folderId)
+            : undefined,
+    };
 
-  static async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const note = NoteService.create(req.body);
-      res.status(201).json({ success: true, data: note });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const result = NoteService.getAll(projectId, pagination);
 
-  static async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const note = NoteService.update(id, req.body);
-      res.json({ success: true, data: note });
-    } catch (error) {
-      next(error);
-    }
-  }
+    return res.status(200).json({
+      success: true,
+      data: {
+        items: result.items,
+        total: result.total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(result.total / pagination.limit),
+      },
+    });
+  });
 
-  static async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      NoteService.delete(id);
-      res.json({ success: true, message: 'Note deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getById = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'note id');
+    const note = NoteService.getById(id);
+    return ok(res, note);
+  });
 
-  static async setTags(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const note = NoteService.getById(id);
-      const { tagIds } = req.body;
-      const tags = TagService.setTagsForEntity(note.projectId, 'note', id, tagIds);
-      res.json({ success: true, data: tags });
-    } catch (error) {
-      next(error);
+  static create = asyncHandler(async (req: Request, res: Response) => {
+    const note = NoteService.create(req.body);
+    return created(res, note);
+  });
+
+  static update = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'note id');
+    const note = NoteService.update(id, req.body);
+    return ok(res, note);
+  });
+
+  static delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'note id');
+    NoteService.delete(id);
+    return ok(res, undefined, 'Note deleted');
+  });
+
+  static setTags = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'note id');
+    const note = NoteService.getById(id);
+    const tagIds = req.body?.tagIds;
+
+    if (!Array.isArray(tagIds)) {
+      throw new BadRequestError('tagIds must be an array');
     }
-  }
+
+    const tags = TagService.setTagsForEntity(note.projectId, 'note', id, tagIds);
+    return ok(res, tags);
+  });
 }

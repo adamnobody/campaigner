@@ -44,4 +44,4 @@ router.post('/character', uploadCharacterImage, (req: Request, res: Response, ne
   }
 });
 
-export { router as uploadRoutes };
+export default router;

@@ -1,0 +1,27 @@
+export function createSmokeContext() {
+  return {
+    projectId: null,
+    tagId: null,
+    characterId: null,
+    secondaryCharacterId: null,
+    relationshipId: null,
+    noteId: null,
+    secondaryWikiNoteId: null,
+    wikiLinkId: null,
+    timelineEventId: null,
+    secondaryTimelineEventId: null,
+    factionId: null,
+    secondaryFactionId: null,
+    factionRankId: null,
+    factionMemberId: null,
+    factionRelationId: null,
+    dynastyId: null,
+    dogmaId: null,
+    secondaryDogmaId: null,
+    uniqueCharacterName: null,
+    uniqueSecondaryCharacterName: null,
+    uniqueNoteTitle: null,
+    uniqueTimelineTitle: null,
+    uniqueDogmaTitle: null,
+  };
+}

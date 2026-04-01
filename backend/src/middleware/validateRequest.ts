@@ -1,38 +1,31 @@
-import { Request, Response, NextFunction } from 'express';
-import { ZodSchema, ZodError } from 'zod';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import type { ZodSchema } from 'zod';
+import { ValidationError } from './errorHandler';
 
-interface ValidateOptions {
+interface ValidateSchemas {
   body?: ZodSchema;
-  query?: ZodSchema;
   params?: ZodSchema;
+  query?: ZodSchema;
 }
 
-export function validateRequest(schemas: ValidateOptions) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+export function validateRequest(schemas: ValidateSchemas): RequestHandler {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
       if (schemas.body) {
         req.body = schemas.body.parse(req.body);
       }
-      if (schemas.query) {
-        req.query = schemas.query.parse(req.query) as any;
-      }
+
       if (schemas.params) {
-        req.params = schemas.params.parse(req.params) as any;
+        req.params = schemas.params.parse(req.params);
       }
+
+      if (schemas.query) {
+        req.query = schemas.query.parse(req.query);
+      }
+
       next();
     } catch (error) {
-      if (error instanceof ZodError) {
-        res.status(400).json({
-          success: false,
-          error: 'Validation error',
-          details: error.errors.map(e => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
-        });
-        return;
-      }
-      next(error);
+      next(new ValidationError('Request validation failed', error));
     }
   };
 }

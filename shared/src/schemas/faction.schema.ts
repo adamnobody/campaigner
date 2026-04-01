@@ -18,7 +18,7 @@ export const createFactionSchema = z.object({
   secondaryColor: z.string().max(50).optional(),
   foundedDate: z.string().max(100).optional(),
   disbandedDate: z.string().max(100).optional(),
-  parentFactionId: z.number().int().positive().optional(),
+  parentFactionId: z.number().int().positive().nullable().optional(),
   sortOrder: z.number().int().default(0),
 });
 

@@ -18,10 +18,14 @@
     "build:frontend": "cd frontend && npm run build",
     "db:migrate": "cd backend && npm run migrate",
     "doctor": "node scripts/doctor.mjs",
-    "chunker": "node scripts/chunker.mjs"
+    "chunker": "node scripts/chunker.mjs",
+    "smoke": "node scripts/smoke/index.mjs",
+    "smoke:up": "node scripts/smoke-runner.mjs",
+    "backend:start:once": "cd backend && npx tsx src/index.ts"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "kill-port": "^2.0.1",
     "typescript": "^5.4.5"
   },
   "dependencies": {

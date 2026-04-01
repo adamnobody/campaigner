@@ -1,150 +1,120 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { CharacterService } from '../services/character.service';
 import { TagService } from '../services/tag.service';
+import { asyncHandler } from '../utils/asyncHandler';
+import { ok, created } from '../utils/apiResponse';
+import { parseId } from '../utils/parseId';
+import { BadRequestError } from '../middleware/errorHandler';
 
 export class CharacterController {
-  static async getAll(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const pagination = {
-        page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 20,
-        search: req.query.search as string,
-        sortBy: req.query.sortBy as string,
-        sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'asc',
-      };
+  static getAll = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
 
-      const result = CharacterService.getAll(projectId, pagination);
-      res.json({
-        success: true,
-        data: {
-          items: result.items,
-          total: result.total,
-          page: pagination.page,
-          limit: pagination.limit,
-          totalPages: Math.ceil(result.total / pagination.limit),
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const page = Number(req.query.page);
+    const limit = Number(req.query.limit);
 
-  static async getById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const character = CharacterService.getById(id);
-      res.json({ success: true, data: character });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const pagination = {
+      page: Number.isFinite(page) ? page : 1,
+      limit: Number.isFinite(limit) ? limit : 20,
+      search: typeof req.query.search === 'string' ? req.query.search : undefined,
+      sortBy: typeof req.query.sortBy === 'string' ? req.query.sortBy : undefined,
+      sortOrder: req.query.sortOrder === 'desc' ? 'desc' : 'asc' as 'asc' | 'desc',
+    };
 
-  static async create(req: Request, res: Response, next: NextFunction) {
-    try {
-      const character = CharacterService.create(req.body);
-      res.status(201).json({ success: true, data: character });
-    } catch (error) {
-      next(error);
-    }
-  }
+    const result = CharacterService.getAll(projectId, pagination);
 
-  static async update(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const character = CharacterService.update(id, req.body);
-      res.json({ success: true, data: character });
-    } catch (error) {
-      next(error);
-    }
-  }
+    return res.status(200).json({
+      success: true,
+      data: {
+        items: result.items,
+        total: result.total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(result.total / pagination.limit),
+      },
+    });
+  });
 
-  static async delete(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      CharacterService.delete(id);
-      res.json({ success: true, message: 'Character deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getById = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'character id');
+    const character = CharacterService.getById(id);
+    return ok(res, character);
+  });
 
-  static async uploadImage(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      if (!req.file) {
-        res.status(400).json({ success: false, error: 'No file uploaded' });
-        return;
-      }
-      const imagePath = `/uploads/characters/${req.file.filename}`;
-      const character = CharacterService.updateImage(id, imagePath);
-      res.json({ success: true, data: character });
-    } catch (error) {
-      next(error);
+  static create = asyncHandler(async (req: Request, res: Response) => {
+    const character = CharacterService.create(req.body);
+    return created(res, character);
+  });
+
+  static update = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'character id');
+    const character = CharacterService.update(id, req.body);
+    return ok(res, character);
+  });
+
+  static delete = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'character id');
+    CharacterService.delete(id);
+    return ok(res, undefined, 'Character deleted');
+  });
+
+  static uploadImage = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'character id');
+
+    if (!req.file) {
+      throw new BadRequestError('No file uploaded');
     }
-  }
+
+    const imagePath = `/uploads/characters/${req.file.filename}`;
+    const character = CharacterService.updateImage(id, imagePath);
+    return ok(res, character);
+  });
 
   // ===== Relationships =====
-  static async getRelationships(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const relationships = CharacterService.getRelationships(projectId);
-      res.json({ success: true, data: relationships });
-    } catch (error) {
-      next(error);
-    }
-  }
 
-  static async createRelationship(req: Request, res: Response, next: NextFunction) {
-    try {
-      const relationship = CharacterService.createRelationship(req.body);
-      res.status(201).json({ success: true, data: relationship });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static getRelationships = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
+    const relationships = CharacterService.getRelationships(projectId);
+    return ok(res, relationships);
+  });
 
-  static async updateRelationship(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const relationship = CharacterService.updateRelationship(id, req.body);
-      res.json({ success: true, data: relationship });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static createRelationship = asyncHandler(async (req: Request, res: Response) => {
+    const relationship = CharacterService.createRelationship(req.body);
+    return created(res, relationship);
+  });
 
-  static async deleteRelationship(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      CharacterService.deleteRelationship(id);
-      res.json({ success: true, message: 'Relationship deleted' });
-    } catch (error) {
-      next(error);
-    }
-  }
+  static updateRelationship = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'relationship id');
+    const relationship = CharacterService.updateRelationship(id, req.body);
+    return ok(res, relationship);
+  });
+
+  static deleteRelationship = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'relationship id');
+    CharacterService.deleteRelationship(id);
+    return ok(res, undefined, 'Relationship deleted');
+  });
 
   // ===== Graph =====
-  static async getGraph(req: Request, res: Response, next: NextFunction) {
-    try {
-      const projectId = parseInt(req.query.projectId as string);
-      const graph = CharacterService.getGraph(projectId);
-      res.json({ success: true, data: graph });
-    } catch (error) {
-      next(error);
-    }
-  }
+
+  static getGraph = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.query.projectId as string, 'project id');
+    const graph = CharacterService.getGraph(projectId);
+    return ok(res, graph);
+  });
 
   // ===== Tags =====
-  static async setTags(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = parseInt(req.params.id);
-      const character = CharacterService.getById(id);
-      const { tagIds } = req.body;
-      const tags = TagService.setTagsForEntity(character.projectId, 'character', id, tagIds);
-      res.json({ success: true, data: tags });
-    } catch (error) {
-      next(error);
+
+  static setTags = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'character id');
+    const character = CharacterService.getById(id);
+    const tagIds = req.body?.tagIds;
+
+    if (!Array.isArray(tagIds)) {
+      throw new BadRequestError('tagIds must be an array');
     }
-  }
+
+    const tags = TagService.setTagsForEntity(character.projectId, 'character', id, tagIds);
+    return ok(res, tags);
+  });
 }
