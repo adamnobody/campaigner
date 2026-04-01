@@ -30,6 +30,7 @@ export async function api(path, options = {}) {
 
   let data = null;
   const text = await response.text();
+
   try {
     data = text ? JSON.parse(text) : null;
   } catch {

@@ -1,11 +1,34 @@
-import { spawn } from 'child_process';
+import { exec, spawn } from 'child_process';
 import pc from 'picocolors';
 
-const API_URL = process.env.API_URL || 'http://localhost:3001/api';
+const PORT = Number(process.env.SMOKE_PORT || process.env.PORT || 3001);
+const API_URL = process.env.API_URL || `http://localhost:${PORT}/api`;
 const HEALTH_URL = `${API_URL}/health`;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function execCommand(command, options = {}) {
+  return new Promise((resolve) => {
+    const child = exec(
+      command,
+      { windowsHide: true, maxBuffer: 1024 * 1024 * 10, ...options },
+      (error, stdout, stderr) => {
+        resolve({
+          code: error?.code ?? 0,
+          stdout: stdout ?? '',
+          stderr: stderr ?? '',
+          error: error ?? null,
+        });
+      }
+    );
+
+    if (options.stdio === 'inherit') {
+      child.stdout?.pipe(process.stdout);
+      child.stderr?.pipe(process.stderr);
+    }
+  });
 }
 
 async function isHealthy() {
@@ -28,83 +51,130 @@ async function waitForHealth(timeoutMs = 15000) {
   throw new Error(`Backend did not become healthy within ${timeoutMs}ms: ${HEALTH_URL}`);
 }
 
-function runCommand(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      stdio: 'inherit',
-      shell: true,
-      ...options,
-    });
+async function getPidsByPort(port) {
+  const cmd = `powershell -NoProfile -Command "$connections = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue; if ($connections) { $connections | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique }"`;
+  const result = await execCommand(cmd);
 
-    child.on('error', reject);
-    child.on('exit', (code) => resolve(code ?? 0));
-  });
+  if (!result.stdout.trim()) {
+    return [];
+  }
+
+  return result.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^\d+$/.test(line))
+    .map((line) => Number(line));
 }
 
-async function stopProcess(proc, label = 'process') {
-  if (!proc || proc.killed) return;
+async function killPid(pid) {
+  const cmd = `powershell -NoProfile -Command "Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue"`;
+  const result = await execCommand(cmd);
+  return result.code === 0;
+}
+
+async function killProcessesOnPort(port, reason = 'Cleaning port') {
+  const pids = await getPidsByPort(port);
+
+  if (pids.length === 0) {
+    return [];
+  }
+
+  console.log(pc.yellow(`\n⚠ ${reason}: found process(es) on port ${port}: ${pids.join(', ')}`));
+
+  const killed = [];
+  for (const pid of pids) {
+    const ok = await killPid(pid);
+    if (ok) {
+      killed.push(pid);
+      console.log(pc.yellow(`⚠ Killed PID ${pid} on port ${port}`));
+    } else {
+      console.log(pc.red(`✖ Failed to kill PID ${pid} on port ${port}`));
+    }
+  }
+
+  await sleep(1000);
+  return killed;
+}
+
+async function ensurePortIsFree(port, context = 'port cleanup') {
+  await killProcessesOnPort(port, context);
+  await sleep(500);
+
+  const leftoverPids = await getPidsByPort(port);
+  if (leftoverPids.length > 0) {
+    throw new Error(`${context}: port ${port} is still occupied by PID(s): ${leftoverPids.join(', ')}`);
+  }
+}
+
+async function stopBackendProcess(proc) {
+  if (!proc) return;
+  if (proc.exitCode !== null) return;
 
   proc.kill('SIGTERM');
   await sleep(1500);
 
-  if (!proc.killed) {
-    console.log(pc.yellow(`⚠ ${label} did not stop after SIGTERM, forcing...`));
+  if (proc.exitCode === null) {
+    console.log(pc.yellow('⚠ Backend did not stop after SIGTERM, forcing...'));
     proc.kill('SIGKILL');
-    await sleep(500);
+    await sleep(1000);
   }
 }
 
 async function main() {
   let backendProcess = null;
-  let startedByRunner = false;
 
   try {
     console.log(pc.cyan('\n▶ Building shared'));
-    const buildCode = await runCommand('npm', ['run', 'build:shared']);
-    if (buildCode !== 0) {
-      process.exit(buildCode);
+    const buildResult = await execCommand('npm run build:shared', { stdio: 'inherit' });
+    if (buildResult.code !== 0) {
+      process.exit(buildResult.code);
     }
 
-    const alreadyRunning = await isHealthy();
+    console.log(pc.cyan(`\n▶ Cleaning port ${PORT}`));
+    await ensurePortIsFree(PORT, 'pre-run port cleanup');
 
-    if (alreadyRunning) {
-      console.log(pc.yellow(`\n⚠ Backend already running at ${HEALTH_URL}; reusing existing server`));
-    } else {
-      console.log(pc.cyan('\n▶ Starting backend'));
-      backendProcess = spawn('npm', ['run', 'backend:start:once'], {
-        stdio: 'inherit',
-        shell: true,
-        detached: false,
-      });
+    console.log(pc.cyan('\n▶ Starting backend'));
+    backendProcess = spawn('npm', ['run', 'backend:start:once'], {
+      stdio: 'inherit',
+      shell: true,
+      detached: false,
+    });
 
-      startedByRunner = true;
+    backendProcess.on('error', (err) => {
+      console.error(pc.red(`✖ Backend process error: ${err.message}`));
+    });
 
-      backendProcess.on('error', (err) => {
-        console.error(pc.red(`✖ Backend process error: ${err.message}`));
-      });
-
-      console.log(pc.cyan(`\n▶ Waiting for health: ${HEALTH_URL}`));
-      await waitForHealth();
-      console.log(pc.green('✔ Backend is healthy'));
-    }
+    console.log(pc.cyan(`\n▶ Waiting for health: ${HEALTH_URL}`));
+    await waitForHealth();
+    console.log(pc.green('✔ Backend is healthy'));
 
     console.log(pc.cyan('\n▶ Running smoke'));
-    const smokeCode = await runCommand('npm', ['run', 'smoke']);
+    const smokeResult = await execCommand('npm run smoke', { stdio: 'inherit' });
 
-    if (startedByRunner) {
-      console.log(pc.cyan('\n▶ Stopping backend'));
-      await stopProcess(backendProcess, 'backend');
-    } else {
-      console.log(pc.dim('\n• Backend was not started by runner, leaving it running'));
-    }
+    console.log(pc.cyan('\n▶ Stopping backend'));
+    await stopBackendProcess(backendProcess);
 
-    process.exit(smokeCode);
+    console.log(pc.cyan(`\n▶ Final port cleanup ${PORT}`));
+    await ensurePortIsFree(PORT, 'post-run port cleanup');
+
+    process.exit(smokeResult.code);
   } catch (err) {
     console.error(pc.red(`\n✖ ${err instanceof Error ? err.message : String(err)}`));
 
-    if (startedByRunner && backendProcess) {
+    if (backendProcess) {
       console.log(pc.cyan('\n▶ Stopping backend after failure'));
-      await stopProcess(backendProcess, 'backend');
+      await stopBackendProcess(backendProcess);
+    }
+
+    try {
+      console.log(pc.cyan(`\n▶ Failure cleanup for port ${PORT}`));
+      await ensurePortIsFree(PORT, 'failure port cleanup');
+    } catch (cleanupErr) {
+      console.error(
+        pc.red(
+          `✖ Cleanup error: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}`
+        )
+      );
     }
 
     process.exit(1);
