@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Paper, TextField, Button,
-  Avatar, IconButton, Chip, Dialog,
-  DialogTitle, DialogContent, DialogActions,
+  Avatar, IconButton, Chip,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, ListItemAvatar,
-  Grid, Tooltip, Collapse,
+  Grid, Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -17,8 +16,6 @@ import PeopleIcon from '@mui/icons-material/People';
 import StarIcon from '@mui/icons-material/Star';
 import LinkIcon from '@mui/icons-material/Link';
 import PersonIcon from '@mui/icons-material/Person';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
 import { useFactionStore } from '@/store/useFactionStore';
@@ -26,11 +23,13 @@ import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
+import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
+import { FactionRankDialog, FactionMemberDialog, FactionRelationDialog } from '@/pages/faction/FactionDialogs';
 import {
   FACTION_TYPES, FACTION_TYPE_LABELS, FACTION_TYPE_ICONS,
   FACTION_STATUSES, FACTION_STATUS_LABELS, FACTION_STATUS_ICONS,
   STATE_TYPES, STATE_TYPE_LABELS,
-  FACTION_RELATION_TYPES, FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
+  FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
 } from '@campaigner/shared';
 import type { FactionRank, FactionMember } from '@campaigner/shared';
 
@@ -65,58 +64,7 @@ const EMPTY_FORM: FactionForm = {
   parentFactionId: '', tagsStr: '',
 };
 
-// ==================== Section wrapper ====================
-
-const Section: React.FC<{
-  title: string;
-  icon: React.ReactNode;
-  badge?: number;
-  defaultOpen?: boolean;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}> = ({ title, icon, badge, defaultOpen = true, action, children }) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <Paper sx={{
-      mb: 2.5, overflow: 'hidden',
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.07)',
-      borderRadius: 2,
-    }}>
-      <Box
-        onClick={() => setOpen(!open)}
-        sx={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          px: 3, py: 2, cursor: 'pointer',
-          backgroundColor: 'rgba(255,255,255,0.02)',
-          borderBottom: open ? '1px solid rgba(255,255,255,0.06)' : 'none',
-          '&:hover': { backgroundColor: 'rgba(255,255,255,0.04)' },
-          transition: 'background 0.15s',
-        }}
-      >
-        <Box display="flex" alignItems="center" gap={1.5}>
-          <Box sx={{ color: 'rgba(201,169,89,0.7)', display: 'flex' }}>{icon}</Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.9)' }}>
-            {title}
-          </Typography>
-          {badge !== undefined && badge > 0 && (
-            <Chip label={badge} size="small" sx={{
-              height: 22, fontSize: '0.7rem', fontWeight: 700,
-              backgroundColor: 'rgba(201,169,89,0.15)', color: 'rgba(201,169,89,0.9)',
-            }} />
-          )}
-        </Box>
-        <Box display="flex" alignItems="center" gap={1}>
-          {action && open && <Box onClick={e => e.stopPropagation()}>{action}</Box>}
-          {open ? <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.3)' }} /> : <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />}
-        </Box>
-      </Box>
-      <Collapse in={open}>
-        <Box sx={{ p: 3 }}>{children}</Box>
-      </Collapse>
-    </Paper>
-  );
-};
+// ==================== Helpers ====================
 
 const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <Box sx={{ mb: 1, pb: 1, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -612,90 +560,21 @@ export const FactionDetailPage: React.FC = () => {
       </Box>
 
       {/* ===== DIALOGS ===== */}
-
-      {/* Rank Dialog */}
-      <Dialog open={rankDialogOpen} onClose={() => setRankDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{editingRank ? 'Редактировать ранг' : 'Новый ранг'}</DialogTitle>
-        <DialogContent>
-          <TextField fullWidth label="Название *" value={rankForm.name} onChange={e => setRankForm(p => ({ ...p, name: e.target.value }))} margin="normal" />
-          <TextField fullWidth label="Уровень" value={rankForm.level} onChange={e => setRankForm(p => ({ ...p, level: parseInt(e.target.value) || 0 }))} margin="normal" type="number" />
-          <TextField fullWidth label="Описание" value={rankForm.description} onChange={e => setRankForm(p => ({ ...p, description: e.target.value }))} margin="normal" multiline rows={2} />
-          <Box display="flex" gap={2}>
-            <TextField fullWidth label="Иконка" value={rankForm.icon} onChange={e => setRankForm(p => ({ ...p, icon: e.target.value }))} margin="normal" placeholder="👑" />
-            <TextField fullWidth label="Цвет" value={rankForm.color || '#000000'} onChange={e => setRankForm(p => ({ ...p, color: e.target.value }))} margin="normal" type="color" InputLabelProps={{ shrink: true }} />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setRankDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleSaveRank} disabled={!rankForm.name.trim()}>{editingRank ? 'Сохранить' : 'Создать'}</DndButton>
-        </DialogActions>
-      </Dialog>
-
-      {/* Member Dialog */}
-      <Dialog open={memberDialogOpen} onClose={() => setMemberDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить члена</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Персонаж *</InputLabel>
-            <Select value={memberForm.characterId} label="Персонаж *" onChange={e => setMemberForm(p => ({ ...p, characterId: e.target.value }))}>
-              {allCharacters.filter((ch: any) => !currentMembers.some(m => m.characterId === ch.id)).map((ch: any) => (
-                <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Ранг</InputLabel>
-            <Select value={memberForm.rankId} label="Ранг" onChange={e => setMemberForm(p => ({ ...p, rankId: e.target.value }))}>
-              <MenuItem value="">Без ранга</MenuItem>
-              {currentRanks.map(r => <MenuItem key={r.id} value={String(r.id)}>{r.icon || '⭐'} {r.name} (ур. {r.level})</MenuItem>)}
-            </Select>
-          </FormControl>
-          <TextField fullWidth label="Роль / Должность" value={memberForm.role} onChange={e => setMemberForm(p => ({ ...p, role: e.target.value }))} margin="normal" placeholder="напр. Казначей" />
-          <TextField fullWidth label="Дата вступления" value={memberForm.joinedDate} onChange={e => setMemberForm(p => ({ ...p, joinedDate: e.target.value }))} margin="normal" />
-          <TextField fullWidth label="Заметки" value={memberForm.notes} onChange={e => setMemberForm(p => ({ ...p, notes: e.target.value }))} margin="normal" multiline rows={2} />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setMemberDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleAddMember} disabled={!memberForm.characterId}>Добавить</DndButton>
-        </DialogActions>
-      </Dialog>
-
-      {/* Relation Dialog */}
-      <Dialog open={relationDialogOpen} onClose={() => setRelationDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить связь</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Фракция *</InputLabel>
-            <Select value={relationForm.targetFactionId} label="Фракция *" onChange={e => setRelationForm(p => ({ ...p, targetFactionId: e.target.value }))}>
-              {otherFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Тип отношений</InputLabel>
-            <Select value={relationForm.relationType} label="Тип отношений" onChange={e => setRelationForm(p => ({ ...p, relationType: e.target.value }))}>
-              {FACTION_RELATION_TYPES.map(t => (
-                <MenuItem key={t} value={t}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: FACTION_RELATION_COLORS[t] }} />
-                    {FACTION_RELATION_LABELS[t]}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {relationForm.relationType === 'custom' && (
-            <TextField fullWidth label="Название связи" value={relationForm.customLabel} onChange={e => setRelationForm(p => ({ ...p, customLabel: e.target.value }))} margin="normal" />
-          )}
-          <TextField fullWidth label="Описание" value={relationForm.description} onChange={e => setRelationForm(p => ({ ...p, description: e.target.value }))} margin="normal" multiline rows={2} />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setRelationDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleAddRelation} disabled={!relationForm.targetFactionId}>Добавить</DndButton>
-        </DialogActions>
-      </Dialog>
+      <FactionRankDialog
+        open={rankDialogOpen} onClose={() => setRankDialogOpen(false)}
+        form={rankForm} onFormChange={setRankForm} onSubmit={handleSaveRank}
+        editingRank={editingRank}
+      />
+      <FactionMemberDialog
+        open={memberDialogOpen} onClose={() => setMemberDialogOpen(false)}
+        form={memberForm} onFormChange={setMemberForm} onSubmit={handleAddMember}
+        allCharacters={allCharacters} currentMembers={currentMembers} currentRanks={currentRanks}
+      />
+      <FactionRelationDialog
+        open={relationDialogOpen} onClose={() => setRelationDialogOpen(false)}
+        form={relationForm} onFormChange={setRelationForm} onSubmit={handleAddRelation}
+        otherFactions={otherFactions}
+      />
     </Box>
   );
 };

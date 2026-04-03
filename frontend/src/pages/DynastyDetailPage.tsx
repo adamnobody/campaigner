@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Paper, TextField, Button,
-  Avatar, IconButton, Chip, Dialog,
-  DialogTitle, DialogContent, DialogActions,
+  Avatar, IconButton, Chip,
   Select, MenuItem, FormControl, InputLabel,
-  List, ListItem, ListItemText, ListItemAvatar,
-  Grid, Tooltip, Collapse,
+  List, ListItem, ListItemText,
+  Grid, Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -18,8 +17,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import EventIcon from '@mui/icons-material/Event';
 import LinkIcon from '@mui/icons-material/Link';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
@@ -29,10 +26,11 @@ import { useFactionStore } from '@/store/useFactionStore';
 import { useTagStore } from '@/store/useTagStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
+import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
+import { DynastyMemberDialog, DynastyFamilyLinkDialog, DynastyEventDialog } from '@/pages/dynasty/DynastyDialogs';
 import {
   DYNASTY_STATUSES, DYNASTY_STATUS_LABELS, DYNASTY_STATUS_ICONS,
-  DYNASTY_FAMILY_RELATION_TYPES, DYNASTY_FAMILY_RELATION_LABELS,
-  DYNASTY_EVENT_IMPORTANCE, DYNASTY_EVENT_IMPORTANCE_LABELS, DYNASTY_EVENT_IMPORTANCE_COLORS,
+  DYNASTY_FAMILY_RELATION_LABELS,
 } from '@campaigner/shared';
 import type { DynastyMember, DynastyEvent } from '@campaigner/shared';
 import { FamilyTree } from '@/components/dynasty/FamilyTree';
@@ -63,51 +61,6 @@ const EMPTY_FORM: DynastyForm = {
   foundedDate: '', extinctDate: '',
   founderId: '', currentLeaderId: '', heirId: '', linkedFactionId: '',
   tagsStr: '',
-};
-
-// ==================== Section ====================
-
-const Section: React.FC<{
-  title: string; icon: React.ReactNode; badge?: number;
-  defaultOpen?: boolean; action?: React.ReactNode; children: React.ReactNode;
-}> = ({ title, icon, badge, defaultOpen = true, action, children }) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <Paper sx={{
-      mb: 2.5, overflow: 'hidden',
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.07)', borderRadius: 2,
-    }}>
-      <Box onClick={() => setOpen(!open)} sx={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        px: 3, py: 2, cursor: 'pointer',
-        backgroundColor: 'rgba(255,255,255,0.02)',
-        borderBottom: open ? '1px solid rgba(255,255,255,0.06)' : 'none',
-        '&:hover': { backgroundColor: 'rgba(255,255,255,0.04)' },
-        transition: 'background 0.15s',
-      }}>
-        <Box display="flex" alignItems="center" gap={1.5}>
-          <Box sx={{ color: 'rgba(201,169,89,0.7)', display: 'flex' }}>{icon}</Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.9)' }}>
-            {title}
-          </Typography>
-          {badge !== undefined && badge > 0 && (
-            <Chip label={badge} size="small" sx={{
-              height: 22, fontSize: '0.7rem', fontWeight: 700,
-              backgroundColor: 'rgba(201,169,89,0.15)', color: 'rgba(201,169,89,0.9)',
-            }} />
-          )}
-        </Box>
-        <Box display="flex" alignItems="center" gap={1}>
-          {action && open && <Box onClick={e => e.stopPropagation()}>{action}</Box>}
-          {open ? <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.3)' }} /> : <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />}
-        </Box>
-      </Box>
-      <Collapse in={open}>
-        <Box sx={{ p: 3 }}>{children}</Box>
-      </Collapse>
-    </Paper>
-  );
 };
 
 // ==================== Component ====================
@@ -800,129 +753,21 @@ export const DynastyDetailPage: React.FC = () => {
       </Box>
 
       {/* ===== DIALOGS ===== */}
-
-      {/* Member Dialog */}
-      <Dialog open={memberDialogOpen} onClose={() => setMemberDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить члена династии</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Персонаж *</InputLabel>
-            <Select value={memberForm.characterId} label="Персонаж *" onChange={e => setMemberForm(p => ({ ...p, characterId: e.target.value as string }))}>
-              {allCharacters.filter((ch: any) => !currentMembers.some(m => m.characterId === ch.id)).map((ch: any) => (
-                <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField fullWidth label="Поколение" value={memberForm.generation}
-            onChange={e => setMemberForm(p => ({ ...p, generation: parseInt(e.target.value) || 0 }))}
-            margin="normal" type="number" helperText="0 = основатели, 1 = дети, 2 = внуки..." />
-          <TextField fullWidth label="Роль в династии" value={memberForm.role}
-            onChange={e => setMemberForm(p => ({ ...p, role: e.target.value }))}
-            margin="normal" placeholder="напр. Основатель, Глава, Наследник, Младший сын" />
-          <Box display="flex" gap={2}>
-            <TextField fullWidth label="Дата рождения" value={memberForm.birthDate}
-              onChange={e => setMemberForm(p => ({ ...p, birthDate: e.target.value }))} margin="normal" />
-            <TextField fullWidth label="Дата смерти" value={memberForm.deathDate}
-              onChange={e => setMemberForm(p => ({ ...p, deathDate: e.target.value }))} margin="normal" />
-          </Box>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Линия</InputLabel>
-            <Select value={memberForm.isMainLine ? 'main' : 'branch'} label="Линия"
-              onChange={e => setMemberForm(p => ({ ...p, isMainLine: e.target.value === 'main' }))}>
-              <MenuItem value="main">Главная линия</MenuItem>
-              <MenuItem value="branch">Боковая ветвь</MenuItem>
-            </Select>
-          </FormControl>
-          <TextField fullWidth label="Заметки" value={memberForm.notes}
-            onChange={e => setMemberForm(p => ({ ...p, notes: e.target.value }))} margin="normal" multiline rows={2} />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setMemberDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleAddMember} disabled={!memberForm.characterId}>Добавить</DndButton>
-        </DialogActions>
-      </Dialog>
-
-      {/* Family Link Dialog */}
-      <Dialog open={familyLinkDialogOpen} onClose={() => setFamilyLinkDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить родственную связь</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>От кого *</InputLabel>
-            <Select value={familyLinkForm.sourceCharacterId} label="От кого *"
-              onChange={e => setFamilyLinkForm(p => ({ ...p, sourceCharacterId: e.target.value as string }))}>
-              {currentMembers.map(m => (
-                <MenuItem key={m.characterId} value={String(m.characterId)}>{m.characterName || `ID: ${m.characterId}`}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Тип связи</InputLabel>
-            <Select value={familyLinkForm.relationType} label="Тип связи"
-              onChange={e => setFamilyLinkForm(p => ({ ...p, relationType: e.target.value as string }))}>
-              {DYNASTY_FAMILY_RELATION_TYPES.map(t => (
-                <MenuItem key={t} value={t}>{DYNASTY_FAMILY_RELATION_LABELS[t]}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>К кому *</InputLabel>
-            <Select value={familyLinkForm.targetCharacterId} label="К кому *"
-              onChange={e => setFamilyLinkForm(p => ({ ...p, targetCharacterId: e.target.value as string }))}>
-              {currentMembers
-                .filter(m => String(m.characterId) !== familyLinkForm.sourceCharacterId)
-                .map(m => (
-                  <MenuItem key={m.characterId} value={String(m.characterId)}>{m.characterName || `ID: ${m.characterId}`}</MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-          <TextField fullWidth label="Пользовательская подпись" value={familyLinkForm.customLabel}
-            onChange={e => setFamilyLinkForm(p => ({ ...p, customLabel: e.target.value }))}
-            margin="normal" placeholder="напр. Приёмный сын" />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setFamilyLinkDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleAddFamilyLink}
-            disabled={!familyLinkForm.sourceCharacterId || !familyLinkForm.targetCharacterId}>Добавить</DndButton>
-        </DialogActions>
-      </Dialog>
-
-      {/* Event Dialog */}
-      <Dialog open={eventDialogOpen} onClose={() => setEventDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{editingEvent ? 'Редактировать событие' : 'Новое событие'}</DialogTitle>
-        <DialogContent>
-          <TextField fullWidth label="Название *" value={eventForm.title}
-            onChange={e => setEventForm(p => ({ ...p, title: e.target.value }))} margin="normal" />
-          <TextField fullWidth label="Дата *" value={eventForm.eventDate}
-            onChange={e => setEventForm(p => ({ ...p, eventDate: e.target.value }))} margin="normal"
-            placeholder="напр. 3-я эпоха, 2941 год" />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Важность</InputLabel>
-            <Select value={eventForm.importance} label="Важность"
-              onChange={e => setEventForm(p => ({ ...p, importance: e.target.value }))}>
-              {DYNASTY_EVENT_IMPORTANCE.map(imp => (
-                <MenuItem key={imp} value={imp}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: DYNASTY_EVENT_IMPORTANCE_COLORS[imp] }} />
-                    {DYNASTY_EVENT_IMPORTANCE_LABELS[imp]}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField fullWidth label="Описание" value={eventForm.description}
-            onChange={e => setEventForm(p => ({ ...p, description: e.target.value }))} margin="normal" multiline rows={3} />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEventDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleSaveEvent}
-            disabled={!eventForm.title.trim() || !eventForm.eventDate.trim()}>
-            {editingEvent ? 'Сохранить' : 'Добавить'}
-          </DndButton>
-        </DialogActions>
-      </Dialog>
+      <DynastyMemberDialog
+        open={memberDialogOpen} onClose={() => setMemberDialogOpen(false)}
+        form={memberForm} onFormChange={setMemberForm} onSubmit={handleAddMember}
+        allCharacters={allCharacters} currentMembers={currentMembers}
+      />
+      <DynastyFamilyLinkDialog
+        open={familyLinkDialogOpen} onClose={() => setFamilyLinkDialogOpen(false)}
+        form={familyLinkForm} onFormChange={setFamilyLinkForm} onSubmit={handleAddFamilyLink}
+        currentMembers={currentMembers}
+      />
+      <DynastyEventDialog
+        open={eventDialogOpen} onClose={() => setEventDialogOpen(false)}
+        form={eventForm} onFormChange={setEventForm} onSubmit={handleSaveEvent}
+        editingEvent={editingEvent}
+      />
     </Box>
   );
 };

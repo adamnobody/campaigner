@@ -6,6 +6,7 @@ import {
 } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
+import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers';
 
 interface TimelineEventRow {
   id: number;
@@ -20,25 +21,31 @@ interface TimelineEventRow {
   updatedAt: string;
 }
 
+const SELECT_FIELDS = `
+  id, project_id as projectId, title, description,
+  event_date as eventDate, sort_order as sortOrder, era,
+  linked_note_id as linkedNoteId,
+  created_at as createdAt, updated_at as updatedAt
+`;
+
 function mapRow(row: TimelineEventRow): TimelineEvent {
-  return {
-    ...row,
-    tags: [],
-  };
+  return { ...row, tags: [] };
 }
+
+const UPDATE_FIELD_MAP: Record<string, string> = {
+  title: 'title',
+  description: 'description',
+  eventDate: 'event_date',
+  sortOrder: 'sort_order',
+  era: 'era',
+  linkedNoteId: 'linked_note_id',
+};
 
 export class TimelineService {
   static getAll(projectId: number, era?: string): TimelineEvent[] {
     const db = getDb();
 
-    let query = `
-      SELECT id, project_id as projectId, title, description,
-             event_date as eventDate, sort_order as sortOrder, era,
-             linked_note_id as linkedNoteId,
-             created_at as createdAt, updated_at as updatedAt
-      FROM timeline_events WHERE project_id = ?
-    `;
-
+    let query = `SELECT ${SELECT_FIELDS} FROM timeline_events WHERE project_id = ?`;
     const params: Array<number | string> = [projectId];
 
     if (era) {
@@ -50,9 +57,15 @@ export class TimelineService {
 
     const rows = db.prepare(query).all(...params) as TimelineEventRow[];
 
+    const tagsMap = loadTagsBatch(
+      projectId,
+      'timeline_event',
+      rows.map((r) => r.id)
+    );
+
     return rows.map((row) => {
       const event = mapRow(row);
-      event.tags = TagService.getTagsForEntity(projectId, 'timeline_event', row.id);
+      event.tags = tagsMap.get(row.id) || [];
       return event;
     });
   }
@@ -60,13 +73,9 @@ export class TimelineService {
   static getById(id: number): TimelineEvent {
     const db = getDb();
 
-    const row = db.prepare(`
-      SELECT id, project_id as projectId, title, description,
-             event_date as eventDate, sort_order as sortOrder, era,
-             linked_note_id as linkedNoteId,
-             created_at as createdAt, updated_at as updatedAt
-      FROM timeline_events WHERE id = ?
-    `).get(id) as TimelineEventRow | undefined;
+    const row = db.prepare(
+      `SELECT ${SELECT_FIELDS} FROM timeline_events WHERE id = ?`
+    ).get(id) as TimelineEventRow | undefined;
 
     if (!row) {
       throw new NotFoundError('Timeline event');
@@ -107,43 +116,7 @@ export class TimelineService {
 
   static update(id: number, data: UpdateTimelineEvent): TimelineEvent {
     this.getById(id);
-    const db = getDb();
-
-    const fields: string[] = [];
-    const values: unknown[] = [];
-
-    if (data.title !== undefined) {
-      fields.push('title = ?');
-      values.push(data.title);
-    }
-    if (data.description !== undefined) {
-      fields.push('description = ?');
-      values.push(data.description);
-    }
-    if (data.eventDate !== undefined) {
-      fields.push('event_date = ?');
-      values.push(data.eventDate);
-    }
-    if (data.sortOrder !== undefined) {
-      fields.push('sort_order = ?');
-      values.push(data.sortOrder);
-    }
-    if (data.era !== undefined) {
-      fields.push('era = ?');
-      values.push(data.era);
-    }
-    if (data.linkedNoteId !== undefined) {
-      fields.push('linked_note_id = ?');
-      values.push(data.linkedNoteId);
-    }
-
-    if (fields.length > 0) {
-      fields.push("updated_at = datetime('now')");
-      values.push(id);
-
-      db.prepare(`UPDATE timeline_events SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-    }
-
+    buildUpdateQuery('timeline_events', UPDATE_FIELD_MAP, data as Record<string, unknown>, id);
     return this.getById(id);
   }
 

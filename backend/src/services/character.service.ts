@@ -8,10 +8,10 @@ import {
   CharacterRelationship,
   CharacterGraph,
   Pagination,
-  Tag,
 } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
+import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers';
 
 type CharacterStatus = Character['status'];
 
@@ -34,13 +34,6 @@ interface CharacterRow {
   updatedAt: string;
 }
 
-interface TagAssociationRow {
-  entity_id: number;
-  id: number;
-  name: string;
-  color: string;
-}
-
 interface CharacterRelationshipRow {
   id: number;
   projectId: number;
@@ -55,19 +48,20 @@ interface CharacterRelationshipRow {
   targetCharacterName?: string;
 }
 
-type CharacterUpdateFieldKey =
-  | 'name'
-  | 'title'
-  | 'race'
-  | 'characterClass'
-  | 'level'
-  | 'status'
-  | 'bio'
-  | 'appearance'
-  | 'personality'
-  | 'backstory'
-  | 'notes'
-  | 'imagePath';
+const CHARACTER_UPDATE_MAP: Record<string, string> = {
+  name: 'name',
+  title: 'title',
+  race: 'race',
+  characterClass: 'character_class',
+  level: 'level',
+  status: 'status',
+  bio: 'bio',
+  appearance: 'appearance',
+  personality: 'personality',
+  backstory: 'backstory',
+  notes: 'notes',
+  imagePath: 'image_path',
+};
 
 function mapRow(row: CharacterRow): Character {
   return {
@@ -75,44 +69,6 @@ function mapRow(row: CharacterRow): Character {
     tags: [],
     level: row.level ?? null,
   };
-}
-
-function loadTagsBatch(
-  projectId: number,
-  entityType: string,
-  entityIds: number[]
-): Map<number, Tag[]> {
-  const result = new Map<number, Tag[]>();
-
-  if (entityIds.length === 0) {
-    return result;
-  }
-
-  entityIds.forEach((id) => result.set(id, []));
-
-  const db = getDb();
-  const placeholders = entityIds.map(() => '?').join(',');
-
-  const rows = db.prepare(`
-    SELECT ta.entity_id, t.id, t.name, t.color
-    FROM tags t
-    JOIN tag_associations ta ON t.id = ta.tag_id
-    WHERE ta.entity_type = ? AND ta.entity_id IN (${placeholders}) AND t.project_id = ?
-    ORDER BY t.name ASC
-  `).all(entityType, ...entityIds, projectId) as TagAssociationRow[];
-
-  for (const row of rows) {
-    const tags = result.get(row.entity_id);
-    if (tags) {
-      tags.push({
-        id: row.id,
-        name: row.name,
-        color: row.color,
-      });
-    }
-  }
-
-  return result;
 }
 
 export class CharacterService {
@@ -228,39 +184,7 @@ export class CharacterService {
 
   static update(id: number, data: UpdateCharacter): Character {
     this.getById(id);
-    const db = getDb();
-
-    const fields: string[] = [];
-    const values: unknown[] = [];
-
-    const fieldMap: Record<CharacterUpdateFieldKey, string> = {
-      name: 'name',
-      title: 'title',
-      race: 'race',
-      characterClass: 'character_class',
-      level: 'level',
-      status: 'status',
-      bio: 'bio',
-      appearance: 'appearance',
-      personality: 'personality',
-      backstory: 'backstory',
-      notes: 'notes',
-      imagePath: 'image_path',
-    };
-
-    for (const [key, column] of Object.entries(fieldMap) as Array<[CharacterUpdateFieldKey, string]>) {
-      if (data[key] !== undefined) {
-        fields.push(`${column} = ?`);
-        values.push(data[key]);
-      }
-    }
-
-    if (fields.length > 0) {
-      fields.push("updated_at = datetime('now')");
-      values.push(id);
-      db.prepare(`UPDATE characters SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-    }
-
+    buildUpdateQuery('characters', CHARACTER_UPDATE_MAP, data as Record<string, unknown>, id);
     return this.getById(id);
   }
 
@@ -344,44 +268,22 @@ export class CharacterService {
   }
 
   static updateRelationship(id: number, data: UpdateRelationship): CharacterRelationship {
+    ensureEntityExists('character_relationships', id, 'Relationship');
+
+    buildUpdateQuery(
+      'character_relationships',
+      {
+        relationshipType: 'relationship_type',
+        customLabel: 'custom_label',
+        description: 'description',
+        isBidirectional: 'is_bidirectional',
+      },
+      data as Record<string, unknown>,
+      id,
+      { booleanFields: ['isBidirectional'], withTimestamp: false }
+    );
+
     const db = getDb();
-
-    const existing = db.prepare('SELECT id FROM character_relationships WHERE id = ?').get(id) as
-      | { id: number }
-      | undefined;
-
-    if (!existing) {
-      throw new NotFoundError('Relationship');
-    }
-
-    const fields: string[] = [];
-    const values: unknown[] = [];
-
-    if (data.relationshipType !== undefined) {
-      fields.push('relationship_type = ?');
-      values.push(data.relationshipType);
-    }
-
-    if (data.customLabel !== undefined) {
-      fields.push('custom_label = ?');
-      values.push(data.customLabel);
-    }
-
-    if (data.description !== undefined) {
-      fields.push('description = ?');
-      values.push(data.description);
-    }
-
-    if (data.isBidirectional !== undefined) {
-      fields.push('is_bidirectional = ?');
-      values.push(data.isBidirectional ? 1 : 0);
-    }
-
-    if (fields.length > 0) {
-      values.push(id);
-      db.prepare(`UPDATE character_relationships SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-    }
-
     return db.prepare(`
       SELECT id, project_id as projectId, source_character_id as sourceCharacterId,
              target_character_id as targetCharacterId, relationship_type as relationshipType,
@@ -393,16 +295,8 @@ export class CharacterService {
   }
 
   static deleteRelationship(id: number): void {
+    ensureEntityExists('character_relationships', id, 'Relationship');
     const db = getDb();
-
-    const existing = db.prepare('SELECT id FROM character_relationships WHERE id = ?').get(id) as
-      | { id: number }
-      | undefined;
-
-    if (!existing) {
-      throw new NotFoundError('Relationship');
-    }
-
     db.prepare('DELETE FROM character_relationships WHERE id = ?').run(id);
   }
 

@@ -12,16 +12,13 @@ import {
   createDynastyEventSchema,
   updateDynastyEventSchema,
 } from '@campaigner/shared';
+import { idParamsSchema, setTagsBodySchema } from './commonSchemas';
 
 const router = Router();
 const upload = createDiskUpload({
   folder: 'dynasties',
   maxFileSize: 10 * 1024 * 1024,
   filenamePrefix: 'dynasty',
-});
-
-const idParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
 });
 
 const memberParamsSchema = z.object({
@@ -45,10 +42,6 @@ const getAllQuerySchema = z.object({
   status: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().min(0).optional(),
-});
-
-const setTagsSchema = z.object({
-  tagIds: z.array(z.number().int().positive()),
 });
 
 const saveGraphPositionsSchema = z.object({
@@ -108,7 +101,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
-    body: setTagsSchema,
+    body: setTagsBodySchema,
   }),
   DynastyController.setTags
 );

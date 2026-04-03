@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export type ThemePreset =
   | 'obsidian-gold'
@@ -46,8 +47,6 @@ export interface PreferencesState {
   resetAppearance: () => void;
 }
 
-const STORAGE_KEY = 'campaigner-preferences';
-
 const defaultPreferences = {
   themePreset: 'obsidian-gold' as ThemePreset,
   surfaceMode: 'glass' as SurfaceMode,
@@ -62,71 +61,40 @@ const defaultPreferences = {
   homeBackgroundOpacity: 0.42,
 };
 
-const loadInitialState = () => {
-  if (typeof window === 'undefined') return defaultPreferences;
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultPreferences;
-    return { ...defaultPreferences, ...JSON.parse(raw) };
-  } catch {
-    return defaultPreferences;
-  }
-};
-
-export const usePreferencesStore = create<PreferencesState>((set) => ({
-  ...loadInitialState(),
-
-  setThemePreset: (value) => set({ themePreset: value }),
-  setSurfaceMode: (value) => set({ surfaceMode: value }),
-  setFontMode: (value) => set({ fontMode: value }),
-  setUiDensity: (value) => set({ uiDensity: value }),
-  setMotionMode: (value) => set({ motionMode: value }),
-  setTransparency: (value) => set({ transparency: value }),
-  setBlur: (value) => set({ blur: value }),
-  setBorderRadius: (value) => set({ borderRadius: value }),
-
-  setHomeBackgroundImage: (value) => set({ homeBackgroundImage: value }),
-  setHomeBackgroundOpacity: (value) => set({ homeBackgroundOpacity: value }),
-  clearHomeBackgroundImage: () => set({ homeBackgroundImage: '' }),
-
-  resetAppearance: () =>
-    set({
+export const usePreferencesStore = create<PreferencesState>()(
+  persist(
+    (set) => ({
       ...defaultPreferences,
+
+      setThemePreset: (value) => set({ themePreset: value }),
+      setSurfaceMode: (value) => set({ surfaceMode: value }),
+      setFontMode: (value) => set({ fontMode: value }),
+      setUiDensity: (value) => set({ uiDensity: value }),
+      setMotionMode: (value) => set({ motionMode: value }),
+      setTransparency: (value) => set({ transparency: value }),
+      setBlur: (value) => set({ blur: value }),
+      setBorderRadius: (value) => set({ borderRadius: value }),
+
+      setHomeBackgroundImage: (value) => set({ homeBackgroundImage: value }),
+      setHomeBackgroundOpacity: (value) => set({ homeBackgroundOpacity: value }),
+      clearHomeBackgroundImage: () => set({ homeBackgroundImage: '' }),
+
+      resetAppearance: () => set({ ...defaultPreferences }),
     }),
-}));
-
-usePreferencesStore.subscribe((state) => {
-  try {
-    const {
-      themePreset,
-      surfaceMode,
-      fontMode,
-      uiDensity,
-      motionMode,
-      transparency,
-      blur,
-      borderRadius,
-      homeBackgroundImage,
-      homeBackgroundOpacity,
-    } = state;
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        themePreset,
-        surfaceMode,
-        fontMode,
-        uiDensity,
-        motionMode,
-        transparency,
-        blur,
-        borderRadius,
-        homeBackgroundImage,
-        homeBackgroundOpacity,
-      })
-    );
-  } catch {
-    // ignore
-  }
-});
+    {
+      name: 'campaigner-preferences',
+      partialize: (state) => ({
+        themePreset: state.themePreset,
+        surfaceMode: state.surfaceMode,
+        fontMode: state.fontMode,
+        uiDensity: state.uiDensity,
+        motionMode: state.motionMode,
+        transparency: state.transparency,
+        blur: state.blur,
+        borderRadius: state.borderRadius,
+        homeBackgroundImage: state.homeBackgroundImage,
+        homeBackgroundOpacity: state.homeBackgroundOpacity,
+      }),
+    }
+  )
+);

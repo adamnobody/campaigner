@@ -3,12 +3,9 @@ import { z } from 'zod';
 import { DogmaController } from '../controllers/dogma.controller';
 import { validateRequest } from '../middleware/validateRequest';
 import { createDogmaSchema, updateDogmaSchema } from '@campaigner/shared';
+import { idParamsSchema, setTagsBodySchema } from './commonSchemas';
 
 const router = Router();
-
-const idParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
-});
 
 const getAllQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
@@ -23,10 +20,6 @@ const getAllQuerySchema = z.object({
 const reorderSchema = z.object({
   projectId: z.number().int().positive(),
   orderedIds: z.array(z.number().int().positive()),
-});
-
-const setTagsSchema = z.object({
-  tagIds: z.array(z.number().int().positive()),
 });
 
 router.get(
@@ -72,7 +65,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
-    body: setTagsSchema,
+    body: setTagsBodySchema,
   }),
   DogmaController.setTags
 );

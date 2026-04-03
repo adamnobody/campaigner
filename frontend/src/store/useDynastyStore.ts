@@ -1,6 +1,25 @@
 import { create } from 'zustand';
 import { dynastiesApi } from '@/api/axiosClient';
-import type { Dynasty, DynastyMember, DynastyFamilyLink, DynastyEvent } from '@campaigner/shared';
+import type {
+  Dynasty,
+  DynastyMember,
+  DynastyFamilyLink,
+  DynastyEvent,
+  CreateDynasty,
+  UpdateDynasty,
+  CreateDynastyMember,
+  UpdateDynastyMember,
+  CreateDynastyFamilyLink,
+  CreateDynastyEvent,
+  UpdateDynastyEvent,
+} from '@campaigner/shared';
+
+interface DynastyListParams {
+  search?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
 
 interface DynastyState {
   dynasties: Dynasty[];
@@ -8,26 +27,23 @@ interface DynastyState {
   loading: boolean;
   currentDynasty: Dynasty | null;
 
-  fetchDynasties: (projectId: number, params?: any) => Promise<void>;
+  fetchDynasties: (projectId: number, params?: DynastyListParams) => Promise<void>;
   fetchDynasty: (id: number) => Promise<Dynasty>;
-  createDynasty: (data: any) => Promise<Dynasty>;
-  updateDynasty: (id: number, data: any) => Promise<Dynasty>;
+  createDynasty: (data: CreateDynasty) => Promise<Dynasty>;
+  updateDynasty: (id: number, data: UpdateDynasty) => Promise<Dynasty>;
   deleteDynasty: (id: number) => Promise<void>;
   uploadImage: (id: number, file: File) => Promise<Dynasty>;
   setTags: (id: number, tagIds: number[]) => Promise<void>;
 
-  // Members
-  addMember: (dynastyId: number, data: any) => Promise<DynastyMember>;
-  updateMember: (dynastyId: number, memberId: number, data: any) => Promise<DynastyMember>;
+  addMember: (dynastyId: number, data: CreateDynastyMember) => Promise<DynastyMember>;
+  updateMember: (dynastyId: number, memberId: number, data: UpdateDynastyMember) => Promise<DynastyMember>;
   removeMember: (dynastyId: number, memberId: number) => Promise<void>;
 
-  // Family links
-  addFamilyLink: (dynastyId: number, data: any) => Promise<DynastyFamilyLink>;
+  addFamilyLink: (dynastyId: number, data: CreateDynastyFamilyLink) => Promise<DynastyFamilyLink>;
   deleteFamilyLink: (dynastyId: number, linkId: number) => Promise<void>;
 
-  // Events
-  addEvent: (dynastyId: number, data: any) => Promise<DynastyEvent>;
-  updateEvent: (dynastyId: number, eventId: number, data: any) => Promise<DynastyEvent>;
+  addEvent: (dynastyId: number, data: CreateDynastyEvent) => Promise<DynastyEvent>;
+  updateEvent: (dynastyId: number, eventId: number, data: UpdateDynastyEvent) => Promise<DynastyEvent>;
   deleteEvent: (dynastyId: number, eventId: number) => Promise<void>;
 
   saveGraphPositions: (dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) => Promise<void>;
@@ -118,7 +134,11 @@ export const useDynastyStore = create<DynastyState>((set) => ({
     const res = await dynastiesApi.addMember(dynastyId, data);
     const member = res.data.data;
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
     return member;
   },
 
@@ -126,14 +146,22 @@ export const useDynastyStore = create<DynastyState>((set) => ({
     const res = await dynastiesApi.updateMember(dynastyId, memberId, data);
     const member = res.data.data;
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
     return member;
   },
 
   removeMember: async (dynastyId, memberId) => {
     await dynastiesApi.removeMember(dynastyId, memberId);
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
   },
 
   // Family links
@@ -141,14 +169,22 @@ export const useDynastyStore = create<DynastyState>((set) => ({
     const res = await dynastiesApi.addFamilyLink(dynastyId, data);
     const link = res.data.data;
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
     return link;
   },
 
   deleteFamilyLink: async (dynastyId, linkId) => {
     await dynastiesApi.deleteFamilyLink(dynastyId, linkId);
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
   },
 
   // Events
@@ -156,7 +192,11 @@ export const useDynastyStore = create<DynastyState>((set) => ({
     const res = await dynastiesApi.addEvent(dynastyId, data);
     const event = res.data.data;
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
     return event;
   },
 
@@ -164,14 +204,22 @@ export const useDynastyStore = create<DynastyState>((set) => ({
     const res = await dynastiesApi.updateEvent(dynastyId, eventId, data);
     const event = res.data.data;
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
     return event;
   },
 
   deleteEvent: async (dynastyId, eventId) => {
     await dynastiesApi.deleteEvent(dynastyId, eventId);
     const dRes = await dynastiesApi.getById(dynastyId);
-    set({ currentDynasty: dRes.data.data });
+    const refreshed = dRes.data.data;
+    set(state => ({
+      currentDynasty: refreshed,
+      dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+    }));
   },
 
   saveGraphPositions: async (dynastyId, positions) => {

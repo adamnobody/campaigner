@@ -2,12 +2,9 @@ import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
-  Slider,
   FormControl,
   FormLabel,
   Divider,
@@ -16,7 +13,6 @@ import {
   TextField,
   Avatar,
   Fade,
-  Paper,
   Tooltip,
   alpha,
   useTheme,
@@ -35,282 +31,26 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TuneIcon from '@mui/icons-material/Tune';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import { usePreferencesStore, type ThemePreset } from '@/store/usePreferencesStore';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { THEME_PRESETS } from '@/theme/presets';
 import { DndButton } from '@/components/ui/DndButton';
 import { motion } from 'framer-motion';
 
-const presetOrder: ThemePreset[] = [
-  'obsidian-gold',
-  'midnight-cyan',
-  'royal-violet',
-  'ember-crimson',
-  'forest-emerald',
-  'moonstone-silver',
-  'sable-rose',
-  'deep-amber',
-  'storm-indigo',
-  'ashen-teal',
-];
-
-// ============================================
-// 🔧 HELPERS: безопасная работа с цветами
-// ============================================
-
-const safeRgba = (rgbString: string | undefined, opacity: number) => {
-  if (!rgbString) return `rgba(128, 128, 128, ${opacity})`;
-  // Если уже содержит rgb/rgba/hex - оборачиваем в alpha как есть
-  if (rgbString.startsWith('rgb') || rgbString.startsWith('#') || rgbString.startsWith('hsl')) {
-    return alpha(rgbString, opacity);
-  }
-  // Иначе это строка типа "180, 190, 210" - оборачиваем в rgba()
-  return `rgba(${rgbString}, ${opacity})`;
-};
-
-const safeRgb = (rgbString: string | undefined) => {
-  if (!rgbString) return 'rgb(128, 128, 128)';
-  if (rgbString.startsWith('rgb') || rgbString.startsWith('#')) return rgbString;
-  return `rgb(${rgbString})`;
-};
-
-// ============================================
-// 🎭 ENHANCED UI COMPONENTS
-// ============================================
-
-interface PositionProps {
-  top?: string;
-  right?: string;
-  bottom?: string;
-  left?: string;
-}
-
-const FloatingOrb: React.FC<{
-  color: string;
-  size?: number;
-} & PositionProps & { delay?: number }> = ({ 
-  color, 
-  size = 300, 
-  top, 
-  right, 
-  bottom, 
-  left, 
-  delay = 0 
-}) => (
-  <Box
-    sx={{
-      position: 'absolute',
-      width: size,
-      height: size,
-      ...(top && { top }),
-      ...(right && { right }),
-      ...(bottom && { bottom }),
-      ...(left && { left }),
-      borderRadius: '50%',
-      background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
-      transform: 'scale(1)',
-      opacity: 0.3,
-      animation: `gentleFloat ${10 + delay}s ease-in-out infinite`,
-      pointerEvents: 'none',
-      zIndex: 0,
-      '@keyframes gentleFloat': {
-        '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
-        '50%': { transform: 'translate(-15px, 15px) scale(1.05)' },
-      },
-    }}
-  />
-);
-
-const GlassCard: React.FC<{
-  children: React.ReactNode;
-  sx?: any;
-  elevation?: number;
-  interactive?: boolean;
-}> = ({ children, sx = {}, elevation = 0, interactive = false }) => {
-  const theme = useTheme();
-  
-  return (
-    <Paper
-      elevation={elevation}
-      sx={{
-        background: `linear-gradient(135deg, 
-          ${alpha(theme.palette.background.paper, 0.75)} 0%, 
-          ${alpha(theme.palette.background.paper, 0.45)} 100%
-        )`,
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: `1px solid ${alpha(theme.palette.divider, 0.25)}`,
-        borderRadius: 3,
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        position: 'relative',
-        overflow: 'hidden',
-        cursor: interactive ? 'pointer' : 'default',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 'inherit',
-          padding: '1px',
-          background: `linear-gradient(135deg, 
-            ${alpha(theme.palette.primary.main, 0.15)} 0%, 
-            transparent 50%
-          )`,
-          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          WebkitMaskComposite: 'xor',
-          maskComposite: 'exclude',
-          pointerEvents: 'none',
-          opacity: 0,
-          transition: 'opacity 0.4s ease',
-        },
-        ...(interactive && {
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            borderColor: alpha(theme.palette.primary.main, 0.35),
-            boxShadow: `
-              0 12px 28px ${alpha(theme.palette.common.black, 0.25)},
-              0 0 40px ${alpha(theme.palette.primary.main, 0.06)}
-            `,
-            '&::before': { opacity: 1 },
-          },
-        }),
-        ...sx,
-      }}
-    >
-      {children}
-    </Paper>
-  );
-};
-
-const SectionHeader: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-}> = ({ icon, title, subtitle }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 40,
-        height: 40,
-        borderRadius: 2,
-        bgcolor: 'primary.main',
-        color: '#fff',
-        boxShadow: (t: any) => `0 4px 12px ${alpha(t.palette.primary.main, 0.3)}`,
-      }}
-    >
-      {icon}
-    </Box>
-    <Box>
-      <Typography
-        variant="h6"
-        sx={{
-          fontFamily: '"Cinzel", serif',
-          fontWeight: 700,
-          fontSize: '1.15rem',
-          lineHeight: 1.2,
-        }}
-      >
-        {title}
-      </Typography>
-      {subtitle && (
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-          {subtitle}
-        </Typography>
-      )}
-    </Box>
-  </Box>
-);
-
-const AnimatedSlider: React.FC<{
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (value: number) => void;
-  valueLabelFormat?: (value: number) => string;
-  disabled?: boolean;
-  icon?: React.ReactNode;
-  color?: string;
-}> = ({ label, value, min, max, step, onChange, valueLabelFormat, disabled, icon, color }) => {
-  const theme = useTheme();
-  
-  return (
-    <Box sx={{ mt: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <FormLabel
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            fontWeight: 600,
-            fontSize: '0.9rem',
-            color: 'text.primary',
-          }}
-        >
-          {icon}
-          {label}
-        </FormLabel>
-        <Chip
-          size="small"
-          label={valueLabelFormat ? valueLabelFormat(value) : value}
-          sx={{
-            backgroundColor: alpha(color || theme.palette.primary.main, 0.12),
-            color: color || theme.palette.primary.main,
-            fontWeight: 700,
-            fontSize: '0.75rem',
-            height: 24,
-            border: `1px solid ${alpha(color || theme.palette.primary.main, 0.25)}`,
-            fontFamily: '"Roboto Mono", monospace',
-          }}
-        />
-      </Box>
-      <Slider
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(_, v) => onChange(v as number)}
-        valueLabelDisplay="auto"
-        valueLabelFormat={valueLabelFormat}
-        disabled={disabled}
-        sx={{
-          height: 6,
-          '& .MuiSlider-thumb': {
-            width: 20,
-            height: 20,
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              boxShadow: `0 0 0 8px ${alpha(color || theme.palette.primary.main, 0.12)}`,
-              transform: 'scale(1.15)',
-            },
-          },
-          '& .MuiSlider-track': {
-            background: `linear-gradient(90deg, ${color || theme.palette.primary.main}, ${
-              color ? alpha(color, 0.6) : theme.palette.primary.light
-            })`,
-            border: 'none',
-          },
-          '& .MuiSlider-rail': {
-            opacity: 0.15,
-          },
-        }}
-      />
-    </Box>
-  );
-};
-
-// ============================================
-// 🚀 MAIN COMPONENT
-// ============================================
+import {
+  presetOrder,
+  safeRgba,
+  FloatingOrb,
+  GlassCard,
+  SectionHeader,
+  AnimatedSlider,
+} from '@/pages/appearance/AppearancePrimitives';
+import { AppearanceLivePreview } from '@/pages/appearance/AppearanceLivePreview';
 
 export const AppearanceSettingsPage: React.FC = () => {
   const theme = useTheme();
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredPreset, setHoveredPreset] = useState<string | null>(null);
 
-  // Store hooks (preserved exactly as original)
   const {
     themePreset,
     surfaceMode,
@@ -343,7 +83,6 @@ export const AppearanceSettingsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handlers (preserved exactly as original)
   const handleBackgroundFileUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -550,7 +289,6 @@ export const AppearanceSettingsPage: React.FC = () => {
                             position: 'relative',
                           }}
                         >
-                          {/* Color Preview - ✅ ИСПРАВЛЕНО: используем safeRgba */}
                           <Box
                             sx={{
                               height: 72,
@@ -591,7 +329,6 @@ export const AppearanceSettingsPage: React.FC = () => {
                             )}
                           </Box>
 
-                          {/* Label */}
                           <Box
                             sx={{
                               p: 1.5,
@@ -1041,159 +778,8 @@ export const AppearanceSettingsPage: React.FC = () => {
             {/* RIGHT COLUMN */}
             <Stack spacing={3} sx={{ minWidth: 0, position: 'sticky', top: 24, alignSelf: 'start' }}>
               
-              {/* LIVE PREVIEW CARD - ✅ ИСПРАВЛЕНО: все borderRgb через safeRgba/safeRgb */}
-              <GlassCard
-                sx={{ p: 3 }}
-                interactive
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    mb: 2,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontFamily: '"Cinzel", serif',
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                    }}
-                  >
-                    <Box
-                      component="span"
-                      sx={{
-                        display: 'inline-flex',
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: theme.palette.success.main,
-                        boxShadow: `0 0 8px ${theme.palette.success.main}`,
-                        animation: 'pulse 2s infinite',
-                        '@keyframes pulse': {
-                          '0%, 100%': { opacity: 1 },
-                          '50%': { opacity: 0.5 },
-                        },
-                      }}
-                    />
-                    Превью
-                  </Typography>
-                  <Chip
-                    size="small"
-                    label="LIVE"
-                    sx={{
-                      backgroundColor: alpha(theme.palette.success.main, 0.15),
-                      color: theme.palette.success.main,
-                      fontWeight: 800,
-                      fontSize: '0.65rem',
-                      letterSpacing: '0.1em',
-                      height: 22,
-                    }}
-                  />
-                </Box>
-
-                {/* Preview Content - ✅ ИСПРАВЛЕНО */}
-                <Box
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2.5,
-                    background: currentPreset.backgroundAccent,
-                    // ✅ ИСПРАВЛЕНО: safeRgba вместо alpha(...borderRgb...)
-                    border: `1px solid ${safeRgba(currentPreset.borderRgb, 0.3)}`,
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: -50,
-                      right: -50,
-                      width: 150,
-                      height: 150,
-                      borderRadius: '50%',
-                      // ✅ ИСПРАВЛЕНО: safeRgba
-                      background: `radial-gradient(circle, ${safeRgba(currentPreset.borderRgb, 0.15)}, transparent 70%)`,
-                    },
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      fontFamily: '"Cinzel", serif',
-                      fontWeight: 800,
-                      fontSize: '1.4rem',
-                      mb: 1.5,
-                      color: currentPreset.textPrimary,
-                      position: 'relative',
-                      zIndex: 1,
-                    }}
-                  >
-                    Башня Архимага
-                  </Typography>
-
-                  <Typography
-                    sx={{ 
-                      color: currentPreset.textSecondary, 
-                      mb: 2,
-                      fontSize: '0.88rem',
-                      lineHeight: 1.6,
-                      position: 'relative',
-                      zIndex: 1,
-                    }}
-                  >
-                    Древняя башня, скрытая среди туманных скал. Внутри хранятся карты, записи экспедиций и забытые трактаты о магии.
-                  </Typography>
-
-                  <Box display="flex" gap={1} flexWrap="wrap" mb={2.5} sx={{ position: 'relative', zIndex: 1 }}>
-                    {['Локация', 'Магия', 'Тайна'].map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={tag}
-                        size="small"
-                        sx={{
-                          backgroundColor: alpha(currentPreset.accentMain, 0.15),
-                          color: currentPreset.accentMain,
-                          fontWeight: 700,
-                          fontSize: '0.72rem',
-                          border: `1px solid ${alpha(currentPreset.accentMain, 0.3)}`,
-                        }}
-                      />
-                    ))}
-                  </Box>
-
-                  <Box display="flex" gap={1.5} sx={{ position: 'relative', zIndex: 1 }}>
-                    <DndButton
-                      variant="contained"
-                      size="small"
-                      sx={{
-                        flex: 1,
-                        fontWeight: 700,
-                        background: `linear-gradient(135deg, ${currentPreset.accentMain}, ${currentPreset.accentStrong})`,
-                        boxShadow: `0 4px 12px ${alpha(currentPreset.accentMain, 0.4)}`,
-                      }}
-                    >
-                      Открыть
-                    </DndButton>
-                    {/* ✅ КРИТИЧНОЕ ИСПРАВЛЕНИЕ: safeRgba для borderRgb */}
-                    <DndButton
-                      variant="outlined"
-                      size="small"
-                      sx={{
-                        flex: 1,
-                        fontWeight: 600,
-                        // ✅ БЫЛО: borderColor: alpha(currentPreset.borderRgb, 0.4)
-                        // ✅ СТАЛО:
-                        borderColor: safeRgba(currentPreset.borderRgb, 0.4),
-                        color: currentPreset.textSecondary,
-                      }}
-                    >
-                      Подробнее
-                    </DndButton>
-                  </Box>
-                </Box>
-              </GlassCard>
+              {/* LIVE PREVIEW CARD */}
+              <AppearanceLivePreview currentPreset={currentPreset} />
 
               {/* CURRENT PARAMETERS CARD */}
               <GlassCard sx={{ p: 3 }}>

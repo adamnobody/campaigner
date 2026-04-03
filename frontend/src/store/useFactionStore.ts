@@ -140,9 +140,12 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   createRank: async (factionId, data) => {
     const res = await factionsApi.createRank(factionId, data);
     const rank = res.data.data;
-    // Refetch faction to update ranks
     const fRes = await factionsApi.getById(factionId);
-    set({ currentFaction: fRes.data.data });
+    const refreshed = fRes.data.data;
+    set(state => ({
+      currentFaction: refreshed,
+      factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+    }));
     return rank;
   },
 
@@ -150,14 +153,22 @@ export const useFactionStore = create<FactionState>((set, get) => ({
     const res = await factionsApi.updateRank(factionId, rankId, data);
     const rank = res.data.data;
     const fRes = await factionsApi.getById(factionId);
-    set({ currentFaction: fRes.data.data });
+    const refreshed = fRes.data.data;
+    set(state => ({
+      currentFaction: refreshed,
+      factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+    }));
     return rank;
   },
 
   deleteRank: async (factionId, rankId) => {
     await factionsApi.deleteRank(factionId, rankId);
     const fRes = await factionsApi.getById(factionId);
-    set({ currentFaction: fRes.data.data });
+    const refreshed = fRes.data.data;
+    set(state => ({
+      currentFaction: refreshed,
+      factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+    }));
   },
 
   // Members
@@ -165,7 +176,11 @@ export const useFactionStore = create<FactionState>((set, get) => ({
     const res = await factionsApi.addMember(factionId, data);
     const member = res.data.data;
     const fRes = await factionsApi.getById(factionId);
-    set({ currentFaction: fRes.data.data });
+    const refreshed = fRes.data.data;
+    set(state => ({
+      currentFaction: refreshed,
+      factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+    }));
     return member;
   },
 
@@ -173,14 +188,22 @@ export const useFactionStore = create<FactionState>((set, get) => ({
     const res = await factionsApi.updateMember(factionId, memberId, data);
     const member = res.data.data;
     const fRes = await factionsApi.getById(factionId);
-    set({ currentFaction: fRes.data.data });
+    const refreshed = fRes.data.data;
+    set(state => ({
+      currentFaction: refreshed,
+      factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+    }));
     return member;
   },
 
   removeMember: async (factionId, memberId) => {
     await factionsApi.removeMember(factionId, memberId);
     const fRes = await factionsApi.getById(factionId);
-    set({ currentFaction: fRes.data.data });
+    const refreshed = fRes.data.data;
+    set(state => ({
+      currentFaction: refreshed,
+      factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+    }));
   },
 
   // Relations
