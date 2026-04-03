@@ -28,6 +28,8 @@ import { mapApi, projectsApi, notesApi, factionsApi } from '@/api/axiosClient';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 
+import type { CreateMarker } from '@campaigner/shared';
+
 // ==================== Constants ====================
 const MARKER_ICONS: Record<string, string> = {
   castle: '🏰', city: '🏙️', village: '🏘️', tavern: '🍺',
@@ -57,9 +59,15 @@ const MAX_ZOOM = 5;
 const ZOOM_SPEED = 0.1;
 const DRAG_THRESHOLD = 4;
 const PANEL_WIDTH = 360;
+type MarkerIcon = CreateMarker['icon'];
+
 const DEFAULT_FORM = {
-  title: '', description: '', icon: 'custom', color: MARKER_COLORS[0] as string,
-  linkedNoteId: null as number | null, createChildMap: false,
+  title: '',
+  description: '',
+  icon: 'custom' as MarkerIcon,
+  color: MARKER_COLORS[0] as string,
+  linkedNoteId: null as number | null,
+  createChildMap: false,
 };
 
 type MapMode = 'select' | 'draw_territory';
@@ -77,7 +85,7 @@ const sxMapContainer = { flexGrow: 1, display: 'flex', overflow: 'hidden', borde
 // ==================== Types ====================
 interface Marker {
   id: number; title: string; description: string;
-  x: number; y: number; icon: string; color: string;
+  x: number; y: number; icon: MarkerIcon; color: string;
   linkedNoteId: number | null; childMapId: number | null;
 }
 interface Territory {
@@ -1326,7 +1334,7 @@ export const MapPage: React.FC = () => {
             : `0 0 8px ${marker.color}80, 0 2px 8px rgba(0,0,0,0.5)`,
           border: isSelected ? '2px solid #fff' : '2px solid rgba(0,0,0,0.3)',
         }}>
-          {MARKER_ICONS[marker.icon] || '📍'}
+          {marker.icon ? (MARKER_ICONS[marker.icon] || '📍') : '📍'}
         </Box>
         <Typography sx={{
           position: 'absolute', top: '100%', left: '50%',
@@ -1379,7 +1387,7 @@ export const MapPage: React.FC = () => {
             fontSize: '20px', flexShrink: 0,
             boxShadow: `0 0 12px ${selectedMarker.color}60`,
           }}>
-            {MARKER_ICONS[selectedMarker.icon] || '📍'}
+            {selectedMarker.icon ? (MARKER_ICONS[selectedMarker.icon] || '📍') : '📍'}
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700, color: '#fff', fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1955,7 +1963,7 @@ export const MapPage: React.FC = () => {
           <FormControl fullWidth margin="normal">
             <InputLabel>Иконка</InputLabel>
             <Select value={markerForm.icon} label="Иконка"
-              onChange={e => setMarkerForm(prev => ({ ...prev, icon: e.target.value }))}>
+              onChange={e => setMarkerForm(prev => ({ ...prev, icon: e.target.value as MarkerIcon }))}>
               {MARKER_ICON_ENTRIES.map(([key, emoji]) => (
                 <MenuItem key={key} value={key}>
                   <Box display="flex" alignItems="center" gap={1}>
@@ -1986,7 +1994,7 @@ export const MapPage: React.FC = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
               boxShadow: `0 0 8px ${markerForm.color}80`,
             }}>
-              {MARKER_ICONS[markerForm.icon] || '📍'}
+              {markerForm.icon ? (MARKER_ICONS[markerForm.icon] || '📍') : '📍'}
             </Box>
             <Box>
               <Typography sx={{ color: '#fff', fontWeight: 600 }}>

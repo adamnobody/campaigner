@@ -45,6 +45,24 @@ import {
   createDogmaSchema,
   updateDogmaSchema,
 } from '../schemas/dogma.schema.js';
+import {
+  createFactionSchema,
+  updateFactionSchema,
+  createFactionRankSchema,
+  updateFactionRankSchema,
+  createFactionMemberSchema,
+  updateFactionMemberSchema,
+  createFactionRelationSchema,
+} from '../schemas/faction.schema.js';
+import {
+  createDynastySchema,
+  updateDynastySchema,
+  createDynastyMemberSchema,
+  updateDynastyMemberSchema,
+  createDynastyRelationSchema,
+  createDynastyEventSchema,
+  updateDynastyEventSchema,
+} from '../schemas/dynasty.schema.js';
 
 // ==================== Project ====================
 export type Project = z.infer<typeof projectSchema>;
@@ -87,15 +105,55 @@ export type Dogma = z.infer<typeof dogmaSchema>;
 export type CreateDogma = z.input<typeof createDogmaSchema>;
 export type UpdateDogma = z.input<typeof updateDogmaSchema>;
 
+// ==================== Factions ====================
+export type CreateFaction = z.input<typeof createFactionSchema>;
+export type UpdateFaction = z.input<typeof updateFactionSchema>;
+
+// Rank/member are created via routes that pass `factionId` in the URL,
+// so request bodies should NOT include `factionId`.
+export type CreateFactionRank = Omit<z.input<typeof createFactionRankSchema>, 'factionId'>;
+export type UpdateFactionRank = z.input<typeof updateFactionRankSchema>;
+
+export type CreateFactionMember = Omit<z.input<typeof createFactionMemberSchema>, 'factionId'>;
+export type UpdateFactionMember = z.input<typeof updateFactionMemberSchema>;
+
+export type CreateFactionRelation = z.input<typeof createFactionRelationSchema>;
+
+// In backend `updateRelationSchema` is defined inline in routes (not in shared schemas),
+// so we model only the expected shape here.
+export interface UpdateFactionRelation {
+  relationType?: string;
+  customLabel?: string;
+  description?: string;
+  startedDate?: string;
+  isBidirectional?: boolean;
+}
+
+// ==================== Dynasties ====================
+export type CreateDynasty = z.input<typeof createDynastySchema>;
+export type UpdateDynasty = z.input<typeof updateDynastySchema>;
+
+export type CreateDynastyMember = Omit<z.input<typeof createDynastyMemberSchema>, 'dynastyId'>;
+export type UpdateDynastyMember = z.input<typeof updateDynastyMemberSchema>;
+
+export type CreateDynastyFamilyLink = Omit<z.input<typeof createDynastyRelationSchema>, 'dynastyId'>;
+
+export type CreateDynastyEvent = Omit<z.input<typeof createDynastyEventSchema>, 'dynastyId'>;
+export type UpdateDynastyEvent = z.input<typeof updateDynastyEventSchema>;
+
 // ==================== Common ====================
-export type Tag = z.infer<typeof tagSchema>;
+// In backend responses `Tag` always includes `id` and `color` (color falls back to '#808080').
+export type Tag = Omit<z.infer<typeof tagSchema>, 'id' | 'color'> & {
+  id: number;
+  color: string;
+};
 export type CreateTag = z.input<typeof createTagSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 
 // ==================== API Response ====================
 export interface ApiResponse<T = unknown> {
   success: boolean;
-  data?: T;
+  data: T;
   error?: string;
   message?: string;
 }

@@ -396,7 +396,7 @@ export const HomePage: React.FC = () => {
         const res = await projectsApi.importProject(data);
         showSnackbar(`📥 Проект "${res.data.data.name}" импортирован!`, 'success');
         fetchProjects();
-        navigate(`/project/${res.data.id}/map`);
+        navigate(`/project/${res.data.data.id}/map`);
       } catch (err: any) {
         if (err instanceof SyntaxError) {
           showSnackbar('Файл не является валидным JSON', 'error');

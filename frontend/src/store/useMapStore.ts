@@ -34,7 +34,7 @@ export const useMapStore = create<MapState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getRootMap(projectId);
-      set({ currentMap: response.data, loading: false });
+      set({ currentMap: response.data.data, loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
@@ -44,7 +44,7 @@ export const useMapStore = create<MapState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getMapById(mapId);
-      set({ currentMap: response.data, loading: false });
+      set({ currentMap: response.data.data, loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
@@ -54,7 +54,7 @@ export const useMapStore = create<MapState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getMapTree(projectId);
-      set({ mapTree: response.data, loading: false });
+      set({ mapTree: response.data.data, loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
@@ -64,7 +64,7 @@ export const useMapStore = create<MapState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getMarkersByMapId(mapId);
-      set({ markers: response.data, loading: false });
+      set({ markers: response.data.data, loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
     }
@@ -73,7 +73,7 @@ export const useMapStore = create<MapState>((set) => ({
   createMap: async (data: any) => {
     try {
       const response = await mapApi.createMap(data);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       set({ error: error.message });
       throw error;
@@ -108,9 +108,9 @@ export const useMapStore = create<MapState>((set) => ({
     try {
       const response = await mapApi.createMarker(mapId, data);
       set((state) => ({
-        markers: [...state.markers, response.data],
+        markers: [...state.markers, response.data.data],
       }));
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       set({ error: error.message });
       throw error;

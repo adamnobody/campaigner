@@ -50,8 +50,8 @@ interface WikiLink {
   id: number;
   sourceNoteId: number;
   targetNoteId: number;
-  sourceTitle: string;
-  targetTitle: string;
+  sourceTitle?: string;
+  targetTitle?: string;
   label: string;
 }
 
@@ -596,7 +596,7 @@ export const NoteEditorPage: React.FC = () => {
           ) : (
             <List disablePadding dense>
               {wikiLinks.map(link => {
-                const otherTitle = link.sourceNoteId === nid ? link.targetTitle : link.sourceTitle;
+                const otherTitle = (link.sourceNoteId === nid ? link.targetTitle : link.sourceTitle) || '';
                 const otherId = link.sourceNoteId === nid ? link.targetNoteId : link.sourceNoteId;
                 return (
                   <ListItem
