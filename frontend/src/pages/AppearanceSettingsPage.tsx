@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -14,6 +14,12 @@ import {
   Button,
   Chip,
   TextField,
+  Avatar,
+  Fade,
+  Paper,
+  Tooltip,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import PaletteIcon from '@mui/icons-material/Palette';
 import BlurOnIcon from '@mui/icons-material/BlurOn';
@@ -25,9 +31,14 @@ import WallpaperIcon from '@mui/icons-material/Wallpaper';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ImageIcon from '@mui/icons-material/Image';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import TuneIcon from '@mui/icons-material/Tune';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { usePreferencesStore, type ThemePreset } from '@/store/usePreferencesStore';
 import { THEME_PRESETS } from '@/theme/presets';
 import { DndButton } from '@/components/ui/DndButton';
+import { motion } from 'framer-motion';
 
 const presetOrder: ThemePreset[] = [
   'obsidian-gold',
@@ -42,7 +53,264 @@ const presetOrder: ThemePreset[] = [
   'ashen-teal',
 ];
 
+// ============================================
+// 🔧 HELPERS: безопасная работа с цветами
+// ============================================
+
+const safeRgba = (rgbString: string | undefined, opacity: number) => {
+  if (!rgbString) return `rgba(128, 128, 128, ${opacity})`;
+  // Если уже содержит rgb/rgba/hex - оборачиваем в alpha как есть
+  if (rgbString.startsWith('rgb') || rgbString.startsWith('#') || rgbString.startsWith('hsl')) {
+    return alpha(rgbString, opacity);
+  }
+  // Иначе это строка типа "180, 190, 210" - оборачиваем в rgba()
+  return `rgba(${rgbString}, ${opacity})`;
+};
+
+const safeRgb = (rgbString: string | undefined) => {
+  if (!rgbString) return 'rgb(128, 128, 128)';
+  if (rgbString.startsWith('rgb') || rgbString.startsWith('#')) return rgbString;
+  return `rgb(${rgbString})`;
+};
+
+// ============================================
+// 🎭 ENHANCED UI COMPONENTS
+// ============================================
+
+interface PositionProps {
+  top?: string;
+  right?: string;
+  bottom?: string;
+  left?: string;
+}
+
+const FloatingOrb: React.FC<{
+  color: string;
+  size?: number;
+} & PositionProps & { delay?: number }> = ({ 
+  color, 
+  size = 300, 
+  top, 
+  right, 
+  bottom, 
+  left, 
+  delay = 0 
+}) => (
+  <Box
+    sx={{
+      position: 'absolute',
+      width: size,
+      height: size,
+      ...(top && { top }),
+      ...(right && { right }),
+      ...(bottom && { bottom }),
+      ...(left && { left }),
+      borderRadius: '50%',
+      background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
+      transform: 'scale(1)',
+      opacity: 0.3,
+      animation: `gentleFloat ${10 + delay}s ease-in-out infinite`,
+      pointerEvents: 'none',
+      zIndex: 0,
+      '@keyframes gentleFloat': {
+        '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+        '50%': { transform: 'translate(-15px, 15px) scale(1.05)' },
+      },
+    }}
+  />
+);
+
+const GlassCard: React.FC<{
+  children: React.ReactNode;
+  sx?: any;
+  elevation?: number;
+  interactive?: boolean;
+}> = ({ children, sx = {}, elevation = 0, interactive = false }) => {
+  const theme = useTheme();
+  
+  return (
+    <Paper
+      elevation={elevation}
+      sx={{
+        background: `linear-gradient(135deg, 
+          ${alpha(theme.palette.background.paper, 0.75)} 0%, 
+          ${alpha(theme.palette.background.paper, 0.45)} 100%
+        )`,
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: `1px solid ${alpha(theme.palette.divider, 0.25)}`,
+        borderRadius: 3,
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: interactive ? 'pointer' : 'default',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 'inherit',
+          padding: '1px',
+          background: `linear-gradient(135deg, 
+            ${alpha(theme.palette.primary.main, 0.15)} 0%, 
+            transparent 50%
+          )`,
+          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+          WebkitMaskComposite: 'xor',
+          maskComposite: 'exclude',
+          pointerEvents: 'none',
+          opacity: 0,
+          transition: 'opacity 0.4s ease',
+        },
+        ...(interactive && {
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            borderColor: alpha(theme.palette.primary.main, 0.35),
+            boxShadow: `
+              0 12px 28px ${alpha(theme.palette.common.black, 0.25)},
+              0 0 40px ${alpha(theme.palette.primary.main, 0.06)}
+            `,
+            '&::before': { opacity: 1 },
+          },
+        }),
+        ...sx,
+      }}
+    >
+      {children}
+    </Paper>
+  );
+};
+
+const SectionHeader: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+}> = ({ icon, title, subtitle }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: 2,
+        bgcolor: 'primary.main',
+        color: '#fff',
+        boxShadow: (t: any) => `0 4px 12px ${alpha(t.palette.primary.main, 0.3)}`,
+      }}
+    >
+      {icon}
+    </Box>
+    <Box>
+      <Typography
+        variant="h6"
+        sx={{
+          fontFamily: '"Cinzel", serif',
+          fontWeight: 700,
+          fontSize: '1.15rem',
+          lineHeight: 1.2,
+        }}
+      >
+        {title}
+      </Typography>
+      {subtitle && (
+        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+          {subtitle}
+        </Typography>
+      )}
+    </Box>
+  </Box>
+);
+
+const AnimatedSlider: React.FC<{
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  valueLabelFormat?: (value: number) => string;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  color?: string;
+}> = ({ label, value, min, max, step, onChange, valueLabelFormat, disabled, icon, color }) => {
+  const theme = useTheme();
+  
+  return (
+    <Box sx={{ mt: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <FormLabel
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            color: 'text.primary',
+          }}
+        >
+          {icon}
+          {label}
+        </FormLabel>
+        <Chip
+          size="small"
+          label={valueLabelFormat ? valueLabelFormat(value) : value}
+          sx={{
+            backgroundColor: alpha(color || theme.palette.primary.main, 0.12),
+            color: color || theme.palette.primary.main,
+            fontWeight: 700,
+            fontSize: '0.75rem',
+            height: 24,
+            border: `1px solid ${alpha(color || theme.palette.primary.main, 0.25)}`,
+            fontFamily: '"Roboto Mono", monospace',
+          }}
+        />
+      </Box>
+      <Slider
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(_, v) => onChange(v as number)}
+        valueLabelDisplay="auto"
+        valueLabelFormat={valueLabelFormat}
+        disabled={disabled}
+        sx={{
+          height: 6,
+          '& .MuiSlider-thumb': {
+            width: 20,
+            height: 20,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              boxShadow: `0 0 0 8px ${alpha(color || theme.palette.primary.main, 0.12)}`,
+              transform: 'scale(1.15)',
+            },
+          },
+          '& .MuiSlider-track': {
+            background: `linear-gradient(90deg, ${color || theme.palette.primary.main}, ${
+              color ? alpha(color, 0.6) : theme.palette.primary.light
+            })`,
+            border: 'none',
+          },
+          '& .MuiSlider-rail': {
+            opacity: 0.15,
+          },
+        }}
+      />
+    </Box>
+  );
+};
+
+// ============================================
+// 🚀 MAIN COMPONENT
+// ============================================
+
 export const AppearanceSettingsPage: React.FC = () => {
+  const theme = useTheme();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hoveredPreset, setHoveredPreset] = useState<string | null>(null);
+
+  // Store hooks (preserved exactly as original)
   const {
     themePreset,
     surfaceMode,
@@ -70,6 +338,12 @@ export const AppearanceSettingsPage: React.FC = () => {
 
   const currentPreset = THEME_PRESETS[themePreset];
 
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoaded(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handlers (preserved exactly as original)
   const handleBackgroundFileUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -93,458 +367,998 @@ export const AppearanceSettingsPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', minWidth: 0 }}>
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', md: 'center' }}
-        gap={2}
-        mb={3}
-        flexWrap="wrap"
-      >
-        <Box>
-          <Typography
-            sx={{
-              fontFamily: '"Cinzel", serif',
-              fontWeight: 700,
-              fontSize: '1.8rem',
-              color: 'text.primary',
-            }}
-          >
-            Настройки внешнего вида
-          </Typography>
-          <Typography sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Управляйте темой, прозрачностью, анимациями, фоном главной страницы и общим стилем всего приложения.
-          </Typography>
-        </Box>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        position: 'relative',
+        overflow: 'hidden',
+        py: { xs: 2, md: 4 },
+        px: { xs: 1, md: 2 },
+      }}
+    >
+      {/* Atmospheric Background */}
+      <FloatingOrb color={alpha(theme.palette.primary.main, 0.2)} size={500} top="5%" left="-10%" />
+      <FloatingOrb color={alpha(theme.palette.secondary.main, 0.15)} size={400} bottom="10%" right="-5%" delay={3} />
 
-        <Button
-          variant="outlined"
-          startIcon={<RestartAltIcon />}
-          onClick={resetAppearance}
-        >
-          Сбросить стиль
-        </Button>
-      </Box>
-
+      {/* Main Content */}
       <Box
         sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)' },
-          gap: 3,
+          position: 'relative',
+          zIndex: 1,
+          maxWidth: 1400,
+          mx: 'auto',
           minWidth: 0,
         }}
       >
-        <Stack spacing={3} sx={{ minWidth: 0 }}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <PaletteIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6">Цветовая тема</Typography>
+        {/* HERO HEADER */}
+        <Fade in={isLoaded} timeout={800}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', md: 'center' },
+              gap: 2,
+              mb: 4,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Box
+              sx={{
+                opacity: isLoaded ? 1 : 0,
+                transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
+                transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                <Avatar
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
+                  }}
+                >
+                  <TuneIcon sx={{ fontSize: '1.5rem' }} />
+                </Avatar>
+                
+                <Box>
+                  <Typography
+                    sx={{
+                      fontFamily: '"Cinzel", serif',
+                      fontWeight: 900,
+                      fontSize: { xs: '1.8rem', md: '2.2rem' },
+                      background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      lineHeight: 1.2,
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    Настройки внешнего вида
+                  </Typography>
+                  
+                  <Typography
+                    sx={{ 
+                      color: 'text.secondary', 
+                      mt: 0.5, 
+                      fontSize: '0.9rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    <AutoAwesomeIcon sx={{ fontSize: '1rem', color: 'primary.main' }} />
+                    Управляйте темой, прозрачностью, анимациями и фоном
+                  </Typography>
+                </Box>
               </Box>
+            </Box>
 
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                  gap: 1.5,
-                }}
-              >
-                {presetOrder.map((presetId) => {
-                  const preset = THEME_PRESETS[presetId];
-                  const selected = presetId === themePreset;
+            <DndButton
+              variant="outlined"
+              startIcon={<RestartAltIcon />}
+              onClick={resetAppearance}
+              sx={{
+                fontWeight: 600,
+                borderColor: alpha(theme.palette.warning.main, 0.5),
+                color: theme.palette.warning.main,
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.warning.main, 0.08),
+                  borderColor: theme.palette.warning.main,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.25)}`,
+                },
+              }}
+            >
+              Сбросить стиль
+            </DndButton>
+          </Box>
+        </Fade>
 
-                  return (
-                    <Card
-                      key={preset.id}
-                      onClick={() => setThemePreset(preset.id)}
-                      sx={{
-                        cursor: 'pointer',
-                        border: selected ? '1px solid' : '1px solid transparent',
-                        borderColor: selected ? 'primary.main' : 'divider',
-                        transition: 'all 180ms ease',
-                      }}
-                    >
-                      <CardContent sx={{ p: 2 }}>
-                        <Box
-                          sx={{
-                            height: 64,
-                            borderRadius: 2,
-                            mb: 1.5,
-                            background: `
-                              ${preset.backgroundAccent},
-                              linear-gradient(135deg, ${preset.background} 0%, rgba(${preset.panelBaseRgb}, 0.95) 100%)
-                            `,
-                            border: `1px solid rgba(${preset.borderRgb}, 0.25)`,
-                          }}
-                        />
-                        <Box display="flex" justifyContent="space-between" alignItems="center" gap={1}>
-                          <Typography fontWeight={600}>{preset.label}</Typography>
-                          {selected && <Chip label="Активна" size="small" color="primary" />}
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <WallpaperIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6">Фон главной страницы</Typography>
-              </Box>
-
-              <Stack spacing={2.5}>
-                <TextField
-                  fullWidth
-                  label="Ссылка на изображение"
-                  value={homeBackgroundImage}
-                  onChange={(e) => setHomeBackgroundImage(e.target.value)}
-                  placeholder="https://example.com/background.jpg"
-                  helperText="Можно вставить URL изображения или загрузить файл с устройства."
+        {/* MAIN GRID LAYOUT */}
+        <Fade in={isLoaded} timeout={1200}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.3fr) minmax(380px, 0.7fr)' },
+              gap: 3,
+              minWidth: 0,
+              opacity: isLoaded ? 1 : 0,
+              transform: isLoaded ? 'translateY(0)' : 'translateY(30px)',
+              transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s`,
+            }}
+          >
+            {/* LEFT COLUMN */}
+            <Stack spacing={3} sx={{ minWidth: 0 }}>
+              
+              {/* COLOR THEMES SECTION */}
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<PaletteIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Цветовая тема"
+                  subtitle={`${presetOrder.length} уникальных палитр`}
                 />
 
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  <DndButton
-                    variant="outlined"
-                    startIcon={<UploadFileIcon />}
-                    onClick={handleBackgroundFileUpload}
-                  >
-                    Загрузить файл
-                  </DndButton>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)' },
+                    gap: 2,
+                  }}
+                >
+                  {presetOrder.map((presetId, index) => {
+                    const preset = THEME_PRESETS[presetId];
+                    const selected = presetId === themePreset;
+                    const hovered = hoveredPreset === presetId;
 
-                  <Button
-                    variant="outlined"
-                    color="inherit"
-                    startIcon={<DeleteOutlineIcon />}
-                    onClick={clearHomeBackgroundImage}
-                    disabled={!homeBackgroundImage}
-                  >
-                    Убрать фон
-                  </Button>
+                    return (
+                      <Tooltip
+                        key={preset.id}
+                        title={preset.label}
+                        arrow
+                        placement="top"
+                      >
+                        <Box
+                          onClick={() => setThemePreset(preset.id)}
+                          onMouseEnter={() => setHoveredPreset(preset.id)}
+                          onMouseLeave={() => setHoveredPreset(null)}
+                          sx={{
+                            cursor: 'pointer',
+                            borderRadius: 2.5,
+                            overflow: 'hidden',
+                            transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+                            transform: hovered ? 'translateY(-4px) scale(1.03)' : 'scale(1)',
+                            border: `2px solid ${
+                              selected 
+                                ? theme.palette.primary.main 
+                                : hovered 
+                                  ? alpha(theme.palette.primary.main, 0.5)
+                                  : 'transparent'
+                            }`,
+                            boxShadow: selected
+                              ? `0 8px 24px ${alpha(theme.palette.primary.main, 0.35)}, inset 0 0 20px ${alpha(theme.palette.primary.main, 0.1)}`
+                              : hovered
+                                ? `0 8px 20px ${alpha(theme.palette.common.black, 0.3)}`
+                                : '0 2px 8px rgba(0,0,0,0.1)',
+                            opacity: isLoaded ? 1 : 0,
+                            animation: isLoaded ? `fadeInUp 0.6s ease ${index * 0.05}s both` : 'none',
+                            '@keyframes fadeInUp': {
+                              '0%': { opacity: 0, transform: 'translateY(20px)' },
+                              '100%': { opacity: 1, transform: 'translateY(0)' },
+                            },
+                            position: 'relative',
+                          }}
+                        >
+                          {/* Color Preview - ✅ ИСПРАВЛЕНО: используем safeRgba */}
+                          <Box
+                            sx={{
+                              height: 72,
+                              background: preset.backgroundAccent,
+                              borderBottom: `1px solid ${safeRgba(preset.borderRgb, 0.3)}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                inset: 0,
+                                background: `radial-gradient(circle at 30% 30%, ${safeRgba(preset.borderRgb, 0.15)}, transparent 60%)`,
+                              },
+                            }}
+                          >
+                            {selected && (
+                              <motion.div
+                                initial={{ scale: 0, rotate: -180, opacity: 0 }}
+                                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                                transition={{ 
+                                  duration: 0.4, 
+                                  ease: [0.68, -0.55, 0.265, 1.55] 
+                                }}
+                                style={{ 
+                                  position: 'absolute', 
+                                  top: '50%', 
+                                  left: '50%', 
+                                  transform: 'translate(-50%, -50%)',
+                                  zIndex: 1,
+                                  color: '#fff'
+                                }}
+                              >
+                                <CheckCircleOutlineIcon sx={{ fontSize: '2rem' }} />
+                              </motion.div>
+                            )}
+                          </Box>
+
+                          {/* Label */}
+                          <Box
+                            sx={{
+                              p: 1.5,
+                              backgroundColor: alpha(theme.palette.background.default, 0.5),
+                              textAlign: 'center',
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontWeight: selected ? 800 : 600,
+                                fontSize: '0.78rem',
+                                color: selected ? theme.palette.primary.main : 'text.primary',
+                                letterSpacing: '0.03em',
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {preset.label}
+                            </Typography>
+                            
+                            {selected && (
+                              <Box
+                                component="span"
+                                sx={{
+                                  display: 'inline-block',
+                                  mt: 0.5,
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1,
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                                  color: theme.palette.primary.main,
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.05em',
+                                }}
+                              >
+                                АКТИВНА
+                              </Box>
+                            )}
+                          </Box>
+                        </Box>
+                      </Tooltip>
+                    );
+                  })}
                 </Box>
+              </GlassCard>
 
-                <Box>
-                  <FormLabel>Прозрачность фонового изображения</FormLabel>
-                  <Slider
+              {/* BACKGROUND SECTION */}
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<WallpaperIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Фон главной страницы"
+                  subtitle="Персонализируйте стартовый экран"
+                />
+
+                <Stack spacing={2.5}>
+                  <TextField
+                    fullWidth
+                    label="Ссылка на изображение"
+                    value={homeBackgroundImage || ''}
+                    onChange={(e) => setHomeBackgroundImage(e.target.value)}
+                    placeholder="https://example.com/background.jpg"
+                    helperText="Можно вставить URL или загрузить файл ниже"
+                    InputProps={{
+                      startAdornment: <ImageIcon sx={{ mr: 1, color: 'action.active' }} />,
+                    }}
+                  />
+
+                  <Box display="flex" gap={1.5} flexWrap="wrap">
+                    <DndButton
+                      variant="outlined"
+                      startIcon={<UploadFileIcon />}
+                      onClick={handleBackgroundFileUpload}
+                      sx={{
+                        fontWeight: 600,
+                        flex: 1,
+                        minWidth: 160,
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.25)}`,
+                        },
+                      }}
+                    >
+                      Загрузить файл
+                    </DndButton>
+
+                    <Button
+                      variant="outlined"
+                      color="inherit"
+                      startIcon={<DeleteOutlineIcon />}
+                      onClick={clearHomeBackgroundImage}
+                      disabled={!homeBackgroundImage}
+                      sx={{
+                        fontWeight: 600,
+                        flex: 1,
+                        minWidth: 140,
+                        borderColor: homeBackgroundImage ? alpha(theme.palette.error.main, 0.5) : undefined,
+                        color: homeBackgroundImage ? theme.palette.error.main : undefined,
+                        '&:hover:not(:disabled)': {
+                          backgroundColor: alpha(theme.palette.error.main, 0.08),
+                          borderColor: theme.palette.error.main,
+                        },
+                      }}
+                    >
+                      Убрать фон
+                    </Button>
+                  </Box>
+
+                  <AnimatedSlider
+                    label="Прозрачность фона"
                     value={homeBackgroundOpacity}
                     min={0.1}
                     max={1}
                     step={0.01}
-                    onChange={(_, value) => setHomeBackgroundOpacity(value as number)}
-                    valueLabelDisplay="auto"
+                    onChange={setHomeBackgroundOpacity}
                     valueLabelFormat={(v) => `${Math.round(v * 100)}%`}
-                    sx={{ mt: 1 }}
                     disabled={!homeBackgroundImage}
+                    icon={<BlurOnIcon sx={{ fontSize: '1rem' }} />}
+                    color={theme.palette.secondary.main}
                   />
-                </Box>
 
-                <Box
-                  sx={{
-                    p: 2,
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    background: homeBackgroundImage
-                      ? `
-                        linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.42)),
-                        url(${homeBackgroundImage})
-                      `
-                      : 'rgba(255,255,255,0.02)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    minHeight: 140,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                  }}
-                >
-                  <Box>
-                    <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                      <ImageIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                      <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
-                        {homeBackgroundImage ? 'Фон установлен' : 'Фон не выбран'}
+                  {/* Preview Box */}
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      p: 3,
+                      borderRadius: 3,
+                      border: `2px dashed ${alpha(theme.palette.divider, 0.4)}`,
+                      background: homeBackgroundImage
+                        ? `
+                          linear-gradient(rgba(0,0,0,0.32), rgba(0,0,0,0.48)),
+                          url(${homeBackgroundImage})
+                        `
+                        : alpha(theme.palette.action.hover, 0.05),
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      minHeight: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-end',
+                      overflow: 'hidden',
+                      transition: 'all 0.4s ease',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        inset: 0,
+                        background: homeBackgroundImage ? 'none' : `
+                          repeating-linear-gradient(
+                            45deg,
+                            transparent,
+                            transparent 10px,
+                            rgba(255,255,255,0.02) 10px,
+                            rgba(255,255,255,0.02) 20px
+                          )
+                        `,
+                      },
+                    }}
+                  >
+                    {!homeBackgroundImage && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <ImageIcon sx={{ fontSize: 48, color: 'divider', mb: 1, opacity: 0.5 }} />
+                        <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
+                          Перетащите изображение или используйте кнопку выше
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        zIndex: 1,
+                        backgroundColor: alpha(theme.palette.background.default, 0.75),
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: 2,
+                        p: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                      }}
+                    >
+                      <ImageIcon fontSize="small" sx={{ color: 'primary.main' }} />
+                      <Typography sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.9rem' }}>
+                        Главная страница Campaigner
                       </Typography>
+                      <Chip
+                        size="small"
+                        label={homeBackgroundImage ? '✓ Фон установлен' : 'Не выбран'}
+                        color={homeBackgroundImage ? 'success' : 'default'}
+                        sx={{ ml: 'auto', fontWeight: 700 }}
+                      />
                     </Box>
-                    <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>
-                      Главная страница Campaigner
-                    </Typography>
                   </Box>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
+                </Stack>
+              </GlassCard>
 
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <LayersIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6">Поверхности</Typography>
-              </Box>
+              {/* SURFACE SETTINGS */}
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<LayersIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Поверхности и материалы"
+                  subtitle="Настройте текстуру интерфейса"
+                />
 
-              <FormControl fullWidth>
-                <FormLabel sx={{ mb: 1 }}>Стиль панелей</FormLabel>
-                <ToggleButtonGroup
-                  exclusive
-                  value={surfaceMode}
-                  onChange={(_, value) => value && setSurfaceMode(value)}
-                  fullWidth
-                >
-                  <ToggleButton value="glass">Стекло</ToggleButton>
-                  <ToggleButton value="solid">Плотный</ToggleButton>
-                </ToggleButtonGroup>
-              </FormControl>
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <FormLabel
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      mb: 1.5,
+                      color: 'text.primary',
+                    }}
+                  >
+                    <DragIndicatorIcon sx={{ fontSize: '1rem' }} />
+                    Стиль панелей
+                  </FormLabel>
+                  <ToggleButtonGroup
+                    exclusive
+                    value={surfaceMode}
+                    onChange={(_, value) => value && setSurfaceMode(value)}
+                    fullWidth
+                    sx={{
+                      '& .MuiToggleButton-root': {
+                        py: 1.5,
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
+                        transition: 'all 0.3s ease',
+                        '&.Mui-selected': {
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                          color: '#fff',
+                          borderColor: theme.palette.primary.main,
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.35)}`,
+                          '&:hover': {
+                            backgroundColor: `${theme.palette.primary.dark}`,
+                          },
+                        },
+                        '&:not(.Mui-selected):hover': {
+                          borderColor: alpha(theme.palette.primary.main, 0.5),
+                          backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                        },
+                      },
+                    }}
+                  >
+                    <ToggleButton value="glass">🪟 Стекло</ToggleButton>
+                    <ToggleButton value="solid">🧱 Плотный</ToggleButton>
+                  </ToggleButtonGroup>
+                </FormControl>
 
-              <Box mt={3}>
-                <FormLabel>Прозрачность</FormLabel>
-                <Slider
+                <AnimatedSlider
+                  label="Прозрачность"
                   value={transparency}
                   min={0.35}
                   max={0.95}
                   step={0.01}
-                  onChange={(_, value) => setTransparency(value as number)}
-                  valueLabelDisplay="auto"
+                  onChange={setTransparency}
                   valueLabelFormat={(v) => `${Math.round(v * 100)}%`}
-                  sx={{ mt: 1 }}
+                  icon={<BlurOnIcon sx={{ fontSize: '1rem' }} />}
                 />
-              </Box>
 
-              <Box mt={3}>
-                <FormLabel>Размытие</FormLabel>
-                <Slider
+                <AnimatedSlider
+                  label="Размытие (Blur)"
                   value={blur}
                   min={0}
                   max={24}
                   step={1}
-                  onChange={(_, value) => setBlur(value as number)}
-                  valueLabelDisplay="auto"
-                  sx={{ mt: 1 }}
+                  onChange={setBlur}
+                  valueLabelFormat={(v) => `${v}px`}
+                  icon={<BlurOnIcon sx={{ fontSize: '1rem' }} />}
+                  color={theme.palette.secondary.main}
                 />
-              </Box>
 
-              <Box mt={3}>
-                <FormLabel>Радиус углов</FormLabel>
-                <Slider
+                <AnimatedSlider
+                  label="Радиус углов"
                   value={borderRadius}
                   min={6}
                   max={24}
                   step={1}
-                  onChange={(_, value) => setBorderRadius(value as number)}
-                  valueLabelDisplay="auto"
-                  sx={{ mt: 1 }}
+                  onChange={setBorderRadius}
+                  valueLabelFormat={(v) => `${v}px`}
+                  icon={<DragIndicatorIcon sx={{ fontSize: '1rem' }} />}
+                  color={theme.palette.success.main}
                 />
-              </Box>
-            </CardContent>
-          </Card>
+              </GlassCard>
 
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <TextFieldsIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6">Типографика и ритм</Typography>
-              </Box>
+              {/* TYPOGRAPHY SECTION */}
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<TextFieldsIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Типографика и ритм"
+                  subtitle="Шрифты, плотность и движение"
+                />
 
-              <Stack spacing={3}>
-                <FormControl fullWidth>
-                  <FormLabel sx={{ mb: 1 }}>Основной стиль текста</FormLabel>
-                  <ToggleButtonGroup
-                    exclusive
-                    value={fontMode}
-                    onChange={(_, value) => value && setFontMode(value)}
-                    fullWidth
-                  >
-                    <ToggleButton value="serif">Serif</ToggleButton>
-                    <ToggleButton value="sans">Sans</ToggleButton>
-                  </ToggleButtonGroup>
-                </FormControl>
+                <Stack spacing={3}>
+                  <FormControl fullWidth>
+                    <FormLabel
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        mb: 1.5,
+                        color: 'text.primary',
+                      }}
+                    >
+                      <TextFieldsIcon sx={{ fontSize: '1rem' }} />
+                      Основной шрифт
+                    </FormLabel>
+                    <ToggleButtonGroup
+                      exclusive
+                      value={fontMode}
+                      onChange={(_, value) => value && setFontMode(value)}
+                      fullWidth
+                      sx={{
+                        '& .MuiToggleButton-root': {
+                          py: 1.5,
+                          fontWeight: 600,
+                          fontFamily: fontMode === 'serif'
+                            ? '"Cinzel", "Georgia", serif'
+                            : '"Inter", "Roboto", sans-serif',
+                          borderRadius: 2,
+                          border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
+                          transition: 'all 0.3s ease',
+                          '&.Mui-selected': {
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                            color: '#fff',
+                            borderColor: theme.palette.primary.main,
+                            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.35)}`,
+                          },
+                          '&:not(.Mui-selected):hover': {
+                            borderColor: alpha(theme.palette.primary.main, 0.5),
+                            backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                          },
+                        },
+                      }}
+                    >
+                      <ToggleButton value="serif">Serif</ToggleButton>
+                      <ToggleButton value="sans">Sans-Serif</ToggleButton>
+                    </ToggleButtonGroup>
+                  </FormControl>
 
-                <FormControl fullWidth>
-                  <FormLabel sx={{ mb: 1 }}>Плотность интерфейса</FormLabel>
-                  <ToggleButtonGroup
-                    exclusive
-                    value={uiDensity}
-                    onChange={(_, value) => value && setUiDensity(value)}
-                    fullWidth
-                  >
-                    <ToggleButton value="compact">Компактно</ToggleButton>
-                    <ToggleButton value="comfortable">Обычно</ToggleButton>
-                    <ToggleButton value="spacious">Свободно</ToggleButton>
-                  </ToggleButtonGroup>
-                </FormControl>
+                  <FormControl fullWidth>
+                    <FormLabel
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        mb: 1.5,
+                        color: 'text.primary',
+                      }}
+                    >
+                      <LayersIcon sx={{ fontSize: '1rem' }} />
+                      Плотность интерфейса
+                    </FormLabel>
+                    <ToggleButtonGroup
+                      exclusive
+                      value={uiDensity}
+                      onChange={(_, value) => value && setUiDensity(value)}
+                      fullWidth
+                      sx={{
+                        '& .MuiToggleButton-root': {
+                          py: 1.2,
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          borderRadius: 2,
+                          border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
+                          transition: 'all 0.3s ease',
+                          '&.Mui-selected': {
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                            color: '#fff',
+                            borderColor: theme.palette.primary.main,
+                            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.35)}`,
+                          },
+                          '&:not(.Mui-selected):hover': {
+                            borderColor: alpha(theme.palette.primary.main, 0.5),
+                            backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                          },
+                        },
+                      }}
+                    >
+                      <ToggleButton value="compact">Компактно</ToggleButton>
+                      <ToggleButton value="comfortable">Обычно</ToggleButton>
+                      <ToggleButton value="spacious">Свободно</ToggleButton>
+                    </ToggleButtonGroup>
+                  </FormControl>
 
-                <FormControl fullWidth>
-                  <FormLabel sx={{ mb: 1 }}>Анимации</FormLabel>
-                  <ToggleButtonGroup
-                    exclusive
-                    value={motionMode}
-                    onChange={(_, value) => value && setMotionMode(value)}
-                    fullWidth
-                  >
-                    <ToggleButton value="full">Плавные</ToggleButton>
-                    <ToggleButton value="reduced">Минимальные</ToggleButton>
-                  </ToggleButtonGroup>
-                </FormControl>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Stack>
+                  <FormControl fullWidth>
+                    <FormLabel
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        mb: 1.5,
+                        color: 'text.primary',
+                      }}
+                    >
+                      <AnimationIcon sx={{ fontSize: '1rem' }} />
+                      Анимации
+                    </FormLabel>
+                    <ToggleButtonGroup
+                      exclusive
+                      value={motionMode}
+                      onChange={(_, value) => value && setMotionMode(value)}
+                      fullWidth
+                      sx={{
+                        '& .MuiToggleButton-root': {
+                          py: 1.5,
+                          fontWeight: 600,
+                          borderRadius: 2,
+                          border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
+                          transition: 'all 0.3s ease',
+                          '&.Mui-selected': {
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                            color: '#fff',
+                            borderColor: theme.palette.primary.main,
+                            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.35)}`,
+                          },
+                          '&:not(.Mui-selected):hover': {
+                            borderColor: alpha(theme.palette.primary.main, 0.5),
+                            backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                          },
+                        },
+                      }}
+                    >
+                      <ToggleButton value="full">✨ Плавные</ToggleButton>
+                      <ToggleButton value="reduced">⚡ Минимальные</ToggleButton>
+                    </ToggleButtonGroup>
+                  </FormControl>
+                </Stack>
+              </GlassCard>
+            </Stack>
 
-        <Stack spacing={3} sx={{ minWidth: 0 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" mb={2}>
-                Предпросмотр
-              </Typography>
-
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  background: `
-                    ${currentPreset.backgroundAccent},
-                    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0))
-                  `,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
+            {/* RIGHT COLUMN */}
+            <Stack spacing={3} sx={{ minWidth: 0, position: 'sticky', top: 24, alignSelf: 'start' }}>
+              
+              {/* LIVE PREVIEW CARD - ✅ ИСПРАВЛЕНО: все borderRgb через safeRgba/safeRgb */}
+              <GlassCard
+                sx={{ p: 3 }}
+                interactive
               >
-                <Typography
+                <Box
                   sx={{
-                    fontFamily: '"Cinzel", serif',
-                    fontWeight: 700,
-                    fontSize: '1.35rem',
-                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 2,
                   }}
                 >
-                  Башня Архимага
-                </Typography>
-
-                <Typography sx={{ color: 'text.secondary', mb: 2 }}>
-                  Древняя башня, скрытая среди туманных скал. Внутри хранятся карты, записи
-                  экспедиций и забытые трактаты о магии.
-                </Typography>
-
-                <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
-                  <Chip label="Локация" size="small" />
-                  <Chip label="Магия" size="small" />
-                  <Chip label="Тайна" size="small" />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontFamily: '"Cinzel", serif',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{
+                        display: 'inline-flex',
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: theme.palette.success.main,
+                        boxShadow: `0 0 8px ${theme.palette.success.main}`,
+                        animation: 'pulse 2s infinite',
+                        '@keyframes pulse': {
+                          '0%, 100%': { opacity: 1 },
+                          '50%': { opacity: 0.5 },
+                        },
+                      }}
+                    />
+                    Превью
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label="LIVE"
+                    sx={{
+                      backgroundColor: alpha(theme.palette.success.main, 0.15),
+                      color: theme.palette.success.main,
+                      fontWeight: 800,
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.1em',
+                      height: 22,
+                    }}
+                  />
                 </Box>
 
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  <DndButton variant="contained">Открыть</DndButton>
-                  <DndButton variant="outlined">Подробнее</DndButton>
+                {/* Preview Content - ✅ ИСПРАВЛЕНО */}
+                <Box
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2.5,
+                    background: currentPreset.backgroundAccent,
+                    // ✅ ИСПРАВЛЕНО: safeRgba вместо alpha(...borderRgb...)
+                    border: `1px solid ${safeRgba(currentPreset.borderRgb, 0.3)}`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: -50,
+                      right: -50,
+                      width: 150,
+                      height: 150,
+                      borderRadius: '50%',
+                      // ✅ ИСПРАВЛЕНО: safeRgba
+                      background: `radial-gradient(circle, ${safeRgba(currentPreset.borderRgb, 0.15)}, transparent 70%)`,
+                    },
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontFamily: '"Cinzel", serif',
+                      fontWeight: 800,
+                      fontSize: '1.4rem',
+                      mb: 1.5,
+                      color: currentPreset.textPrimary,
+                      position: 'relative',
+                      zIndex: 1,
+                    }}
+                  >
+                    Башня Архимага
+                  </Typography>
+
+                  <Typography
+                    sx={{ 
+                      color: currentPreset.textSecondary, 
+                      mb: 2,
+                      fontSize: '0.88rem',
+                      lineHeight: 1.6,
+                      position: 'relative',
+                      zIndex: 1,
+                    }}
+                  >
+                    Древняя башня, скрытая среди туманных скал. Внутри хранятся карты, записи экспедиций и забытые трактаты о магии.
+                  </Typography>
+
+                  <Box display="flex" gap={1} flexWrap="wrap" mb={2.5} sx={{ position: 'relative', zIndex: 1 }}>
+                    {['Локация', 'Магия', 'Тайна'].map((tag) => (
+                      <Chip
+                        key={tag}
+                        label={tag}
+                        size="small"
+                        sx={{
+                          backgroundColor: alpha(currentPreset.accentMain, 0.15),
+                          color: currentPreset.accentMain,
+                          fontWeight: 700,
+                          fontSize: '0.72rem',
+                          border: `1px solid ${alpha(currentPreset.accentMain, 0.3)}`,
+                        }}
+                      />
+                    ))}
+                  </Box>
+
+                  <Box display="flex" gap={1.5} sx={{ position: 'relative', zIndex: 1 }}>
+                    <DndButton
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        flex: 1,
+                        fontWeight: 700,
+                        background: `linear-gradient(135deg, ${currentPreset.accentMain}, ${currentPreset.accentStrong})`,
+                        boxShadow: `0 4px 12px ${alpha(currentPreset.accentMain, 0.4)}`,
+                      }}
+                    >
+                      Открыть
+                    </DndButton>
+                    {/* ✅ КРИТИЧНОЕ ИСПРАВЛЕНИЕ: safeRgba для borderRgb */}
+                    <DndButton
+                      variant="outlined"
+                      size="small"
+                      sx={{
+                        flex: 1,
+                        fontWeight: 600,
+                        // ✅ БЫЛО: borderColor: alpha(currentPreset.borderRgb, 0.4)
+                        // ✅ СТАЛО:
+                        borderColor: safeRgba(currentPreset.borderRgb, 0.4),
+                        color: currentPreset.textSecondary,
+                      }}
+                    >
+                      Подробнее
+                    </DndButton>
+                  </Box>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              </GlassCard>
 
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <BlurOnIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6">Текущие параметры</Typography>
-              </Box>
+              {/* CURRENT PARAMETERS CARD */}
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<TuneIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Текущие параметры"
+                  subtitle="Все активные настройки"
+                />
 
-              <Stack spacing={1.25}>
-                <Typography color="text.secondary">
-                  Пресет:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {currentPreset.label}
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Поверхность:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {surfaceMode}
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Шрифт:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {fontMode}
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Плотность:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {uiDensity}
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Анимации:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {motionMode}
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Прозрачность:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {Math.round(transparency * 100)}%
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Blur:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {blur}px
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Радиус:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {borderRadius}px
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Фон главной:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {homeBackgroundImage ? 'установлен' : 'не выбран'}
-                  </Box>
-                </Typography>
-                <Typography color="text.secondary">
-                  Прозрачность фона:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {Math.round(homeBackgroundOpacity * 100)}%
-                  </Box>
-                </Typography>
-              </Stack>
+                <Stack spacing={1.5}>
+                  {[
+                    { label: 'Пресет', value: currentPreset.label, color: theme.palette.primary.main },
+                    { label: 'Поверхность', value: surfaceMode === 'glass' ? '🪟 Стекло' : '🧱 Плотный', color: theme.palette.info.main },
+                    { label: 'Шрифт', value: fontMode === 'serif' ? 'Serif' : 'Sans-Serif', color: theme.palette.text.primary },
+                    { label: 'Плотность', value: uiDensity === 'compact' ? 'Компактно' : uiDensity === 'comfortable' ? 'Обычно' : 'Свободно', color: theme.palette.success.main },
+                    { label: 'Анимации', value: motionMode === 'full' ? '✨ Плавные' : '⚡ Минимальные', color: theme.palette.warning.main },
+                    { label: 'Прозрачность', value: `${Math.round(transparency * 100)}%`, color: theme.palette.secondary.main },
+                    { label: 'Blur', value: `${blur}px`, color: theme.palette.secondary.main },
+                    { label: 'Радиус углов', value: `${borderRadius}px`, color: theme.palette.text.secondary },
+                    { label: 'Фон главной', value: homeBackgroundImage ? '✓ Установлен' : '○ Не выбран', color: homeBackgroundImage ? theme.palette.success.main : theme.palette.text.disabled },
+                    { label: 'Прозрачность фона', value: `${Math.round(homeBackgroundOpacity * 100)}%`, color: theme.palette.text.secondary },
+                  ].map((param) => (
+                    <Box
+                      key={param.label}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        py: 0.75,
+                        px: 1.5,
+                        borderRadius: 1.5,
+                        backgroundColor: alpha(param.color, 0.06),
+                        borderLeft: `3px solid ${param.color}`,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor: alpha(param.color, 0.1),
+                          pl: 2,
+                        },
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color: 'text.secondary',
+                          fontSize: '0.82rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {param.label}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          color: param.color,
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          fontFamily: '"Roboto Mono", monospace',
+                        }}
+                      >
+                        {param.value}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
 
-              <Divider sx={{ my: 2 }} />
+                <Divider sx={{ my: 2.5, borderColor: alpha(theme.palette.divider, 0.3) }} />
 
-              <Typography sx={{ color: 'text.secondary' }}>
-                Эти настройки применяются ко всему приложению и сохраняются локально для пользователя.
-              </Typography>
-            </CardContent>
-          </Card>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    backgroundColor: alpha(theme.palette.info.main, 0.06),
+                    border: `1px dashed ${alpha(theme.palette.info.main, 0.3)}`,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: '0.82rem',
+                      lineHeight: 1.6,
+                      display: 'flex',
+                      gap: 1,
+                    }}
+                  >
+                    <AutoAwesomeIcon sx={{ color: 'info.main', fontSize: '1.1rem', flexShrink: 0, mt: 0.2 }} />
+                    <span>Эти настройки применяются ко всему приложению и сохраняются локально в браузере.</span>
+                  </Typography>
+                </Box>
+              </GlassCard>
 
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <AnimationIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6">Рекомендации</Typography>
-              </Box>
+              {/* RECOMMENDATIONS CARD */}
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<AutoAwesomeIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Рекомендации"
+                  subtitle="Советы от дизайнера"
+                />
 
-              <Stack spacing={1.5}>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  • Для строгого интерфейса лучше подходят <b>Obsidian Gold</b> и <b>Midnight Cyan</b>.
-                </Typography>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  • Если хочется меньше “стекла” — переключи режим поверхности на <b>Плотный</b>.
-                </Typography>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  • Для фонового изображения главной лучше использовать тёмные, не слишком контрастные арты.
-                </Typography>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  • Если фон слишком активный — опусти его прозрачность до 20–45%.
-                </Typography>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  • Для более кинематографичного вида хорошо работает blur 10–16 и прозрачность 65–78%.
-                </Typography>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Stack>
+                <Stack spacing={2}>
+                  {[
+                    {
+                      tip: 'Для строгого интерфейса лучше подходят Obsidian Gold и Midnight Cyan.',
+                      icon: '🎯',
+                      color: theme.palette.primary.main,
+                    },
+                    {
+                      tip: 'Если хочется меньше "стекла" — переключи режим поверхности на Плотный.',
+                      icon: '🧱',
+                      color: theme.palette.info.main,
+                    },
+                    {
+                      tip: 'Для фонового изображения лучше использовать тёмные, не слишком контрастные арты.',
+                      icon: '🖼️',
+                      color: theme.palette.warning.main,
+                    },
+                    {
+                      tip: 'Если фон слишком активный — опусти его прозрачность до 20–45%.',
+                      icon: '💧',
+                      color: theme.palette.secondary.main,
+                    },
+                    {
+                      tip: 'Для более кинематографичного вида хорошо работает blur 10–16 и прозрачность 65–78%.',
+                      icon: '✨',
+                      color: theme.palette.success.main,
+                    },
+                  ].map((item, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        display: 'flex',
+                        gap: 1.5,
+                        p: 1.5,
+                        borderRadius: 2,
+                        backgroundColor: alpha(item.color, 0.04),
+                        borderLeft: `3px solid ${item.color}`,
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          backgroundColor: alpha(item.color, 0.08),
+                          transform: 'translateX(4px)',
+                        },
+                      }}
+                    >
+                      <Typography sx={{ fontSize: '1.2rem', lineHeight: 1 }}>{item.icon}</Typography>
+                      <Typography
+                        sx={{
+                          color: 'text.secondary',
+                          fontSize: '0.84rem',
+                          lineHeight: 1.5,
+                          '& strong': {
+                            color: item.color,
+                            fontWeight: 700,
+                          },
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: item.tip.replace(
+                            /\*\*(.*?)\*\*/g,
+                            '<strong>$1</strong>'
+                          ),
+                        }}
+                      />
+                    </Box>
+                  ))}
+                </Stack>
+              </GlassCard>
+            </Stack>
+          </Box>
+        </Fade>
       </Box>
     </Box>
   );
