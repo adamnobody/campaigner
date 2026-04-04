@@ -14,6 +14,7 @@ import { useFactionStore } from '@/store/useFactionStore';
 import { useDynastyStore } from '@/store/useDynastyStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { SearchDialog } from '@/components/ui/SearchDialog';
+import { shallow } from 'zustand/shallow';
 
 const PAGE_LABELS: Record<string, string> = {
   map: 'Карта',
@@ -32,11 +33,15 @@ const PAGE_LABELS: Record<string, string> = {
 };
 
 export const TopBar: React.FC = () => {
-  const { toggleSidebar, searchOpen, setSearchOpen } = useUIStore();
-  const { currentProject } = useProjectStore();
-  const { currentCharacter } = useCharacterStore();
-  const { currentFaction } = useFactionStore();
-  const { currentDynasty } = useDynastyStore();
+  const { toggleSidebar, searchOpen, setSearchOpen } = useUIStore((state) => ({
+    toggleSidebar: state.toggleSidebar,
+    searchOpen: state.searchOpen,
+    setSearchOpen: state.setSearchOpen,
+  }), shallow);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const currentCharacter = useCharacterStore((state) => state.currentCharacter);
+  const currentFaction = useFactionStore((state) => state.currentFaction);
+  const currentDynasty = useDynastyStore((state) => state.currentDynasty);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -92,7 +97,7 @@ export const TopBar: React.FC = () => {
 
           <Typography
             variant="h6"
-            sx={{ fontFamily: '"Cinzel", serif', color: 'primary.main', cursor: 'pointer', mr: 3 }}
+            sx={{ fontFamily: 'inherit', color: 'primary.main', cursor: 'pointer', mr: 3 }}
             onClick={() => navigate('/')}
           >
             ⚔️ Campaigner

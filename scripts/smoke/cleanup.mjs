@@ -8,6 +8,16 @@ export async function cleanup(ctx) {
     if (res.ok) logOk(`Relationship deleted: #${ctx.relationshipId}`);
   }
 
+  if (ctx.territoryId) {
+    const res = await api(`/territories/${ctx.territoryId}`, { method: 'DELETE' });
+    if (res.ok) logOk(`Territory deleted: #${ctx.territoryId}`);
+  }
+
+  if (ctx.markerId) {
+    const res = await api(`/markers/${ctx.markerId}`, { method: 'DELETE' });
+    if (res.ok) logOk(`Marker deleted: #${ctx.markerId}`);
+  }
+
   if (ctx.wikiLinkId) {
     const res = await api(`/wiki/links/${ctx.wikiLinkId}`, { method: 'DELETE' });
     if (res.ok) logOk(`Wiki link deleted: #${ctx.wikiLinkId}`);
@@ -91,5 +101,10 @@ export async function cleanup(ctx) {
   if (ctx.projectId) {
     const res = await api(`/projects/${ctx.projectId}`, { method: 'DELETE' });
     if (res.ok) logOk(`Project deleted: #${ctx.projectId}`);
+  }
+
+  if (ctx.importedProjectId) {
+    const res = await api(`/projects/${ctx.importedProjectId}`, { method: 'DELETE' });
+    if (res.ok) logOk(`Imported project deleted: #${ctx.importedProjectId}`);
   }
 }

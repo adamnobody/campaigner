@@ -4,9 +4,26 @@ import type { PreferencesState } from '@/store/usePreferencesStore';
 
 export const createAppTheme = (preferences: Pick<
   PreferencesState,
-  'themePreset' | 'surfaceMode' | 'fontMode' | 'uiDensity' | 'motionMode' | 'transparency' | 'blur' | 'borderRadius'
+  | 'themePreset'
+  | 'surfaceMode'
+  | 'fontMode'
+  | 'uiDensity'
+  | 'motionMode'
+  | 'transparency'
+  | 'blur'
+  | 'borderRadius'
+  | 'customBodyFontFamily'
+  | 'customHeadingFontFamily'
+  | 'panelPatternMode'
+  | 'panelPatternOpacity'
+  | 'panelPatternSize'
+  | 'panelPatternUrl'
+  | 'cardPatternMode'
+  | 'cardPatternOpacity'
+  | 'cardPatternSize'
+  | 'cardPatternUrl'
 >) => {
-  const preset = THEME_PRESETS[preferences.themePreset];
+  const preset = THEME_PRESETS[preferences.themePreset] || THEME_PRESETS['obsidian-gold'];
 
   const spacingBase =
     preferences.uiDensity === 'compact' ? 7 :
@@ -14,12 +31,17 @@ export const createAppTheme = (preferences: Pick<
     8;
 
   const bodyFont =
-    preferences.fontMode === 'serif'
+    preferences.fontMode === 'custom'
+      ? preferences.customBodyFontFamily || '"Inter", "Roboto", sans-serif'
+      : preferences.fontMode === 'serif'
       ? '"Crimson Text", serif'
       : '"Inter", "Roboto", sans-serif';
 
   const uiFont = '"Inter", "Roboto", sans-serif';
-  const headingFont = '"Cinzel", serif';
+  const headingFont =
+    preferences.fontMode === 'custom'
+      ? preferences.customHeadingFontFamily || '"Cinzel", serif'
+      : '"Cinzel", serif';
   const monoFont = '"Fira Code", monospace';
 
   const panelOpacity = preferences.surfaceMode === 'glass'
@@ -35,6 +57,72 @@ export const createAppTheme = (preferences: Pick<
   const paperBackground = `rgba(${preset.panelBaseRgb}, ${panelOpacity})`;
   const softBackground = alpha(preset.textPrimary, 0.03);
   const borderColor = `rgba(${preset.borderRgb}, 0.18)`;
+
+  const buildPatternStyle = (
+    mode: PreferencesState['panelPatternMode'],
+    opacity: number,
+    size: number,
+    customUrl: string,
+    color: string
+  ): {
+    backgroundImage?: string;
+    backgroundSize?: string;
+    backgroundRepeat?: string;
+    backgroundPosition?: string;
+  } => {
+    if (mode === 'none') return {};
+    if (mode === 'custom' && customUrl.trim()) {
+      return {
+        backgroundImage: `url("${customUrl}")`,
+        backgroundSize: `${Math.max(8, size)}px ${Math.max(8, size)}px`,
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    if (mode === 'dots') {
+      return {
+        backgroundImage: `radial-gradient(circle, ${alpha(color, opacity)} 1.2px, transparent 1.2px)`,
+        backgroundSize: `${size}px ${size}px`,
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    if (mode === 'grid') {
+      return {
+        backgroundImage: [
+          `linear-gradient(to right, ${alpha(color, opacity)} 1px, transparent 1px)`,
+          `linear-gradient(to bottom, ${alpha(color, opacity)} 1px, transparent 1px)`,
+        ].join(', '),
+        backgroundSize: `${size}px ${size}px`,
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    if (mode === 'diagonal') {
+      return {
+        backgroundImage: `repeating-linear-gradient(45deg, ${alpha(color, opacity)} 0, ${alpha(color, opacity)} 2px, transparent 2px, transparent ${size}px)`,
+        backgroundSize: 'auto',
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    return {};
+  };
+
+  const panelPattern = buildPatternStyle(
+    preferences.panelPatternMode,
+    preferences.panelPatternOpacity,
+    preferences.panelPatternSize,
+    preferences.panelPatternUrl,
+    preset.textPrimary
+  );
+  const cardPattern = buildPatternStyle(
+    preferences.cardPatternMode,
+    preferences.cardPatternOpacity,
+    preferences.cardPatternSize,
+    preferences.cardPatternUrl,
+    preset.textPrimary
+  );
 
   return createTheme({
     spacing: spacingBase,
@@ -145,8 +233,8 @@ export const createAppTheme = (preferences: Pick<
       MuiPaper: {
         styleOverrides: {
           root: {
-            backgroundImage: 'none',
             backgroundColor: paperBackground,
+            ...panelPattern,
             backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
             border: `1px solid ${borderColor}`,
             transition: transitionDuration ? `background-color ${transitionDuration}ms ease, border-color ${transitionDuration}ms ease, transform ${transitionDuration}ms ease` : 'none',
@@ -156,8 +244,8 @@ export const createAppTheme = (preferences: Pick<
       MuiCard: {
         styleOverrides: {
           root: {
-            backgroundImage: 'none',
             backgroundColor: paperBackground,
+            ...cardPattern,
             backdropFilter: blurAmount ? `blur(${blurAmount}px)` : 'none',
             border: `1px solid ${borderColor}`,
             boxShadow: '0 10px 30px rgba(0,0,0,0.18)',

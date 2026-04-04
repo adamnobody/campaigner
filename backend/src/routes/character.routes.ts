@@ -9,12 +9,9 @@ import {
   updateRelationshipSchema,
 } from '@campaigner/shared';
 import { uploadCharacterImage } from '../middleware/upload';
+import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas';
 
 const router = Router();
-
-const idParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
-});
 
 const listQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
@@ -23,14 +20,6 @@ const listQuerySchema = z.object({
   search: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
-});
-
-const relationshipListQuerySchema = z.object({
-  projectId: z.coerce.number().int().positive(),
-});
-
-const setTagsSchema = z.object({
-  tagIds: z.array(z.number().int().positive()),
 });
 
 // Characters
@@ -42,13 +31,13 @@ router.get(
 
 router.get(
   '/graph',
-  validateRequest({ query: relationshipListQuerySchema }),
+  validateRequest({ query: projectIdQuerySchema }),
   CharacterController.getGraph
 );
 
 router.get(
   '/relationships/list',
-  validateRequest({ query: relationshipListQuerySchema }),
+  validateRequest({ query: projectIdQuerySchema }),
   CharacterController.getRelationships
 );
 
@@ -90,7 +79,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
-    body: setTagsSchema,
+    body: setTagsBodySchema,
   }),
   CharacterController.setTags
 );

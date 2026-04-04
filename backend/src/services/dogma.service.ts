@@ -2,6 +2,7 @@ import { getDb } from '../db/connection';
 import { CreateDogma, UpdateDogma, Dogma } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
+import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers';
 
 type DogmaCategory = Dogma['category'];
 type DogmaImportance = Dogma['importance'];
@@ -62,6 +63,20 @@ const SELECT_FIELDS = `
   created_at as createdAt, updated_at as updatedAt
 `;
 
+const UPDATE_FIELD_MAP: Record<string, string> = {
+  title: 'title',
+  category: 'category',
+  description: 'description',
+  impact: 'impact',
+  exceptions: 'exceptions',
+  isPublic: 'is_public',
+  importance: 'importance',
+  status: 'status',
+  sortOrder: 'sort_order',
+  icon: 'icon',
+  color: 'color',
+};
+
 export class DogmaService {
   static getAll(
     projectId: number,
@@ -100,17 +115,13 @@ export class DogmaService {
     }
 
     const countRow = db.prepare(`
-      SELECT COUNT(*) as count
-      FROM dogmas
-      ${whereClause}
+      SELECT COUNT(*) as count FROM dogmas ${whereClause}
     `).get(...queryParams) as CountRow;
 
     const total = countRow.count;
 
     let query = `
-      SELECT ${SELECT_FIELDS}
-      FROM dogmas
-      ${whereClause}
+      SELECT ${SELECT_FIELDS} FROM dogmas ${whereClause}
       ORDER BY sort_order ASC, created_at DESC
     `;
 
@@ -128,9 +139,15 @@ export class DogmaService {
 
     const rows = db.prepare(query).all(...paginationParams) as DogmaRow[];
 
+    const tagsMap = loadTagsBatch(
+      projectId,
+      'dogma',
+      rows.map((r) => r.id)
+    );
+
     const items = rows.map((row) => {
       const dogma = mapRow(row);
-      dogma.tags = TagService.getTagsForEntity(projectId, 'dogma', row.id);
+      dogma.tags = tagsMap.get(row.id) || [];
       return dogma;
     });
 
@@ -141,9 +158,7 @@ export class DogmaService {
     const db = getDb();
 
     const row = db.prepare(`
-      SELECT ${SELECT_FIELDS}
-      FROM dogmas
-      WHERE id = ?
+      SELECT ${SELECT_FIELDS} FROM dogmas WHERE id = ?
     `).get(id) as DogmaRow | undefined;
 
     if (!row) {
@@ -162,9 +177,7 @@ export class DogmaService {
 
     if (sortOrder === undefined || sortOrder === 0) {
       const maxOrderRow = db.prepare(`
-        SELECT MAX(sort_order) as maxOrder
-        FROM dogmas
-        WHERE project_id = ?
+        SELECT MAX(sort_order) as maxOrder FROM dogmas WHERE project_id = ?
       `).get(data.projectId) as MaxOrderRow | undefined;
 
       sortOrder = (maxOrderRow?.maxOrder || 0) + 1;
@@ -196,62 +209,9 @@ export class DogmaService {
 
   static update(id: number, data: UpdateDogma): Dogma {
     this.getById(id);
-    const db = getDb();
-
-    const fields: string[] = [];
-    const values: unknown[] = [];
-
-    if (data.title !== undefined) {
-      fields.push('title = ?');
-      values.push(data.title);
-    }
-    if (data.category !== undefined) {
-      fields.push('category = ?');
-      values.push(data.category);
-    }
-    if (data.description !== undefined) {
-      fields.push('description = ?');
-      values.push(data.description);
-    }
-    if (data.impact !== undefined) {
-      fields.push('impact = ?');
-      values.push(data.impact);
-    }
-    if (data.exceptions !== undefined) {
-      fields.push('exceptions = ?');
-      values.push(data.exceptions);
-    }
-    if (data.isPublic !== undefined) {
-      fields.push('is_public = ?');
-      values.push(data.isPublic ? 1 : 0);
-    }
-    if (data.importance !== undefined) {
-      fields.push('importance = ?');
-      values.push(data.importance);
-    }
-    if (data.status !== undefined) {
-      fields.push('status = ?');
-      values.push(data.status);
-    }
-    if (data.sortOrder !== undefined) {
-      fields.push('sort_order = ?');
-      values.push(data.sortOrder);
-    }
-    if (data.icon !== undefined) {
-      fields.push('icon = ?');
-      values.push(data.icon);
-    }
-    if (data.color !== undefined) {
-      fields.push('color = ?');
-      values.push(data.color);
-    }
-
-    if (fields.length > 0) {
-      fields.push("updated_at = datetime('now')");
-      values.push(id);
-      db.prepare(`UPDATE dogmas SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-    }
-
+    buildUpdateQuery('dogmas', UPDATE_FIELD_MAP, data as Record<string, unknown>, id, {
+      booleanFields: ['isPublic'],
+    });
     return this.getById(id);
   }
 

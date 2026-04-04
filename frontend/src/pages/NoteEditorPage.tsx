@@ -2,8 +2,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   Box, Typography, Paper, TextField, IconButton,
   ToggleButtonGroup, ToggleButton, Chip, Divider, Tooltip,
-  List, ListItem, ListItemText, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Autocomplete, 
+  List, ListItem, ListItemText,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -29,9 +28,6 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -40,7 +36,11 @@ import { useHistory } from '@/hooks/useHistory';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { wikiApi, notesApi } from '@/api/axiosClient';
-import type { Note } from '@campaigner/shared';
+import { ToolbarButton } from '@/pages/note-editor/ToolbarButton';
+import { InsertWikiLinkDialog } from '@/pages/note-editor/InsertWikiLinkDialog';
+import { CreateWikiLinkDialog } from '@/pages/note-editor/CreateWikiLinkDialog';
+import { MarkdownPreview } from '@/pages/note-editor/MarkdownPreview';
+import { shallow } from 'zustand/shallow';
 
 const AUTOSAVE_DELAY = 3000;
 
@@ -50,8 +50,8 @@ interface WikiLink {
   id: number;
   sourceNoteId: number;
   targetNoteId: number;
-  sourceTitle: string;
-  targetTitle: string;
+  sourceTitle?: string;
+  targetTitle?: string;
   label: string;
 }
 
@@ -60,12 +60,17 @@ export const NoteEditorPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const nid = parseInt(noteId!);
   const navigate = useNavigate();
-  const { currentNote, fetchNote, updateNote } = useNoteStore();
-  const { showSnackbar } = useUIStore();
+  const { currentNote, fetchNote, updateNote } = useNoteStore((state) => ({
+    currentNote: state.currentNote,
+    fetchNote: state.fetchNote,
+    updateNote: state.updateNote,
+  }), shallow);
+  const showSnackbar = useUIStore((state) => state.showSnackbar);
 
   const [mode, setMode] = useState<EditorMode>('split');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [previewContent, setPreviewContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved');
@@ -76,11 +81,8 @@ export const NoteEditorPage: React.FC = () => {
   const [wikiLinks, setWikiLinks] = useState<WikiLink[]>([]);
   const [wikiNotes, setWikiNotes] = useState<{ id: number; title: string }[]>([]);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [linkTarget, setLinkTarget] = useState<{ id: number; title: string } | null>(null);
-  const [linkLabel, setLinkLabel] = useState('');
   const [insertWikiDialogOpen, setInsertWikiDialogOpen] = useState(false);
-  const [insertWikiTarget, setInsertWikiTarget] = useState<{ id: number; title: string } | null>(null);
-  const [insertWikiLabel, setInsertWikiLabel] = useState('');
+  const [insertWikiInitialLabel, setInsertWikiInitialLabel] = useState('');
   const insertWikiSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,12 +96,22 @@ export const NoteEditorPage: React.FC = () => {
 
   const history = useHistory('');
   const initializedNoteIdRef = useRef<number | null>(null);
+  const wikiNotesLoadedRef = useRef(false);
 
   useEffect(() => {
     hasChangesRef.current = hasChanges;
     titleRef.current = title;
     contentRef.current = content;
   }, [hasChanges, title, content]);
+
+  useEffect(() => {
+    if (mode === 'edit') {
+      setPreviewContent(content);
+      return;
+    }
+    const timer = setTimeout(() => setPreviewContent(content), 180);
+    return () => clearTimeout(timer);
+  }, [content, mode]);
 
   useEffect(() => {
     fetchNote(nid);
@@ -111,6 +123,7 @@ export const NoteEditorPage: React.FC = () => {
         initializedNoteIdRef.current = currentNote.id;
         setTitle(currentNote.title);
         setContent(currentNote.content);
+        setPreviewContent(currentNote.content);
         history.reset(currentNote.content);
         setHasChanges(false);
         setSaveStatus('saved');
@@ -126,23 +139,31 @@ export const NoteEditorPage: React.FC = () => {
     }
   }, [currentNote]);
 
-  const loadWikiData = async () => {
+  const loadWikiNotes = useCallback(async () => {
     try {
-      const [linksRes, notesRes] = await Promise.all([
+      const notesRes = await notesApi.getAll(pid, { noteType: 'wiki', limit: 500 });
+      setWikiNotes((notesRes.data.data.items || []).map((n: any) => ({ id: n.id, title: n.title })));
+      wikiNotesLoadedRef.current = true;
+    } catch {
+      // no-op
+    }
+  }, [pid]);
+
+  const loadWikiData = useCallback(async () => {
+    try {
+      const [linksRes] = await Promise.all([
         wikiApi.getLinks(pid, nid),
-        notesApi.getAll(pid, { noteType: 'wiki', limit: 500 }),
       ]);
       setWikiLinks(linksRes.data.data || []);
-      setWikiNotes((notesRes.data.data.items || []).map((n: any) => ({ id: n.id, title: n.title })));
+      await loadWikiNotes();
     } catch {}
-  };
+  }, [loadWikiNotes, nid, pid]);
 
   // Load all wiki notes for [[link]] resolution even for non-wiki notes
   useEffect(() => {
-    notesApi.getAll(pid, { noteType: 'wiki', limit: 500 }).then(res => {
-      setWikiNotes((res.data.data.items || []).map((n: any) => ({ id: n.id, title: n.title })));
-    }).catch(() => {});
-  }, [pid]);
+    wikiNotesLoadedRef.current = false;
+    loadWikiNotes();
+  }, [loadWikiNotes]);
 
   // ==================== Save ====================
   const doSave = useCallback(async (isAuto: boolean = false) => {
@@ -230,8 +251,7 @@ export const NoteEditorPage: React.FC = () => {
 
     if (type === 'wikilink') {
       insertWikiSelectionRef.current = { start, end };
-      setInsertWikiTarget(null);
-      setInsertWikiLabel(selected || '');
+      setInsertWikiInitialLabel(selected || '');
       setInsertWikiDialogOpen(true);
       return;
     }
@@ -264,13 +284,10 @@ export const NoteEditorPage: React.FC = () => {
   }, [content, history]);
 
   // ==================== Wiki links ====================
-  const handleCreateLink = async () => {
-    if (!linkTarget) return;
+  const handleCreateLink = async (target: { id: number; title: string }, label: string) => {
     try {
-      await wikiApi.createLink({ projectId: pid, sourceNoteId: nid, targetNoteId: linkTarget.id, label: linkLabel.trim() });
+      await wikiApi.createLink({ projectId: pid, sourceNoteId: nid, targetNoteId: target.id, label: label.trim() });
       setLinkDialogOpen(false);
-      setLinkTarget(null);
-      setLinkLabel('');
       showSnackbar('Связь создана', 'success');
       loadWikiData();
     } catch (err: any) {
@@ -278,14 +295,12 @@ export const NoteEditorPage: React.FC = () => {
     }
   };
 
-  const handleInsertWikiLink = () => {
-    if (!insertWikiTarget) return;
-
+  const handleInsertWikiLink = (target: { id: number; title: string }, insertLabel: string) => {
     const textarea = textareaRef.current;
     const { start, end } = insertWikiSelectionRef.current;
 
-    const label = insertWikiLabel.trim() || insertWikiTarget.title;
-    const insertion = `[${label}](/__note__/${insertWikiTarget.id})`;
+    const label = insertLabel.trim() || target.title;
+    const insertion = `[${label}](/__note__/${target.id})`;
 
     const newContent = content.substring(0, start) + insertion + content.substring(end);
     const newCursorPos = start + insertion.length;
@@ -295,8 +310,6 @@ export const NoteEditorPage: React.FC = () => {
     handleContentChange(newContent);
 
     setInsertWikiDialogOpen(false);
-    setInsertWikiTarget(null);
-    setInsertWikiLabel('');
 
     setTimeout(() => {
       if (textarea) {
@@ -378,26 +391,6 @@ export const NoteEditorPage: React.FC = () => {
   const isMarkdown = currentNote.format === 'md';
   const isWiki = currentNote.noteType === 'wiki';
 
-  const markdownStyles = {
-    '& h1': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.8rem', mt: 3, mb: 1, borderBottom: '1px solid rgba(201,169,89,0.2)', pb: 1 },
-    '& h2': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.4rem', mt: 2.5, mb: 1 },
-    '& h3': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.15rem', mt: 2, mb: 0.5 },
-    '& p': { mb: 1.5, lineHeight: 1.8, color: 'rgba(255,255,255,0.85)' },
-    '& a': { color: '#4ECDC4', textDecoration: 'underline', textDecorationColor: 'rgba(78,205,196,0.3)' },
-    '& code': { backgroundColor: 'rgba(201,169,89,0.1)', padding: '2px 6px', borderRadius: '4px', fontFamily: '"Fira Code", monospace', fontSize: '0.85em' },
-    '& pre': { backgroundColor: 'rgba(0,0,0,0.4)', p: 2, borderRadius: 2, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', '& code': { backgroundColor: 'transparent', p: 0 } },
-    '& blockquote': { borderLeft: '3px solid', borderColor: 'primary.main', pl: 2, ml: 0, opacity: 0.85, fontStyle: 'italic' },
-    '& ul, & ol': { pl: 3, mb: 1.5 },
-    '& li': { mb: 0.5, lineHeight: 1.7 },
-    '& table': { borderCollapse: 'collapse', width: '100%', mb: 2 },
-    '& th, & td': { border: '1px solid rgba(255,255,255,0.1)', px: 2, py: 1, textAlign: 'left' },
-    '& th': { backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 },
-    '& hr': { border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', my: 3 },
-    '& img': { maxWidth: '100%', borderRadius: 1 },
-    '& strong': { color: '#fff', fontWeight: 700 },
-    '& em': { color: 'rgba(255,255,255,0.9)' },
-  };
-
   const renderEditor = () => (
     <Box ref={editorScrollRef} onScroll={handleEditorScroll} sx={{ height: '100%', overflow: 'auto' }}>
       {isMarkdown && (
@@ -464,100 +457,6 @@ export const NoteEditorPage: React.FC = () => {
     </Box>
   );
 
-  /** Custom renderer that resolves [[wiki links]] inside text nodes */
-  const renderPreview = () => (
-    <Box ref={previewScrollRef} sx={{ height: '100%', overflow: 'auto', p: 3, ...markdownStyles }}>
-      {isMarkdown ? (
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-          components={{
-            a: ({ href, children }) => {
-              if (href?.startsWith('/__note__/')) {
-                const noteIdStr = href.replace('/__note__/', '');
-                const targetNoteId = parseInt(noteIdStr, 10);
-                const found = wikiNotes.find((n) => n.id === targetNoteId);
-
-                if (!Number.isNaN(targetNoteId) && found) {
-                  return (
-                    <a
-                      href={href}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigate(`/project/${pid}/notes/${targetNoteId}`);
-                      }}
-                      style={{
-                        color: '#4ECDC4',
-                        textDecoration: 'underline',
-                        textDecorationColor: 'rgba(78,205,196,0.3)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {children}
-                    </a>
-                  );
-                }
-
-                return (
-                  <span
-                    style={{
-                      color: '#FF6B6B',
-                      borderBottom: '1px dashed rgba(255,107,107,0.4)',
-                      cursor: 'not-allowed',
-                    }}
-                  >
-                    {children}
-                  </span>
-                );
-              }
-
-              if (href && href.startsWith('/project/')) {
-                return (
-                  <a
-                    href={href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(href);
-                    }}
-                    style={{
-                      color: '#4ECDC4',
-                      textDecoration: 'underline',
-                      textDecorationColor: 'rgba(78,205,196,0.3)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {children}
-                  </a>
-                );
-              }
-
-              return (
-                <a href={href} target="_blank" rel="noopener noreferrer">
-                  {children}
-                </a>
-              );
-            },
-          }}
-          skipHtml={false}
-        >
-          {content || '*Пусто...*'}
-        </ReactMarkdown>
-      ) : (
-        <Typography
-          component="pre"
-          sx={{
-            whiteSpace: 'pre-wrap',
-            fontFamily: '"Crimson Text", serif',
-            lineHeight: 1.8,
-            color: 'rgba(255,255,255,0.85)',
-          }}
-        >
-          {content || 'Пусто...'}
-        </Typography>
-      )}
-    </Box>
-  );
-
   /** Wiki links sidebar */
   const renderWikiSidebar = () => {
     if (!showLinks) return null;
@@ -596,7 +495,7 @@ export const NoteEditorPage: React.FC = () => {
           ) : (
             <List disablePadding dense>
               {wikiLinks.map(link => {
-                const otherTitle = link.sourceNoteId === nid ? link.targetTitle : link.sourceTitle;
+                const otherTitle = (link.sourceNoteId === nid ? link.targetTitle : link.sourceTitle) || '';
                 const otherId = link.sourceNoteId === nid ? link.targetNoteId : link.sourceNoteId;
                 return (
                   <ListItem
@@ -714,122 +613,37 @@ export const NoteEditorPage: React.FC = () => {
           {mode === 'split' && (
             <>
               <Box sx={{ width: '50%', height: '100%', borderRight: '1px solid rgba(255,255,255,0.08)' }}>{renderEditor()}</Box>
-              <Box sx={{ width: '50%', height: '100%' }}>{renderPreview()}</Box>
+              <Box sx={{ width: '50%', height: '100%' }}>
+                <MarkdownPreview content={previewContent} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
+              </Box>
             </>
           )}
-          {mode === 'preview' && <Box sx={{ width: '100%', height: '100%' }}>{renderPreview()}</Box>}
+          {mode === 'preview' && (
+            <Box sx={{ width: '100%', height: '100%' }}>
+              <MarkdownPreview content={previewContent} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
+            </Box>
+          )}
         </Paper>
 
         {renderWikiSidebar()}
       </Box>
 
-      <Dialog
+      <InsertWikiLinkDialog
         open={insertWikiDialogOpen}
-        onClose={() => {
-          setInsertWikiDialogOpen(false);
-          setInsertWikiTarget(null);
-          setInsertWikiLabel('');
-        }}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
-      >
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-          Вставить вики-ссылку
-        </DialogTitle>
-        <DialogContent>
-          <Autocomplete
-            options={wikiNotes.filter((n) => n.id !== nid)}
-            getOptionLabel={(opt) => opt.title}
-            value={insertWikiTarget}
-            onChange={(_, val) => {
-              setInsertWikiTarget(val);
-              if (val && !insertWikiLabel.trim()) {
-                setInsertWikiLabel(val.title);
-              }
-            }}
-            isOptionEqualToValue={(opt, val) => opt.id === val.id}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Вики-статья *"
-                margin="normal"
-                placeholder="Выберите статью..."
-              />
-            )}
-            noOptionsText="Нет статей"
-          />
+        onClose={() => setInsertWikiDialogOpen(false)}
+        wikiNotes={wikiNotes}
+        currentNoteId={nid}
+        initialLabel={insertWikiInitialLabel}
+        onInsert={handleInsertWikiLink}
+      />
 
-          <TextField
-            fullWidth
-            label="Текст ссылки"
-            value={insertWikiLabel}
-            onChange={(e) => setInsertWikiLabel(e.target.value)}
-            margin="normal"
-            placeholder="Текст, который будет показан в статье"
-            helperText="В текст будет вставлена markdown-ссылка на внутреннюю статью"
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => {
-              setInsertWikiDialogOpen(false);
-              setInsertWikiTarget(null);
-              setInsertWikiLabel('');
-            }}
-            color="inherit"
-          >
-            Отмена
-          </Button>
-          <DndButton
-            variant="contained"
-            onClick={handleInsertWikiLink}
-            disabled={!insertWikiTarget}
-          >
-            Вставить
-          </DndButton>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Link Dialog */}
-      <Dialog open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить связь</DialogTitle>
-        <DialogContent>
-          <Autocomplete
-            options={wikiNotes.filter(n => n.id !== nid)}
-            getOptionLabel={(opt) => opt.title}
-            value={linkTarget}
-            onChange={(_, val) => setLinkTarget(val)}
-            isOptionEqualToValue={(opt, val) => opt.id === val.id}
-            renderInput={(params) => (
-              <TextField {...params} label="Вики-статья *" margin="normal" placeholder="Выберите статью..." />
-            )}
-            noOptionsText="Нет статей"
-          />
-          <TextField
-            fullWidth label="Описание связи (опционально)" value={linkLabel}
-            onChange={(e) => setLinkLabel(e.target.value)} margin="normal"
-            placeholder="напр. столица, союзник, часть..."
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setLinkDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleCreateLink} disabled={!linkTarget}>
-            Создать связь
-          </DndButton>
-        </DialogActions>
-      </Dialog>
+      <CreateWikiLinkDialog
+        open={linkDialogOpen}
+        onClose={() => setLinkDialogOpen(false)}
+        wikiNotes={wikiNotes}
+        currentNoteId={nid}
+        onCreateLink={handleCreateLink}
+      />
     </Box>
   );
 };
-
-const ToolbarButton: React.FC<{ icon: React.ReactNode; tooltip: string; onClick: () => void }> = ({ icon, tooltip, onClick }) => (
-  <Tooltip title={tooltip}>
-    <IconButton size="small" onClick={onClick}
-      sx={{ color: 'rgba(255,255,255,0.4)', borderRadius: 1, width: 30, height: 30,
-        '&:hover': { color: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(255,255,255,0.06)' } }}>
-      {icon}
-    </IconButton>
-  </Tooltip>
-);

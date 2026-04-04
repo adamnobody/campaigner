@@ -1,31 +1,19 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { createDiskUpload } from '../middleware/createUpload';
-import {
-  getProjects,
-  getProjectById,
-  createProject,
-  updateProject,
-  deleteProject,
-  uploadProjectMap,
-  exportProject,
-  importProject,
-} from '../controllers/project.controller';
+import { ProjectController } from '../controllers/project.controller';
 import { validateRequest } from '../middleware/validateRequest';
 import {
   createProjectSchema,
   updateProjectSchema,
 } from '@campaigner/shared';
+import { idParamsSchema } from './commonSchemas';
 
 const router = Router();
 
 const upload = createDiskUpload({
   folder: 'maps',
   filenamePrefix: 'project-map',
-});
-
-const idParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
 });
 
 const importProjectSchema = z.object({
@@ -47,18 +35,18 @@ const importProjectSchema = z.object({
   tagAssociations: z.array(z.any()).optional(),
 });
 
-router.get('/', getProjects);
+router.get('/', ProjectController.getAll);
 
 router.get(
   '/:id',
   validateRequest({ params: idParamsSchema }),
-  getProjectById
+  ProjectController.getById
 );
 
 router.post(
   '/',
   validateRequest({ body: createProjectSchema }),
-  createProject
+  ProjectController.create
 );
 
 router.put(
@@ -67,32 +55,32 @@ router.put(
     params: idParamsSchema,
     body: updateProjectSchema,
   }),
-  updateProject
+  ProjectController.update
 );
 
 router.delete(
   '/:id',
   validateRequest({ params: idParamsSchema }),
-  deleteProject
+  ProjectController.delete
 );
 
 router.post(
   '/:id/map',
   validateRequest({ params: idParamsSchema }),
   upload.single('mapImage'),
-  uploadProjectMap
+  ProjectController.uploadMap
 );
 
 router.get(
   '/:id/export',
   validateRequest({ params: idParamsSchema }),
-  exportProject
+  ProjectController.export
 );
 
 router.post(
   '/import',
   validateRequest({ body: importProjectSchema }),
-  importProject
+  ProjectController.import
 );
 
 export default router;

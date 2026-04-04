@@ -2,16 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   IconButton,
-  Paper,
   Chip,
   Container,
+  Avatar,
+  Fade,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
@@ -25,43 +20,44 @@ import { projectsApi } from '@/api/axiosClient';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { shallow } from 'zustand/shallow';
+import { HomeBackground } from '@/pages/home/HomeBackground';
+import { CreateProjectDialog } from '@/pages/home/CreateProjectDialog';
+import { GlassCard, EmptyStateIllustration } from '@/pages/home/HomePrimitives';
 
 export const HomePage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { projects, loading, fetchProjects, createProject, deleteProject } = useProjectStore();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
-  const { homeBackgroundImage, homeBackgroundOpacity } = usePreferencesStore();
+  const { projects, loading, fetchProjects, createProject, deleteProject } = useProjectStore((state) => ({
+    projects: state.projects,
+    loading: state.loading,
+    fetchProjects: state.fetchProjects,
+    createProject: state.createProject,
+    deleteProject: state.deleteProject,
+  }), shallow);
+  const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
+    showSnackbar: state.showSnackbar,
+    showConfirmDialog: state.showConfirmDialog,
+  }), shallow);
+  const { homeBackgroundImage, homeBackgroundOpacity } = usePreferencesStore((state) => ({
+    homeBackgroundImage: state.homeBackgroundImage,
+    homeBackgroundOpacity: state.homeBackgroundOpacity,
+  }), shallow);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     fetchProjects();
+    const timer = setTimeout(() => setIsLoaded(true), 100);
+    return () => clearTimeout(timer);
   }, [fetchProjects]);
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return;
-
-    setCreating(true);
-    try {
-      const project = await createProject({
-        name: newName.trim(),
-        description: newDescription.trim(),
-      });
-
-      setCreateDialogOpen(false);
-      setNewName('');
-      setNewDescription('');
-      showSnackbar('Проект создан!', 'success');
-      navigate(`/project/${project.id}/map`);
-    } catch {
-      showSnackbar('Не удалось создать проект', 'error');
-    } finally {
-      setCreating(false);
-    }
+  const handleCreateSubmit = async (name: string, description: string) => {
+    const project = await createProject({ name, description });
+    setCreateDialogOpen(false);
+    showSnackbar('✨ Проект создан!', 'success');
+    navigate(`/project/${project.id}/map`);
   };
 
   const handleDelete = (id: number, name: string, e: React.MouseEvent) => {
@@ -99,7 +95,7 @@ export const HomePage: React.FC = () => {
         }
 
         const res = await projectsApi.importProject(data);
-        showSnackbar(`Проект "${res.data.data.name}" импортирован!`, 'success');
+        showSnackbar(`📥 Проект "${res.data.data.name}" импортирован!`, 'success');
         fetchProjects();
         navigate(`/project/${res.data.data.id}/map`);
       } catch (err: any) {
@@ -126,65 +122,16 @@ export const HomePage: React.FC = () => {
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
+        background: theme.palette.background.default,
       }}
     >
-      {homeBackgroundImage && (
-        <Box
-          sx={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: 'none',
-            backgroundImage: `url(${homeBackgroundImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            opacity: homeBackgroundOpacity,
-            transform: 'scale(1.02)',
-          }}
-        />
-      )}
-
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          background: `
-            radial-gradient(circle at 15% 20%, ${alpha(theme.palette.primary.main, 0.16)} 0%, transparent 28%),
-            radial-gradient(circle at 85% 18%, ${alpha(theme.palette.secondary.main, 0.1)} 0%, transparent 24%),
-            radial-gradient(circle at 50% 75%, rgba(255,255,255,0.04) 0%, transparent 22%)
-          `,
-        }}
+      {/* Atmospheric Background */}
+      <HomeBackground
+        homeBackgroundImage={homeBackgroundImage}
+        homeBackgroundOpacity={homeBackgroundOpacity}
       />
 
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          background: homeBackgroundImage
-            ? `
-              linear-gradient(
-                180deg,
-                ${alpha(theme.palette.background.default, 0.84)} 0%,
-                ${alpha(theme.palette.background.default, 0.62)} 45%,
-                ${alpha(theme.palette.background.default, 0.92)} 100%
-              )
-            `
-            : `
-              linear-gradient(
-                180deg,
-                ${alpha(theme.palette.background.default, 0.78)} 0%,
-                ${alpha(theme.palette.background.default, 0.58)} 45%,
-                ${alpha(theme.palette.background.default, 0.9)} 100%
-              )
-            `,
-        }}
-      />
-
+      {/* Main Content */}
       <Box
         sx={{
           position: 'relative',
@@ -194,54 +141,157 @@ export const HomePage: React.FC = () => {
           flexDirection: 'column',
         }}
       >
-        <Container maxWidth="md" sx={{ pt: { xs: 5, md: 7 }, pb: 2 }}>
-          <Typography
-            sx={{
-              fontFamily: '"Cinzel", serif',
-              fontWeight: 700,
-              fontSize: { xs: '2.4rem', md: '3.6rem' },
-              color: 'text.primary',
-              lineHeight: 1.05,
-              letterSpacing: '0.02em',
-            }}
-          >
-            Campaigner
-          </Typography>
-
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'text.secondary',
-              mt: 1.5,
-              maxWidth: 720,
-              fontSize: { xs: '1rem', md: '1.05rem' },
-            }}
-          >
-            Среда для создания интерактивных карт, заметок, связей и истории вашего мира.
-          </Typography>
-        </Container>
-
-        <Container maxWidth="md" sx={{ pt: 3, pb: 4, flexGrow: 1 }}>
+        {/* Hero Section with Animation */}
+        <Container maxWidth="md" sx={{ pt: { xs: 6, md: 10 }, pb: 3 }}>
           <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems={{ xs: 'flex-start', sm: 'center' }}
-            mb={2.5}
-            gap={2}
-            flexWrap="wrap"
+            sx={{
+              opacity: isLoaded ? 1 : 0,
+              transform: isLoaded ? 'translateY(0)' : 'translateY(30px)',
+              transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
           >
+            {/* Logo / Title with Glow Effect */}
+            <Box sx={{ position: 'relative', display: 'inline-block' }}>
+              <Typography
+                sx={{
+                  fontFamily: theme.typography.h1.fontFamily,
+                  fontWeight: 900,
+                  fontSize: { xs: '2.8rem', md: '4.5rem' },
+                  background: `linear-gradient(135deg, 
+                    ${theme.palette.text.primary} 0%, 
+                    ${theme.palette.primary.main} 50%, 
+                    ${theme.palette.text.primary} 100%
+                  )`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  lineHeight: 1.1,
+                  letterSpacing: '0.03em',
+                  textShadow: `0 0 40px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  position: 'relative',
+                  '&::after': {
+                    content: '"Campaigner"',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    background: `linear-gradient(135deg, 
+                      ${theme.palette.text.primary} 0%, 
+                      ${theme.palette.primary.main} 50%, 
+                      ${theme.palette.text.primary} 100%
+                    )`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    opacity: 0.3,
+                    filter: 'blur(8px)',
+                    transform: 'translateX(4px)',
+                  },
+                }}
+              >
+                Campaigner
+              </Typography>
+
+              {/* Decorative Line */}
+              <Box
+                sx={{
+                  mt: 1.5,
+                  width: 120,
+                  height: 3,
+                  background: `linear-gradient(90deg, 
+                    ${theme.palette.primary.main} 0%, 
+                    transparent 100%
+                  )`,
+                  borderRadius: 2,
+                  boxShadow: `0 0 10px ${theme.palette.primary.main}`,
+                }}
+              />
+            </Box>
+
+            {/* Subtitle */}
             <Typography
-              variant="h5"
+              variant="body1"
               sx={{
-                fontFamily: '"Cinzel", serif',
-                fontWeight: 600,
-                color: 'text.primary',
+                color: 'text.secondary',
+                mt: 2.5,
+                maxWidth: 700,
+                fontSize: { xs: '1.05rem', md: '1.15rem' },
+                lineHeight: 1.6,
+                letterSpacing: '0.01em',
+                opacity: isLoaded ? 1 : 0,
+                transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${0.2}s`,
               }}
             >
-              Проекты
+              Среда для создания интерактивных карт, заметок, связей и истории вашего мира.
+              <Box
+                component="span"
+                sx={{
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  ml: 0.5,
+                }}
+              >
+                ✦
+              </Box>
             </Typography>
+          </Box>
+        </Container>
 
-            <Box display="flex" gap={1} flexWrap="wrap">
+        {/* Projects Section */}
+        <Container maxWidth="md" sx={{ pt: 4, pb: 4, flexGrow: 1 }}>
+          {/* Section Header with Actions */}
+          <Box
+            sx={{
+              opacity: isLoaded ? 1 : 0,
+              transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
+              transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${0.3}s`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              mb: 3,
+              gap: 2,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: theme.typography.h5.fontFamily,
+                  fontWeight: 700,
+                  color: 'text.primary',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                }}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-block',
+                    width: 4,
+                    height: 24,
+                    borderRadius: 2,
+                    background: `linear-gradient(180deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  }}
+                />
+                Проекты
+                <Chip
+                  label={projects.length}
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                    color: theme.palette.primary.main,
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    height: 24,
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                  }}
+                />
+              </Typography>
+            </Box>
+
+            <Box display="flex" gap={1.5} flexWrap="wrap">
               <DndButton
                 variant="outlined"
                 startIcon={<PaletteIcon />}
@@ -249,6 +299,13 @@ export const HomePage: React.FC = () => {
                 sx={{
                   fontWeight: 600,
                   letterSpacing: '0.03em',
+                  borderColor: alpha(theme.palette.secondary.main, 0.4),
+                  color: 'text.secondary',
+                  '&:hover': {
+                    borderColor: theme.palette.secondary.main,
+                    backgroundColor: alpha(theme.palette.secondary.main, 0.08),
+                    transform: 'translateY(-2px)',
+                  },
                 }}
               >
                 Внешний вид
@@ -261,6 +318,13 @@ export const HomePage: React.FC = () => {
                 sx={{
                   fontWeight: 600,
                   letterSpacing: '0.04em',
+                  borderColor: alpha(theme.palette.info.main, 0.4),
+                  color: 'text.secondary',
+                  '&:hover': {
+                    borderColor: theme.palette.info.main,
+                    backgroundColor: alpha(theme.palette.info.main, 0.08),
+                    transform: 'translateY(-2px)',
+                  },
                 }}
               >
                 Импорт
@@ -273,6 +337,12 @@ export const HomePage: React.FC = () => {
                 sx={{
                   fontWeight: 700,
                   letterSpacing: '0.04em',
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                  boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.4)}`,
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.5)}`,
+                  },
                 }}
               >
                 Создать проект
@@ -280,202 +350,257 @@ export const HomePage: React.FC = () => {
             </Box>
           </Box>
 
-          <Box display="flex" flexDirection="column" gap={1.5}>
-            {projects.map((project) => (
-              <Paper
+          {/* Projects List with Staggered Animation */}
+          <Box display="flex" flexDirection="column" gap={2}>
+            {projects.map((project, index) => (
+              <GlassCard
                 key={project.id}
-                elevation={0}
                 onClick={() => navigate(`/project/${project.id}/map`)}
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  px: 3,
-                  py: 2.2,
-                  cursor: 'pointer',
-                  borderRadius: 3,
-                  minWidth: 0,
-                  backgroundColor: alpha(theme.palette.background.paper, homeBackgroundImage ? 0.82 : 0.9),
-                  border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
-                  transition: 'all 0.22s ease',
-                  transform: 'translateY(0)',
-                  '&:hover': {
-                    transform: 'translateY(-3px)',
-                    borderColor: alpha(theme.palette.primary.main, 0.45),
-                    boxShadow: `0 14px 32px ${alpha(theme.palette.common.black, 0.28)}`,
-                  },
+                  opacity: isLoaded ? 1 : 0,
+                  transform: isLoaded ? 'translateY(0)' : 'translateY(30px)',
+                  transition: `all 0.6s cubic-bezier(0.4, 0, 0.2, 1) ${0.4 + index * 0.1}s`,
+                  px: 3.5,
+                  py: 2.8,
                 }}
               >
-                <Box sx={{ minWidth: 0, flexGrow: 1, pr: 2 }}>
-                  <Typography
-                    sx={{
-                      fontFamily: '"Cinzel", serif',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      color: 'text.primary',
-                    }}
-                    noWrap
-                  >
-                    {project.name}
-                  </Typography>
-
-                  <Box display="flex" alignItems="center" gap={1.5} mt={0.75} flexWrap="wrap">
-                    <Chip
-                      label={project.status === 'active' ? 'Активный' : String(project.status)}
-                      size="small"
-                      sx={{
-                        backgroundColor: alpha(theme.palette.primary.main, 0.14),
-                        color: theme.palette.primary.main,
-                        fontSize: '0.72rem',
-                        height: 22,
-                        fontWeight: 700,
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
-                      }}
-                    />
-
-                    {project.description && (
-                      <Typography
-                        variant="caption"
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0 }}>
+                  <Box sx={{ minWidth: 0, flexGrow: 1, pr: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      <Avatar
                         sx={{
-                          color: 'text.secondary',
-                          fontSize: '0.78rem',
+                          width: 42,
+                          height: 42,
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                          fontFamily: theme.typography.h6.fontFamily,
+                          fontWeight: 800,
+                          fontSize: '1.1rem',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
                         }}
-                        noWrap
                       >
-                        {project.description}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
+                        {project.name.charAt(0).toUpperCase()}
+                      </Avatar>
 
-                <IconButton
-                  size="small"
-                  onClick={(e) => handleDelete(project.id, project.name, e)}
-                  sx={{
-                    color: alpha(theme.palette.text.primary, 0.28),
-                    flexShrink: 0,
-                    ml: 2,
-                    transition: 'color 0.2s ease, background-color 0.2s ease',
-                    '&:hover': {
-                      color: theme.palette.error.main,
-                      backgroundColor: alpha(theme.palette.error.main, 0.08),
-                    },
-                  }}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Paper>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontFamily: theme.typography.h6.fontFamily,
+                            fontWeight: 700,
+                            fontSize: '1.2rem',
+                            color: 'text.primary',
+                            letterSpacing: '0.02em',
+                            transition: 'color 0.3s ease',
+                            '.MuiPaper-root:hover &': {
+                              color: theme.palette.primary.main,
+                            },
+                          }}
+                          noWrap
+                        >
+                          {project.name}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+                      <Chip
+                        label={
+                          project.status === 'active'
+                            ? '⚡ Активный'
+                            : String(project.status)
+                        }
+                        size="small"
+                        sx={{
+                          backgroundColor: alpha(theme.palette.success.main, 0.12),
+                          color: theme.palette.success.main,
+                          fontSize: '0.72rem',
+                          height: 24,
+                          fontWeight: 700,
+                          border: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
+                          letterSpacing: '0.03em',
+                        }}
+                      />
+
+                      {project.description && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.secondary',
+                            fontSize: '0.82rem',
+                            lineHeight: 1.4,
+                            maxWidth: 400,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {project.description}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleDelete(project.id, project.name, e)}
+                    sx={{
+                      color: alpha(theme.palette.text.primary, 0.25),
+                      flexShrink: 0,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        color: theme.palette.error.main,
+                        backgroundColor: alpha(theme.palette.error.main, 0.1),
+                        transform: 'scale(1.1) rotate(90deg)',
+                      },
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </GlassCard>
             ))}
           </Box>
 
+          {/* Enhanced Empty State */}
           {projects.length === 0 && (
-            <Paper
-              elevation={0}
+            <GlassCard
               sx={{
-                mt: 1,
+                mt: 2,
                 textAlign: 'center',
                 py: 8,
-                px: 3,
-                borderRadius: 3,
-                backgroundColor: alpha(theme.palette.background.paper, homeBackgroundImage ? 0.74 : 0.72),
-                border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
+                px: 4,
+                opacity: isLoaded ? 1 : 0,
+                transition: `all 0.8s ease ${0.6}s`,
               }}
             >
-              <Typography variant="h6" sx={{ color: 'text.primary' }}>
-                Нет проектов
+              <EmptyStateIllustration />
+
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: theme.typography.h5.fontFamily,
+                  fontWeight: 700,
+                  color: 'text.primary',
+                  mb: 1,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Ваш мир ждёт своего творца
               </Typography>
-              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                Создайте первый проект или импортируйте его из JSON.
+
+              <Typography
+                variant="body1"
+                sx={{
+                  color: 'text.secondary',
+                  mb: 3,
+                  maxWidth: 420,
+                  mx: 'auto',
+                  lineHeight: 1.6,
+                }}
+              >
+                Создайте первый проект, чтобы начать увлекательное путешествие по построению вашей вселенной.
               </Typography>
-            </Paper>
+
+              <DndButton
+                variant="contained"
+                size="large"
+                startIcon={<AddIcon />}
+                onClick={() => setCreateDialogOpen(true)}
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  letterSpacing: '0.05em',
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                  boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                  '&:hover': {
+                    transform: 'translateY(-3px)',
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.5)}`,
+                  },
+                }}
+              >
+                ⚔️ Создать первый проект
+              </DndButton>
+            </GlassCard>
           )}
         </Container>
 
+        {/* Spacer */}
         <Box sx={{ flexGrow: 1 }} />
 
-        <Container maxWidth="md">
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              py: 2.5,
-              gap: 2,
-              flexWrap: 'wrap',
-              borderTop: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
-            }}
-          >
-            <Box>
-              <Typography
-                sx={{
-                  fontFamily: '"Cinzel", serif',
-                  fontWeight: 600,
-                  color: 'text.primary',
-                  fontSize: '0.95rem',
-                }}
-              >
-                Campaigner
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Среда для создания интерактивных карт вашего мира
-              </Typography>
-            </Box>
+        {/* Footer with Glass Effect */}
+        <Fade in={isLoaded} timeout={1000}>
+          <Container maxWidth="md">
+            <GlassCard
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                py: 2.5,
+                px: 3,
+                mb: 2,
+                borderTop: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                borderLeft: 'none',
+                borderRight: 'none',
+                borderBottom: 'none',
+                borderRadius: 0,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    bgcolor: 'primary.main',
+                    fontFamily: theme.typography.h6.fontFamily,
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  C
+                </Avatar>
+                <Box>
+                  <Typography
+                    sx={{
+                      fontFamily: theme.typography.h6.fontFamily,
+                      fontWeight: 700,
+                      color: 'text.primary',
+                      fontSize: '0.95rem',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Campaigner
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
+                    Среда для создания миров
+                  </Typography>
+                </Box>
+              </Box>
 
-            <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.9) }}>
-              © {new Date().getFullYear()}
-            </Typography>
-          </Box>
-        </Container>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: alpha(theme.palette.text.secondary, 0.7),
+                    fontSize: '0.72rem',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  © {new Date().getFullYear()} · Сделано с ✦ для творцов
+                </Typography>
+              </Box>
+            </GlassCard>
+          </Container>
+        </Fade>
       </Box>
 
-      <Dialog
+      {/* Create Project Dialog */}
+      <CreateProjectDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-          Создать новый проект
-        </DialogTitle>
-
-        <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            label="Название кампании"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            margin="normal"
-            placeholder="например, Затерянные Рудники Фанделвера"
-          />
-
-          <TextField
-            fullWidth
-            label="Описание"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            margin="normal"
-            multiline
-            rows={3}
-            placeholder="Краткое описание кампании..."
-          />
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setCreateDialogOpen(false)} color="inherit">
-            Отмена
-          </Button>
-
-          <DndButton
-            variant="contained"
-            onClick={handleCreate}
-            loading={creating}
-            disabled={!newName.trim()}
-          >
-            Создать
-          </DndButton>
-        </DialogActions>
-      </Dialog>
+        onSubmit={handleCreateSubmit}
+      />
     </Box>
   );
 };

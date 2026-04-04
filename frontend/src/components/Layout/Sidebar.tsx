@@ -20,6 +20,7 @@ import PaletteIcon from '@mui/icons-material/Palette';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
+import { shallow } from 'zustand/shallow';
 import GavelIcon from '@mui/icons-material/Gavel';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -36,8 +37,14 @@ const projectMenuItems = [
 ];
 
 export const Sidebar: React.FC = () => {
-  const { sidebarOpen, sidebarWidth } = useUIStore();
-  const { currentProject, fetchProject } = useProjectStore();
+  const { sidebarOpen, sidebarWidth } = useUIStore((state) => ({
+    sidebarOpen: state.sidebarOpen,
+    sidebarWidth: state.sidebarWidth,
+  }), shallow);
+  const { currentProject, fetchProject } = useProjectStore((state) => ({
+    currentProject: state.currentProject,
+    fetchProject: state.fetchProject,
+  }), shallow);
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams<{ projectId: string }>();

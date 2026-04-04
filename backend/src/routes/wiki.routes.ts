@@ -2,20 +2,13 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { WikiController } from '../controllers/wiki.controller';
 import { validateRequest } from '../middleware/validateRequest';
+import { idParamsSchema, projectIdQuerySchema } from './commonSchemas';
 
 const router = Router();
 
 const getLinksQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
   noteId: z.coerce.number().int().positive().optional(),
-});
-
-const getCategoriesQuerySchema = z.object({
-  projectId: z.coerce.number().int().positive(),
-});
-
-const idParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
 });
 
 const createWikiLinkSchema = z.object({
@@ -45,7 +38,7 @@ router.delete(
 
 router.get(
   '/categories',
-  validateRequest({ query: getCategoriesQuerySchema }),
+  validateRequest({ query: projectIdQuerySchema }),
   WikiController.getCategories
 );
 

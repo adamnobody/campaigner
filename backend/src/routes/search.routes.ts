@@ -8,7 +8,7 @@ const router = Router();
 const searchQuerySchema = z.object({
   projectId: z.coerce.number().int().positive().optional(),
   q: z.string().optional(),
-  limit: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().max(50).optional(),
 });
 
 router.get(

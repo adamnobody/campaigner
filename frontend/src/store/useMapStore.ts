@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { mapApi } from '../api/axiosClient';
-import type { Map, MapMarker } from '@campaigner/shared';
+import { mapApi } from '@/api/axiosClient';
+import type { Map, MapMarker, CreateMap, UpdateMap, CreateMarker, UpdateMarker } from '@campaigner/shared';
 
 interface MapState {
   currentMap: Map | null;
@@ -13,11 +13,11 @@ interface MapState {
   fetchMapById: (mapId: number) => Promise<void>;
   fetchMapTree: (projectId: number) => Promise<void>;
   fetchMarkers: (mapId: number) => Promise<void>;
-  createMap: (data: any) => Promise<Map>;
-  updateMap: (mapId: number, data: any) => Promise<void>;
+  createMap: (data: CreateMap) => Promise<Map>;
+  updateMap: (mapId: number, data: UpdateMap) => Promise<void>;
   deleteMap: (mapId: number) => Promise<void>;
-  createMarker: (mapId: number, data: any) => Promise<MapMarker>;
-  updateMarker: (markerId: number, data: any) => Promise<void>;
+  createMarker: (mapId: number, data: CreateMarker) => Promise<MapMarker>;
+  updateMarker: (markerId: number, data: UpdateMarker) => Promise<void>;
   deleteMarker: (markerId: number) => Promise<void>;
   setCurrentMap: (map: Map | null) => void;
   clearMapState: () => void;
@@ -34,53 +34,53 @@ export const useMapStore = create<MapState>((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getRootMap(projectId);
-      set({ currentMap: response.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+      set({ currentMap: response.data.data, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
     }
   },
 
-  fetchMapById: async (mapId: number) => {
+  fetchMapById: async (mapId) => {
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getMapById(mapId);
-      set({ currentMap: response.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+      set({ currentMap: response.data.data, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
     }
   },
 
-  fetchMapTree: async (projectId: number) => {
+  fetchMapTree: async (projectId) => {
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getMapTree(projectId);
-      set({ mapTree: response.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+      set({ mapTree: response.data.data, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
     }
   },
 
-  fetchMarkers: async (mapId: number) => {
+  fetchMarkers: async (mapId) => {
     set({ loading: true, error: null });
     try {
       const response = await mapApi.getMarkersByMapId(mapId);
-      set({ markers: response.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+      set({ markers: response.data.data, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
     }
   },
 
-  createMap: async (data: any) => {
+  createMap: async (data) => {
     try {
       const response = await mapApi.createMap(data);
-      return response.data;
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+      return response.data.data;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 
-  updateMap: async (mapId: number, data: any) => {
+  updateMap: async (mapId, data) => {
     try {
       await mapApi.updateMap(mapId, data);
       set((state) => ({
@@ -88,36 +88,36 @@ export const useMapStore = create<MapState>((set) => ({
           ? { ...state.currentMap, ...data }
           : null,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 
-  deleteMap: async (mapId: number) => {
+  deleteMap: async (mapId) => {
     try {
       await mapApi.deleteMap(mapId);
       set({ currentMap: null, markers: [] });
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 
-  createMarker: async (mapId: number, data: any) => {
+  createMarker: async (mapId, data) => {
     try {
       const response = await mapApi.createMarker(mapId, data);
       set((state) => ({
-        markers: [...state.markers, response.data],
+        markers: [...state.markers, response.data.data],
       }));
-      return response.data;
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+      return response.data.data;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 
-  updateMarker: async (markerId: number, data: any) => {
+  updateMarker: async (markerId, data) => {
     try {
       await mapApi.updateMarker(markerId, data);
       set((state) => ({
@@ -125,21 +125,21 @@ export const useMapStore = create<MapState>((set) => ({
           m.id === markerId ? { ...m, ...data } : m
         ),
       }));
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 
-  deleteMarker: async (markerId: number) => {
+  deleteMarker: async (markerId) => {
     try {
       await mapApi.deleteMarker(markerId);
       set((state) => ({
         markers: state.markers.filter((m) => m.id !== markerId),
       }));
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 

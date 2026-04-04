@@ -13,13 +13,9 @@ shared/dist/
 backend/dist/
 frontend/dist/
 
-# ==================== Database ====================
-data/*.sqlite
-data/*.sqlite-wal
-data/*.sqlite-shm
-
-# ==================== Uploads ====================
-data/uploads/
+# ==================== Local data (SQLite, uploads) ====================
+# Создаётся при первом запуске бэкенда; в репозиторий не коммитим.
+/data/
 
 # ==================== Environment ====================
 .env
@@ -60,7 +56,3 @@ ehthumbs.db
 .temp/
 .tmp/
 coverage/
-
-# Keep data directory structure
-!data/.gitkeep
-node_modules

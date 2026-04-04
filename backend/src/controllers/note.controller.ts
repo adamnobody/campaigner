@@ -15,7 +15,7 @@ export class NoteController {
 
     const pagination = {
       page: Number.isFinite(page) ? page : 1,
-      limit: Number.isFinite(limit) ? limit : 50,
+      limit: Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 200)) : 50,
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       sortBy: typeof req.query.sortBy === 'string' ? req.query.sortBy : undefined,
       sortOrder: req.query.sortOrder === 'asc' ? 'asc' : 'desc' as 'asc' | 'desc',

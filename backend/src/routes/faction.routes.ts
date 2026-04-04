@@ -12,16 +12,13 @@ import {
   updateFactionMemberSchema,
   createFactionRelationSchema,
 } from '@campaigner/shared';
+import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas';
 
 const router = Router();
 const upload = createDiskUpload({
   folder: 'factions',
   maxFileSize: 10 * 1024 * 1024,
   filenamePrefix: 'faction',
-});
-
-const idParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
 });
 
 const rankParamsSchema = z.object({
@@ -47,14 +44,6 @@ const getAllQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
-const projectQuerySchema = z.object({
-  projectId: z.coerce.number().int().positive(),
-});
-
-const setTagsSchema = z.object({
-  tagIds: z.array(z.number().int().positive()),
-});
-
 const updateRelationSchema = z.object({
   relationType: z.string().min(1).max(50).optional(),
   customLabel: z.string().max(200).optional(),
@@ -73,13 +62,13 @@ router.get(
 
 router.get(
   '/relations',
-  validateRequest({ query: projectQuerySchema }),
+  validateRequest({ query: projectIdQuerySchema }),
   FactionController.getRelations
 );
 
 router.get(
   '/graph',
-  validateRequest({ query: projectQuerySchema }),
+  validateRequest({ query: projectIdQuerySchema }),
   FactionController.getGraph
 );
 
@@ -132,7 +121,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
-    body: setTagsSchema,
+    body: setTagsBodySchema,
   }),
   FactionController.setTags
 );

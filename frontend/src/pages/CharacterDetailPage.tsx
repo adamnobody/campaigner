@@ -24,6 +24,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
+import { shallow } from 'zustand/shallow';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 
@@ -133,16 +134,39 @@ export const CharacterDetailPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const isNew = !characterId || characterId === 'new';
   const navigate = useNavigate();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
+  const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
+    showSnackbar: state.showSnackbar,
+    showConfirmDialog: state.showConfirmDialog,
+  }), shallow);
 
   const {
     characters, currentCharacter, relationships, loading,
     fetchCharacter, fetchCharacters, createCharacter, updateCharacter,
     deleteCharacter, uploadImage, setTags,
     fetchRelationships, createRelationship, deleteRelationship, setCurrentCharacter,
-  } = useCharacterStore();
+  } = useCharacterStore((state) => ({
+    characters: state.characters,
+    currentCharacter: state.currentCharacter,
+    relationships: state.relationships,
+    loading: state.loading,
+    fetchCharacter: state.fetchCharacter,
+    fetchCharacters: state.fetchCharacters,
+    createCharacter: state.createCharacter,
+    updateCharacter: state.updateCharacter,
+    deleteCharacter: state.deleteCharacter,
+    uploadImage: state.uploadImage,
+    setTags: state.setTags,
+    fetchRelationships: state.fetchRelationships,
+    createRelationship: state.createRelationship,
+    deleteRelationship: state.deleteRelationship,
+    setCurrentCharacter: state.setCurrentCharacter,
+  }), shallow);
 
-  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
+  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore((state) => ({
+    tags: state.tags,
+    fetchTags: state.fetchTags,
+    findOrCreateTagsByNames: state.findOrCreateTagsByNames,
+  }), shallow);
 
   const [form, setForm] = useState<CharacterForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);

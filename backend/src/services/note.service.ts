@@ -1,7 +1,8 @@
 import { getDb } from '../db/connection';
-import { CreateNote, UpdateNote, Note, Pagination, Tag } from '@campaigner/shared';
+import { CreateNote, UpdateNote, Note, Pagination } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
+import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers';
 
 type NoteFormat = Note['format'];
 type NoteType = Note['noteType'];
@@ -19,13 +20,6 @@ interface NoteRow {
   updatedAt: string;
 }
 
-interface TagAssociationRow {
-  entity_id: number;
-  id: number;
-  name: string;
-  color: string;
-}
-
 function mapRow(row: NoteRow): Note {
   return {
     ...row,
@@ -34,43 +28,14 @@ function mapRow(row: NoteRow): Note {
   };
 }
 
-function loadTagsBatch(
-  projectId: number,
-  entityType: string,
-  entityIds: number[]
-): Map<number, Tag[]> {
-  const result = new Map<number, Tag[]>();
-
-  if (entityIds.length === 0) {
-    return result;
-  }
-
-  entityIds.forEach((id) => result.set(id, []));
-
-  const db = getDb();
-  const placeholders = entityIds.map(() => '?').join(',');
-
-  const rows = db.prepare(`
-    SELECT ta.entity_id, t.id, t.name, t.color
-    FROM tags t
-    JOIN tag_associations ta ON t.id = ta.tag_id
-    WHERE ta.entity_type = ? AND ta.entity_id IN (${placeholders}) AND t.project_id = ?
-    ORDER BY t.name ASC
-  `).all(entityType, ...entityIds, projectId) as TagAssociationRow[];
-
-  for (const row of rows) {
-    const tags = result.get(row.entity_id);
-    if (tags) {
-      tags.push({
-        id: row.id,
-        name: row.name,
-        color: row.color,
-      });
-    }
-  }
-
-  return result;
-}
+const UPDATE_FIELD_MAP: Record<string, string> = {
+  title: 'title',
+  content: 'content',
+  format: 'format',
+  noteType: 'note_type',
+  folderId: 'folder_id',
+  isPinned: 'is_pinned',
+};
 
 export class NoteService {
   static getAll(
@@ -122,9 +87,7 @@ export class NoteService {
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
     const totalRow = db.prepare(`
-      SELECT COUNT(*) as count
-      FROM notes
-      ${whereClause}
+      SELECT COUNT(*) as count FROM notes ${whereClause}
     `).get(...params) as { count: number };
 
     const rows = db.prepare(`
@@ -137,8 +100,7 @@ export class NoteService {
       LIMIT ? OFFSET ?
     `).all(...params, limit, offset) as NoteRow[];
 
-    const ids = rows.map((row) => row.id);
-    const tagsMap = loadTagsBatch(projectId, 'note', ids);
+    const tagsMap = loadTagsBatch(projectId, 'note', rows.map((r) => r.id));
 
     const items = rows.map((row) => {
       const note = mapRow(row);
@@ -190,42 +152,9 @@ export class NoteService {
 
   static update(id: number, data: UpdateNote): Note {
     this.getById(id);
-    const db = getDb();
-
-    const fields: string[] = [];
-    const values: unknown[] = [];
-
-    if (data.title !== undefined) {
-      fields.push('title = ?');
-      values.push(data.title);
-    }
-    if (data.content !== undefined) {
-      fields.push('content = ?');
-      values.push(data.content);
-    }
-    if (data.format !== undefined) {
-      fields.push('format = ?');
-      values.push(data.format);
-    }
-    if (data.noteType !== undefined) {
-      fields.push('note_type = ?');
-      values.push(data.noteType);
-    }
-    if (data.folderId !== undefined) {
-      fields.push('folder_id = ?');
-      values.push(data.folderId);
-    }
-    if (data.isPinned !== undefined) {
-      fields.push('is_pinned = ?');
-      values.push(data.isPinned ? 1 : 0);
-    }
-
-    if (fields.length > 0) {
-      fields.push("updated_at = datetime('now')");
-      values.push(id);
-      db.prepare(`UPDATE notes SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-    }
-
+    buildUpdateQuery('notes', UPDATE_FIELD_MAP, data as Record<string, unknown>, id, {
+      booleanFields: ['isPinned'],
+    });
     return this.getById(id);
   }
 

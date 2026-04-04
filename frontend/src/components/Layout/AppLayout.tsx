@@ -4,9 +4,13 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { useUIStore } from '@/store/useUIStore';
+import { shallow } from 'zustand/shallow';
 
 export const AppLayout: React.FC = () => {
-  const { sidebarOpen, sidebarWidth } = useUIStore();
+  const { sidebarOpen, sidebarWidth } = useUIStore((state) => ({
+    sidebarOpen: state.sidebarOpen,
+    sidebarWidth: state.sidebarWidth,
+  }), shallow);
   const location = useLocation();
 
   const isHomePage = location.pathname === '/';

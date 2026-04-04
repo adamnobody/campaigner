@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import { Note, CreateNote, UpdateNote } from '@campaigner/shared';
+import { Note, CreateNote, UpdateNote, Pagination } from '@campaigner/shared';
 import { notesApi } from '@/api/axiosClient';
+
+interface NoteListParams extends Partial<Pagination> {
+  noteType?: string;
+  folderId?: number | null;
+}
 
 interface NoteState {
   notes: Note[];
@@ -9,7 +14,7 @@ interface NoteState {
   loading: boolean;
   error: string | null;
 
-  fetchNotes: (projectId: number, params?: any) => Promise<void>;
+  fetchNotes: (projectId: number, params?: NoteListParams) => Promise<void>;
   fetchNote: (id: number) => Promise<void>;
   createNote: (data: CreateNote) => Promise<Note>;
   updateNote: (id: number, data: UpdateNote) => Promise<void>;
@@ -35,8 +40,8 @@ export const useNoteStore = create<NoteState>((set) => ({
         total: res.data.data.total,
         loading: false,
       });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
     }
   },
 
@@ -45,8 +50,8 @@ export const useNoteStore = create<NoteState>((set) => ({
     try {
       const res = await notesApi.getById(id);
       set({ currentNote: res.data.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
     }
   },
 
@@ -61,9 +66,9 @@ export const useNoteStore = create<NoteState>((set) => ({
         loading: false,
       }));
       return note;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
-      throw error;
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
+      throw err;
     }
   },
 
@@ -76,9 +81,9 @@ export const useNoteStore = create<NoteState>((set) => ({
         notes: state.notes.map(n => n.id === id ? updated : n),
         currentNote: state.currentNote?.id === id ? updated : state.currentNote,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 
@@ -91,9 +96,9 @@ export const useNoteStore = create<NoteState>((set) => ({
         total: state.total - 1,
         currentNote: state.currentNote?.id === id ? null : state.currentNote,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
-      throw error;
+    } catch (err) {
+      set({ error: (err as Error).message });
+      throw err;
     }
   },
 
@@ -107,8 +112,8 @@ export const useNoteStore = create<NoteState>((set) => ({
         notes: state.notes.map(n => n.id === id ? updated : n),
         currentNote: state.currentNote?.id === id ? updated : state.currentNote,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (err) {
+      set({ error: (err as Error).message });
     }
   },
 
