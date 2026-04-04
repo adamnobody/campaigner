@@ -36,6 +36,7 @@ import {
   preloadImage, pointsToSvgPath, isPointInPolygon, hexToRgb,
 } from './map/mapUtils';
 import type { MarkerIcon, MapMode, Marker, Territory, MapData, NoteOption, FactionOption } from './map/mapUtils';
+import { shallow } from 'zustand/shallow';
 
 // ==================== Component ====================
 export const MapPage: React.FC = () => {
@@ -43,7 +44,10 @@ export const MapPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const mid = mapId ? parseInt(mapId) : null;
   const navigate = useNavigate();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
+  const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
+    showSnackbar: state.showSnackbar,
+    showConfirmDialog: state.showConfirmDialog,
+  }), shallow);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -86,6 +90,8 @@ export const MapPage: React.FC = () => {
   const dragStartScreenRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const didDragRef = useRef(false);
+  const lastDragPreviewUpdateAtRef = useRef(0);
+  const lastPointDragUpdateAtRef = useRef(0);
 
   // Drag territory points
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
@@ -351,6 +357,12 @@ export const MapPage: React.FC = () => {
 
     // Drag territory point
     if (draggingPointIndex !== null && imgRef.current) {
+      const now = performance.now();
+      if (now - lastPointDragUpdateAtRef.current < 16) {
+        return;
+      }
+      lastPointDragUpdateAtRef.current = now;
+
       const rect = imgRef.current.getBoundingClientRect();
       const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
       const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
@@ -379,6 +391,11 @@ export const MapPage: React.FC = () => {
       const dy = e.clientY - dragStartScreenRef.current.y;
       if (!didDragRef.current && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
       didDragRef.current = true;
+      const now = performance.now();
+      if (now - lastDragPreviewUpdateAtRef.current < 16) {
+        return;
+      }
+      lastDragPreviewUpdateAtRef.current = now;
 
       const rect = imgRef.current.getBoundingClientRect();
       setDragPreview({
@@ -418,6 +435,7 @@ export const MapPage: React.FC = () => {
 
       setDraggingMarker(null);
       setDragPreview(null);
+      lastDragPreviewUpdateAtRef.current = 0;
       didDragRef.current = false;
     }
   }, [draggingMarker, draggingPointIndex, dragPreview, selectedMarker?.id, showSnackbar]);
@@ -431,6 +449,7 @@ export const MapPage: React.FC = () => {
     dragStartScreenRef.current = { x: e.clientX, y: e.clientY };
     setDraggingMarker(marker);
     setDragPreview(null);
+    lastDragPreviewUpdateAtRef.current = 0;
   }, [mode]);
 
   const handleMarkerClick = useCallback((e: React.MouseEvent, marker: Marker) => {
@@ -792,6 +811,9 @@ export const MapPage: React.FC = () => {
     const w = imgRef.current.clientWidth;
     const h = imgRef.current.clientHeight;
     if (!w || !h) return null;
+    const reduceTerritoryEffects = Boolean(
+      draggingMarker || draggingPointIndex !== null || editingTerritoryPoints || mode === 'draw_territory'
+    );
 
     const hexToRgbStr = (hex: string) => {
       const c = hex.replace('#', '');
@@ -887,24 +909,28 @@ export const MapPage: React.FC = () => {
                   <stop offset="100%" stopColor={`rgba(${rgb}, ${t.opacity * 0.5})`} />
                 </radialGradient>
 
-                {/* Outer glow + drop shadow */}
-                <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur" />
-                  <feFlood floodColor={t.borderColor} floodOpacity="0.4" result="color" />
-                  <feComposite in="color" in2="blur" operator="in" result="shadow" />
-                  <feMerge>
-                    <feMergeNode in="shadow" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
+                {!reduceTerritoryEffects && (
+                  <>
+                    {/* Outer glow + drop shadow */}
+                    <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur" />
+                      <feFlood floodColor={t.borderColor} floodOpacity="0.4" result="color" />
+                      <feComposite in="color" in2="blur" operator="in" result="shadow" />
+                      <feMerge>
+                        <feMergeNode in="shadow" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
 
-                {/* Inner glow */}
-                <filter id={innerGlowId} x="-10%" y="-10%" width="120%" height="120%">
-                  <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
-                  <feFlood floodColor={`rgb(${rgb})`} floodOpacity="0.3" result="color" />
-                  <feComposite in="color" in2="blur" operator="in" result="glow" />
-                  <feComposite in="glow" in2="SourceAlpha" operator="in" />
-                </filter>
+                    {/* Inner glow */}
+                    <filter id={innerGlowId} x="-10%" y="-10%" width="120%" height="120%">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
+                      <feFlood floodColor={`rgb(${rgb})`} floodOpacity="0.3" result="color" />
+                      <feComposite in="color" in2="blur" operator="in" result="glow" />
+                      <feComposite in="glow" in2="SourceAlpha" operator="in" />
+                    </filter>
+                  </>
+                )}
               </React.Fragment>
             );
           })}
@@ -925,7 +951,7 @@ export const MapPage: React.FC = () => {
           const { cx, cy } = getCentroid(svgPts);
 
           return (
-            <g key={t.id} filter={`url(#${filterId})`}>
+            <g key={t.id} filter={reduceTerritoryEffects ? undefined : `url(#${filterId})`}>
               {/* Clip path for inner effects */}
               <clipPath id={clipId}>
                 <path d={pathD} />
@@ -954,7 +980,7 @@ export const MapPage: React.FC = () => {
                   stroke={t.color}
                   strokeWidth={12}
                   opacity={0.15}
-                  filter={`url(#${innerGlowId})`}
+                  filter={reduceTerritoryEffects ? undefined : `url(#${innerGlowId})`}
                 />
               </g>
 

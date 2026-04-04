@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -190,12 +190,51 @@ export const AnimatedSlider: React.FC<{
   max: number;
   step: number;
   onChange: (value: number) => void;
+  onChangeCommitted?: (value: number) => void;
+  debounceMs?: number;
   valueLabelFormat?: (value: number) => string;
   disabled?: boolean;
   icon?: React.ReactNode;
   color?: string;
-}> = ({ label, value, min, max, step, onChange, valueLabelFormat, disabled, icon, color }) => {
+}> = ({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  onChangeCommitted,
+  debounceMs = 180,
+  valueLabelFormat,
+  disabled,
+  icon,
+  color,
+}) => {
   const theme = useTheme();
+  const [localValue, setLocalValue] = useState(value);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingValueRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const flushPendingChange = useCallback((fallbackValue?: number) => {
+    const nextValue = pendingValueRef.current ?? fallbackValue;
+    if (nextValue === undefined) return;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    pendingValueRef.current = null;
+    onChange(nextValue);
+  }, [onChange]);
+
+  useEffect(() => {
+    return () => {
+      flushPendingChange();
+    };
+  }, [flushPendingChange]);
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -215,7 +254,7 @@ export const AnimatedSlider: React.FC<{
         </FormLabel>
         <Chip
           size="small"
-          label={valueLabelFormat ? valueLabelFormat(value) : value}
+          label={valueLabelFormat ? valueLabelFormat(localValue) : localValue}
           sx={{
             backgroundColor: alpha(color || theme.palette.primary.main, 0.12),
             color: color || theme.palette.primary.main,
@@ -228,11 +267,33 @@ export const AnimatedSlider: React.FC<{
         />
       </Box>
       <Slider
-        value={value}
+        value={localValue}
         min={min}
         max={max}
         step={step}
-        onChange={(_, v) => onChange(v as number)}
+        onChange={(_, v) => {
+          const nextValue = v as number;
+          setLocalValue(nextValue);
+          if (disabled) return;
+
+          if (debounceMs <= 0) {
+            onChange(nextValue);
+            return;
+          }
+
+          pendingValueRef.current = nextValue;
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+          }
+          debounceTimerRef.current = setTimeout(() => {
+            flushPendingChange(nextValue);
+          }, debounceMs);
+        }}
+        onChangeCommitted={(_, v) => {
+          const committedValue = v as number;
+          flushPendingChange(committedValue);
+          onChangeCommitted?.(committedValue);
+        }}
         valueLabelDisplay="auto"
         valueLabelFormat={valueLabelFormat}
         disabled={disabled}

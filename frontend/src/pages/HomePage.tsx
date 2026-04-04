@@ -20,6 +20,7 @@ import { projectsApi } from '@/api/axiosClient';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { shallow } from 'zustand/shallow';
 import { HomeBackground } from '@/pages/home/HomeBackground';
 import { CreateProjectDialog } from '@/pages/home/CreateProjectDialog';
 import { GlassCard, EmptyStateIllustration } from '@/pages/home/HomePrimitives';
@@ -27,9 +28,21 @@ import { GlassCard, EmptyStateIllustration } from '@/pages/home/HomePrimitives';
 export const HomePage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { projects, loading, fetchProjects, createProject, deleteProject } = useProjectStore();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
-  const { homeBackgroundImage, homeBackgroundOpacity } = usePreferencesStore();
+  const { projects, loading, fetchProjects, createProject, deleteProject } = useProjectStore((state) => ({
+    projects: state.projects,
+    loading: state.loading,
+    fetchProjects: state.fetchProjects,
+    createProject: state.createProject,
+    deleteProject: state.deleteProject,
+  }), shallow);
+  const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
+    showSnackbar: state.showSnackbar,
+    showConfirmDialog: state.showConfirmDialog,
+  }), shallow);
+  const { homeBackgroundImage, homeBackgroundOpacity } = usePreferencesStore((state) => ({
+    homeBackgroundImage: state.homeBackgroundImage,
+    homeBackgroundOpacity: state.homeBackgroundOpacity,
+  }), shallow);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);

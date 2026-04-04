@@ -1,0 +1,439 @@
+{
+  "generatedAt": "2026-04-04T13:30:53.694Z",
+  "apiBase": "http://localhost:3001/api",
+  "projectId": 32,
+  "rounds": 30,
+  "timeoutMs": 10000,
+  "searchQuery": "test",
+  "clientScenarios": [
+    {
+      "name": "health",
+      "rounds": 30,
+      "avgMs": 3.66,
+      "p95Ms": 4.14,
+      "p99Ms": 74.44,
+      "minMs": 0.64,
+      "maxMs": 74.44
+    },
+    {
+      "name": "notes:list",
+      "rounds": 30,
+      "avgMs": 2.48,
+      "p95Ms": 3.3,
+      "p99Ms": 3.48,
+      "minMs": 1.78,
+      "maxMs": 3.48
+    },
+    {
+      "name": "search",
+      "rounds": 30,
+      "avgMs": 1.71,
+      "p95Ms": 2.63,
+      "p99Ms": 2.72,
+      "minMs": 1.24,
+      "maxMs": 2.72
+    }
+  ],
+  "serverSnapshot": {
+    "capturedAt": "2026-04-04T13:30:53.691Z",
+    "endpointCount": 44,
+    "endpoints": [
+      {
+        "endpoint": "GET /:id/export",
+        "count": 2,
+        "avgMs": 2.01,
+        "minMs": 1.07,
+        "maxMs": 2.94,
+        "p95Ms": 2.94,
+        "p99Ms": 2.94
+      },
+      {
+        "endpoint": "POST /import",
+        "count": 2,
+        "avgMs": 2.01,
+        "minMs": 1.58,
+        "maxMs": 2.43,
+        "p95Ms": 2.43,
+        "p99Ms": 2.43
+      },
+      {
+        "endpoint": "GET /api/notes",
+        "count": 4,
+        "avgMs": 1.34,
+        "minMs": 0.96,
+        "maxMs": 2.34,
+        "p95Ms": 2.34,
+        "p99Ms": 2.34
+      },
+      {
+        "endpoint": "GET /",
+        "count": 238,
+        "avgMs": 1.38,
+        "minMs": 0.41,
+        "maxMs": 5.24,
+        "p95Ms": 2.32,
+        "p99Ms": 2.85
+      },
+      {
+        "endpoint": "GET /projects/:id/maps/root",
+        "count": 9,
+        "avgMs": 0.77,
+        "minMs": 0.37,
+        "maxMs": 2.2,
+        "p95Ms": 2.2,
+        "p99Ms": 2.2
+      },
+      {
+        "endpoint": "GET /maps/:id/markers",
+        "count": 3,
+        "avgMs": 0.99,
+        "minMs": 0.44,
+        "maxMs": 2.07,
+        "p95Ms": 2.07,
+        "p99Ms": 2.07
+      },
+      {
+        "endpoint": "POST /relationships",
+        "count": 2,
+        "avgMs": 1.65,
+        "minMs": 1.38,
+        "maxMs": 1.93,
+        "p95Ms": 1.93,
+        "p99Ms": 1.93
+      },
+      {
+        "endpoint": "PUT /:id/tags",
+        "count": 10,
+        "avgMs": 1.06,
+        "minMs": 0.74,
+        "maxMs": 1.91,
+        "p95Ms": 1.91,
+        "p99Ms": 1.91
+      },
+      {
+        "endpoint": "GET /categories",
+        "count": 4,
+        "avgMs": 0.79,
+        "minMs": 0.37,
+        "maxMs": 1.68,
+        "p95Ms": 1.68,
+        "p99Ms": 1.68
+      },
+      {
+        "endpoint": "DELETE /:id",
+        "count": 28,
+        "avgMs": 0.86,
+        "minMs": 0.45,
+        "maxMs": 1.85,
+        "p95Ms": 1.61,
+        "p99Ms": 1.85
+      },
+      {
+        "endpoint": "PUT /:id",
+        "count": 14,
+        "avgMs": 1.02,
+        "minMs": 0.68,
+        "maxMs": 1.52,
+        "p95Ms": 1.52,
+        "p99Ms": 1.52
+      },
+      {
+        "endpoint": "GET /api/metrics/perf",
+        "count": 4,
+        "avgMs": 1.3,
+        "minMs": 1.19,
+        "maxMs": 1.47,
+        "p95Ms": 1.47,
+        "p99Ms": 1.47
+      },
+      {
+        "endpoint": "GET /maps/:id/territories",
+        "count": 3,
+        "avgMs": 0.82,
+        "minMs": 0.51,
+        "maxMs": 1.34,
+        "p95Ms": 1.34,
+        "p99Ms": 1.34
+      },
+      {
+        "endpoint": "POST /:id/members",
+        "count": 2,
+        "avgMs": 0.97,
+        "minMs": 0.75,
+        "maxMs": 1.19,
+        "p95Ms": 1.19,
+        "p99Ms": 1.19
+      },
+      {
+        "endpoint": "GET /relationships/list",
+        "count": 4,
+        "avgMs": 0.74,
+        "minMs": 0.47,
+        "maxMs": 1.12,
+        "p95Ms": 1.12,
+        "p99Ms": 1.12
+      },
+      {
+        "endpoint": "POST /",
+        "count": 3044,
+        "avgMs": 0.77,
+        "minMs": 0.35,
+        "maxMs": 10.81,
+        "p95Ms": 1.11,
+        "p99Ms": 2.91
+      },
+      {
+        "endpoint": "POST /maps/:id/territories",
+        "count": 170,
+        "avgMs": 0.75,
+        "minMs": 0.45,
+        "maxMs": 8.49,
+        "p95Ms": 1.03,
+        "p99Ms": 3.79
+      },
+      {
+        "endpoint": "GET /:id",
+        "count": 14,
+        "avgMs": 0.69,
+        "minMs": 0.45,
+        "maxMs": 1.03,
+        "p95Ms": 1.03,
+        "p99Ms": 1.03
+      },
+      {
+        "endpoint": "DELETE /relationships/:id",
+        "count": 2,
+        "avgMs": 0.78,
+        "minMs": 0.56,
+        "maxMs": 1,
+        "p95Ms": 1,
+        "p99Ms": 1
+      },
+      {
+        "endpoint": "GET /graph",
+        "count": 4,
+        "avgMs": 0.75,
+        "minMs": 0.48,
+        "maxMs": 0.97,
+        "p95Ms": 0.97,
+        "p99Ms": 0.97
+      },
+      {
+        "endpoint": "POST /maps/:id/markers",
+        "count": 1082,
+        "avgMs": 0.75,
+        "minMs": 0.41,
+        "maxMs": 89.68,
+        "p95Ms": 0.93,
+        "p99Ms": 1.36
+      },
+      {
+        "endpoint": "POST /links",
+        "count": 2,
+        "avgMs": 0.77,
+        "minMs": 0.61,
+        "maxMs": 0.93,
+        "p95Ms": 0.93,
+        "p99Ms": 0.93
+      },
+      {
+        "endpoint": "POST /reorder",
+        "count": 4,
+        "avgMs": 0.78,
+        "minMs": 0.69,
+        "maxMs": 0.88,
+        "p95Ms": 0.88,
+        "p99Ms": 0.88
+      },
+      {
+        "endpoint": "PUT /markers/:id",
+        "count": 2,
+        "avgMs": 0.82,
+        "minMs": 0.77,
+        "maxMs": 0.87,
+        "p95Ms": 0.87,
+        "p99Ms": 0.87
+      },
+      {
+        "endpoint": "GET /api/search",
+        "count": 2,
+        "avgMs": 0.86,
+        "minMs": 0.86,
+        "maxMs": 0.87,
+        "p95Ms": 0.87,
+        "p99Ms": 0.87
+      },
+      {
+        "endpoint": "PUT /relationships/:id",
+        "count": 2,
+        "avgMs": 0.74,
+        "minMs": 0.61,
+        "maxMs": 0.86,
+        "p95Ms": 0.86,
+        "p99Ms": 0.86
+      },
+      {
+        "endpoint": "PUT /relations/:id",
+        "count": 2,
+        "avgMs": 0.71,
+        "minMs": 0.59,
+        "maxMs": 0.83,
+        "p95Ms": 0.83,
+        "p99Ms": 0.83
+      },
+      {
+        "endpoint": "GET /links",
+        "count": 6,
+        "avgMs": 0.51,
+        "minMs": 0.38,
+        "maxMs": 0.81,
+        "p95Ms": 0.81,
+        "p99Ms": 0.81
+      },
+      {
+        "endpoint": "PUT /:id/ranks/:id",
+        "count": 2,
+        "avgMs": 0.71,
+        "minMs": 0.62,
+        "maxMs": 0.8,
+        "p95Ms": 0.8,
+        "p99Ms": 0.8
+      },
+      {
+        "endpoint": "POST /relations",
+        "count": 2,
+        "avgMs": 0.7,
+        "minMs": 0.61,
+        "maxMs": 0.79,
+        "p95Ms": 0.79,
+        "p99Ms": 0.79
+      },
+      {
+        "endpoint": "POST /:id/ranks",
+        "count": 2,
+        "avgMs": 0.65,
+        "minMs": 0.52,
+        "maxMs": 0.78,
+        "p95Ms": 0.78,
+        "p99Ms": 0.78
+      },
+      {
+        "endpoint": "GET /:id/members",
+        "count": 2,
+        "avgMs": 0.69,
+        "minMs": 0.63,
+        "maxMs": 0.75,
+        "p95Ms": 0.75,
+        "p99Ms": 0.75
+      },
+      {
+        "endpoint": "DELETE /territories/:id",
+        "count": 2,
+        "avgMs": 0.61,
+        "minMs": 0.48,
+        "maxMs": 0.74,
+        "p95Ms": 0.74,
+        "p99Ms": 0.74
+      },
+      {
+        "endpoint": "GET /api/health",
+        "count": 94,
+        "avgMs": 0.41,
+        "minMs": 0.23,
+        "maxMs": 3.54,
+        "p95Ms": 0.72,
+        "p99Ms": 3.54
+      },
+      {
+        "endpoint": "PUT /:id/members/:id",
+        "count": 2,
+        "avgMs": 0.63,
+        "minMs": 0.54,
+        "maxMs": 0.72,
+        "p95Ms": 0.72,
+        "p99Ms": 0.72
+      },
+      {
+        "endpoint": "PUT /territories/:id",
+        "count": 2,
+        "avgMs": 0.68,
+        "minMs": 0.65,
+        "maxMs": 0.71,
+        "p95Ms": 0.71,
+        "p99Ms": 0.71
+      },
+      {
+        "endpoint": "DELETE /markers/:id",
+        "count": 2,
+        "avgMs": 0.6,
+        "minMs": 0.53,
+        "maxMs": 0.67,
+        "p95Ms": 0.67,
+        "p99Ms": 0.67
+      },
+      {
+        "endpoint": "GET /:id/ranks",
+        "count": 2,
+        "avgMs": 0.49,
+        "minMs": 0.32,
+        "maxMs": 0.65,
+        "p95Ms": 0.65,
+        "p99Ms": 0.65
+      },
+      {
+        "endpoint": "DELETE /links/:id",
+        "count": 2,
+        "avgMs": 0.56,
+        "minMs": 0.48,
+        "maxMs": 0.63,
+        "p95Ms": 0.63,
+        "p99Ms": 0.63
+      },
+      {
+        "endpoint": "DELETE /:id/members/:id",
+        "count": 2,
+        "avgMs": 0.57,
+        "minMs": 0.56,
+        "maxMs": 0.58,
+        "p95Ms": 0.58,
+        "p99Ms": 0.58
+      },
+      {
+        "endpoint": "DELETE /relations/:id",
+        "count": 2,
+        "avgMs": 0.5,
+        "minMs": 0.44,
+        "maxMs": 0.55,
+        "p95Ms": 0.55,
+        "p99Ms": 0.55
+      },
+      {
+        "endpoint": "DELETE /:id/ranks/:id",
+        "count": 2,
+        "avgMs": 0.52,
+        "minMs": 0.51,
+        "maxMs": 0.53,
+        "p95Ms": 0.53,
+        "p99Ms": 0.53
+      },
+      {
+        "endpoint": "GET /relations",
+        "count": 2,
+        "avgMs": 0.42,
+        "minMs": 0.35,
+        "maxMs": 0.5,
+        "p95Ms": 0.5,
+        "p99Ms": 0.5
+      },
+      {
+        "endpoint": "GET /projects/:id/maps/tree",
+        "count": 2,
+        "avgMs": 0.36,
+        "minMs": 0.32,
+        "maxMs": 0.4,
+        "p95Ms": 0.4,
+        "p99Ms": 0.4
+      }
+    ]
+  }
+}

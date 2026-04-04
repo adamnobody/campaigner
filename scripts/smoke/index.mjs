@@ -19,6 +19,9 @@ import {
   smokeFactionRelations,
 } from './scenarios/factions.mjs';
 import { smokeDynasties } from './scenarios/dynasties.mjs';
+import { smokeMaps } from './scenarios/maps.mjs';
+import { smokeProjectTransfer } from './scenarios/project-transfer.mjs';
+import { smokePerfMetrics } from './scenarios/perf.mjs';
 
 async function main() {
   const ctx = createSmokeContext();
@@ -44,6 +47,9 @@ async function main() {
     await smokeFactionMembers(ctx);
     await smokeFactionRelations(ctx);
     await smokeDynasties(ctx);
+    await smokeMaps(ctx);
+    await smokeProjectTransfer(ctx);
+    await smokePerfMetrics(ctx);
 
     console.log(pc.green(pc.bold('\n✔ Smoke test passed\n')));
     process.exitCode = 0;

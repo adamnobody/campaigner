@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -40,6 +40,7 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import TextureIcon from '@mui/icons-material/Texture';
 import FontDownloadIcon from '@mui/icons-material/FontDownload';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { shallow } from 'zustand/shallow';
 import { THEME_PRESETS } from '@/theme/presets';
 import { DndButton } from '@/components/ui/DndButton';
 import { motion } from 'framer-motion';
@@ -128,6 +129,64 @@ const FONT_PRESET_OPTIONS: FontPresetOption[] = [
   },
 ];
 
+const DRAFT_DEBOUNCE_MS = 220;
+
+function useDebouncedDraft(
+  externalValue: string,
+  commit: (value: string) => void,
+  debounceMs = DRAFT_DEBOUNCE_MS
+) {
+  const [draft, setDraft] = useState(externalValue);
+  const [isPending, setIsPending] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsPending(false);
+    setDraft(externalValue);
+  }, [externalValue]);
+
+  const setDraftValue = useCallback((nextValue: string) => {
+    setDraft(nextValue);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setIsPending(true);
+    timerRef.current = setTimeout(() => {
+      commit(nextValue);
+      timerRef.current = null;
+      setIsPending(false);
+    }, debounceMs);
+  }, [commit, debounceMs]);
+
+  const flushDraft = useCallback((nextValue?: string) => {
+    const valueToCommit = nextValue ?? draft;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsPending(false);
+    if (valueToCommit !== externalValue) {
+      commit(valueToCommit);
+    }
+  }, [commit, draft, externalValue]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return {
+    draft,
+    isPending,
+    setDraftImmediately: setDraft,
+    setDraftValue,
+    flushDraft,
+  };
+}
+
 export const AppearanceSettingsPage: React.FC = () => {
   const theme = useTheme();
   const [isLoaded, setIsLoaded] = useState(false);
@@ -185,9 +244,126 @@ export const AppearanceSettingsPage: React.FC = () => {
     applyCustomTheme,
     deleteCustomTheme,
     resetAppearance,
-  } = usePreferencesStore();
+  } = usePreferencesStore((state) => ({
+    themePreset: state.themePreset,
+    surfaceMode: state.surfaceMode,
+    fontMode: state.fontMode,
+    uiDensity: state.uiDensity,
+    motionMode: state.motionMode,
+    transparency: state.transparency,
+    blur: state.blur,
+    borderRadius: state.borderRadius,
+    homeBackgroundImage: state.homeBackgroundImage,
+    homeBackgroundOpacity: state.homeBackgroundOpacity,
+    customBodyFontFamily: state.customBodyFontFamily,
+    customHeadingFontFamily: state.customHeadingFontFamily,
+    customFontCssUrl: state.customFontCssUrl,
+    panelPatternMode: state.panelPatternMode,
+    panelPatternOpacity: state.panelPatternOpacity,
+    panelPatternSize: state.panelPatternSize,
+    panelPatternUrl: state.panelPatternUrl,
+    cardPatternMode: state.cardPatternMode,
+    cardPatternOpacity: state.cardPatternOpacity,
+    cardPatternSize: state.cardPatternSize,
+    cardPatternUrl: state.cardPatternUrl,
+    customThemes: state.customThemes,
+    selectedCustomThemeId: state.selectedCustomThemeId,
+    setThemePreset: state.setThemePreset,
+    setSurfaceMode: state.setSurfaceMode,
+    setFontMode: state.setFontMode,
+    setUiDensity: state.setUiDensity,
+    setMotionMode: state.setMotionMode,
+    setTransparency: state.setTransparency,
+    setBlur: state.setBlur,
+    setBorderRadius: state.setBorderRadius,
+    setHomeBackgroundImage: state.setHomeBackgroundImage,
+    setHomeBackgroundOpacity: state.setHomeBackgroundOpacity,
+    clearHomeBackgroundImage: state.clearHomeBackgroundImage,
+    setCustomBodyFontFamily: state.setCustomBodyFontFamily,
+    setCustomHeadingFontFamily: state.setCustomHeadingFontFamily,
+    setCustomFontCssUrl: state.setCustomFontCssUrl,
+    setPanelPatternMode: state.setPanelPatternMode,
+    setPanelPatternOpacity: state.setPanelPatternOpacity,
+    setPanelPatternSize: state.setPanelPatternSize,
+    setPanelPatternUrl: state.setPanelPatternUrl,
+    setCardPatternMode: state.setCardPatternMode,
+    setCardPatternOpacity: state.setCardPatternOpacity,
+    setCardPatternSize: state.setCardPatternSize,
+    setCardPatternUrl: state.setCardPatternUrl,
+    saveCurrentAsCustomTheme: state.saveCurrentAsCustomTheme,
+    applyCustomTheme: state.applyCustomTheme,
+    deleteCustomTheme: state.deleteCustomTheme,
+    resetAppearance: state.resetAppearance,
+  }), shallow);
 
   const currentPreset = THEME_PRESETS[themePreset] || THEME_PRESETS['obsidian-gold'];
+
+  const commitCustomFontCssUrl = useCallback((value: string) => {
+    setCustomFontCssUrl(value);
+    setFontMode('custom');
+  }, [setCustomFontCssUrl, setFontMode]);
+  const commitCustomBodyFontFamily = useCallback((value: string) => {
+    setCustomBodyFontFamily(value);
+    setFontMode('custom');
+  }, [setCustomBodyFontFamily, setFontMode]);
+  const commitCustomHeadingFontFamily = useCallback((value: string) => {
+    setCustomHeadingFontFamily(value);
+    setFontMode('custom');
+  }, [setCustomHeadingFontFamily, setFontMode]);
+
+  const {
+    draft: homeBackgroundImageDraft,
+    isPending: isHomeBackgroundImagePending,
+    setDraftImmediately: setHomeBackgroundImageDraftImmediately,
+    setDraftValue: setHomeBackgroundImageDraft,
+    flushDraft: flushHomeBackgroundImageDraft,
+  } = useDebouncedDraft(homeBackgroundImage || '', setHomeBackgroundImage);
+  const {
+    draft: customFontCssUrlDraft,
+    isPending: isCustomFontCssUrlPending,
+    setDraftValue: setCustomFontCssUrlDraft,
+    flushDraft: flushCustomFontCssUrlDraft,
+  } = useDebouncedDraft(customFontCssUrl, commitCustomFontCssUrl);
+  const {
+    draft: customBodyFontFamilyDraft,
+    isPending: isCustomBodyFontFamilyPending,
+    setDraftValue: setCustomBodyFontFamilyDraft,
+    flushDraft: flushCustomBodyFontFamilyDraft,
+  } = useDebouncedDraft(customBodyFontFamily, commitCustomBodyFontFamily);
+  const {
+    draft: customHeadingFontFamilyDraft,
+    isPending: isCustomHeadingFontFamilyPending,
+    setDraftValue: setCustomHeadingFontFamilyDraft,
+    flushDraft: flushCustomHeadingFontFamilyDraft,
+  } = useDebouncedDraft(customHeadingFontFamily, commitCustomHeadingFontFamily);
+  const {
+    draft: panelPatternUrlDraft,
+    isPending: isPanelPatternUrlPending,
+    setDraftImmediately: setPanelPatternUrlDraftImmediately,
+    setDraftValue: setPanelPatternUrlDraft,
+    flushDraft: flushPanelPatternUrlDraft,
+  } = useDebouncedDraft(panelPatternUrl, setPanelPatternUrl);
+  const {
+    draft: cardPatternUrlDraft,
+    isPending: isCardPatternUrlPending,
+    setDraftImmediately: setCardPatternUrlDraftImmediately,
+    setDraftValue: setCardPatternUrlDraft,
+    flushDraft: flushCardPatternUrlDraft,
+  } = useDebouncedDraft(cardPatternUrl, setCardPatternUrl);
+
+  const renderApplyingHint = (isPending: boolean) => (
+    <Typography
+      component="span"
+      sx={{
+        color: 'info.main',
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        visibility: isPending ? 'visible' : 'hidden',
+      }}
+    >
+      Применяется...
+    </Typography>
+  );
 
   const buildPatternPreviewStyle = (
     mode: 'none' | 'dots' | 'grid' | 'diagonal' | 'custom',
@@ -257,6 +433,7 @@ export const AppearanceSettingsPage: React.FC = () => {
       reader.onload = () => {
         const result = reader.result;
         if (typeof result === 'string') {
+          setHomeBackgroundImageDraftImmediately(result);
           setHomeBackgroundImage(result);
         }
       };
@@ -279,9 +456,11 @@ export const AppearanceSettingsPage: React.FC = () => {
         if (typeof result !== 'string') return;
         if (target === 'panel') {
           setPanelPatternMode('custom');
+          setPanelPatternUrlDraftImmediately(result);
           setPanelPatternUrl(result);
         } else {
           setCardPatternMode('custom');
+          setCardPatternUrlDraftImmediately(result);
           setCardPatternUrl(result);
         }
       };
@@ -587,10 +766,16 @@ export const AppearanceSettingsPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Ссылка на изображение"
-                    value={homeBackgroundImage || ''}
-                    onChange={(e) => setHomeBackgroundImage(e.target.value)}
+                    value={homeBackgroundImageDraft}
+                    onChange={(e) => setHomeBackgroundImageDraft(e.target.value)}
+                    onBlur={() => flushHomeBackgroundImageDraft()}
                     placeholder="https://example.com/background.jpg"
-                    helperText="Можно вставить URL или загрузить файл ниже"
+                    helperText={
+                      <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Можно вставить URL или загрузить файл ниже</span>
+                        {renderApplyingHint(isHomeBackgroundImagePending)}
+                      </Box>
+                    }
                     InputProps={{
                       startAdornment: <ImageIcon sx={{ mr: 1, color: 'action.active' }} />,
                     }}
@@ -618,14 +803,17 @@ export const AppearanceSettingsPage: React.FC = () => {
                       variant="outlined"
                       color="inherit"
                       startIcon={<DeleteOutlineIcon />}
-                      onClick={clearHomeBackgroundImage}
-                      disabled={!homeBackgroundImage}
+                      onClick={() => {
+                        setHomeBackgroundImageDraftImmediately('');
+                        clearHomeBackgroundImage();
+                      }}
+                      disabled={!homeBackgroundImageDraft}
                       sx={{
                         fontWeight: 600,
                         flex: 1,
                         minWidth: 140,
-                        borderColor: homeBackgroundImage ? alpha(theme.palette.error.main, 0.5) : undefined,
-                        color: homeBackgroundImage ? theme.palette.error.main : undefined,
+                        borderColor: homeBackgroundImageDraft ? alpha(theme.palette.error.main, 0.5) : undefined,
+                        color: homeBackgroundImageDraft ? theme.palette.error.main : undefined,
                         '&:hover:not(:disabled)': {
                           backgroundColor: alpha(theme.palette.error.main, 0.08),
                           borderColor: theme.palette.error.main,
@@ -644,7 +832,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     step={0.01}
                     onChange={setHomeBackgroundOpacity}
                     valueLabelFormat={(v) => `${Math.round(v * 100)}%`}
-                    disabled={!homeBackgroundImage}
+                    disabled={!homeBackgroundImageDraft}
                     icon={<BlurOnIcon sx={{ fontSize: '1rem' }} />}
                     color={theme.palette.secondary.main}
                   />
@@ -656,10 +844,10 @@ export const AppearanceSettingsPage: React.FC = () => {
                       p: 3,
                       borderRadius: 3,
                       border: `2px dashed ${alpha(theme.palette.divider, 0.4)}`,
-                      background: homeBackgroundImage
+                      background: homeBackgroundImageDraft
                         ? `
                           linear-gradient(rgba(0,0,0,0.32), rgba(0,0,0,0.48)),
-                          url(${homeBackgroundImage})
+                          url(${homeBackgroundImageDraft})
                         `
                         : alpha(theme.palette.action.hover, 0.05),
                       backgroundSize: 'cover',
@@ -674,7 +862,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                         content: '""',
                         position: 'absolute',
                         inset: 0,
-                        background: homeBackgroundImage ? 'none' : `
+                        background: homeBackgroundImageDraft ? 'none' : `
                           repeating-linear-gradient(
                             45deg,
                             transparent,
@@ -686,7 +874,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       },
                     }}
                   >
-                    {!homeBackgroundImage && (
+                    {!homeBackgroundImageDraft && (
                       <Box
                         sx={{
                           position: 'absolute',
@@ -722,8 +910,8 @@ export const AppearanceSettingsPage: React.FC = () => {
                       </Typography>
                       <Chip
                         size="small"
-                        label={homeBackgroundImage ? '✓ Фон установлен' : 'Не выбран'}
-                        color={homeBackgroundImage ? 'success' : 'default'}
+                        label={homeBackgroundImageDraft ? '✓ Фон установлен' : 'Не выбран'}
+                        color={homeBackgroundImageDraft ? 'success' : 'default'}
                         sx={{ ml: 'auto', fontWeight: 700 }}
                       />
                     </Box>
@@ -1004,35 +1192,36 @@ export const AppearanceSettingsPage: React.FC = () => {
                   <TextField
                     fullWidth
                     label="CSS URL шрифта (Google Fonts / свой CDN)"
-                    value={customFontCssUrl}
-                    onChange={(e) => {
-                      setCustomFontCssUrl(e.target.value);
-                      setFontMode('custom');
-                    }}
+                    value={customFontCssUrlDraft}
+                    onChange={(e) => setCustomFontCssUrlDraft(e.target.value)}
+                    onBlur={() => flushCustomFontCssUrlDraft()}
                     placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
-                    helperText="Ссылка будет подключена как <link rel='stylesheet'>"
+                    helperText={
+                      <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Ссылка будет подключена как &lt;link rel='stylesheet'&gt;</span>
+                        {renderApplyingHint(isCustomFontCssUrlPending)}
+                      </Box>
+                    }
                   />
 
                   <TextField
                     fullWidth
                     label="font-family для основного текста"
-                    value={customBodyFontFamily}
-                    onChange={(e) => {
-                      setCustomBodyFontFamily(e.target.value);
-                      setFontMode('custom');
-                    }}
+                    value={customBodyFontFamilyDraft}
+                    onChange={(e) => setCustomBodyFontFamilyDraft(e.target.value)}
+                    onBlur={() => flushCustomBodyFontFamilyDraft()}
                     placeholder={'"Inter", "Roboto", sans-serif'}
+                    helperText={renderApplyingHint(isCustomBodyFontFamilyPending)}
                   />
 
                   <TextField
                     fullWidth
                     label="font-family для заголовков"
-                    value={customHeadingFontFamily}
-                    onChange={(e) => {
-                      setCustomHeadingFontFamily(e.target.value);
-                      setFontMode('custom');
-                    }}
+                    value={customHeadingFontFamilyDraft}
+                    onChange={(e) => setCustomHeadingFontFamilyDraft(e.target.value)}
+                    onBlur={() => flushCustomHeadingFontFamilyDraft()}
                     placeholder={'"Cinzel", serif'}
+                    helperText={renderApplyingHint(isCustomHeadingFontFamilyPending)}
                   />
 
                   <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.08) }}>
@@ -1094,9 +1283,11 @@ export const AppearanceSettingsPage: React.FC = () => {
                         <TextField
                           fullWidth
                           label="URL паттерна для панелей"
-                          value={panelPatternUrl}
-                          onChange={(e) => setPanelPatternUrl(e.target.value)}
+                          value={panelPatternUrlDraft}
+                          onChange={(e) => setPanelPatternUrlDraft(e.target.value)}
+                          onBlur={() => flushPanelPatternUrlDraft()}
                           placeholder="https://example.com/pattern.png"
+                          helperText={renderApplyingHint(isPanelPatternUrlPending)}
                         />
                         <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => handlePatternFileUpload('panel')}>
                           Загрузить паттерн панелей
@@ -1115,7 +1306,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                           panelPatternMode,
                           panelPatternOpacity,
                           panelPatternSize,
-                          panelPatternUrl
+                          panelPatternUrlDraft
                         ),
                       }}
                     >
@@ -1180,9 +1371,11 @@ export const AppearanceSettingsPage: React.FC = () => {
                         <TextField
                           fullWidth
                           label="URL паттерна для карточек"
-                          value={cardPatternUrl}
-                          onChange={(e) => setCardPatternUrl(e.target.value)}
+                          value={cardPatternUrlDraft}
+                          onChange={(e) => setCardPatternUrlDraft(e.target.value)}
+                          onBlur={() => flushCardPatternUrlDraft()}
                           placeholder="https://example.com/pattern.png"
+                          helperText={renderApplyingHint(isCardPatternUrlPending)}
                         />
                         <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => handlePatternFileUpload('card')}>
                           Загрузить паттерн карточек
@@ -1201,7 +1394,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                           cardPatternMode,
                           cardPatternOpacity,
                           cardPatternSize,
-                          cardPatternUrl
+                          cardPatternUrlDraft
                         ),
                       }}
                     >

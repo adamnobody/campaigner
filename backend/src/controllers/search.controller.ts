@@ -16,7 +16,9 @@ export class SearchController {
     const projectId = parseId(rawProjectId, 'project id');
 
     const limitValue = Number(req.query.limit);
-    const limit = Number.isFinite(limitValue) ? limitValue : 20;
+    const limit = Number.isFinite(limitValue)
+      ? Math.max(1, Math.min(Math.trunc(limitValue), 50))
+      : 20;
 
     const results = SearchService.search(projectId, query, limit);
     return ok(res, results);

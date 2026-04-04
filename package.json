@@ -20,8 +20,14 @@
     "doctor": "node scripts/doctor.mjs",
     "chunker": "node scripts/chunker.mjs",
     "smoke": "node scripts/smoke/index.mjs",
+    "smoke:frontend": "node scripts/smoke/frontend.mjs",
+    "smoke:final": "npm run smoke && npm run smoke:frontend",
     "smoke:up": "node scripts/smoke-runner.mjs",
-    "backend:start:once": "cd backend && npx tsx src/index.ts"
+    "backend:start:once": "cd backend && npx tsx src/index.ts",
+    "perf:baseline": "node scripts/perf/baseline.mjs",
+    "perf:compare": "node scripts/perf/compare.mjs",
+    "db:seed-demo": "node scripts/db/seed-demo.mjs",
+    "db:explain-hot": "node scripts/db/explain-hot.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

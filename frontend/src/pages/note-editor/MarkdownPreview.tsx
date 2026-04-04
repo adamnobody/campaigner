@@ -38,6 +38,9 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   content, isMarkdown, wikiNotes, projectId, scrollRef,
 }) => {
   const navigate = useNavigate();
+  const wikiNotesMap = React.useMemo(() => {
+    return new Map(wikiNotes.map((note) => [note.id, note.title]));
+  }, [wikiNotes]);
 
   return (
     <Box ref={scrollRef} sx={{ height: '100%', overflow: 'auto', p: 3, ...markdownStyles }}>
@@ -50,7 +53,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
               if (href?.startsWith('/__note__/')) {
                 const noteIdStr = href.replace('/__note__/', '');
                 const targetNoteId = parseInt(noteIdStr, 10);
-                const found = wikiNotes.find((n) => n.id === targetNoteId);
+                const found = wikiNotesMap.get(targetNoteId);
 
                 if (!Number.isNaN(targetNoteId) && found) {
                   return (

@@ -40,6 +40,7 @@ import { ToolbarButton } from '@/pages/note-editor/ToolbarButton';
 import { InsertWikiLinkDialog } from '@/pages/note-editor/InsertWikiLinkDialog';
 import { CreateWikiLinkDialog } from '@/pages/note-editor/CreateWikiLinkDialog';
 import { MarkdownPreview } from '@/pages/note-editor/MarkdownPreview';
+import { shallow } from 'zustand/shallow';
 
 const AUTOSAVE_DELAY = 3000;
 
@@ -59,12 +60,17 @@ export const NoteEditorPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const nid = parseInt(noteId!);
   const navigate = useNavigate();
-  const { currentNote, fetchNote, updateNote } = useNoteStore();
-  const { showSnackbar } = useUIStore();
+  const { currentNote, fetchNote, updateNote } = useNoteStore((state) => ({
+    currentNote: state.currentNote,
+    fetchNote: state.fetchNote,
+    updateNote: state.updateNote,
+  }), shallow);
+  const showSnackbar = useUIStore((state) => state.showSnackbar);
 
   const [mode, setMode] = useState<EditorMode>('split');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [previewContent, setPreviewContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved');
@@ -90,12 +96,22 @@ export const NoteEditorPage: React.FC = () => {
 
   const history = useHistory('');
   const initializedNoteIdRef = useRef<number | null>(null);
+  const wikiNotesLoadedRef = useRef(false);
 
   useEffect(() => {
     hasChangesRef.current = hasChanges;
     titleRef.current = title;
     contentRef.current = content;
   }, [hasChanges, title, content]);
+
+  useEffect(() => {
+    if (mode === 'edit') {
+      setPreviewContent(content);
+      return;
+    }
+    const timer = setTimeout(() => setPreviewContent(content), 180);
+    return () => clearTimeout(timer);
+  }, [content, mode]);
 
   useEffect(() => {
     fetchNote(nid);
@@ -107,6 +123,7 @@ export const NoteEditorPage: React.FC = () => {
         initializedNoteIdRef.current = currentNote.id;
         setTitle(currentNote.title);
         setContent(currentNote.content);
+        setPreviewContent(currentNote.content);
         history.reset(currentNote.content);
         setHasChanges(false);
         setSaveStatus('saved');
@@ -122,23 +139,31 @@ export const NoteEditorPage: React.FC = () => {
     }
   }, [currentNote]);
 
-  const loadWikiData = async () => {
+  const loadWikiNotes = useCallback(async () => {
     try {
-      const [linksRes, notesRes] = await Promise.all([
+      const notesRes = await notesApi.getAll(pid, { noteType: 'wiki', limit: 500 });
+      setWikiNotes((notesRes.data.data.items || []).map((n: any) => ({ id: n.id, title: n.title })));
+      wikiNotesLoadedRef.current = true;
+    } catch {
+      // no-op
+    }
+  }, [pid]);
+
+  const loadWikiData = useCallback(async () => {
+    try {
+      const [linksRes] = await Promise.all([
         wikiApi.getLinks(pid, nid),
-        notesApi.getAll(pid, { noteType: 'wiki', limit: 500 }),
       ]);
       setWikiLinks(linksRes.data.data || []);
-      setWikiNotes((notesRes.data.data.items || []).map((n: any) => ({ id: n.id, title: n.title })));
+      await loadWikiNotes();
     } catch {}
-  };
+  }, [loadWikiNotes, nid, pid]);
 
   // Load all wiki notes for [[link]] resolution even for non-wiki notes
   useEffect(() => {
-    notesApi.getAll(pid, { noteType: 'wiki', limit: 500 }).then(res => {
-      setWikiNotes((res.data.data.items || []).map((n: any) => ({ id: n.id, title: n.title })));
-    }).catch(() => {});
-  }, [pid]);
+    wikiNotesLoadedRef.current = false;
+    loadWikiNotes();
+  }, [loadWikiNotes]);
 
   // ==================== Save ====================
   const doSave = useCallback(async (isAuto: boolean = false) => {
@@ -589,13 +614,13 @@ export const NoteEditorPage: React.FC = () => {
             <>
               <Box sx={{ width: '50%', height: '100%', borderRight: '1px solid rgba(255,255,255,0.08)' }}>{renderEditor()}</Box>
               <Box sx={{ width: '50%', height: '100%' }}>
-                <MarkdownPreview content={content} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
+                <MarkdownPreview content={previewContent} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
               </Box>
             </>
           )}
           {mode === 'preview' && (
             <Box sx={{ width: '100%', height: '100%' }}>
-              <MarkdownPreview content={content} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
+              <MarkdownPreview content={previewContent} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
             </Box>
           )}
         </Paper>

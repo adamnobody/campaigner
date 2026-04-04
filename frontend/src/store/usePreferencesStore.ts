@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { createDebouncedStateStorage } from './debouncedStorage';
 
 export type ThemePreset = string;
 
@@ -217,6 +218,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: 'campaigner-preferences',
+      storage: createJSONStorage(() => createDebouncedStateStorage(220)),
       partialize: (state) => ({
         themePreset: state.themePreset,
         surfaceMode: state.surfaceMode,

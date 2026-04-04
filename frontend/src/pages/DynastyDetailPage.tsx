@@ -35,6 +35,7 @@ import {
 import type { DynastyMember, DynastyEvent } from '@campaigner/shared';
 import { FamilyTree } from '@/components/dynasty/FamilyTree';
 import { DynastyEventsTimeline } from '@/components/dynasty/DynastyEventsTimeline';
+import { shallow } from 'zustand/shallow';
 
 // ==================== Form ====================
 
@@ -71,7 +72,10 @@ export const DynastyDetailPage: React.FC = () => {
   const isNew = !dynastyId || dynastyId === 'new';
   const did = dynastyId && !isNew ? parseInt(dynastyId) : 0;
   const navigate = useNavigate();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
+  const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
+    showSnackbar: state.showSnackbar,
+    showConfirmDialog: state.showConfirmDialog,
+  }), shallow);
 
   const {
     currentDynasty, loading,
@@ -82,11 +86,40 @@ export const DynastyDetailPage: React.FC = () => {
     addEvent, updateEvent, deleteEvent,
     saveGraphPositions,
     setCurrentDynasty,
-  } = useDynastyStore();
+  } = useDynastyStore((state) => ({
+    currentDynasty: state.currentDynasty,
+    loading: state.loading,
+    fetchDynasty: state.fetchDynasty,
+    createDynasty: state.createDynasty,
+    updateDynasty: state.updateDynasty,
+    deleteDynasty: state.deleteDynasty,
+    uploadImage: state.uploadImage,
+    setTags: state.setTags,
+    addMember: state.addMember,
+    updateMember: state.updateMember,
+    removeMember: state.removeMember,
+    addFamilyLink: state.addFamilyLink,
+    deleteFamilyLink: state.deleteFamilyLink,
+    addEvent: state.addEvent,
+    updateEvent: state.updateEvent,
+    deleteEvent: state.deleteEvent,
+    saveGraphPositions: state.saveGraphPositions,
+    setCurrentDynasty: state.setCurrentDynasty,
+  }), shallow);
 
-  const { characters, fetchCharacters } = useCharacterStore();
-  const { factions, fetchFactions } = useFactionStore();
-  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
+  const { characters, fetchCharacters } = useCharacterStore((state) => ({
+    characters: state.characters,
+    fetchCharacters: state.fetchCharacters,
+  }), shallow);
+  const { factions, fetchFactions } = useFactionStore((state) => ({
+    factions: state.factions,
+    fetchFactions: state.fetchFactions,
+  }), shallow);
+  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore((state) => ({
+    tags: state.tags,
+    fetchTags: state.fetchTags,
+    findOrCreateTagsByNames: state.findOrCreateTagsByNames,
+  }), shallow);
 
   const [form, setForm] = useState<DynastyForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);

@@ -377,6 +377,8 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
     CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(project_id, note_type);
     CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(project_id, is_pinned);
+    CREATE INDEX IF NOT EXISTS idx_notes_project_type_updated ON notes(project_id, note_type, updated_at);
+    CREATE INDEX IF NOT EXISTS idx_notes_project_folder_updated ON notes(project_id, folder_id, updated_at);
     CREATE INDEX IF NOT EXISTS idx_timeline_events_project ON timeline_events(project_id);
     CREATE INDEX IF NOT EXISTS idx_timeline_events_sort ON timeline_events(project_id, sort_order);
     CREATE INDEX IF NOT EXISTS idx_folders_project ON folders(project_id);
@@ -394,8 +396,10 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_maps_project ON maps(project_id);
     CREATE INDEX IF NOT EXISTS idx_maps_parent ON maps(parent_map_id);
     CREATE INDEX IF NOT EXISTS idx_map_markers_map ON map_markers(map_id);
+    CREATE INDEX IF NOT EXISTS idx_map_markers_map_created ON map_markers(map_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_map_markers_child_map ON map_markers(child_map_id);
     CREATE INDEX IF NOT EXISTS idx_map_territories_map ON map_territories(map_id);
+    CREATE INDEX IF NOT EXISTS idx_map_territories_map_sort_created ON map_territories(map_id, sort_order, created_at);
     CREATE INDEX IF NOT EXISTS idx_map_territories_faction ON map_territories(faction_id);
     CREATE INDEX IF NOT EXISTS idx_dogmas_project ON dogmas(project_id);
     CREATE INDEX IF NOT EXISTS idx_dogmas_category ON dogmas(project_id, category);

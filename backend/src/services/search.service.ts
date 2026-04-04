@@ -86,6 +86,7 @@ function createSnippet(content: string, query: string, radius = 30): string {
 export class SearchService {
   static search(projectId: number, query: string, limit = 20): SearchResult[] {
     const db = getDb();
+    const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 50));
     const like = `%${query}%`;
     const results: SearchResult[] = [];
 
@@ -97,7 +98,7 @@ export class SearchService {
         character_class LIKE ? OR bio LIKE ? OR backstory LIKE ?
       )
       LIMIT ?
-    `).all(projectId, like, like, like, like, like, like, limit) as CharacterSearchRow[];
+    `).all(projectId, like, like, like, like, like, like, safeLimit) as CharacterSearchRow[];
 
     for (const character of characters) {
       const parts = [character.race, character.characterClass, character.title].filter(Boolean);
@@ -117,7 +118,7 @@ export class SearchService {
       FROM notes
       WHERE project_id = ? AND (title LIKE ? OR content LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, limit) as NoteSearchRow[];
+    `).all(projectId, like, like, safeLimit) as NoteSearchRow[];
 
     for (const note of notes) {
       const typeIcons: Record<NoteSearchRow['noteType'], string> = {
@@ -144,7 +145,7 @@ export class SearchService {
       JOIN maps m ON mm.map_id = m.id
       WHERE m.project_id = ? AND (mm.title LIKE ? OR mm.description LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, limit) as MarkerSearchRow[];
+    `).all(projectId, like, like, safeLimit) as MarkerSearchRow[];
 
     for (const marker of markers) {
       results.push({
@@ -162,7 +163,7 @@ export class SearchService {
       FROM timeline_events
       WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR era LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, like, limit) as EventSearchRow[];
+    `).all(projectId, like, like, like, safeLimit) as EventSearchRow[];
 
     for (const event of events) {
       const parts = [event.eventDate, event.era].filter(Boolean);
@@ -182,7 +183,7 @@ export class SearchService {
       FROM dogmas
       WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR impact LIKE ? OR exceptions LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, like, like, limit) as DogmaSearchRow[];
+    `).all(projectId, like, like, like, like, safeLimit) as DogmaSearchRow[];
 
     for (const dogma of dogmas) {
       results.push({
@@ -200,7 +201,7 @@ export class SearchService {
       FROM factions
       WHERE project_id = ? AND (name LIKE ? OR motto LIKE ? OR description LIKE ? OR headquarters LIKE ?)
       LIMIT ?
-    `).all(projectId, like, like, like, like, limit) as FactionSearchRow[];
+    `).all(projectId, like, like, like, like, safeLimit) as FactionSearchRow[];
 
     for (const faction of factions) {
       const subtitle =
@@ -223,7 +224,7 @@ export class SearchService {
       FROM tags
       WHERE project_id = ? AND name LIKE ?
       LIMIT ?
-    `).all(projectId, like, limit) as TagSearchRow[];
+    `).all(projectId, like, safeLimit) as TagSearchRow[];
 
     for (const tag of tags) {
       results.push({
@@ -266,6 +267,6 @@ export class SearchService {
       return typePriority[a.type] - typePriority[b.type];
     });
 
-    return results.slice(0, limit);
+    return results.slice(0, safeLimit);
   }
 }

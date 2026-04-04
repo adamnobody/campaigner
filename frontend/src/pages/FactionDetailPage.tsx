@@ -32,6 +32,7 @@ import {
   FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
 } from '@campaigner/shared';
 import type { FactionRank, FactionMember } from '@campaigner/shared';
+import { shallow } from 'zustand/shallow';
 
 // ==================== Types ====================
 
@@ -80,7 +81,10 @@ export const FactionDetailPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const isNew = !factionId || factionId === 'new';
   const navigate = useNavigate();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
+  const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
+    showSnackbar: state.showSnackbar,
+    showConfirmDialog: state.showConfirmDialog,
+  }), shallow);
 
   const {
     factions, currentFaction, relations, loading,
@@ -90,10 +94,39 @@ export const FactionDetailPage: React.FC = () => {
     addMember, removeMember,
     fetchRelations, createRelation, deleteRelation,
     setCurrentFaction,
-  } = useFactionStore();
+  } = useFactionStore((state) => ({
+    factions: state.factions,
+    currentFaction: state.currentFaction,
+    relations: state.relations,
+    loading: state.loading,
+    fetchFactions: state.fetchFactions,
+    fetchFaction: state.fetchFaction,
+    createFaction: state.createFaction,
+    updateFaction: state.updateFaction,
+    deleteFaction: state.deleteFaction,
+    uploadImage: state.uploadImage,
+    uploadBanner: state.uploadBanner,
+    setTags: state.setTags,
+    createRank: state.createRank,
+    updateRank: state.updateRank,
+    deleteRank: state.deleteRank,
+    addMember: state.addMember,
+    removeMember: state.removeMember,
+    fetchRelations: state.fetchRelations,
+    createRelation: state.createRelation,
+    deleteRelation: state.deleteRelation,
+    setCurrentFaction: state.setCurrentFaction,
+  }), shallow);
 
-  const { characters, fetchCharacters } = useCharacterStore();
-  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
+  const { characters, fetchCharacters } = useCharacterStore((state) => ({
+    characters: state.characters,
+    fetchCharacters: state.fetchCharacters,
+  }), shallow);
+  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore((state) => ({
+    tags: state.tags,
+    fetchTags: state.fetchTags,
+    findOrCreateTagsByNames: state.findOrCreateTagsByNames,
+  }), shallow);
 
   const [form, setForm] = useState<FactionForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);

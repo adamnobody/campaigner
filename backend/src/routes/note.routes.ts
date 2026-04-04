@@ -10,7 +10,7 @@ const router = Router();
 const listQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
   page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().max(200).optional(),
   search: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
