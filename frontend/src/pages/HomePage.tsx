@@ -141,7 +141,7 @@ export const HomePage: React.FC = () => {
             <Box sx={{ position: 'relative', display: 'inline-block' }}>
               <Typography
                 sx={{
-                  fontFamily: '"Cinzel", serif',
+                  fontFamily: theme.typography.h1.fontFamily,
                   fontWeight: 900,
                   fontSize: { xs: '2.8rem', md: '4.5rem' },
                   background: `linear-gradient(135deg, 
@@ -243,7 +243,7 @@ export const HomePage: React.FC = () => {
               <Typography
                 variant="h5"
                 sx={{
-                  fontFamily: '"Cinzel", serif',
+                  fontFamily: theme.typography.h5.fontFamily,
                   fontWeight: 700,
                   color: 'text.primary',
                   display: 'flex',
@@ -359,7 +359,7 @@ export const HomePage: React.FC = () => {
                           width: 42,
                           height: 42,
                           background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                          fontFamily: '"Cinzel", serif',
+                          fontFamily: theme.typography.h6.fontFamily,
                           fontWeight: 800,
                           fontSize: '1.1rem',
                           boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
@@ -371,7 +371,7 @@ export const HomePage: React.FC = () => {
                       <Box sx={{ minWidth: 0 }}>
                         <Typography
                           sx={{
-                            fontFamily: '"Cinzel", serif',
+                            fontFamily: theme.typography.h6.fontFamily,
                             fontWeight: 700,
                             fontSize: '1.2rem',
                             color: 'text.primary',
@@ -465,7 +465,7 @@ export const HomePage: React.FC = () => {
               <Typography
                 variant="h5"
                 sx={{
-                  fontFamily: '"Cinzel", serif',
+                  fontFamily: theme.typography.h5.fontFamily,
                   fontWeight: 700,
                   color: 'text.primary',
                   mb: 1,
@@ -540,7 +540,7 @@ export const HomePage: React.FC = () => {
                     width: 32,
                     height: 32,
                     bgcolor: 'primary.main',
-                    fontFamily: '"Cinzel", serif',
+                    fontFamily: theme.typography.h6.fontFamily,
                     fontSize: '0.85rem',
                     fontWeight: 800,
                   }}
@@ -550,7 +550,7 @@ export const HomePage: React.FC = () => {
                 <Box>
                   <Typography
                     sx={{
-                      fontFamily: '"Cinzel", serif',
+                      fontFamily: theme.typography.h6.fontFamily,
                       fontWeight: 700,
                       color: 'text.primary',
                       fontSize: '0.95rem',

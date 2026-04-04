@@ -92,7 +92,7 @@ export const TopBar: React.FC = () => {
 
           <Typography
             variant="h6"
-            sx={{ fontFamily: '"Cinzel", serif', color: 'primary.main', cursor: 'pointer', mr: 3 }}
+            sx={{ fontFamily: 'inherit', color: 'primary.main', cursor: 'pointer', mr: 3 }}
             onClick={() => navigate('/')}
           >
             ⚔️ Campaigner

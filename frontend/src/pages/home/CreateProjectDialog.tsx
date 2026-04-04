@@ -84,7 +84,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
     >
       <DialogTitle
         sx={{
-          fontFamily: '"Cinzel", serif',
+          fontFamily: theme.typography.h5.fontFamily,
           fontWeight: 700,
           fontSize: '1.4rem',
           pb: 1,
