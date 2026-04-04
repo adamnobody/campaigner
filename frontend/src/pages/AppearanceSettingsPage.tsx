@@ -6,10 +6,14 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   FormLabel,
   Divider,
   Button,
   Chip,
+  IconButton,
   TextField,
   Avatar,
   Fade,
@@ -31,6 +35,10 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TuneIcon from '@mui/icons-material/Tune';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import TextureIcon from '@mui/icons-material/Texture';
+import FontDownloadIcon from '@mui/icons-material/FontDownload';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { THEME_PRESETS } from '@/theme/presets';
 import { DndButton } from '@/components/ui/DndButton';
@@ -46,10 +54,58 @@ import {
 } from '@/pages/appearance/AppearancePrimitives';
 import { AppearanceLivePreview } from '@/pages/appearance/AppearanceLivePreview';
 
+type FontPresetOption = {
+  id: string;
+  label: string;
+  bodyFamily: string;
+  headingFamily: string;
+  cssUrl: string;
+};
+
+const FONT_PRESET_OPTIONS: FontPresetOption[] = [
+  {
+    id: 'default-inter-cinzel',
+    label: 'Inter + Cinzel (по умолчанию)',
+    bodyFamily: '"Inter", "Roboto", sans-serif',
+    headingFamily: '"Cinzel", serif',
+    cssUrl: '',
+  },
+  {
+    id: 'kode-mono',
+    label: 'Kode Mono (Google Fonts)',
+    bodyFamily: '"Kode Mono", "Fira Code", monospace',
+    headingFamily: '"Kode Mono", "Fira Code", monospace',
+    cssUrl: 'https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400;700&display=swap',
+  },
+  {
+    id: 'playfair',
+    label: 'Playfair Display + Inter',
+    bodyFamily: '"Inter", "Roboto", sans-serif',
+    headingFamily: '"Playfair Display", "Georgia", serif',
+    cssUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap',
+  },
+  {
+    id: 'cinzel-crimson',
+    label: 'Cinzel + Crimson Text',
+    bodyFamily: '"Crimson Text", "Georgia", serif',
+    headingFamily: '"Cinzel", serif',
+    cssUrl: 'https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:wght@400;600;700&display=swap',
+  },
+  {
+    id: 'local-template',
+    label: 'Локальный шрифт из /public/fonts',
+    bodyFamily: '"MyLocalFont", serif',
+    headingFamily: '"MyLocalFont", serif',
+    cssUrl: '/fonts/my-local-font.css',
+  },
+];
+
 export const AppearanceSettingsPage: React.FC = () => {
   const theme = useTheme();
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredPreset, setHoveredPreset] = useState<string | null>(null);
+  const [customThemeName, setCustomThemeName] = useState('');
+  const [selectedFontPresetId, setSelectedFontPresetId] = useState('default-inter-cinzel');
 
   const {
     themePreset,
@@ -62,6 +118,19 @@ export const AppearanceSettingsPage: React.FC = () => {
     borderRadius,
     homeBackgroundImage,
     homeBackgroundOpacity,
+    customBodyFontFamily,
+    customHeadingFontFamily,
+    customFontCssUrl,
+    panelPatternMode,
+    panelPatternOpacity,
+    panelPatternSize,
+    panelPatternUrl,
+    cardPatternMode,
+    cardPatternOpacity,
+    cardPatternSize,
+    cardPatternUrl,
+    customThemes,
+    selectedCustomThemeId,
     setThemePreset,
     setSurfaceMode,
     setFontMode,
@@ -73,10 +142,74 @@ export const AppearanceSettingsPage: React.FC = () => {
     setHomeBackgroundImage,
     setHomeBackgroundOpacity,
     clearHomeBackgroundImage,
+    setCustomBodyFontFamily,
+    setCustomHeadingFontFamily,
+    setCustomFontCssUrl,
+    setPanelPatternMode,
+    setPanelPatternOpacity,
+    setPanelPatternSize,
+    setPanelPatternUrl,
+    setCardPatternMode,
+    setCardPatternOpacity,
+    setCardPatternSize,
+    setCardPatternUrl,
+    saveCurrentAsCustomTheme,
+    applyCustomTheme,
+    deleteCustomTheme,
     resetAppearance,
   } = usePreferencesStore();
 
-  const currentPreset = THEME_PRESETS[themePreset];
+  const currentPreset = THEME_PRESETS[themePreset] || THEME_PRESETS['obsidian-gold'];
+
+  const buildPatternPreviewStyle = (
+    mode: 'none' | 'dots' | 'grid' | 'diagonal' | 'custom',
+    opacity: number,
+    size: number,
+    customUrl: string
+  ): {
+    backgroundImage?: string;
+    backgroundSize?: string;
+    backgroundRepeat?: string;
+    backgroundPosition?: string;
+  } => {
+    if (mode === 'none') return {};
+    if (mode === 'custom' && customUrl.trim()) {
+      return {
+        backgroundImage: `url("${customUrl}")`,
+        backgroundSize: `${Math.max(8, size)}px ${Math.max(8, size)}px`,
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    if (mode === 'dots') {
+      return {
+        backgroundImage: `radial-gradient(circle, ${alpha(currentPreset.textPrimary, opacity)} 1.2px, transparent 1.2px)`,
+        backgroundSize: `${size}px ${size}px`,
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    if (mode === 'grid') {
+      return {
+        backgroundImage: [
+          `linear-gradient(to right, ${alpha(currentPreset.textPrimary, opacity)} 1px, transparent 1px)`,
+          `linear-gradient(to bottom, ${alpha(currentPreset.textPrimary, opacity)} 1px, transparent 1px)`,
+        ].join(', '),
+        backgroundSize: `${size}px ${size}px`,
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    if (mode === 'diagonal') {
+      return {
+        backgroundImage: `repeating-linear-gradient(45deg, ${alpha(currentPreset.textPrimary, opacity)} 0, ${alpha(currentPreset.textPrimary, opacity)} 2px, transparent 2px, transparent ${size}px)`,
+        backgroundSize: 'auto',
+        backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
+      };
+    }
+    return {};
+  };
 
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100);
@@ -105,12 +238,51 @@ export const AppearanceSettingsPage: React.FC = () => {
     input.click();
   };
 
+  const handlePatternFileUpload = (target: 'panel' | 'card') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/svg+xml';
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') return;
+        if (target === 'panel') {
+          setPanelPatternMode('custom');
+          setPanelPatternUrl(result);
+        } else {
+          setCardPatternMode('custom');
+          setCardPatternUrl(result);
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
+  const handleSaveCustomTheme = () => {
+    if (!customThemeName.trim()) return;
+    saveCurrentAsCustomTheme(customThemeName.trim());
+    setCustomThemeName('');
+  };
+
+  const applyFontPreset = (presetId: string) => {
+    const preset = FONT_PRESET_OPTIONS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setSelectedFontPresetId(preset.id);
+    setCustomFontCssUrl(preset.cssUrl);
+    setCustomBodyFontFamily(preset.bodyFamily);
+    setCustomHeadingFontFamily(preset.headingFamily);
+    setFontMode('custom');
+  };
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
         position: 'relative',
-        overflow: 'hidden',
         py: { xs: 2, md: 4 },
         px: { xs: 1, md: 2 },
       }}
@@ -144,7 +316,7 @@ export const AppearanceSettingsPage: React.FC = () => {
             <Box
               sx={{
                 opacity: isLoaded ? 1 : 0,
-                transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
+                transform: isLoaded ? 'none' : 'translateY(20px)',
                 transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
@@ -224,7 +396,7 @@ export const AppearanceSettingsPage: React.FC = () => {
               gap: 3,
               minWidth: 0,
               opacity: isLoaded ? 1 : 0,
-              transform: isLoaded ? 'translateY(0)' : 'translateY(30px)',
+              transform: isLoaded ? 'none' : 'translateY(30px)',
               transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s`,
             }}
           >
@@ -658,6 +830,8 @@ export const AppearanceSettingsPage: React.FC = () => {
                           fontWeight: 600,
                           fontFamily: fontMode === 'serif'
                             ? '"Cinzel", "Georgia", serif'
+                            : fontMode === 'custom'
+                            ? customBodyFontFamily
                             : '"Inter", "Roboto", sans-serif',
                           borderRadius: 2,
                           border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
@@ -677,6 +851,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     >
                       <ToggleButton value="serif">Serif</ToggleButton>
                       <ToggleButton value="sans">Sans-Serif</ToggleButton>
+                      <ToggleButton value="custom">Custom</ToggleButton>
                     </ToggleButtonGroup>
                   </FormControl>
 
@@ -773,10 +948,337 @@ export const AppearanceSettingsPage: React.FC = () => {
                   </FormControl>
                 </Stack>
               </GlassCard>
+
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<FontDownloadIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Кастомные шрифты"
+                  subtitle="Подключайте свои font-family и CSS URL"
+                />
+
+                <Stack spacing={2.5}>
+                  <FormControl fullWidth>
+                    <InputLabel id="font-preset-select-label">Готовый пресет шрифта</InputLabel>
+                    <Select
+                      labelId="font-preset-select-label"
+                      value={selectedFontPresetId}
+                      label="Готовый пресет шрифта"
+                      onChange={(e) => applyFontPreset(e.target.value)}
+                    >
+                      {FONT_PRESET_OPTIONS.map((preset) => (
+                        <MenuItem key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    fullWidth
+                    label="CSS URL шрифта (Google Fonts / свой CDN)"
+                    value={customFontCssUrl}
+                    onChange={(e) => {
+                      setCustomFontCssUrl(e.target.value);
+                      setFontMode('custom');
+                    }}
+                    placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
+                    helperText="Ссылка будет подключена как <link rel='stylesheet'>"
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="font-family для основного текста"
+                    value={customBodyFontFamily}
+                    onChange={(e) => {
+                      setCustomBodyFontFamily(e.target.value);
+                      setFontMode('custom');
+                    }}
+                    placeholder={'"Inter", "Roboto", sans-serif'}
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="font-family для заголовков"
+                    value={customHeadingFontFamily}
+                    onChange={(e) => {
+                      setCustomHeadingFontFamily(e.target.value);
+                      setFontMode('custom');
+                    }}
+                    placeholder={'"Cinzel", serif'}
+                  />
+
+                  <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.08) }}>
+                    <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+                      Для локальных шрифтов положи файлы в <b>frontend/public/fonts</b>, затем укажи CSS, например:
+                      <br />
+                      <code>/fonts/my-local-font.css</code> и family вроде <code>"MyLocalFont", serif</code>.
+                      <br />
+                      При вводе значений режим автоматически переключается на <b>Custom</b>.
+                    </Typography>
+                  </Box>
+                </Stack>
+              </GlassCard>
+
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<TextureIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Паттерны панелей и карточек"
+                  subtitle="Сетка, точки, диагональ или ваш texture"
+                />
+
+                <Stack spacing={3}>
+                  <Box>
+                    <FormLabel sx={{ mb: 1.2, display: 'block', fontWeight: 600 }}>Паттерн панелей (Paper)</FormLabel>
+                    <ToggleButtonGroup
+                      exclusive
+                      value={panelPatternMode}
+                      onChange={(_, value) => value && setPanelPatternMode(value)}
+                      fullWidth
+                    >
+                      <ToggleButton value="none">Нет</ToggleButton>
+                      <ToggleButton value="dots">Точки</ToggleButton>
+                      <ToggleButton value="grid">Сетка</ToggleButton>
+                      <ToggleButton value="diagonal">Диагональ</ToggleButton>
+                      <ToggleButton value="custom">Custom</ToggleButton>
+                    </ToggleButtonGroup>
+                    <AnimatedSlider
+                      label="Плотность/размер паттерна"
+                      value={panelPatternSize}
+                      min={8}
+                      max={64}
+                      step={1}
+                      onChange={setPanelPatternSize}
+                      valueLabelFormat={(v) => `${v}px`}
+                      icon={<TextureIcon sx={{ fontSize: '1rem' }} />}
+                    />
+                    <AnimatedSlider
+                      label="Прозрачность паттерна"
+                      value={panelPatternOpacity}
+                      min={0.03}
+                      max={0.5}
+                      step={0.01}
+                      onChange={setPanelPatternOpacity}
+                      valueLabelFormat={(v) => `${Math.round(v * 100)}%`}
+                      icon={<TextureIcon sx={{ fontSize: '1rem' }} />}
+                    />
+                    {panelPatternMode === 'custom' && (
+                      <Stack spacing={1.2}>
+                        <TextField
+                          fullWidth
+                          label="URL паттерна для панелей"
+                          value={panelPatternUrl}
+                          onChange={(e) => setPanelPatternUrl(e.target.value)}
+                          placeholder="https://example.com/pattern.png"
+                        />
+                        <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => handlePatternFileUpload('panel')}>
+                          Загрузить паттерн панелей
+                        </Button>
+                      </Stack>
+                    )}
+
+                    <Box
+                      sx={{
+                        mt: 2,
+                        p: 1.5,
+                        borderRadius: 2,
+                        border: `1px solid ${alpha(theme.palette.divider, 0.35)}`,
+                        backgroundColor: alpha(theme.palette.background.paper, 0.65),
+                        ...buildPatternPreviewStyle(
+                          panelPatternMode,
+                          panelPatternOpacity,
+                          panelPatternSize,
+                          panelPatternUrl
+                        ),
+                      }}
+                    >
+                      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', mb: 1 }}>
+                        Предпросмотр панелей (Paper)
+                      </Typography>
+                      <Box
+                        sx={{
+                          p: 1.2,
+                          borderRadius: 1.5,
+                          border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                          backgroundColor: alpha(theme.palette.background.default, 0.35),
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Typography sx={{ fontWeight: 600 }}>Panel Sample</Typography>
+                        <Chip size="small" label={panelPatternMode} />
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Divider />
+
+                  <Box>
+                    <FormLabel sx={{ mb: 1.2, display: 'block', fontWeight: 600 }}>Паттерн карточек (Card)</FormLabel>
+                    <ToggleButtonGroup
+                      exclusive
+                      value={cardPatternMode}
+                      onChange={(_, value) => value && setCardPatternMode(value)}
+                      fullWidth
+                    >
+                      <ToggleButton value="none">Нет</ToggleButton>
+                      <ToggleButton value="dots">Точки</ToggleButton>
+                      <ToggleButton value="grid">Сетка</ToggleButton>
+                      <ToggleButton value="diagonal">Диагональ</ToggleButton>
+                      <ToggleButton value="custom">Custom</ToggleButton>
+                    </ToggleButtonGroup>
+                    <AnimatedSlider
+                      label="Плотность/размер паттерна"
+                      value={cardPatternSize}
+                      min={8}
+                      max={64}
+                      step={1}
+                      onChange={setCardPatternSize}
+                      valueLabelFormat={(v) => `${v}px`}
+                      icon={<TextureIcon sx={{ fontSize: '1rem' }} />}
+                    />
+                    <AnimatedSlider
+                      label="Прозрачность паттерна"
+                      value={cardPatternOpacity}
+                      min={0.03}
+                      max={0.5}
+                      step={0.01}
+                      onChange={setCardPatternOpacity}
+                      valueLabelFormat={(v) => `${Math.round(v * 100)}%`}
+                      icon={<TextureIcon sx={{ fontSize: '1rem' }} />}
+                    />
+                    {cardPatternMode === 'custom' && (
+                      <Stack spacing={1.2}>
+                        <TextField
+                          fullWidth
+                          label="URL паттерна для карточек"
+                          value={cardPatternUrl}
+                          onChange={(e) => setCardPatternUrl(e.target.value)}
+                          placeholder="https://example.com/pattern.png"
+                        />
+                        <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => handlePatternFileUpload('card')}>
+                          Загрузить паттерн карточек
+                        </Button>
+                      </Stack>
+                    )}
+
+                    <Box
+                      sx={{
+                        mt: 2,
+                        p: 1.5,
+                        borderRadius: 2,
+                        border: `1px solid ${alpha(theme.palette.divider, 0.35)}`,
+                        backgroundColor: alpha(theme.palette.background.paper, 0.65),
+                        ...buildPatternPreviewStyle(
+                          cardPatternMode,
+                          cardPatternOpacity,
+                          cardPatternSize,
+                          cardPatternUrl
+                        ),
+                      }}
+                    >
+                      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', mb: 1 }}>
+                        Предпросмотр карточек (Card)
+                      </Typography>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: `1px solid ${alpha(theme.palette.secondary.main, 0.35)}`,
+                          backgroundColor: alpha(theme.palette.background.default, 0.32),
+                          boxShadow: '0 6px 14px rgba(0,0,0,0.18)',
+                        }}
+                      >
+                        <Typography sx={{ fontWeight: 700, mb: 0.5 }}>Card Sample</Typography>
+                        <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
+                          Так будет выглядеть фон карточек с текущим паттерном.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Stack>
+              </GlassCard>
+
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<SaveIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Пользовательские темы"
+                  subtitle="Сохраняйте и быстро переключайте свои настройки"
+                />
+
+                <Stack spacing={2}>
+                  <Box display="flex" gap={1.2}>
+                    <TextField
+                      fullWidth
+                      label="Название вашей темы"
+                      value={customThemeName}
+                      onChange={(e) => setCustomThemeName(e.target.value)}
+                      placeholder="Например: Ночная карта с текстурой"
+                    />
+                    <DndButton
+                      variant="contained"
+                      startIcon={<SaveIcon />}
+                      onClick={handleSaveCustomTheme}
+                      disabled={!customThemeName.trim()}
+                    >
+                      Сохранить
+                    </DndButton>
+                  </Box>
+
+                  <Stack spacing={1}>
+                    {customThemes.length === 0 && (
+                      <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
+                        Пока нет сохраненных тем. Настройте стиль и нажмите «Сохранить».
+                      </Typography>
+                    )}
+                    {customThemes.map((customTheme) => {
+                      const active = selectedCustomThemeId === customTheme.id;
+                      return (
+                        <Box
+                          key={customTheme.id}
+                          sx={{
+                            p: 1.2,
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            border: `1px solid ${active ? alpha(theme.palette.success.main, 0.5) : alpha(theme.palette.divider, 0.4)}`,
+                            bgcolor: active ? alpha(theme.palette.success.main, 0.08) : alpha(theme.palette.background.paper, 0.4),
+                          }}
+                        >
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography sx={{ fontWeight: 700, color: 'text.primary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {customTheme.name}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                              {new Date(customTheme.createdAt).toLocaleString()}
+                            </Typography>
+                          </Box>
+                          <Button size="small" variant={active ? 'contained' : 'outlined'} onClick={() => applyCustomTheme(customTheme.id)}>
+                            {active ? 'Активна' : 'Применить'}
+                          </Button>
+                          <IconButton size="small" onClick={() => deleteCustomTheme(customTheme.id)} sx={{ color: 'error.main' }}>
+                            <DeleteForeverIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </Stack>
+              </GlassCard>
             </Stack>
 
             {/* RIGHT COLUMN */}
-            <Stack spacing={3} sx={{ minWidth: 0, position: 'sticky', top: 24, alignSelf: 'start' }}>
+            <Stack
+              spacing={3}
+              sx={{
+                minWidth: 0,
+                position: { xs: 'static', lg: 'sticky' },
+                top: { lg: 88 },
+                alignSelf: 'start',
+                height: 'fit-content',
+              }}
+            >
               
               {/* LIVE PREVIEW CARD */}
               <AppearanceLivePreview currentPreset={currentPreset} />
@@ -799,6 +1301,10 @@ export const AppearanceSettingsPage: React.FC = () => {
                     { label: 'Прозрачность', value: `${Math.round(transparency * 100)}%`, color: theme.palette.secondary.main },
                     { label: 'Blur', value: `${blur}px`, color: theme.palette.secondary.main },
                     { label: 'Радиус углов', value: `${borderRadius}px`, color: theme.palette.text.secondary },
+                    { label: 'Шрифт custom', value: fontMode === 'custom' ? 'Да' : 'Нет', color: fontMode === 'custom' ? theme.palette.success.main : theme.palette.text.disabled },
+                    { label: 'Паттерн Paper', value: panelPatternMode, color: theme.palette.info.main },
+                    { label: 'Паттерн Card', value: cardPatternMode, color: theme.palette.info.main },
+                    { label: 'Сохраненных тем', value: String(customThemes.length), color: theme.palette.primary.main },
                     { label: 'Фон главной', value: homeBackgroundImage ? '✓ Установлен' : '○ Не выбран', color: homeBackgroundImage ? theme.palette.success.main : theme.palette.text.disabled },
                     { label: 'Прозрачность фона', value: `${Math.round(homeBackgroundOpacity * 100)}%`, color: theme.palette.text.secondary },
                   ].map((param) => (

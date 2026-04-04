@@ -17,7 +17,37 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
     transparency,
     blur,
     borderRadius,
+    customBodyFontFamily,
+    customHeadingFontFamily,
+    customFontCssUrl,
+    panelPatternMode,
+    panelPatternOpacity,
+    panelPatternSize,
+    panelPatternUrl,
+    cardPatternMode,
+    cardPatternOpacity,
+    cardPatternSize,
+    cardPatternUrl,
   } = usePreferencesStore();
+
+  React.useEffect(() => {
+    const id = 'campaigner-custom-font-css';
+    const existing = document.getElementById(id);
+    if (existing) {
+      existing.remove();
+    }
+    if (!customFontCssUrl?.trim()) return;
+
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = customFontCssUrl;
+    document.head.appendChild(link);
+
+    return () => {
+      link.remove();
+    };
+  }, [customFontCssUrl]);
 
   const theme = useMemo(() => {
     return createAppTheme({
@@ -29,6 +59,16 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
       transparency,
       blur,
       borderRadius,
+      customBodyFontFamily,
+      customHeadingFontFamily,
+      panelPatternMode,
+      panelPatternOpacity,
+      panelPatternSize,
+      panelPatternUrl,
+      cardPatternMode,
+      cardPatternOpacity,
+      cardPatternSize,
+      cardPatternUrl,
     });
   }, [
     themePreset,
@@ -39,6 +79,16 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
     transparency,
     blur,
     borderRadius,
+    customBodyFontFamily,
+    customHeadingFontFamily,
+    panelPatternMode,
+    panelPatternOpacity,
+    panelPatternSize,
+    panelPatternUrl,
+    cardPatternMode,
+    cardPatternOpacity,
+    cardPatternSize,
+    cardPatternUrl,
   ]);
 
   return (
