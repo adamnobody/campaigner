@@ -13,7 +13,8 @@ export interface MapTerritory {
   borderColor: string;
   borderWidth: number;
   smoothing?: number;
-  points: MapTerritoryPoint[];
+  /** Несколько несвязных контуров (материк, анклавы). */
+  rings: MapTerritoryPoint[][];
   factionId: number | null;
   sortOrder: number;
   createdAt: string;
@@ -28,7 +29,7 @@ export interface CreateMapTerritoryData {
   borderColor?: string;
   borderWidth?: number;
   smoothing?: number;
-  points?: MapTerritoryPoint[];
+  rings: MapTerritoryPoint[][];
   factionId?: number | null;
   sortOrder?: number;
 }
@@ -41,7 +42,7 @@ export interface UpdateMapTerritoryData {
   borderColor?: string;
   borderWidth?: number;
   smoothing?: number;
-  points?: MapTerritoryPoint[];
+  rings?: MapTerritoryPoint[][];
   factionId?: number | null;
   sortOrder?: number;
 }
@@ -63,12 +64,39 @@ export interface TerritoryRawRow {
   updatedAt: string;
 }
 
-export function parseTerritoryPoints(value: string | null | undefined): MapTerritoryPoint[] {
+/**
+ * Читает JSON из БД: legacy `[{x,y},…]` или `{ rings: [[…],[…]] }`.
+ */
+export function parseTerritoryRings(value: string | null | undefined): MapTerritoryPoint[][] {
   if (!value) return [];
   try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      if (parsed.length === 0) return [];
+      const first = parsed[0] as unknown;
+      if (
+        first &&
+        typeof first === 'object' &&
+        !Array.isArray(first) &&
+        'x' in (first as object) &&
+        'y' in (first as object)
+      ) {
+        return [parsed as MapTerritoryPoint[]];
+      }
+      if (Array.isArray(first)) {
+        return parsed as MapTerritoryPoint[][];
+      }
+      return [];
+    }
+    if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { rings?: unknown }).rings)) {
+      return (parsed as { rings: MapTerritoryPoint[][] }).rings;
+    }
+    return [];
   } catch {
     return [];
   }
+}
+
+export function serializeTerritoryRings(rings: MapTerritoryPoint[][]): string {
+  return JSON.stringify({ rings });
 }

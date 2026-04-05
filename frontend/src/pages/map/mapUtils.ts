@@ -29,6 +29,9 @@ export const ZOOM_SPEED = 0.1;
 export const DRAG_THRESHOLD = 4;
 export const PANEL_WIDTH = 360;
 
+/** Если у любой территории больше точек — не рисуем SVG filters (blur/glow): иначе при зуме Chromium даёт артефакты слоёв. */
+export const TERRITORY_SVG_FILTER_MAX_POINTS = 56;
+
 export type MarkerIcon = CreateMarker['icon'];
 export type MapMode = 'select' | 'draw_territory';
 
@@ -58,7 +61,8 @@ export interface Marker {
 export interface Territory {
   id: number; mapId: number; name: string; description: string;
   color: string; opacity: number; borderColor: string; borderWidth: number; smoothing: number;
-  points: { x: number; y: number }[];
+  /** Несколько несвязных контуров (0–100 % карты), материк и анклавы. */
+  rings: { x: number; y: number }[][];
   factionId: number | null; sortOrder: number;
 }
 export interface MapData {
@@ -78,14 +82,27 @@ export const normalizeMarker = (m: any): Marker => ({
   linkedNoteId: m.linkedNoteId || null, childMapId: m.childMapId || null,
 });
 
-export const normalizeTerritory = (t: any): Territory => ({
-  id: t.id, mapId: t.mapId, name: t.name, description: t.description || '',
-  color: t.color || '#4ECDC4', opacity: t.opacity ?? 0.25,
-  borderColor: t.borderColor || '#4ECDC4', borderWidth: t.borderWidth ?? 1.5,
-  smoothing: t.smoothing ?? 0,
-  points: (t.points || []).map((p: any) => ({ x: p.x * 100, y: p.y * 100 })),
-  factionId: t.factionId || null, sortOrder: t.sortOrder || 0,
-});
+const mapRingFromApi = (ring: any[]): { x: number; y: number }[] =>
+  ring.map((p: any) => ({ x: p.x * 100, y: p.y * 100 }));
+
+export const normalizeTerritory = (t: any): Territory => {
+  let rings: { x: number; y: number }[][];
+  if (Array.isArray(t.rings) && t.rings.length > 0) {
+    rings = t.rings.map((ring: any[]) => mapRingFromApi(ring));
+  } else if (Array.isArray(t.points) && t.points.length > 0) {
+    rings = [mapRingFromApi(t.points)];
+  } else {
+    rings = [];
+  }
+  return {
+    id: t.id, mapId: t.mapId, name: t.name, description: t.description || '',
+    color: t.color || '#4ECDC4', opacity: t.opacity ?? 0.25,
+    borderColor: t.borderColor || '#4ECDC4', borderWidth: t.borderWidth ?? 1.5,
+    smoothing: t.smoothing ?? 0,
+    rings,
+    factionId: t.factionId || null, sortOrder: t.sortOrder || 0,
+  };
+};
 
 export const normalizeMap = (m: any): MapData => ({
   id: m.id, projectId: m.projectId || m.project_id,
@@ -125,6 +142,53 @@ export const pointsToSvgPath = (points: { x: number; y: number }[]): string => {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 };
 
+/** Средняя ширина глифа относительно fontSize (латиница + кириллица, ~600 weight). */
+const TERRITORY_LABEL_AVG_CHAR_EM = 0.52;
+const TERRITORY_LABEL_MIN_SCREEN_PX = 11;
+const TERRITORY_LABEL_MAX_SVG_PX = 96;
+
+/**
+ * Размер подписи территории в координатах SVG (пиксели изображения карты).
+ * Базовый размер от bbox; не ниже порога читаемости на экране при текущем зуме (как у маркеров).
+ * Подпись рисуется поверх территории без обрезки по полигону — длинное имя может выходить за контур.
+ */
+export function territoryLabelMetrics(
+  svgPts: { x: number; y: number }[],
+  name: string,
+  zoomDisplay: number
+): { fontSize: number; strokeWidth: number } {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of svgPts) {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  }
+  const bw = Math.max(maxX - minX, 1);
+  const bh = Math.max(maxY - minY, 1);
+  const padX = Math.max(6, bw * 0.035);
+  const padY = Math.max(6, bh * 0.035);
+  const innerW = Math.max(bw - 2 * padX, 3);
+  const innerH = Math.max(bh - 2 * padY, 3);
+
+  const len = Math.max(name.trim().length, 1);
+  const fitByWidth = innerW / (TERRITORY_LABEL_AVG_CHAR_EM * len);
+  const fitByHeight = innerH * 0.34;
+  let fit = Math.min(fitByWidth, fitByHeight);
+  fit = Math.max(5, Math.min(fit, 64));
+
+  const z = Math.max(zoomDisplay, MIN_ZOOM * 0.5);
+  const minSvg = TERRITORY_LABEL_MIN_SCREEN_PX / z;
+
+  const fontSize = Math.min(Math.max(fit * 0.9, minSvg), TERRITORY_LABEL_MAX_SVG_PX);
+
+  const strokeWidth = Math.min(6, Math.max(1.5, fontSize * 0.2));
+  return { fontSize, strokeWidth };
+}
+
 export const isPointInPolygon = (px: number, py: number, polygon: { x: number; y: number }[]): boolean => {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -136,6 +200,35 @@ export const isPointInPolygon = (px: number, py: number, polygon: { x: number; y
   }
   return inside;
 };
+
+export function polygonAreaPercent(pts: { x: number; y: number }[]): number {
+  let sum = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    sum += pts[j].x * pts[i].y - pts[i].x * pts[j].y;
+  }
+  return Math.abs(sum / 2);
+}
+
+/** Контур с наибольшей площадью (для подписи / фокуса). */
+export function getLargestRing(territory: Territory): { x: number; y: number }[] {
+  if (!territory.rings.length) return [];
+  return territory.rings.reduce((best, ring) =>
+    polygonAreaPercent(ring) > polygonAreaPercent(best) ? ring : best
+  );
+}
+
+export function territoryTotalPointCount(territory: Territory): number {
+  return territory.rings.reduce((s, r) => s + r.length, 0);
+}
+
+export function isPointInTerritory(px: number, py: number, territory: Territory): boolean {
+  return territory.rings.some(ring => isPointInPolygon(px, py, ring));
+}
+
+/** Событие начала перетаскивания вершины: черновой контур или редактирование с индексом кольца. */
+export type TerritoryPointDragPayload =
+  | { mode: 'draw'; pointIndex: number }
+  | { mode: 'edit'; ringIndex: number; pointIndex: number };
 
 export const hexToRgb = (hex: string): string => {
   const r = parseInt(hex.slice(1, 3), 16);

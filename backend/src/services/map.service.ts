@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import type { Map, CreateMap, UpdateMap, MapMarker, CreateMarker, UpdateMarker } from '@campaigner/shared';
 import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
 import type { MapTerritory, CreateMapTerritoryData, UpdateMapTerritoryData, TerritoryRawRow } from './map/map.types';
-import { parseTerritoryPoints } from './map/map.types';
+import { parseTerritoryRings, serializeTerritoryRings } from './map/map.types';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -196,7 +196,10 @@ export class MapService {
       FROM map_territories WHERE map_id = ? ORDER BY sort_order, created_at
     `).all(mapId) as TerritoryRawRow[];
 
-    return rows.map((row) => ({ ...row, points: parseTerritoryPoints(row.points) }));
+    return rows.map((row) => {
+      const { points: rawPoints, ...rest } = row;
+      return { ...rest, rings: parseTerritoryRings(rawPoints) };
+    });
   }
 
   getTerritoryById(territoryId: number): MapTerritory | null {
@@ -210,7 +213,8 @@ export class MapService {
     `).get(territoryId) as TerritoryRawRow | undefined;
 
     if (!row) return null;
-    return { ...row, points: parseTerritoryPoints(row.points) };
+    const { points: rawPoints, ...rest } = row;
+    return { ...rest, rings: parseTerritoryRings(rawPoints) };
   }
 
   getTerritoryByIdOrThrow(territoryId: number): MapTerritory {
@@ -221,12 +225,13 @@ export class MapService {
 
   createTerritory(mapId: number, data: CreateMapTerritoryData): MapTerritory {
     this.getMapByIdOrThrow(mapId);
+    const rings = data.rings ?? [];
     const result = getDb().prepare(`
       INSERT INTO map_territories (map_id, name, description, color, opacity, border_color, border_width, smoothing, points, faction_id, sort_order)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(mapId, data.name, data.description || '', data.color || '#4ECDC4',
       data.opacity ?? 0.25, data.borderColor || '#4ECDC4', data.borderWidth ?? 2,
-      data.smoothing ?? 0, JSON.stringify(data.points || []),
+      data.smoothing ?? 0, serializeTerritoryRings(rings),
       data.factionId || null, data.sortOrder ?? 0);
     return this.getTerritoryByIdOrThrow(result.lastInsertRowid as number);
   }
@@ -244,7 +249,7 @@ export class MapService {
     if (data.borderColor !== undefined) { updates.push('border_color = ?'); values.push(data.borderColor); }
     if (data.borderWidth !== undefined) { updates.push('border_width = ?'); values.push(data.borderWidth); }
     if (data.smoothing !== undefined) { updates.push('smoothing = ?'); values.push(data.smoothing); }
-    if (data.points !== undefined) { updates.push('points = ?'); values.push(JSON.stringify(data.points)); }
+    if (data.rings !== undefined) { updates.push('points = ?'); values.push(serializeTerritoryRings(data.rings)); }
     if (data.factionId !== undefined) { updates.push('faction_id = ?'); values.push(data.factionId); }
     if (data.sortOrder !== undefined) { updates.push('sort_order = ?'); values.push(data.sortOrder); }
 

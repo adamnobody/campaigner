@@ -36,7 +36,15 @@ export function useHotkeys(hotkeys: Hotkey[]) {
           keyMatch = eventCode === hk.code;
         } else if (hk.key) {
           const hotkey = hk.key.toLowerCase();
-          keyMatch = eventKey === hotkey || eventCode === `Key${hk.key.toUpperCase()}`;
+          // Одна латинская буква: только по физ. клавише, иначе на русской раскладке
+          // e.key — другой символ (например «к» вместо «k»).
+          if (/^[a-z]$/i.test(hk.key)) {
+            keyMatch = eventCode === `Key${hk.key.toUpperCase()}`;
+          } else if (/^[0-9]$/.test(hk.key)) {
+            keyMatch = eventCode === `Digit${hk.key}`;
+          } else {
+            keyMatch = eventKey === hotkey;
+          }
         }
 
         if (keyMatch && ctrlMatch && shiftMatch && altMatch) {

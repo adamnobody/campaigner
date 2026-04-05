@@ -16,6 +16,7 @@ frontend/dist/
 # ==================== Local data (SQLite, uploads) ====================
 # Создаётся при первом запуске бэкенда; в репозиторий не коммитим.
 /data/
+/backend/uploads/
 
 # ==================== Environment ====================
 .env
@@ -56,3 +57,4 @@ ehthumbs.db
 .temp/
 .tmp/
 coverage/
+backend/data/uploads/maps/project-map-1775408962501-q4s25k-9a75f7f607b8e39d97da166653341e35_d7cf1793-795f-4b4.png
