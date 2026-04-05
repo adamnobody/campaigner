@@ -51,11 +51,14 @@ export const updateMarkerSchema = mapMarkerSchema
   .omit({ id: true, mapId: true, createdAt: true, updatedAt: true })
   .partial();
 
-// ==================== Территории (полигоны) ====================
+// ==================== Территории (мультиполигон: материк + анклавы) ====================
 export const territoryPointSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
 });
+
+/** Один замкнутый контур (≥3 точек). */
+export const territoryRingSchema = z.array(territoryPointSchema).min(3);
 
 export const mapTerritorySchema = z.object({
   id: idSchema,
@@ -67,20 +70,52 @@ export const mapTerritorySchema = z.object({
   borderColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#4ECDC4'),
   borderWidth: z.number().min(0.5).max(5).default(2),
   smoothing: z.number().min(0).max(1).default(0),
-  points: z.array(territoryPointSchema).min(3),
+  rings: z.array(territoryRingSchema).min(1),
   factionId: z.number().int().positive().nullable().optional(),
   sortOrder: z.number().int().default(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 
-export const createTerritorySchema = mapTerritorySchema.omit({
-  id: true,
-  mapId: true,
-  createdAt: true,
-  updatedAt: true,
-});
+/** Тело создания: допускаем legacy `points` (один контур) → нормализуем в `rings`. */
+function preprocessTerritoryCreateBody(data: unknown): unknown {
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const o = data as Record<string, unknown>;
+    if (Array.isArray(o.rings) && o.rings.length > 0) return o;
+    if (Array.isArray(o.points) && o.points.length >= 3) {
+      const { points, ...rest } = o;
+      return { ...rest, rings: [points] };
+    }
+  }
+  return data;
+}
 
-export const updateTerritorySchema = mapTerritorySchema
-  .omit({ id: true, mapId: true, createdAt: true, updatedAt: true })
-  .partial();
+export const createTerritorySchema = z.preprocess(
+  preprocessTerritoryCreateBody,
+  mapTerritorySchema.omit({
+    id: true,
+    mapId: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+);
+
+/** PATCH: `points` как один контур превращаем в `rings: [points]`. */
+function preprocessTerritoryUpdateBody(data: unknown): unknown {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
+  const o = { ...(data as Record<string, unknown>) };
+  if (
+    Array.isArray(o.points) &&
+    o.points.length >= 3 &&
+    (!Array.isArray(o.rings) || o.rings.length === 0)
+  ) {
+    o.rings = [o.points];
+    delete o.points;
+  }
+  return o;
+}
+
+export const updateTerritorySchema = z.preprocess(
+  preprocessTerritoryUpdateBody,
+  mapTerritorySchema.omit({ id: true, mapId: true, createdAt: true, updatedAt: true }).partial()
+);

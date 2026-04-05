@@ -1,34 +1,43 @@
 import React from 'react';
-import { TERRITORY_SVG_FILTER_MAX_POINTS, territoryLabelMetrics } from './mapUtils';
-import type { MapMode, Marker, Territory } from './mapUtils';
+import {
+  TERRITORY_SVG_FILTER_MAX_POINTS,
+  territoryLabelMetrics,
+  getLargestRing,
+  territoryTotalPointCount,
+} from './mapUtils';
+import type { MapMode, Marker, Territory, TerritoryPointDragPayload } from './mapUtils';
 
 type Props = {
   imgRef: React.RefObject<HTMLImageElement | null>;
-  /** Текущий масштаб карты (1 = 100%), для компенсации мелкого текста при отдалении. */
   zoomDisplay: number;
   territories: Territory[];
   mode: MapMode;
+  drawingCompletedRings: { x: number; y: number }[][];
   drawingPoints: { x: number; y: number }[];
   editingTerritoryPoints: Territory | null;
   selectedTerritory: Territory | null;
   draggingMarker: Marker | null;
-  draggingPointIndex: number | null;
+  draggingTerritoryPoint: TerritoryPointDragPayload | null;
   onTerritoryClick: (e: React.MouseEvent<SVGElement>, territory: Territory) => void;
-  onPointDragStart: (e: React.MouseEvent, index: number, isDrawing: boolean) => void;
-  onDeletePoint: (index: number, isDrawing: boolean) => void;
-  onAddPointOnEdge: (index: number, isDrawing: boolean) => void;
+  onPointDragStart: (e: React.MouseEvent, payload: TerritoryPointDragPayload) => void;
+  onDeletePoint: (payload: TerritoryPointDragPayload) => void;
+  onAddPointOnEdge: (payload: TerritoryPointDragPayload) => void;
 };
+
+const ringToSvg = (ring: { x: number; y: number }[], w: number, h: number) =>
+  ring.map(p => ({ x: (p.x / 100) * w, y: (p.y / 100) * h }));
 
 export const MapTerritorySvg: React.FC<Props> = ({
   imgRef,
   zoomDisplay,
   territories,
   mode,
+  drawingCompletedRings,
   drawingPoints,
   editingTerritoryPoints,
   selectedTerritory,
   draggingMarker,
-  draggingPointIndex,
+  draggingTerritoryPoint,
   onTerritoryClick,
   onPointDragStart,
   onDeletePoint,
@@ -38,10 +47,10 @@ export const MapTerritorySvg: React.FC<Props> = ({
   const w = imgRef.current.clientWidth;
   const h = imgRef.current.clientHeight;
   if (!w || !h) return null;
-  const complexTerritories = territories.some((t) => t.points.length > TERRITORY_SVG_FILTER_MAX_POINTS);
+  const complexTerritories = territories.some((t) => territoryTotalPointCount(t) > TERRITORY_SVG_FILTER_MAX_POINTS);
   const reduceTerritoryEffects = Boolean(
     draggingMarker ||
-      draggingPointIndex !== null ||
+      draggingTerritoryPoint !== null ||
       editingTerritoryPoints ||
       mode === 'draw_territory' ||
       complexTerritories
@@ -103,6 +112,17 @@ export const MapTerritorySvg: React.FC<Props> = ({
     return parts.join(' ');
   };
 
+  const straightPathD = (svgPts: { x: number; y: number }[]) =>
+    svgPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+
+  const isDraggingDrawVertex = (i: number) =>
+    draggingTerritoryPoint?.mode === 'draw' && draggingTerritoryPoint.pointIndex === i;
+
+  const isDraggingEditVertex = (ri: number, i: number) =>
+    draggingTerritoryPoint?.mode === 'edit' &&
+    draggingTerritoryPoint.ringIndex === ri &&
+    draggingTerritoryPoint.pointIndex === i;
+
   return (
     <svg
       shapeRendering={complexTerritories ? 'optimizeSpeed' : 'geometricPrecision'}
@@ -158,12 +178,8 @@ export const MapTerritorySvg: React.FC<Props> = ({
       </defs>
 
       {territories.map(t => {
-        const svgPts = t.points.map(p => ({
-          x: (p.x / 100) * w,
-          y: (p.y / 100) * h,
-        }));
-        const pathD = buildSmoothPath(svgPts, t.smoothing);
-
+        const ringPaths = t.rings.map(ring => buildSmoothPath(ringToSvg(ring, w, h), t.smoothing));
+        const pathDCombined = ringPaths.join(' ');
         const gradId = `grad-${t.id}`;
         const filterId = `filter-${t.id}`;
         const innerGlowId = `innerglow-${t.id}`;
@@ -173,97 +189,119 @@ export const MapTerritorySvg: React.FC<Props> = ({
         return (
           <g key={t.id} filter={reduceTerritoryEffects ? undefined : `url(#${filterId})`}>
             <clipPath id={clipId}>
-              <path d={pathD} />
+              {ringPaths.map((d, ri) => (
+                <path key={ri} d={d} />
+              ))}
             </clipPath>
 
-            <path
-              d={pathD}
-              fill={`url(#${gradId})`}
-              stroke="none"
-            />
+            {ringPaths.map((d, ri) => (
+              <path key={`fill-${ri}`} d={d} fill={`url(#${gradId})`} stroke="none" />
+            ))}
 
-            <path
-              d={pathD}
-              fill="url(#territory-hatch)"
-              stroke="none"
-              opacity={0.6}
-            />
+            {ringPaths.map((d, ri) => (
+              <path
+                key={`hatch-${ri}`}
+                d={d}
+                fill="url(#territory-hatch)"
+                stroke="none"
+                opacity={0.6}
+              />
+            ))}
 
             <g clipPath={`url(#${clipId})`}>
-              <path
-                d={pathD}
-                fill="none"
-                stroke={t.color}
-                strokeWidth={12}
-                opacity={0.15}
-                filter={reduceTerritoryEffects ? undefined : `url(#${innerGlowId})`}
-              />
+              {ringPaths.map((d, ri) => (
+                <path
+                  key={`glow-${ri}`}
+                  d={d}
+                  fill="none"
+                  stroke={t.color}
+                  strokeWidth={12}
+                  opacity={0.15}
+                  filter={reduceTerritoryEffects ? undefined : `url(#${innerGlowId})`}
+                />
+              ))}
             </g>
 
-            <path
-              d={pathD}
-              fill="none"
-              stroke="rgba(0,0,0,0.4)"
-              strokeWidth={t.borderWidth + 2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
+            {ringPaths.map((d, ri) => (
+              <path
+                key={`b1-${ri}`}
+                d={d}
+                fill="none"
+                stroke="rgba(0,0,0,0.4)"
+                strokeWidth={t.borderWidth + 2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            ))}
 
-            <path
-              d={pathD}
-              fill="none"
-              stroke={t.borderColor}
-              strokeWidth={t.borderWidth}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
+            {ringPaths.map((d, ri) => (
+              <path
+                key={`b2-${ri}`}
+                d={d}
+                fill="none"
+                stroke={t.borderColor}
+                strokeWidth={t.borderWidth}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            ))}
 
             <g clipPath={`url(#${clipId})`}>
-              <path
-                d={pathD}
-                fill="none"
-                stroke="rgba(255,255,255,0.12)"
-                strokeWidth={t.borderWidth + 1}
-                strokeLinejoin="round"
-              />
+              {ringPaths.map((d, ri) => (
+                <path
+                  key={`hi-${ri}`}
+                  d={d}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.12)"
+                  strokeWidth={t.borderWidth + 1}
+                  strokeLinejoin="round"
+                />
+              ))}
             </g>
 
-            {isSelected && (
-              <path
-                d={pathD}
-                fill="none"
-                stroke="#fff"
-                strokeWidth={t.borderWidth + 1}
-                strokeLinejoin="round"
-                strokeDasharray="6 4"
-                opacity={0.7}
-              />
-            )}
+            {isSelected &&
+              ringPaths.map((d, ri) => (
+                <path
+                  key={`sel-${ri}`}
+                  d={d}
+                  fill="none"
+                  stroke="#fff"
+                  strokeWidth={t.borderWidth + 1}
+                  strokeLinejoin="round"
+                  strokeDasharray="6 4"
+                  opacity={0.7}
+                />
+              ))}
 
-            <path
-              d={pathD}
-              fill="transparent"
-              stroke="transparent"
-              strokeWidth={Math.max(t.borderWidth + 6, 10)}
-              style={{
-                pointerEvents: mode === 'select' ? 'auto' : 'none',
-                cursor: mode === 'select' ? 'pointer' : 'default',
-              }}
-              onClick={(e) => onTerritoryClick(e, t)}
-            />
+            {ringPaths.map((d, ri) => (
+              <path
+                key={`hit-${ri}`}
+                d={d}
+                fill="transparent"
+                stroke="transparent"
+                strokeWidth={Math.max(t.borderWidth + 6, 10)}
+                style={{
+                  pointerEvents: mode === 'select' ? 'auto' : 'none',
+                  cursor: mode === 'select' ? 'pointer' : 'default',
+                }}
+                onClick={(e) => onTerritoryClick(e, t)}
+              />
+            ))}
           </g>
         );
       })}
 
-      {/* Подписи последним слоем поверх заливок и обводок; без clipPath — строка целиком, даже если выходит за контур */}
       <g style={{ pointerEvents: 'none' }}>
         {territories.map(t => {
-          const svgPts = t.points.map(p => ({
-            x: (p.x / 100) * w,
-            y: (p.y / 100) * h,
-          }));
+          const largest = getLargestRing(t);
+          if (largest.length === 0) return null;
+          const svgPts = ringToSvg(largest, w, h);
           const { cx, cy } = getCentroid(svgPts);
-          const { fontSize: labelFontSize, strokeWidth: labelStroke } = territoryLabelMetrics(svgPts, t.name, zoomDisplay);
+          const { fontSize: labelFontSize, strokeWidth: labelStroke } = territoryLabelMetrics(
+            svgPts,
+            t.name,
+            zoomDisplay
+          );
 
           return (
             <g key={`label-${t.id}`}>
@@ -289,107 +327,118 @@ export const MapTerritorySvg: React.FC<Props> = ({
         })}
       </g>
 
-      {mode === 'draw_territory' && drawingPoints.length > 0 && (() => {
-        const svgPts = drawingPoints.map(p => ({
-          x: (p.x / 100) * w,
-          y: (p.y / 100) * h,
-        }));
-
-        return (
-          <>
-            {svgPts.length >= 3 && (
+      {mode === 'draw_territory' && (drawingCompletedRings.length > 0 || drawingPoints.length > 0) && (
+        <>
+          {drawingCompletedRings.map((ring, ri) => {
+            const svgPts = ringToSvg(ring, w, h);
+            if (svgPts.length < 3) return null;
+            return (
               <path
-                d={svgPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z'}
-                fill="rgba(78, 205, 196, 0.15)"
+                key={`done-${ri}`}
+                d={straightPathD(svgPts)}
+                fill="rgba(78, 205, 196, 0.12)"
                 stroke="#4ECDC4"
                 strokeWidth={2}
                 strokeDasharray="8 4"
                 strokeLinejoin="round"
+                opacity={0.85}
               />
-            )}
-            {svgPts.length === 2 && (
-              <line
-                x1={svgPts[0].x} y1={svgPts[0].y}
-                x2={svgPts[1].x} y2={svgPts[1].y}
-                stroke="#4ECDC4" strokeWidth={2} strokeDasharray="8 4"
+            );
+          })}
+          {drawingPoints.length > 0 && (() => {
+            const svgPts = ringToSvg(drawingPoints, w, h);
+            return (
+              <>
+                {svgPts.length >= 3 && (
+                  <path
+                    d={straightPathD(svgPts)}
+                    fill="rgba(78, 205, 196, 0.15)"
+                    stroke="#4ECDC4"
+                    strokeWidth={2}
+                    strokeDasharray="8 4"
+                    strokeLinejoin="round"
+                  />
+                )}
+                {svgPts.length === 2 && (
+                  <line
+                    x1={svgPts[0].x} y1={svgPts[0].y}
+                    x2={svgPts[1].x} y2={svgPts[1].y}
+                    stroke="#4ECDC4" strokeWidth={2} strokeDasharray="8 4"
+                  />
+                )}
+                {svgPts.map((p, i) => (
+                  <g key={i}>
+                    <circle
+                      cx={p.x} cy={p.y} r={10}
+                      fill="transparent"
+                      style={{ cursor: 'grab', pointerEvents: 'auto' }}
+                      onMouseDown={e => onPointDragStart(e, { mode: 'draw', pointIndex: i })}
+                      onContextMenu={e => {
+                        e.preventDefault();
+                        if (drawingPoints.length > 1) onDeletePoint({ mode: 'draw', pointIndex: i });
+                      }}
+                      onDoubleClick={e => {
+                        e.stopPropagation();
+                        onAddPointOnEdge({ mode: 'draw', pointIndex: i });
+                      }}
+                    />
+                    <circle
+                      cx={p.x} cy={p.y}
+                      r={isDraggingDrawVertex(i) && !editingTerritoryPoints ? 4 : 3}
+                      fill={i === 0 ? '#FF6B6B' : '#4ECDC4'}
+                      stroke="#fff" strokeWidth={1.5}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  </g>
+                ))}
+              </>
+            );
+          })()}
+        </>
+      )}
+
+      {editingTerritoryPoints &&
+        editingTerritoryPoints.rings.map((ring, ri) => {
+          const svgPts = ringToSvg(ring, w, h);
+          const pathD = straightPathD(svgPts);
+          return (
+            <React.Fragment key={`edit-ring-${ri}`}>
+              <path
+                d={pathD}
+                fill={`rgba(${hexToRgbStr(editingTerritoryPoints.color)}, 0.2)`}
+                stroke="#FFD700"
+                strokeWidth={2}
+                strokeDasharray="6 3"
+                strokeLinejoin="round"
               />
-            )}
-            {svgPts.map((p, i) => (
-              <g key={i}>
-                <circle
-                  cx={p.x} cy={p.y} r={10}
-                  fill="transparent"
-                  style={{ cursor: 'grab', pointerEvents: 'auto' }}
-                  onMouseDown={e => onPointDragStart(e, i, true)}
-                  onContextMenu={e => {
-                    e.preventDefault();
-                    if (drawingPoints.length > 1) onDeletePoint(i, true);
-                  }}
-                  onDoubleClick={e => {
-                    e.stopPropagation();
-                    onAddPointOnEdge(i, true);
-                  }}
-                />
-                <circle
-                  cx={p.x} cy={p.y}
-                  r={draggingPointIndex === i && !editingTerritoryPoints ? 4 : 3}
-                  fill={i === 0 ? '#FF6B6B' : '#4ECDC4'}
-                  stroke="#fff" strokeWidth={1.5}
-                  style={{ pointerEvents: 'none' }}
-                />
-              </g>
-            ))}
-          </>
-        );
-      })()}
-
-      {editingTerritoryPoints && (() => {
-        const svgPts = editingTerritoryPoints.points.map(p => ({
-          x: (p.x / 100) * w,
-          y: (p.y / 100) * h,
-        }));
-        const pathD = svgPts.map((p, i) =>
-          `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-        ).join(' ') + ' Z';
-
-        return (
-          <>
-            <path
-              d={pathD}
-              fill={`rgba(${hexToRgbStr(editingTerritoryPoints.color)}, 0.2)`}
-              stroke="#FFD700"
-              strokeWidth={2}
-              strokeDasharray="6 3"
-              strokeLinejoin="round"
-            />
-            {svgPts.map((p, i) => (
-              <g key={i}>
-                <circle
-                  cx={p.x} cy={p.y} r={10}
-                  fill="transparent"
-                  style={{ cursor: 'grab', pointerEvents: 'auto' }}
-                  onMouseDown={e => onPointDragStart(e, i, false)}
-                  onContextMenu={e => {
-                    e.preventDefault();
-                    if (editingTerritoryPoints.points.length > 3) onDeletePoint(i, false);
-                  }}
-                  onDoubleClick={e => {
-                    e.stopPropagation();
-                    onAddPointOnEdge(i, false);
-                  }}
-                />
-                <circle
-                  cx={p.x} cy={p.y}
-                  r={draggingPointIndex === i && editingTerritoryPoints ? 4 : 3}
-                  fill="#FFD700"
-                  stroke="#fff" strokeWidth={1.5}
-                  style={{ pointerEvents: 'none' }}
-                />
-              </g>
-            ))}
-          </>
-        );
-      })()}
+              {svgPts.map((p, i) => (
+                <g key={i}>
+                  <circle
+                    cx={p.x} cy={p.y} r={10}
+                    fill="transparent"
+                    style={{ cursor: 'grab', pointerEvents: 'auto' }}
+                    onMouseDown={e => onPointDragStart(e, { mode: 'edit', ringIndex: ri, pointIndex: i })}
+                    onContextMenu={e => {
+                      e.preventDefault();
+                      if (ring.length > 3) onDeletePoint({ mode: 'edit', ringIndex: ri, pointIndex: i });
+                    }}
+                    onDoubleClick={e => {
+                      e.stopPropagation();
+                      onAddPointOnEdge({ mode: 'edit', ringIndex: ri, pointIndex: i });
+                    }}
+                  />
+                  <circle
+                    cx={p.x} cy={p.y}
+                    r={isDraggingEditVertex(ri, i) ? 4 : 3}
+                    fill="#FFD700"
+                    stroke="#fff" strokeWidth={1.5}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                </g>
+              ))}
+            </React.Fragment>
+          );
+        })}
     </svg>
   );
 };

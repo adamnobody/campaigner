@@ -5,7 +5,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
 import PentagonIcon from '@mui/icons-material/Pentagon';
-import { sxDivider, sxSectionLabel, sxPanelRoot, hexToRgb } from './mapUtils';
+import { sxDivider, sxSectionLabel, sxPanelRoot, hexToRgb, territoryTotalPointCount } from './mapUtils';
 import type { Territory, FactionOption } from './mapUtils';
 
 type Props = {
@@ -43,7 +43,7 @@ export const MapTerritoryPanel: React.FC<Props> = ({
           {selectedTerritory.name}
         </Typography>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>
-          Территория · {selectedTerritory.points.length} точек
+          Территория · контуров: {selectedTerritory.rings.length}, точек: {territoryTotalPointCount(selectedTerritory)}
         </Typography>
       </Box>
       <IconButton size="small" onClick={onClose} sx={{ color: 'rgba(255,255,255,0.4)' }}>

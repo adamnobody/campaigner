@@ -61,7 +61,8 @@ export interface Marker {
 export interface Territory {
   id: number; mapId: number; name: string; description: string;
   color: string; opacity: number; borderColor: string; borderWidth: number; smoothing: number;
-  points: { x: number; y: number }[];
+  /** Несколько несвязных контуров (0–100 % карты), материк и анклавы. */
+  rings: { x: number; y: number }[][];
   factionId: number | null; sortOrder: number;
 }
 export interface MapData {
@@ -81,14 +82,27 @@ export const normalizeMarker = (m: any): Marker => ({
   linkedNoteId: m.linkedNoteId || null, childMapId: m.childMapId || null,
 });
 
-export const normalizeTerritory = (t: any): Territory => ({
-  id: t.id, mapId: t.mapId, name: t.name, description: t.description || '',
-  color: t.color || '#4ECDC4', opacity: t.opacity ?? 0.25,
-  borderColor: t.borderColor || '#4ECDC4', borderWidth: t.borderWidth ?? 1.5,
-  smoothing: t.smoothing ?? 0,
-  points: (t.points || []).map((p: any) => ({ x: p.x * 100, y: p.y * 100 })),
-  factionId: t.factionId || null, sortOrder: t.sortOrder || 0,
-});
+const mapRingFromApi = (ring: any[]): { x: number; y: number }[] =>
+  ring.map((p: any) => ({ x: p.x * 100, y: p.y * 100 }));
+
+export const normalizeTerritory = (t: any): Territory => {
+  let rings: { x: number; y: number }[][];
+  if (Array.isArray(t.rings) && t.rings.length > 0) {
+    rings = t.rings.map((ring: any[]) => mapRingFromApi(ring));
+  } else if (Array.isArray(t.points) && t.points.length > 0) {
+    rings = [mapRingFromApi(t.points)];
+  } else {
+    rings = [];
+  }
+  return {
+    id: t.id, mapId: t.mapId, name: t.name, description: t.description || '',
+    color: t.color || '#4ECDC4', opacity: t.opacity ?? 0.25,
+    borderColor: t.borderColor || '#4ECDC4', borderWidth: t.borderWidth ?? 1.5,
+    smoothing: t.smoothing ?? 0,
+    rings,
+    factionId: t.factionId || null, sortOrder: t.sortOrder || 0,
+  };
+};
 
 export const normalizeMap = (m: any): MapData => ({
   id: m.id, projectId: m.projectId || m.project_id,
@@ -186,6 +200,35 @@ export const isPointInPolygon = (px: number, py: number, polygon: { x: number; y
   }
   return inside;
 };
+
+export function polygonAreaPercent(pts: { x: number; y: number }[]): number {
+  let sum = 0;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    sum += pts[j].x * pts[i].y - pts[i].x * pts[j].y;
+  }
+  return Math.abs(sum / 2);
+}
+
+/** Контур с наибольшей площадью (для подписи / фокуса). */
+export function getLargestRing(territory: Territory): { x: number; y: number }[] {
+  if (!territory.rings.length) return [];
+  return territory.rings.reduce((best, ring) =>
+    polygonAreaPercent(ring) > polygonAreaPercent(best) ? ring : best
+  );
+}
+
+export function territoryTotalPointCount(territory: Territory): number {
+  return territory.rings.reduce((s, r) => s + r.length, 0);
+}
+
+export function isPointInTerritory(px: number, py: number, territory: Territory): boolean {
+  return territory.rings.some(ring => isPointInPolygon(px, py, ring));
+}
+
+/** Событие начала перетаскивания вершины: черновой контур или редактирование с индексом кольца. */
+export type TerritoryPointDragPayload =
+  | { mode: 'draw'; pointIndex: number }
+  | { mode: 'edit'; ringIndex: number; pointIndex: number };
 
 export const hexToRgb = (hex: string): string => {
   const r = parseInt(hex.slice(1, 3), 16);
