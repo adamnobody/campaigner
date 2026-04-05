@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, Paper, TextField, IconButton,
-  ToggleButtonGroup, ToggleButton, Chip, Divider, Tooltip,
-  List, ListItem, ListItemText,
+  ToggleButtonGroup, ToggleButton, Chip, Tooltip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -14,20 +13,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SyncIcon from '@mui/icons-material/Sync';
-import FormatBoldIcon from '@mui/icons-material/FormatBold';
-import FormatItalicIcon from '@mui/icons-material/FormatItalic';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
-import CodeIcon from '@mui/icons-material/Code';
-import TitleIcon from '@mui/icons-material/Title';
-import LinkIcon from '@mui/icons-material/Link';
-import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
-import UndoIcon from '@mui/icons-material/Undo';
-import RedoIcon from '@mui/icons-material/Redo';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -36,7 +22,8 @@ import { useHistory } from '@/hooks/useHistory';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { wikiApi, notesApi } from '@/api/axiosClient';
-import { ToolbarButton } from '@/pages/note-editor/ToolbarButton';
+import { NoteEditorMarkdownToolbar } from '@/pages/note-editor/NoteEditorMarkdownToolbar';
+import { NoteEditorWikiSidebar, type EditorWikiLink } from '@/pages/note-editor/NoteEditorWikiSidebar';
 import { InsertWikiLinkDialog } from '@/pages/note-editor/InsertWikiLinkDialog';
 import { CreateWikiLinkDialog } from '@/pages/note-editor/CreateWikiLinkDialog';
 import { MarkdownPreview } from '@/pages/note-editor/MarkdownPreview';
@@ -45,15 +32,6 @@ import { shallow } from 'zustand/shallow';
 const AUTOSAVE_DELAY = 3000;
 
 type EditorMode = 'edit' | 'preview' | 'split';
-
-interface WikiLink {
-  id: number;
-  sourceNoteId: number;
-  targetNoteId: number;
-  sourceTitle?: string;
-  targetTitle?: string;
-  label: string;
-}
 
 export const NoteEditorPage: React.FC = () => {
   const { projectId, noteId } = useParams<{ projectId: string; noteId: string }>();
@@ -78,7 +56,7 @@ export const NoteEditorPage: React.FC = () => {
 
   // Wiki sidebar
   const [showLinks, setShowLinks] = useState(false);
-  const [wikiLinks, setWikiLinks] = useState<WikiLink[]>([]);
+  const [wikiLinks, setWikiLinks] = useState<EditorWikiLink[]>([]);
   const [wikiNotes, setWikiNotes] = useState<{ id: number; title: string }[]>([]);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [insertWikiDialogOpen, setInsertWikiDialogOpen] = useState(false);
@@ -394,46 +372,14 @@ export const NoteEditorPage: React.FC = () => {
   const renderEditor = () => (
     <Box ref={editorScrollRef} onScroll={handleEditorScroll} sx={{ height: '100%', overflow: 'auto' }}>
       {isMarkdown && (
-        <Box sx={{ display: 'flex', gap: 0.5, p: 1, borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Tooltip title="Отменить (Ctrl+Z)">
-            <span>
-              <IconButton size="small" onClick={handleUndo} disabled={!history.canUndo}
-                sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-disabled': { color: 'rgba(255,255,255,0.12)' }, borderRadius: 1, width: 30, height: 30 }}>
-                <UndoIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title="Повторить (Ctrl+Shift+Z)">
-            <span>
-              <IconButton size="small" onClick={handleRedo} disabled={!history.canRedo}
-                sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-disabled': { color: 'rgba(255,255,255,0.12)' }, borderRadius: 1, width: 30, height: 30 }}>
-                <RedoIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
-          <ToolbarButton icon={<TitleIcon />} tooltip="Заголовок" onClick={() => insertMarkdown('heading')} />
-          <ToolbarButton icon={<FormatBoldIcon />} tooltip="Жирный (Ctrl+B)" onClick={() => insertMarkdown('bold')} />
-          <ToolbarButton icon={<FormatItalicIcon />} tooltip="Курсив (Ctrl+I)" onClick={() => insertMarkdown('italic')} />
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
-          <ToolbarButton icon={<FormatListBulletedIcon />} tooltip="Список" onClick={() => insertMarkdown('list')} />
-          <ToolbarButton icon={<FormatQuoteIcon />} tooltip="Цитата" onClick={() => insertMarkdown('quote')} />
-          <ToolbarButton icon={<CodeIcon />} tooltip="Код" onClick={() => insertMarkdown('code')} />
-          <ToolbarButton icon={<LinkIcon />} tooltip="Ссылка" onClick={() => insertMarkdown('link')} />
-          <ToolbarButton icon={<HorizontalRuleIcon />} tooltip="Разделитель" onClick={() => insertMarkdown('hr')} />
-          {isWiki && (
-            <>
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
-              <Tooltip title="Внутренняя вики-ссылка">
-                <IconButton size="small" onClick={() => insertMarkdown('wikilink')}
-                  sx={{ color: 'rgba(78,205,196,0.6)', borderRadius: 1, width: 30, height: 30,
-                    '&:hover': { color: 'rgba(78,205,196,1)', backgroundColor: 'rgba(78,205,196,0.1)' } }}>
-                  <MenuBookIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-        </Box>
+        <NoteEditorMarkdownToolbar
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onInsertMarkdown={insertMarkdown}
+          isWiki={isWiki}
+        />
       )}
 
       <TextField
@@ -456,91 +402,6 @@ export const NoteEditorPage: React.FC = () => {
       />
     </Box>
   );
-
-  /** Wiki links sidebar */
-  const renderWikiSidebar = () => {
-    if (!showLinks) return null;
-
-    return (
-      <Box sx={{
-        width: 260, flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      }}>
-        <Box sx={{ p: 1.5, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box display="flex" alignItems="center" gap={0.5}>
-            <AccountTreeIcon sx={{ fontSize: 16, color: 'rgba(78,205,196,0.6)' }} />
-            <Typography variant="subtitle2" sx={{ color: 'rgba(78,205,196,0.8)', fontWeight: 600, fontSize: '0.8rem' }}>
-              Связи ({wikiLinks.length})
-            </Typography>
-          </Box>
-          <Tooltip title="Добавить связь">
-            <IconButton size="small" onClick={() => setLinkDialogOpen(true)}
-              sx={{ color: 'rgba(78,205,196,0.5)', '&:hover': { color: 'rgba(78,205,196,1)' } }}>
-              <AddIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        <Box sx={{ flexGrow: 1, overflow: 'auto', p: 1 }}>
-          {wikiLinks.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 3 }}>
-              <AccountTreeIcon sx={{ fontSize: 32, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', display: 'block' }}>
-                Нет связей
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.15)', display: 'block', fontSize: '0.65rem' }}>
-                Свяжите с другими вики-статьями
-              </Typography>
-            </Box>
-          ) : (
-            <List disablePadding dense>
-              {wikiLinks.map(link => {
-                const otherTitle = (link.sourceNoteId === nid ? link.targetTitle : link.sourceTitle) || '';
-                const otherId = link.sourceNoteId === nid ? link.targetNoteId : link.sourceNoteId;
-                return (
-                  <ListItem
-                    key={link.id}
-                    secondaryAction={
-                      <IconButton size="small" onClick={() => handleDeleteLink(link.id)}
-                        sx={{ color: 'rgba(255,100,100,0.3)', '&:hover': { color: 'rgba(255,100,100,0.7)' } }}>
-                        <DeleteIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                    }
-                    onClick={() => navigate(`/project/${pid}/notes/${otherId}`)}
-                    sx={{
-                      cursor: 'pointer', borderRadius: 1, mb: 0.5,
-                      backgroundColor: 'rgba(78,205,196,0.04)',
-                      border: '1px solid rgba(78,205,196,0.08)',
-                      '&:hover': { backgroundColor: 'rgba(78,205,196,0.1)' },
-                    }}
-                  >
-                    <ListItemText
-                      primary={
-                        <Typography sx={{ fontSize: '0.8rem', color: '#fff', fontWeight: 500 }} noWrap>
-                          {otherTitle}
-                        </Typography>
-                      }
-                      secondary={link.label ? (
-                        <Typography variant="caption" sx={{ color: 'rgba(78,205,196,0.5)', fontSize: '0.65rem' }}>
-                          {link.label}
-                        </Typography>
-                      ) : null}
-                    />
-                  </ListItem>
-                );
-              })}
-            </List>
-          )}
-        </Box>
-
-        <Box sx={{ p: 1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', display: 'block', textAlign: 'center' }}>
-            Используйте [Текст ссылки](/__note__/ID)
-          </Typography>
-        </Box>
-      </Box>
-    );
-  };
 
   return (
     <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
@@ -625,7 +486,15 @@ export const NoteEditorPage: React.FC = () => {
           )}
         </Paper>
 
-        {renderWikiSidebar()}
+        {showLinks && (
+          <NoteEditorWikiSidebar
+            wikiLinks={wikiLinks}
+            currentNoteId={nid}
+            onNavigateToNote={(id) => navigate(`/project/${pid}/notes/${id}`)}
+            onOpenCreateLink={() => setLinkDialogOpen(true)}
+            onDeleteLink={handleDeleteLink}
+          />
+        )}
       </Box>
 
       <InsertWikiLinkDialog

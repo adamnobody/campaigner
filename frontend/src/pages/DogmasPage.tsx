@@ -1,19 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Box, Typography, Paper, TextField, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions,
+  Box, Typography, TextField,
   Button, Chip, Select, MenuItem, FormControl,
-  InputAdornment, Collapse, Tooltip, Switch,
-  FormControlLabel, InputLabel,
+  InputAdornment, Collapse,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import GavelIcon from '@mui/icons-material/Gavel';
 import { useParams } from 'react-router-dom';
 import { useDogmaStore } from '@/store/useDogmaStore';
@@ -30,12 +24,8 @@ import {
   DOGMA_IMPORTANCE_LABELS,
 } from '@campaigner/shared';
 import type { Dogma } from '@campaigner/shared';
-
-const IMPORTANCE_COLORS: Record<string, string> = {
-  fundamental: 'rgba(255,107,107,0.8)',
-  major: 'rgba(255,200,100,0.8)',
-  minor: 'rgba(130,130,255,0.6)',
-};
+import { DogmaFormDialog } from '@/pages/dogma/DogmaFormDialog';
+import { DogmaListItem } from '@/pages/dogma/DogmaListItem';
 
 const PAGE_SIZE = 30;
 
@@ -425,125 +415,12 @@ export const DogmasPage: React.FC = () => {
                 <Collapse in={!collapsed}>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pl: 1 }}>
                     {group.dogmas.map((dogma) => (
-                      <Paper
+                      <DogmaListItem
                         key={dogma.id}
-                        sx={{
-                          p: 2.5,
-                          backgroundColor: 'rgba(255,255,255,0.04)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          borderLeft: `4px solid ${IMPORTANCE_COLORS[dogma.importance] || 'rgba(130,130,255,0.6)'}`,
-                          borderRadius: 2,
-                          transition: 'all 0.15s',
-                          '&:hover': {
-                            backgroundColor: 'rgba(255,255,255,0.07)',
-                            borderColor: 'rgba(255,255,255,0.15)',
-                            '& .dogma-actions': { opacity: 1 },
-                          },
-                        }}
-                      >
-                        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                            {/* Title row */}
-                            <Box display="flex" alignItems="center" gap={1} mb={0.5} flexWrap="wrap">
-                              {dogma.icon && (
-                                <Typography sx={{ fontSize: '1.2rem' }}>{dogma.icon}</Typography>
-                              )}
-                              <Typography sx={{ fontWeight: 700, color: '#fff', fontSize: '1.05rem' }}>
-                                {dogma.title}
-                              </Typography>
-                              <Chip
-                                label={DOGMA_IMPORTANCE_LABELS[dogma.importance]}
-                                size="small"
-                                sx={{
-                                  height: 20, fontSize: '0.65rem', fontWeight: 600,
-                                  backgroundColor: IMPORTANCE_COLORS[dogma.importance] || 'rgba(130,130,255,0.2)',
-                                  color: '#fff', borderRadius: 1,
-                                }}
-                              />
-                              {!dogma.isPublic && (
-                                <Tooltip title="Не известна жителям мира">
-                                  <VisibilityOffIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.3)' }} />
-                                </Tooltip>
-                              )}
-                            </Box>
-
-                            {/* Description */}
-                            {dogma.description && (
-                              <Typography variant="body2" sx={{
-                                color: 'rgba(255,255,255,0.5)', fontSize: '0.88rem', mt: 0.5,
-                                overflow: 'hidden', textOverflow: 'ellipsis',
-                                display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
-                              }}>
-                                {dogma.description}
-                              </Typography>
-                            )}
-
-                            {/* Impact */}
-                            {dogma.impact && (
-                              <Box display="flex" alignItems="center" gap={0.5} mt={1}>
-                                <Typography variant="caption" sx={{
-                                  color: 'rgba(255,200,100,0.7)', fontWeight: 600, flexShrink: 0,
-                                }}>
-                                  Влияние:
-                                </Typography>
-                                <Typography variant="caption" sx={{
-                                  color: 'rgba(255,255,255,0.4)',
-                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>
-                                  {dogma.impact}
-                                </Typography>
-                              </Box>
-                            )}
-
-                            {/* Exceptions */}
-                            {dogma.exceptions && (
-                              <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
-                                <Typography variant="caption" sx={{
-                                  color: 'rgba(255,107,107,0.7)', fontWeight: 600, flexShrink: 0,
-                                }}>
-                                  Исключения:
-                                </Typography>
-                                <Typography variant="caption" sx={{
-                                  color: 'rgba(255,255,255,0.4)',
-                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>
-                                  {dogma.exceptions}
-                                </Typography>
-                              </Box>
-                            )}
-
-                            {/* Tags */}
-                            {dogma.tags && dogma.tags.length > 0 && (
-                              <Box display="flex" gap={0.5} mt={1} flexWrap="wrap">
-                                {dogma.tags.map((tag: any) => (
-                                  <Chip key={tag.id} label={tag.name} size="small" sx={{
-                                    height: 20, fontSize: '0.65rem', fontWeight: 600,
-                                    backgroundColor: tag.color || 'rgba(130,130,255,0.2)',
-                                    color: '#fff', borderRadius: 1,
-                                  }} />
-                                ))}
-                              </Box>
-                            )}
-                          </Box>
-
-                          {/* Actions */}
-                          <Box className="dogma-actions" display="flex" alignItems="center" gap={0}
-                            sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0, ml: 1 }}>
-                            <Tooltip title="Редактировать">
-                              <IconButton size="small" onClick={() => handleOpenEdit(dogma)}
-                                sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#fff' } }}>
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Удалить">
-                              <IconButton size="small" onClick={() => handleDelete(dogma.id, dogma.title)}
-                                sx={{ color: 'rgba(255,100,100,0.4)', '&:hover': { color: 'rgba(255,100,100,0.8)' } }}>
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </Box>
-                      </Paper>
+                        dogma={dogma}
+                        onEdit={handleOpenEdit}
+                        onDelete={handleDelete}
+                      />
                     ))}
                   </Box>
                 </Collapse>
@@ -562,104 +439,30 @@ export const DogmasPage: React.FC = () => {
         </>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-          {editingDogma ? 'Редактировать догму' : 'Новая догма'}
-        </DialogTitle>
-        <DialogContent>
-          <TextField autoFocus fullWidth label="Формулировка *" value={title}
-            onChange={e => setTitle(e.target.value)} margin="normal"
-            placeholder="напр. Магия питается лунным светом" />
-
-          <Box display="flex" gap={2} mt={1}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Категория</InputLabel>
-              <Select value={category} onChange={e => setCategory(e.target.value)} label="Категория">
-                {DOGMA_CATEGORIES.map(cat => (
-                  <MenuItem key={cat} value={cat}>
-                    {DOGMA_CATEGORY_ICONS[cat]} {DOGMA_CATEGORY_LABELS[cat]}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Важность</InputLabel>
-              <Select value={importance} onChange={e => setImportance(e.target.value)} label="Важность">
-                {DOGMA_IMPORTANCE.map(imp => (
-                  <MenuItem key={imp} value={imp}>{DOGMA_IMPORTANCE_LABELS[imp]}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-
-          <TextField fullWidth label="Иконка (эмодзи)" value={icon}
-            onChange={e => setIcon(e.target.value)} margin="normal"
-            placeholder="напр. ⚡ 🌙 ⚔️"
-            sx={{ maxWidth: 200 }} />
-
-          <TextField fullWidth label="Описание" value={description}
-            onChange={e => setDescription(e.target.value)} margin="normal"
-            multiline rows={4}
-            placeholder="Подробное описание правила, его нюансы..." />
-
-          <TextField fullWidth label="Влияние на мир" value={impact}
-            onChange={e => setImpact(e.target.value)} margin="normal"
-            multiline rows={3}
-            placeholder="Как это правило влияет на жизнь, политику, войны..." />
-
-          <TextField fullWidth label="Исключения" value={exceptions}
-            onChange={e => setExceptions(e.target.value)} margin="normal"
-            multiline rows={2}
-            placeholder="Известные исключения из этого правила..." />
-
-          <Box display="flex" alignItems="center" gap={2} mt={2}>
-            <FormControlLabel
-              control={
-                <Switch checked={isPublic} onChange={e => setIsPublic(e.target.checked)}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': { color: 'rgba(78,205,196,0.9)' },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: 'rgba(78,205,196,0.5)' },
-                  }} />
-              }
-              label={
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  {isPublic
-                    ? <VisibilityIcon sx={{ fontSize: 18, color: 'rgba(78,205,196,0.8)' }} />
-                    : <VisibilityOffIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.3)' }} />}
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                    {isPublic ? 'Известна жителям мира' : 'Скрыта от жителей мира'}
-                  </Typography>
-                </Box>
-              }
-            />
-          </Box>
-
-          <TextField fullWidth label="Теги (через запятую)" value={tagsStr}
-            onChange={e => setTagsStr(e.target.value)} margin="normal"
-            placeholder="напр. магия, луна, ограничения" />
-
-          {tagsStr.trim() && (
-            <Box display="flex" gap={0.5} flexWrap="wrap" mt={1}>
-              {tagsStr.split(',').map((t, i) => {
-                const trimmed = t.trim();
-                return trimmed ? (
-                  <Chip key={i} label={trimmed} size="small"
-                    sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
-                ) : null;
-              })}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleSave} disabled={!title.trim()}>
-            {editingDogma ? 'Сохранить' : 'Создать'}
-          </DndButton>
-        </DialogActions>
-      </Dialog>
+      <DogmaFormDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        editingDogma={editingDogma}
+        title={title}
+        setTitle={setTitle}
+        category={category}
+        setCategory={setCategory}
+        description={description}
+        setDescription={setDescription}
+        impact={impact}
+        setImpact={setImpact}
+        exceptions={exceptions}
+        setExceptions={setExceptions}
+        isPublic={isPublic}
+        setIsPublic={setIsPublic}
+        importance={importance}
+        setImportance={setImportance}
+        icon={icon}
+        setIcon={setIcon}
+        tagsStr={tagsStr}
+        setTagsStr={setTagsStr}
+        onSave={handleSave}
+      />
     </Box>
   );
 };

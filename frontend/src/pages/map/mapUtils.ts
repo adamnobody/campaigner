@@ -29,6 +29,9 @@ export const ZOOM_SPEED = 0.1;
 export const DRAG_THRESHOLD = 4;
 export const PANEL_WIDTH = 360;
 
+/** Если у любой территории больше точек — не рисуем SVG filters (blur/glow): иначе при зуме Chromium даёт артефакты слоёв. */
+export const TERRITORY_SVG_FILTER_MAX_POINTS = 56;
+
 export type MarkerIcon = CreateMarker['icon'];
 export type MapMode = 'select' | 'draw_territory';
 
@@ -124,6 +127,53 @@ export const pointsToSvgPath = (points: { x: number; y: number }[]): string => {
   if (points.length < 2) return '';
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 };
+
+/** Средняя ширина глифа относительно fontSize (латиница + кириллица, ~600 weight). */
+const TERRITORY_LABEL_AVG_CHAR_EM = 0.52;
+const TERRITORY_LABEL_MIN_SCREEN_PX = 11;
+const TERRITORY_LABEL_MAX_SVG_PX = 96;
+
+/**
+ * Размер подписи территории в координатах SVG (пиксели изображения карты).
+ * Базовый размер от bbox; не ниже порога читаемости на экране при текущем зуме (как у маркеров).
+ * Подпись рисуется поверх территории без обрезки по полигону — длинное имя может выходить за контур.
+ */
+export function territoryLabelMetrics(
+  svgPts: { x: number; y: number }[],
+  name: string,
+  zoomDisplay: number
+): { fontSize: number; strokeWidth: number } {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of svgPts) {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  }
+  const bw = Math.max(maxX - minX, 1);
+  const bh = Math.max(maxY - minY, 1);
+  const padX = Math.max(6, bw * 0.035);
+  const padY = Math.max(6, bh * 0.035);
+  const innerW = Math.max(bw - 2 * padX, 3);
+  const innerH = Math.max(bh - 2 * padY, 3);
+
+  const len = Math.max(name.trim().length, 1);
+  const fitByWidth = innerW / (TERRITORY_LABEL_AVG_CHAR_EM * len);
+  const fitByHeight = innerH * 0.34;
+  let fit = Math.min(fitByWidth, fitByHeight);
+  fit = Math.max(5, Math.min(fit, 64));
+
+  const z = Math.max(zoomDisplay, MIN_ZOOM * 0.5);
+  const minSvg = TERRITORY_LABEL_MIN_SCREEN_PX / z;
+
+  const fontSize = Math.min(Math.max(fit * 0.9, minSvg), TERRITORY_LABEL_MAX_SVG_PX);
+
+  const strokeWidth = Math.min(6, Math.max(1.5, fontSize * 0.2));
+  return { fontSize, strokeWidth };
+}
 
 export const isPointInPolygon = (px: number, py: number, polygon: { x: number; y: number }[]): boolean => {
   let inside = false;
