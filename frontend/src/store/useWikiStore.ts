@@ -65,7 +65,7 @@ export const useWikiStore = create<WikiState>((set) => ({
     set({ error: null });
     try {
       const res = await wikiApi.createLink(data);
-      const created = res.data.data as WikiLink;
+      const created = res.data.data;
       set((state) => ({
         links: [created, ...state.links],
       }));

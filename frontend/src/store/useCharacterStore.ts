@@ -150,6 +150,7 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   },
 
   fetchRelationships: async (projectId) => {
+    set({ error: null });
     try {
       const res = await charactersApi.getRelationships(projectId);
       set({ relationships: res.data.data });
@@ -185,6 +186,7 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   },
 
   fetchGraph: async (projectId) => {
+    set({ error: null });
     try {
       const res = await charactersApi.getGraph(projectId);
       set({ graph: res.data.data });

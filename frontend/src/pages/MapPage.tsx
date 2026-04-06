@@ -4,19 +4,14 @@ import MapIcon from '@mui/icons-material/Map';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mapApi } from '@/api/maps';
-import { projectsApi } from '@/api/projects';
-import { notesApi } from '@/api/notes';
-import { factionsApi } from '@/api/factions';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 import {
-  DRAG_THRESHOLD,
-  DEFAULT_FORM, MARKER_COLORS, sxMapContainer,
-  extractData, normalizeMarker, normalizeTerritory, normalizeMap,
-  parseMarkers, parseTerritories, parseNotes, parseFactions,
-  preloadImage, isPointInTerritory, territoryTotalPointCount,
+  sxMapContainer,
+  extractData, normalizeMap,
+  territoryTotalPointCount,
 } from './map/mapUtils';
-import type { MapMode, Marker, Territory, MapData, NoteOption, FactionOption, TerritoryPointDragPayload } from './map/mapUtils';
+import type { MapMode, Marker, Territory, NoteOption, FactionOption } from './map/mapUtils';
 import { MapMarkerDialog } from './map/MapMarkerDialog';
 import { MapTerritoryDialog } from './map/MapTerritoryDialog';
 import { MapMarkerPanel } from './map/MapMarkerPanel';
@@ -29,7 +24,11 @@ import { useMapTerritoryDrawing } from './map/useMapTerritoryDrawing';
 import { shallow } from 'zustand/shallow';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useMapGeoHistory } from './map/useMapGeoHistory';
-import type { Project } from '@campaigner/shared';
+import { useMapData } from './map/useMapData';
+import { useMapNavigation } from './map/useMapNavigation';
+import { useMapMarkerCrud } from './map/useMapMarkerCrud';
+import { useMapTerritoryCrud } from './map/useMapTerritoryCrud';
+import { useMapInteractions } from './map/useMapInteractions';
 
 // ==================== Component ====================
 export const MapPage: React.FC = () => {
@@ -46,21 +45,11 @@ export const MapPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const transformRef = useRef<HTMLDivElement>(null);
-
-  // Data
-  const [project, setProject] = useState<Project | null>(null);
-  const [currentMap, setCurrentMap] = useState<MapData | null>(null);
-  const [markers, setMarkers] = useState<Marker[]>([]);
-  const [territories, setTerritories] = useState<Territory[]>([]);
-  const [notes, setNotes] = useState<NoteOption[]>([]);
-  const [factions, setFactions] = useState<FactionOption[]>([]);
-  const [mapBreadcrumbs, setMapBreadcrumbs] = useState<MapData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [transitioning, setTransitioning] = useState(false);
-  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
-
-  // Mode
   const [mode, setMode] = useState<MapMode>('select');
+  const [selectedMarker, setSelectedMarker] = useState<Marker | null>(null);
+  const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelType, setPanelType] = useState<'marker' | 'territory'>('marker');
 
   const {
     drawingCompletedRings,
@@ -73,6 +62,38 @@ export const MapPage: React.FC = () => {
     completeContour,
     buildRingsSnapshotForCreateDialog,
   } = useMapTerritoryDrawing(mode, showSnackbar);
+  const resetViewRef = useRef<() => void>(() => {});
+
+  const {
+    project,
+    currentMap,
+    markers,
+    territories,
+    notes,
+    factions,
+    loading,
+    transitioning,
+    imgSize,
+    setImgSize,
+    setProject,
+    setCurrentMap,
+    setMarkers,
+    setTerritories,
+    loadMapData,
+  } = useMapData({
+    projectId: pid,
+    mapId: mid,
+    showSnackbar,
+    clearDrawingDraft,
+    resetView: () => resetViewRef.current(),
+    onBeforeMapLoad: () => {
+      setSelectedMarker(null);
+      setSelectedTerritory(null);
+      setPanelOpen(false);
+      setMode('select');
+    },
+    onInitialMapResolved: (map) => setMapBreadcrumbs([map]),
+  });
 
   const {
     zoomDisplay,
@@ -90,43 +111,134 @@ export const MapPage: React.FC = () => {
     transformRef,
     wheelEnabled: !loading,
   });
+  resetViewRef.current = resetView;
 
-  // Drag markers
-  const [draggingMarker, setDraggingMarker] = useState<Marker | null>(null);
-  const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
-  const dragStartScreenRef = useRef({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
-  const didDragRef = useRef(false);
-  const lastDragPreviewUpdateAtRef = useRef(0);
-  const lastPointDragUpdateAtRef = useRef(0);
+  const {
+    mapBreadcrumbs,
+    setMapBreadcrumbs,
+    navigateToChildMap,
+    navigateToBreadcrumb,
+    navigateToParent,
+  } = useMapNavigation({ loadMapData });
 
-  // Drag territory points (черновик или редактирование: кольцо + вершина)
-  const [draggingTerritoryPoint, setDraggingTerritoryPoint] = useState<TerritoryPointDragPayload | null>(null);
-  const [editingTerritoryPoints, setEditingTerritoryPoints] = useState<Territory | null>(null);
-
-  // Dialog (markers)
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
-  const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null);
-  const [markerForm, setMarkerForm] = useState({ ...DEFAULT_FORM });
-  const [childMapFile, setChildMapFile] = useState<File | null>(null);
-  const [childMapPreview, setChildMapPreview] = useState<string | null>(null);
-
-  // Dialog (territory)
-  const [territoryDialogOpen, setTerritoryDialogOpen] = useState(false);
-  const [editingTerritory, setEditingTerritory] = useState<Territory | null>(null);
-  const [territoryForm, setTerritoryForm] = useState({
-    name: '', description: '', color: '#4ECDC4', opacity: 0.25,
-    borderColor: '#4ECDC4', borderWidth: 1.5, smoothing: 0, factionId: null as number | null,
+  const {
+    dialogOpen,
+    editingMarker,
+    markerForm,
+    childMapFile,
+    childMapPreview,
+    draggingMarker,
+    dragPreview,
+    didDragRef,
+    isDraggingRef,
+    openNewMarkerDialogAt,
+    setMarkerForm,
+    handleMarkerMouseDown,
+    handleMarkerDragMove,
+    handleMarkerDragEnd,
+    handleSaveMarker,
+    handleDeleteMarker,
+    handleEditMarker,
+    handleUploadMap,
+    closeDialog,
+    handleChildMapFileChange,
+    clearChildMapFile,
+  } = useMapMarkerCrud({
+    projectId: pid,
+    currentMap,
+    selectedMarker,
+    setSelectedMarker,
+    setPanelOpen,
+    setMarkers,
+    setCurrentMap,
+    setProject,
+    showSnackbar,
+    showConfirmDialog,
   });
 
-  // Panel
-  const [selectedMarker, setSelectedMarker] = useState<Marker | null>(null);
-  const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [panelType, setPanelType] = useState<'marker' | 'territory'>('marker');
+  const {
+    territoryDialogOpen,
+    editingTerritory,
+    editingTerritoryPoints,
+    territoryForm,
+    setTerritoryForm,
+    setEditingTerritoryPoints,
+    openCreateTerritoryDialogFromRings,
+    handleSaveTerritory,
+    startEditingPoints,
+    saveEditingPoints,
+    cancelEditingPoints,
+    deletePoint,
+    addPointOnEdge,
+    handleEditTerritory,
+    handleDeleteTerritory,
+    closeTerritoryDialog,
+  } = useMapTerritoryCrud({
+    currentMap,
+    pendingNewTerritoryRings,
+    setPendingNewTerritoryRings,
+    setDrawingPoints,
+    clearDrawingDraft,
+    setMode,
+    selectedTerritory,
+    setSelectedTerritory,
+    setPanelOpen,
+    setTerritories,
+    showSnackbar,
+    showConfirmDialog,
+  });
 
-  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const {
+    draggingTerritoryPoint,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handlePointDragStart,
+    handleMarkerClick,
+    handleMarkerDoubleClick,
+    handleTerritoryClick,
+    handleMapClick,
+    finishDrawing,
+    cancelDrawing,
+    handleMapModeChange,
+    closePanel,
+    resetForMapLoad,
+  } = useMapInteractions({
+    mode,
+    setMode,
+    currentMap,
+    territories,
+    transitioning,
+    draggingMarker,
+    didDragRef,
+    isDraggingRef,
+    isPanningRef,
+    panStartRef,
+    panOriginRef,
+    panRef,
+    applyTransform,
+    imgRef,
+    setDrawingPoints,
+    clearDrawingDraft,
+    buildRingsSnapshotForCreateDialog,
+    openNewMarkerDialogAt,
+    openCreateTerritoryDialogFromRings,
+    navigateToChildMap,
+    handleMarkerDragMove,
+    handleMarkerDragEnd,
+    editingTerritoryPoints,
+    setEditingTerritoryPoints,
+    panelOpen,
+    setPanelOpen,
+    panelType,
+    setPanelType,
+    selectedMarker,
+    setSelectedMarker,
+    selectedTerritory,
+    setSelectedTerritory,
+    setPendingNewTerritoryRings,
+    showSnackbar,
+  });
 
   const notesMap = useMemo(() => {
     const m = new Map<number, NoteOption>();
@@ -147,115 +259,11 @@ export const MapPage: React.FC = () => {
     currentMap?.imagePath ? `/api${currentMap.imagePath}` : project?.mapImagePath || null,
     [currentMap?.imagePath, project?.mapImagePath]);
 
-  // ==================== Data loading ====================
-  const loadMapData = useCallback(async (loadMapId: number) => {
-    setTransitioning(true);
-    setSelectedMarker(null);
-    setSelectedTerritory(null);
-    setPanelOpen(false);
-    setMode('select');
-    clearDrawingDraft();
-
-    try {
-      const mapRes = await mapApi.getMapById(loadMapId);
-      const mapData = normalizeMap(extractData(mapRes));
-
-      const [markersRes, territoriesRes, notesRes, factionsRes] = await Promise.all([
-        mapApi.getMarkersByMapId(mapData.id),
-        mapApi.getTerritoriesByMapId(mapData.id),
-        notesApi.getAll(pid),
-        factionsApi.getAll(pid),
-      ]);
-
-      const newMarkers = parseMarkers(extractData(markersRes));
-      const newTerritories = parseTerritories(extractData(territoriesRes));
-      const newNotes = parseNotes(extractData(notesRes));
-      const newFactions = parseFactions(extractData(factionsRes));
-
-      if (mapData.imagePath) {
-        await preloadImage(`/api${mapData.imagePath}`);
-      }
-
-      setCurrentMap(mapData);
-      setMarkers(newMarkers);
-      setTerritories(newTerritories);
-      setNotes(newNotes);
-      setFactions(newFactions);
-      setImgSize(null);
-      resetView();
-    } catch {
-      showSnackbar('Ошибка загрузки карты', 'error');
-    }
-    setTransitioning(false);
-  }, [pid, showSnackbar, clearDrawingDraft, resetView]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const init = async () => {
-      try {
-        const projRes = await projectsApi.getById(pid);
-        if (cancelled) return;
-        setProject(extractData(projRes));
-
-        let mapToLoad: MapData;
-        if (mid) {
-          mapToLoad = normalizeMap(extractData(await mapApi.getMapById(mid)));
-        } else {
-          try {
-            mapToLoad = normalizeMap(extractData(await mapApi.getRootMap(pid)));
-          } catch {
-            mapToLoad = normalizeMap(extractData(await mapApi.createMap({ projectId: pid, name: 'Корневая карта' })));
-          }
-        }
-        if (cancelled) return;
-
-        setCurrentMap(mapToLoad);
-        setMapBreadcrumbs([mapToLoad]);
-
-        const [markersRes, territoriesRes, notesRes, factionsRes] = await Promise.all([
-          mapApi.getMarkersByMapId(mapToLoad.id),
-          mapApi.getTerritoriesByMapId(mapToLoad.id),
-          notesApi.getAll(pid),
-          factionsApi.getAll(pid),
-        ]);
-        if (cancelled) return;
-
-        setMarkers(parseMarkers(extractData(markersRes)));
-        setTerritories(parseTerritories(extractData(territoriesRes)));
-        setNotes(parseNotes(extractData(notesRes)));
-        setFactions(parseFactions(extractData(factionsRes)));
-      } catch { /* ignore */ }
-      if (!cancelled) setLoading(false);
-    };
-
-    init();
-    return () => { cancelled = true; };
-  }, [pid, mid]);
-
   const { geoDate, setGeoDate, geoEventsCount } = useMapGeoHistory({
     projectId: pid,
     mapId: currentMap?.id ?? null,
     branchId: activeBranchId,
   });
-
-  // ==================== Navigation ====================
-  const navigateToChildMap = useCallback(async (childMapId: number) => {
-    const mapRes = await mapApi.getMapById(childMapId);
-    const childMap = normalizeMap(extractData(mapRes));
-    setMapBreadcrumbs(prev => [...prev, childMap]);
-    await loadMapData(childMapId);
-  }, [loadMapData]);
-
-  const navigateToBreadcrumb = useCallback(async (index: number) => {
-    const target = mapBreadcrumbs[index];
-    if (!target) return;
-    await loadMapData(target.id);
-    setMapBreadcrumbs(prev => prev.slice(0, index + 1));
-  }, [mapBreadcrumbs, loadMapData]);
-
-  const navigateToParent = useCallback(() => {
-    if (mapBreadcrumbs.length > 1) navigateToBreadcrumb(mapBreadcrumbs.length - 2);
-  }, [mapBreadcrumbs, navigateToBreadcrumb]);
 
   // ==================== Child map ops ====================
   const handleCreateChildMap = useCallback(async (marker: Marker) => {
@@ -284,517 +292,6 @@ export const MapPage: React.FC = () => {
       showSnackbar('Ошибка загрузки изображения', 'error');
     }
   }, [showSnackbar]);
-
-  // ==================== Pan & Drag ====================
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.altKey)) {
-      isPanningRef.current = true;
-      panStartRef.current = { x: e.clientX, y: e.clientY };
-      panOriginRef.current = { ...panRef.current };
-      e.preventDefault();
-    }
-  }, []);
-
-  const handlePointDragStart = useCallback((e: React.MouseEvent, payload: TerritoryPointDragPayload) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setDraggingTerritoryPoint(payload);
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isPanningRef.current) {
-      panRef.current = {
-        x: panOriginRef.current.x + e.clientX - panStartRef.current.x,
-        y: panOriginRef.current.y + e.clientY - panStartRef.current.y,
-      };
-      applyTransform();
-      return;
-    }
-
-    // Drag territory point
-    if (draggingTerritoryPoint !== null && imgRef.current) {
-      const now = performance.now();
-      if (now - lastPointDragUpdateAtRef.current < 16) {
-        return;
-      }
-      lastPointDragUpdateAtRef.current = now;
-
-      const rect = imgRef.current.getBoundingClientRect();
-      const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-      const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-
-      if (draggingTerritoryPoint.mode === 'edit' && editingTerritoryPoints) {
-        setEditingTerritoryPoints(prev => {
-          if (!prev) return prev;
-          const { ringIndex, pointIndex } = draggingTerritoryPoint;
-          const newRings = prev.rings.map((r, ri) =>
-            ri === ringIndex
-              ? r.map((p, pi) => (pi === pointIndex ? { x: px, y: py } : p))
-              : r
-          );
-          return { ...prev, rings: newRings };
-        });
-      } else if (draggingTerritoryPoint.mode === 'draw') {
-        setDrawingPoints(prev => {
-          const newPts = [...prev];
-          newPts[draggingTerritoryPoint.pointIndex] = { x: px, y: py };
-          return newPts;
-        });
-      }
-      return;
-    }
-
-    if (isDraggingRef.current && draggingMarker && imgRef.current) {
-      const dx = e.clientX - dragStartScreenRef.current.x;
-      const dy = e.clientY - dragStartScreenRef.current.y;
-      if (!didDragRef.current && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
-      didDragRef.current = true;
-      const now = performance.now();
-      if (now - lastDragPreviewUpdateAtRef.current < 16) {
-        return;
-      }
-      lastDragPreviewUpdateAtRef.current = now;
-
-      const rect = imgRef.current.getBoundingClientRect();
-      setDragPreview({
-        x: Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100)),
-        y: Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100)),
-      });
-    }
-  }, [draggingMarker, draggingTerritoryPoint, editingTerritoryPoints, applyTransform]);
-
-  const handleMouseUp = useCallback(async () => {
-    if (draggingTerritoryPoint !== null) {
-      setDraggingTerritoryPoint(null);
-      return;
-    }
-
-    if (isPanningRef.current) {
-      isPanningRef.current = false;
-      return;
-    }
-
-    if (isDraggingRef.current && draggingMarker) {
-      isDraggingRef.current = false;
-
-      if (didDragRef.current && dragPreview) {
-        try {
-          await mapApi.updateMarker(draggingMarker.id, {
-            positionX: dragPreview.x / 100, positionY: dragPreview.y / 100,
-          });
-          setMarkers(prev => prev.map(m => m.id === draggingMarker.id ? { ...m, x: dragPreview.x, y: dragPreview.y } : m));
-          if (selectedMarker?.id === draggingMarker.id)
-            setSelectedMarker(prev => prev ? { ...prev, x: dragPreview.x, y: dragPreview.y } : prev);
-          showSnackbar('Маркер перемещён', 'success');
-        } catch {
-          showSnackbar('Ошибка перемещения', 'error');
-        }
-      }
-
-      setDraggingMarker(null);
-      setDragPreview(null);
-      lastDragPreviewUpdateAtRef.current = 0;
-      didDragRef.current = false;
-    }
-  }, [draggingMarker, draggingTerritoryPoint, dragPreview, selectedMarker?.id, showSnackbar]);
-
-  // ==================== Marker interactions ====================
-  const handleMarkerMouseDown = useCallback((e: React.MouseEvent, marker: Marker) => {
-    if (e.button !== 0 || e.altKey || mode !== 'select') return;
-    e.stopPropagation();
-    isDraggingRef.current = true;
-    didDragRef.current = false;
-    dragStartScreenRef.current = { x: e.clientX, y: e.clientY };
-    setDraggingMarker(marker);
-    setDragPreview(null);
-    lastDragPreviewUpdateAtRef.current = 0;
-  }, [mode]);
-
-  const handleMarkerClick = useCallback((e: React.MouseEvent, marker: Marker) => {
-    e.stopPropagation();
-    if (didDragRef.current || transitioning || mode !== 'select') return;
-
-    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-    clickTimerRef.current = setTimeout(() => {
-      clickTimerRef.current = null;
-      setSelectedMarker(marker);
-      setSelectedTerritory(null);
-      setPanelType('marker');
-      setPanelOpen(true);
-    }, 250);
-  }, [transitioning, mode]);
-
-  // ==================== Territory interactions ====================
-  const openNewMarkerDialogAt = useCallback((px: number, py: number) => {
-    setClickPos({ x: px, y: py });
-    setEditingMarker(null);
-    setMarkerForm({ ...DEFAULT_FORM });
-    setChildMapFile(null);
-    setChildMapPreview(null);
-    setSelectedTerritory(null);
-    setPanelOpen(false);
-    setDialogOpen(true);
-  }, []);
-
-  const handleTerritoryClick = useCallback((e: React.MouseEvent, _territory: Territory) => {
-    e.stopPropagation();
-    if (mode !== 'select') return;
-    if (e.shiftKey && imgRef.current) {
-      const rect = imgRef.current.getBoundingClientRect();
-      const px = ((e.clientX - rect.left) / rect.width) * 100;
-      const py = ((e.clientY - rect.top) / rect.height) * 100;
-      openNewMarkerDialogAt(px, py);
-      return;
-    }
-    setSelectedTerritory(_territory);
-    setSelectedMarker(null);
-    setPanelType('territory');
-    setPanelOpen(true);
-  }, [mode, openNewMarkerDialogAt]);
-
-  // ==================== Map click ====================
-  const handleMapClick = useCallback((e: React.MouseEvent) => {
-    if (isPanningRef.current || didDragRef.current || transitioning) return;
-    if (!imgRef.current || !currentMap) return;
-
-    const rect = imgRef.current.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * 100;
-    const py = ((e.clientY - rect.top) / rect.height) * 100;
-
-    if (mode === 'draw_territory') {
-      setDrawingPoints(prev => [...prev, { x: px, y: py }]);
-      return;
-    }
-
-    // Без Shift — клик по заливке территории перехватывает SVG; здесь только «пустая» карта.
-    if (!e.shiftKey) {
-      for (let i = territories.length - 1; i >= 0; i--) {
-        if (isPointInTerritory(px, py, territories[i])) {
-          setSelectedTerritory(territories[i]);
-          setSelectedMarker(null);
-          setPanelType('territory');
-          setPanelOpen(true);
-          return;
-        }
-      }
-    }
-
-    openNewMarkerDialogAt(px, py);
-  }, [transitioning, currentMap, mode, territories, openNewMarkerDialogAt]);
-
-  // ==================== Drawing territory (см. useMapTerritoryDrawing) ====================
-  const finishDrawing = useCallback(() => {
-    const rings = buildRingsSnapshotForCreateDialog();
-    if (!rings) return;
-    setPendingNewTerritoryRings(rings);
-    setTerritoryForm({
-      name: '', description: '', color: '#4ECDC4', opacity: 0.25,
-      borderColor: '#4ECDC4', borderWidth: 2, smoothing: 0, factionId: null,
-    });
-    setEditingTerritory(null);
-    setTerritoryDialogOpen(true);
-  }, [buildRingsSnapshotForCreateDialog, setPendingNewTerritoryRings]);
-
-  const cancelDrawing = useCallback(() => {
-    clearDrawingDraft();
-    setMode('select');
-  }, [clearDrawingDraft]);
-
-  const handleMapModeChange = useCallback(
-    (v: MapMode) => {
-      setMode(v);
-      clearDrawingDraft();
-    },
-    [clearDrawingDraft]
-  );
-
-  // ==================== Territory CRUD ====================
-  const handleSaveTerritory = useCallback(async () => {
-    if (!territoryForm.name.trim()) return;
-    try {
-      if (editingTerritory) {
-        const res = await mapApi.updateTerritory(editingTerritory.id, {
-          name: territoryForm.name,
-          description: territoryForm.description,
-          color: territoryForm.color,
-          opacity: territoryForm.opacity,
-          borderColor: territoryForm.borderColor,
-          borderWidth: territoryForm.borderWidth,
-          smoothing: territoryForm.smoothing,
-          factionId: territoryForm.factionId,
-        });
-        const updated = normalizeTerritory(extractData(res));
-        setTerritories(prev => prev.map(t => t.id === editingTerritory.id ? updated : t));
-      if (selectedTerritory?.id === editingTerritory.id) setSelectedTerritory(updated);
-        showSnackbar('Территория обновлена', 'success');
-      } else if (currentMap && pendingNewTerritoryRings?.length) {
-        const apiRings = pendingNewTerritoryRings.map(ring =>
-          ring.map(p => ({ x: p.x / 100, y: p.y / 100 }))
-        );
-        const res = await mapApi.createTerritory(currentMap.id, {
-          name: territoryForm.name,
-          description: territoryForm.description,
-          color: territoryForm.color,
-          opacity: territoryForm.opacity,
-          borderColor: territoryForm.borderColor,
-          borderWidth: territoryForm.borderWidth,
-          smoothing: territoryForm.smoothing,
-          factionId: territoryForm.factionId,
-          rings: apiRings,
-        });
-        const newTerritory = normalizeTerritory(extractData(res));
-        setTerritories(prev => [...prev, newTerritory]);
-        showSnackbar('Территория создана', 'success');
-      }
-      setTerritoryDialogOpen(false);
-      clearDrawingDraft();
-      setMode('select');
-    } catch (err: any) {
-      showSnackbar(err.message || 'Ошибка сохранения территории', 'error');
-    }
-  }, [territoryForm, editingTerritory, currentMap, pendingNewTerritoryRings, selectedTerritory?.id, showSnackbar, clearDrawingDraft]);
-
-  const startEditingPoints = useCallback((territory: Territory) => {
-    setEditingTerritoryPoints(territory);
-    setPanelOpen(false);
-  }, []);
-
-  const saveEditingPoints = useCallback(async () => {
-    if (!editingTerritoryPoints) return;
-    try {
-      const apiRings = editingTerritoryPoints.rings.map(ring =>
-        ring.map(p => ({ x: p.x / 100, y: p.y / 100 }))
-      );
-      const res = await mapApi.updateTerritory(editingTerritoryPoints.id, { rings: apiRings });
-      const updated = normalizeTerritory(extractData(res));
-      setTerritories(prev => prev.map(t => t.id === editingTerritoryPoints.id ? updated : t));
-      if (selectedTerritory?.id === editingTerritoryPoints.id) setSelectedTerritory(updated);
-      setEditingTerritoryPoints(null);
-      showSnackbar('Точки территории обновлены', 'success');
-    } catch {
-      showSnackbar('Ошибка сохранения точек', 'error');
-    }
-  }, [editingTerritoryPoints, selectedTerritory?.id, showSnackbar]);
-
-  const cancelEditingPoints = useCallback(() => {
-    setEditingTerritoryPoints(null);
-  }, []);
-
-  const deletePoint = useCallback((payload: TerritoryPointDragPayload) => {
-    if (payload.mode === 'draw') {
-      setDrawingPoints(prev => {
-        if (prev.length <= 1) return prev;
-        return prev.filter((_, i) => i !== payload.pointIndex);
-      });
-    } else {
-      setEditingTerritoryPoints(prev => {
-        if (!prev) return prev;
-        const ring = prev.rings[payload.ringIndex];
-        if (!ring || ring.length <= 3) return prev;
-        const newRings = prev.rings.map((r, ri) =>
-          ri === payload.ringIndex ? r.filter((_, i) => i !== payload.pointIndex) : r
-        );
-        return { ...prev, rings: newRings };
-      });
-    }
-  }, []);
-
-  const addPointOnEdge = useCallback((payload: TerritoryPointDragPayload) => {
-    if (payload.mode === 'draw') {
-      const index = payload.pointIndex;
-      setDrawingPoints(prev => {
-        const nextIdx = (index + 1) % prev.length;
-        const mid = {
-          x: (prev[index].x + prev[nextIdx].x) / 2,
-          y: (prev[index].y + prev[nextIdx].y) / 2,
-        };
-        const newPts = [...prev];
-        newPts.splice(index + 1, 0, mid);
-        return newPts;
-      });
-    } else {
-      setEditingTerritoryPoints(prev => {
-        if (!prev) return prev;
-        const ri = payload.ringIndex;
-        const index = payload.pointIndex;
-        const ring = prev.rings[ri];
-        const nextIdx = (index + 1) % ring.length;
-        const mid = {
-          x: (ring[index].x + ring[nextIdx].x) / 2,
-          y: (ring[index].y + ring[nextIdx].y) / 2,
-        };
-        const newRing = [...ring];
-        newRing.splice(index + 1, 0, mid);
-        const newRings = prev.rings.map((r, idx) => (idx === ri ? newRing : r));
-        return { ...prev, rings: newRings };
-      });
-    }
-  }, []);
-
-  const handleEditTerritory = useCallback((territory: Territory) => {
-    setEditingTerritory(territory);
-    setTerritoryForm({
-      name: territory.name,
-      description: territory.description,
-      color: territory.color,
-      opacity: territory.opacity,
-      borderColor: territory.borderColor,
-      borderWidth: territory.borderWidth,
-      smoothing: territory.smoothing,
-      factionId: territory.factionId,
-    });
-    setTerritoryDialogOpen(true);
-  }, []);
-
-  const handleDeleteTerritory = useCallback((territory: Territory) => {
-    showConfirmDialog('Удалить территорию', `Удалить "${territory.name}"?`, async () => {
-      try {
-        await mapApi.deleteTerritory(territory.id);
-        setTerritories(prev => prev.filter(t => t.id !== territory.id));
-        setSelectedTerritory(null);
-        setPanelOpen(false);
-        showSnackbar('Территория удалена', 'success');
-      } catch {
-        showSnackbar('Ошибка удаления', 'error');
-      }
-    });
-  }, [showConfirmDialog, showSnackbar]);
-
-  // ==================== Marker CRUD ====================
-  const handleSaveMarker = useCallback(async () => {
-    if (!markerForm.title.trim()) return;
-    try {
-      if (editingMarker) {
-        const res = await mapApi.updateMarker(editingMarker.id, {
-          title: markerForm.title, description: markerForm.description,
-          positionX: editingMarker.x / 100, positionY: editingMarker.y / 100,
-          icon: markerForm.icon, color: markerForm.color,
-          linkedNoteId: markerForm.linkedNoteId,
-        });
-        const updated = normalizeMarker(extractData(res));
-        setMarkers(prev => prev.map(m => m.id === editingMarker.id ? updated : m));
-        if (selectedMarker?.id === editingMarker.id) setSelectedMarker(updated);
-        showSnackbar('Маркер обновлён', 'success');
-      } else if (clickPos && currentMap) {
-        const res = await mapApi.createMarker(currentMap.id, {
-          title: markerForm.title, description: markerForm.description,
-          positionX: clickPos.x / 100, positionY: clickPos.y / 100,
-          icon: markerForm.icon, color: markerForm.color,
-          linkedNoteId: markerForm.linkedNoteId,
-        });
-        const newMarker = normalizeMarker(extractData(res));
-
-        if (markerForm.createChildMap && currentMap) {
-          try {
-            const mapRes = await mapApi.createMap({
-              projectId: pid, parentMapId: currentMap.id,
-              parentMarkerId: newMarker.id, name: `Карта: ${newMarker.title}`,
-            });
-            const childMap = normalizeMap(extractData(mapRes));
-            await mapApi.updateMarker(newMarker.id, { childMapId: childMap.id });
-            newMarker.childMapId = childMap.id;
-
-            if (childMapFile) {
-              try { await mapApi.uploadMapImage(childMap.id, childMapFile); }
-              catch { showSnackbar('Карта создана, но ошибка загрузки изображения', 'warning'); }
-            }
-          } catch {
-            showSnackbar('Маркер создан, но ошибка создания вложенной карты', 'warning');
-          }
-        }
-
-        setMarkers(prev => [...prev, newMarker]);
-        setChildMapFile(null);
-        setChildMapPreview(null);
-        showSnackbar('Маркер добавлен', 'success');
-      }
-      setDialogOpen(false);
-    } catch (err: any) {
-      showSnackbar(err.message || 'Ошибка сохранения', 'error');
-    }
-  }, [markerForm, editingMarker, clickPos, currentMap, pid, childMapFile, selectedMarker?.id, showSnackbar]);
-
-  const handleDeleteMarker = useCallback((marker: Marker) => {
-    showConfirmDialog('Удалить маркер', `Удалить "${marker.title}"?`, async () => {
-      try {
-        await mapApi.deleteMarker(marker.id);
-        setMarkers(prev => prev.filter(m => m.id !== marker.id));
-        setSelectedMarker(null);
-        setPanelOpen(false);
-        showSnackbar('Маркер удалён', 'success');
-      } catch {
-        showSnackbar('Ошибка удаления', 'error');
-      }
-    });
-  }, [showConfirmDialog, showSnackbar]);
-
-  const handleEditMarker = useCallback((marker: Marker) => {
-    setEditingMarker(marker);
-    setMarkerForm({
-      title: marker.title, description: marker.description || '',
-      icon: marker.icon || 'custom', color: marker.color || MARKER_COLORS[0],
-      linkedNoteId: marker.linkedNoteId, createChildMap: false,
-    });
-    setChildMapFile(null);
-    setChildMapPreview(null);
-    setDialogOpen(true);
-  }, []);
-
-  const handleUploadMap = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      if (currentMap) {
-        await mapApi.uploadMapImage(currentMap.id, file);
-        const updated = normalizeMap(extractData(await mapApi.getMapById(currentMap.id)));
-        setCurrentMap(updated);
-        if (!updated.parentMapId) {
-          await projectsApi.uploadMap(pid, file);
-          setProject(extractData(await projectsApi.getById(pid)));
-        }
-      }
-      showSnackbar('Карта загружена!', 'success');
-    } catch {
-      showSnackbar('Ошибка загрузки', 'error');
-    }
-  }, [currentMap, pid, showSnackbar]);
-
-  const closePanel = useCallback(() => {
-    setPanelOpen(false);
-    setSelectedMarker(null);
-    setSelectedTerritory(null);
-  }, []);
-
-  const closeDialog = useCallback(() => setDialogOpen(false), []);
-  const closeTerritoryDialog = useCallback(() => {
-    setTerritoryDialogOpen(false);
-    setPendingNewTerritoryRings(null);
-  }, []);
-
-  const handleChildMapFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setChildMapFile(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => setChildMapPreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-    e.target.value = '';
-  }, []);
-
-  const clearChildMapFile = useCallback(() => {
-    setChildMapFile(null);
-    setChildMapPreview(null);
-  }, []);
-
-  const handleMarkerDoubleClick = useCallback((e: React.MouseEvent, marker: Marker) => {
-    e.stopPropagation();
-    if (clickTimerRef.current) {
-      clearTimeout(clickTimerRef.current);
-      clickTimerRef.current = null;
-    }
-    if (marker.childMapId) navigateToChildMap(marker.childMapId);
-  }, [navigateToChildMap]);
 
   // ==================== Loading ====================
   if (loading) {
@@ -930,7 +427,7 @@ export const MapPage: React.FC = () => {
                     displayY={displayY}
                     linkedNote={getLinkedNote(marker.linkedNoteId)}
                     hasChildMap={!!marker.childMapId}
-                    onMarkerMouseDown={handleMarkerMouseDown}
+                    onMarkerMouseDown={(e, m) => handleMarkerMouseDown(e, m, mode)}
                     onMarkerClick={handleMarkerClick}
                     onMarkerDoubleClick={handleMarkerDoubleClick}
                   />

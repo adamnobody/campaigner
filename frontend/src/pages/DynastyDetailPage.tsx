@@ -33,8 +33,8 @@ import {
   DYNASTY_FAMILY_RELATION_LABELS,
 } from '@campaigner/shared';
 import type { DynastyMember, DynastyEvent } from '@campaigner/shared';
-import { FamilyTree } from '@/components/dynasty/FamilyTree';
-import { DynastyEventsTimeline } from '@/components/dynasty/DynastyEventsTimeline';
+import { FamilyTree } from '@/pages/dynasty/FamilyTree';
+import { DynastyEventsTimeline } from '@/pages/dynasty/DynastyEventsTimeline';
 import { shallow } from 'zustand/shallow';
 
 // ==================== Form ====================

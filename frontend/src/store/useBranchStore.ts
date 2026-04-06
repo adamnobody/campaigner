@@ -1,55 +1,72 @@
 import { create } from 'zustand';
 import type { ScenarioBranch } from '@campaigner/shared';
 import { branchesApi } from '@/api/branches';
+import { getErrorMessage } from '@/utils/error';
+import {
+  getActiveBranchId as getStoredActiveBranchId,
+  setActiveBranchId as setStoredActiveBranchId,
+  clearActiveBranchId as clearStoredActiveBranchId,
+} from './branchStorage';
 
 interface BranchState {
   branches: ScenarioBranch[];
+  activeProjectId: number | null;
   activeBranchId: number | null;
   loading: boolean;
+  initialized: boolean;
+  error: string | null;
   fetchBranches: (projectId: number) => Promise<void>;
   setActiveBranchId: (branchId: number | null) => void;
-}
-
-const ACTIVE_BRANCH_STORAGE_KEY = 'campaigner.activeBranchId';
-
-function getStoredActiveBranchId(): number | null {
-  const raw = localStorage.getItem(ACTIVE_BRANCH_STORAGE_KEY);
-  if (!raw) return null;
-  const parsed = Number(raw);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  clearError: () => void;
 }
 
 export const useBranchStore = create<BranchState>((set) => ({
   branches: [],
-  activeBranchId: getStoredActiveBranchId(),
+  activeProjectId: null,
+  activeBranchId: getStoredActiveBranchId() ?? null,
   loading: false,
+  initialized: false,
+  error: null,
   fetchBranches: async (projectId) => {
-    set({ loading: true });
+    set({ loading: true, error: null, activeProjectId: projectId });
     try {
       const res = await branchesApi.getAll(projectId);
       const branches = res.data.data ?? [];
       const mainBranch = branches.find((branch) => branch.isMain);
       set((state) => {
-        const activeExists = branches.some((b) => b.id === state.activeBranchId);
+        const storedForProject = getStoredActiveBranchId(projectId) ?? null;
+        const activeCandidate = state.activeProjectId === projectId ? state.activeBranchId : storedForProject;
+        const activeExists = branches.some((b) => b.id === activeCandidate);
         const fallback = mainBranch?.id ?? branches[0]?.id ?? null;
-        const activeBranchId = activeExists ? state.activeBranchId : fallback;
+        const activeBranchId = activeExists ? activeCandidate : fallback;
         if (activeBranchId) {
-          localStorage.setItem(ACTIVE_BRANCH_STORAGE_KEY, String(activeBranchId));
+          setStoredActiveBranchId(projectId, activeBranchId);
         } else {
-          localStorage.removeItem(ACTIVE_BRANCH_STORAGE_KEY);
+          clearStoredActiveBranchId(projectId);
         }
-        return { branches, activeBranchId, loading: false };
+        return { branches, activeBranchId, loading: false, initialized: true };
       });
-    } catch {
-      set({ loading: false });
+    } catch (error: unknown) {
+      set({
+        loading: false,
+        initialized: true,
+        error: getErrorMessage(error, 'Failed to fetch branches'),
+      });
     }
   },
   setActiveBranchId: (branchId) => {
-    if (branchId) {
-      localStorage.setItem(ACTIVE_BRANCH_STORAGE_KEY, String(branchId));
-    } else {
-      localStorage.removeItem(ACTIVE_BRANCH_STORAGE_KEY);
-    }
-    set({ activeBranchId: branchId });
+    set((state) => {
+      const projectId = state.activeProjectId;
+      if (!projectId) return { activeBranchId: branchId };
+
+      if (branchId) {
+        setStoredActiveBranchId(projectId, branchId);
+      } else {
+        clearStoredActiveBranchId(projectId);
+      }
+
+      return { activeBranchId: branchId };
+    });
   },
+  clearError: () => set({ error: null }),
 }));
