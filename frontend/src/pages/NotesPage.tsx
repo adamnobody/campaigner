@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Grid, Card, CardContent, TextField,
+  Box, Typography, Grid, TextField,
   InputAdornment, Tabs, Tab, Chip, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, FormControl, InputLabel, Select, MenuItem,
-  Autocomplete, Tooltip,
+  Autocomplete, Tooltip, useTheme, alpha,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -19,6 +19,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { GlassCard } from '@/components/ui/GlassCard';
 import { tagsApi } from '@/api/tags';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -29,6 +30,7 @@ export const NotesPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+  const theme = useTheme();
   const { notes, total, loading, fetchNotes, createNote, deleteNote, setTags } = useNoteStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
@@ -141,135 +143,157 @@ export const NotesPage: React.FC = () => {
     }
   };
 
+  const hasFilters = Boolean(debouncedSearch || tab !== 0);
+
   if (loading && notes.length === 0) return <LoadingScreen />;
 
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff' }}>
-          Заметки
-        </Typography>
+        <Box>
+          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
+            Заметки
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Свободные записи, идеи и черновики
+          </Typography>
+        </Box>
         <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
           Новая заметка
         </DndButton>
       </Box>
 
-      <TextField
-        fullWidth
-        placeholder="Поиск заметок..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2 }}
-        InputProps={{
-          startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
-        }}
-      />
+      {/* Filters */}
+      {(total > 0 || hasFilters) && (
+        <GlassCard sx={{ p: 2, mb: 3 }}>
+          <TextField
+            fullWidth
+            placeholder="Поиск заметок..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.secondary' }} /></InputAdornment>,
+            }}
+            size="small"
+          />
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
-        <Tab label={`Все (${total})`} />
-        <Tab label="Заметки" />
-        <Tab label="Вики" />
-        <Tab label="Маркеры" />
-      </Tabs>
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
+            <Tab label={`Все (${total})`} />
+            <Tab label="Заметки" />
+            <Tab label="Вики" />
+            <Tab label="Маркеры" />
+          </Tabs>
+        </GlassCard>
+      )}
 
-      {notes.length === 0 ? (
-        <EmptyState
-          icon={<DescriptionIcon sx={{ fontSize: 64 }} />}
-          title="Заметок пока нет"
-          description="Создавайте заметки, вики-статьи и документацию для вашего мира"
-          actionLabel="Создать заметку"
-          onAction={() => setCreateOpen(true)}
-        />
+      {/* Content */}
+      {notes.length === 0 && !loading ? (
+        hasFilters ? (
+          <EmptyState
+            icon={<SearchIcon sx={{ fontSize: 64 }} />}
+            title="Ничего не найдено"
+            description="Попробуйте изменить параметры поиска или выбрать другую вкладку"
+            actionLabel="Сбросить фильтры"
+            onAction={() => { setSearch(''); setTab(0); }}
+          />
+        ) : (
+          <EmptyState
+            icon={<DescriptionIcon sx={{ fontSize: 64 }} />}
+            title="Заметок пока нет"
+            description="Создавайте заметки, идеи и черновики для вашего мира"
+            actionLabel="Создать заметку"
+            onAction={() => setCreateOpen(true)}
+          />
+        )
       ) : (
         <Grid container spacing={2}>
           {notes.map(note => (
             <Grid item xs={12} md={6} key={note.id}>
-              <Card
+              <GlassCard
+                interactive
+                onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
                 sx={{
-                  cursor: 'pointer',
                   height: '100%',
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  transition: 'all 0.2s',
+                  p: 2.5,
+                  display: 'flex',
+                  flexDirection: 'column',
                   '&:hover': {
-                    transform: 'translateY(-2px)',
-                    backgroundColor: 'rgba(255,255,255,0.07)',
-                    borderColor: 'rgba(255,255,255,0.15)',
                     '& .card-actions': { opacity: 1 },
                   },
                 }}
-                onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
               >
-                <CardContent>
-                  <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                    <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flex: 1 }}>
-                      {note.isPinned && <PushPinIcon fontSize="small" color="primary" />}
-                      <Typography variant="h6" noWrap sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600 }}>
-                        {note.title}
-                      </Typography>
-                    </Box>
-                    <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
-                      <Tooltip title="Редактировать теги">
-                        <IconButton size="small" onClick={(e) => handleOpenTagsEdit(note, e)}
-                          sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'rgba(201,169,89,0.8)' } }}>
-                          <LocalOfferIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Удалить">
-                        <IconButton size="small" onClick={(e) => handleDelete(note.id, note.title, e)}
-                          sx={{ color: 'rgba(255,100,100,0.4)', '&:hover': { color: 'rgba(255,100,100,0.8)' } }}>
-                          <DeleteIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                  <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flex: 1 }}>
+                    {note.isPinned && <PushPinIcon fontSize="small" color="primary" />}
+                    <Typography variant="h6" noWrap sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: 'text.primary' }}>
+                      {note.title}
+                    </Typography>
                   </Box>
+                  <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
+                    <Tooltip title="Редактировать теги">
+                      <IconButton size="small" onClick={(e) => handleOpenTagsEdit(note, e)}
+                        sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
+                        <LocalOfferIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Удалить">
+                      <IconButton size="small" onClick={(e) => handleDelete(note.id, note.title, e)}
+                        sx={{ color: theme.palette.error.main, '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) } }}>
+                        <DeleteIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
 
-                  {note.content && (
-                    <Box sx={{
-                      mt: 1,
-                      maxHeight: '7em',
-                      overflow: 'hidden',
-                      position: 'relative',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: 0, left: 0, right: 0,
-                        height: '2em',
-                        background: 'linear-gradient(transparent, rgba(20,20,35,0.95))',
-                        pointerEvents: 'none',
-                      },
-                      '& h1, & h2, & h3': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1rem', fontWeight: 700, my: 0.5 },
-                      '& p': { fontSize: '0.85rem', color: 'text.secondary', my: 0.3, lineHeight: 1.5 },
-                      '& ul, & ol': { pl: 2.5, my: 0.3 },
-                      '& li': { fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.5 },
-                      '& strong': { color: '#fff' },
-                      '& em': { color: 'rgba(255,255,255,0.8)' },
-                      '& a': { color: '#4ECDC4' },
-                      '& code': { backgroundColor: 'rgba(201,169,89,0.1)', px: 0.5, borderRadius: 0.5, fontSize: '0.8rem' },
-                      '& pre': { backgroundColor: 'rgba(0,0,0,0.3)', p: 1, borderRadius: 1, fontSize: '0.8rem', overflow: 'hidden' },
-                      '& blockquote': { borderLeft: '2px solid', borderColor: 'primary.main', pl: 1, ml: 0, opacity: 0.8 },
-                      '& hr': { border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', my: 0.5 },
-                      '& img': { display: 'none' },
-                    }}>
-                      {note.format === 'md' ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.85rem' }}>
-                          {note.content}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
+                {note.content && (
+                  <Box sx={{
+                    mt: 1,
+                    maxHeight: '7em',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    flexGrow: 1,
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: 0, left: 0, right: 0,
+                      height: '2em',
+                      background: `linear-gradient(transparent, ${theme.palette.background.paper})`,
+                      pointerEvents: 'none',
+                    },
+                    '& h1, & h2, & h3': { fontFamily: '"Cinzel", serif', color: 'text.primary', fontSize: '1rem', fontWeight: 700, my: 0.5 },
+                    '& p': { fontSize: '0.85rem', color: 'text.secondary', my: 0.3, lineHeight: 1.5 },
+                    '& ul, & ol': { pl: 2.5, my: 0.3 },
+                    '& li': { fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.5 },
+                    '& strong': { color: 'text.primary' },
+                    '& em': { color: 'text.secondary', fontStyle: 'italic' },
+                    '& a': { color: theme.palette.primary.main },
+                    '& code': { backgroundColor: alpha(theme.palette.text.primary, 0.1), px: 0.5, borderRadius: 0.5, fontSize: '0.8rem', color: 'text.primary' },
+                    '& pre': { backgroundColor: alpha(theme.palette.background.default, 0.5), p: 1, borderRadius: 1, fontSize: '0.8rem', overflow: 'hidden' },
+                    '& blockquote': { borderLeft: '2px solid', borderColor: theme.palette.primary.main, pl: 1, ml: 0, opacity: 0.8, color: 'text.secondary' },
+                    '& hr': { border: 'none', borderTop: `1px solid ${theme.palette.divider}`, my: 0.5 },
+                    '& img': { display: 'none' },
+                  }}>
+                    {note.format === 'md' ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.85rem' }}>
+                        {note.content}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
 
+                <Box mt="auto" pt={1.5}>
                   {/* Tags */}
-                  <Box display="flex" gap={0.5} mt={1.5} flexWrap="wrap" alignItems="center">
+                  <Box display="flex" gap={0.5} flexWrap="wrap" alignItems="center">
                     <Chip label={note.format.toUpperCase()} size="small" variant="outlined"
-                      sx={{ height: 22, fontSize: '0.65rem' }} />
+                      sx={{ height: 22, fontSize: '0.65rem', color: 'text.secondary', borderColor: theme.palette.divider }} />
                     <Chip label={note.noteType} size="small" color="primary" variant="outlined"
                       sx={{ height: 22, fontSize: '0.65rem' }} />
                     {note.tags?.map((tag: any) => (
                       <Chip key={tag.id} label={tag.name} size="small"
-                        sx={{ height: 22, fontSize: '0.65rem', fontWeight: 600, backgroundColor: tag.color || 'rgba(130,130,255,0.2)', color: '#fff', borderRadius: 1 }} />
+                        sx={{ height: 22, fontSize: '0.65rem', fontWeight: 600, backgroundColor: tag.color ? alpha(tag.color, 0.15) : alpha(theme.palette.primary.main, 0.15), color: tag.color || theme.palette.primary.main, borderRadius: 1 }} />
                     ))}
                   </Box>
 
@@ -278,21 +302,21 @@ export const NotesPage: React.FC = () => {
                     <Box
                       display="flex" alignItems="center" gap={0.5} mt={1}
                       onClick={(e) => handleOpenTagsEdit(note, e)}
-                      sx={{ cursor: 'pointer', '&:hover': { '& .add-tag-text': { color: 'rgba(201,169,89,0.8)' } } }}
+                      sx={{ cursor: 'pointer', '&:hover': { '& .add-tag-text': { color: 'text.primary' } } }}
                     >
-                      <LocalOfferIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.2)' }} />
+                      <LocalOfferIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                       <Typography className="add-tag-text" variant="caption"
-                        sx={{ color: 'rgba(255,255,255,0.2)', transition: 'color 0.15s' }}>
+                        sx={{ color: 'text.secondary', transition: 'color 0.15s' }}>
                         + добавить теги
                       </Typography>
                     </Box>
                   )}
 
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', mt: 1, display: 'block' }}>
+                  <Typography variant="caption" sx={{ color: 'text.disabled', mt: 1, display: 'block' }}>
                     {new Date(note.updatedAt).toLocaleDateString('ru-RU')}
                   </Typography>
-                </CardContent>
-              </Card>
+                </Box>
+              </GlassCard>
             </Grid>
           ))}
         </Grid>
@@ -300,7 +324,7 @@ export const NotesPage: React.FC = () => {
 
       {/* ============ Create Dialog ============ */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
+        PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Новая заметка</DialogTitle>
         <DialogContent>
           <TextField
@@ -324,7 +348,7 @@ export const NotesPage: React.FC = () => {
             renderTags={(value, getTagProps) =>
               value.map((opt, index) => (
                 <Chip {...getTagProps({ index })} key={opt} label={opt} size="small"
-                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
+                  sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.15), color: theme.palette.primary.main, fontSize: '0.75rem' }} />
               ))
             }
             renderInput={(params) => (
@@ -334,7 +358,7 @@ export const NotesPage: React.FC = () => {
                   startAdornment: (
                     <>
                       <InputAdornment position="start">
-                        <LocalOfferIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 18 }} />
+                        <LocalOfferIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
                       </InputAdornment>
                       {params.InputProps.startAdornment}
                     </>
@@ -357,7 +381,7 @@ export const NotesPage: React.FC = () => {
 
       {/* ============ Edit Tags Dialog ============ */}
       <Dialog open={tagsDialogOpen} onClose={() => setTagsDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
+        PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
           Теги: {tagsEditNote?.title}
         </DialogTitle>
@@ -370,7 +394,7 @@ export const NotesPage: React.FC = () => {
             renderTags={(value, getTagProps) =>
               value.map((opt, index) => (
                 <Chip {...getTagProps({ index })} key={opt} label={opt} size="small"
-                  sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
+                  sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.15), color: theme.palette.primary.main, fontSize: '0.75rem' }} />
               ))
             }
             renderInput={(params) => (
@@ -380,7 +404,7 @@ export const NotesPage: React.FC = () => {
                   startAdornment: (
                     <>
                       <InputAdornment position="start">
-                        <LocalOfferIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 18 }} />
+                        <LocalOfferIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
                       </InputAdornment>
                       {params.InputProps.startAdornment}
                     </>

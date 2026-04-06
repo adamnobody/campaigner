@@ -4,7 +4,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Chip, Select, MenuItem, FormControl,
   InputAdornment, Collapse, Tooltip, InputLabel,
-  Autocomplete,
+  Autocomplete, useTheme, alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -25,14 +25,23 @@ import { tagsApi } from '@/api/tags';
 import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { TimelineEvent } from '@campaigner/shared';
 
-const ERA_COLORS: string[] = [
-  'rgba(130,130,255,0.6)', 'rgba(78,205,196,0.6)', 'rgba(255,170,100,0.6)',
-  'rgba(187,143,206,0.6)', 'rgba(255,107,107,0.6)', 'rgba(130,225,170,0.6)',
-  'rgba(255,200,100,0.6)', 'rgba(69,183,209,0.6)',
-];
+const useEraColors = () => {
+  const theme = useTheme();
+  return [
+    alpha(theme.palette.primary.main, 0.6),
+    alpha(theme.palette.secondary.main, 0.6),
+    alpha(theme.palette.warning.main, 0.6),
+    alpha(theme.palette.info.main, 0.6),
+    alpha(theme.palette.error.main, 0.6),
+    alpha(theme.palette.success.main, 0.6),
+    alpha(theme.palette.primary.light, 0.6),
+    alpha(theme.palette.secondary.light, 0.6),
+  ];
+};
 
 interface NoteOption {
   id: number;
@@ -48,6 +57,8 @@ export const TimelinePage: React.FC = () => {
     deleteEvent, reorderEvents,
   } = useTimelineStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
+  const theme = useTheme();
+  const eraColors = useEraColors();
 
   // Dialog form
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -311,11 +322,11 @@ export const TimelinePage: React.FC = () => {
             {/* Vertical line */}
             <Box sx={{
               position: 'absolute', left: 15, top: 0, bottom: 0, width: 2,
-              background: 'linear-gradient(to bottom, rgba(130,130,255,0.4), rgba(130,130,255,0.1))',
+              background: `linear-gradient(to bottom, ${alpha(theme.palette.primary.main, 0.4)}, ${alpha(theme.palette.primary.main, 0.1)})`,
             }} />
 
             {groupedEras.map((group, gi) => {
-              const eraColor = ERA_COLORS[gi % ERA_COLORS.length];
+              const eraColor = eraColors[gi % eraColors.length];
               const eraKey = group.name || '__none__';
               const collapsed = collapsedEras.has(eraKey);
 
@@ -332,7 +343,7 @@ export const TimelinePage: React.FC = () => {
                         width: 32, height: 32, borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         backgroundColor: eraColor, flexShrink: 0, zIndex: 1,
-                        border: '3px solid #0d1117',
+                        border: `3px solid ${theme.palette.background.default}`,
                       }}>
                         {collapsed
                           ? <ExpandMoreIcon sx={{ fontSize: 18, color: '#fff' }} />
@@ -345,7 +356,7 @@ export const TimelinePage: React.FC = () => {
                         {group.name}
                       </Typography>
                       <Chip label={`${group.events.length}`} size="small"
-                        sx={{ height: 20, fontSize: '0.7rem', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }} />
+                        sx={{ height: 20, fontSize: '0.7rem', backgroundColor: alpha(theme.palette.common.white, 0.06), color: 'text.secondary' }} />
                     </Box>
                   )}
 
@@ -375,22 +386,19 @@ export const TimelinePage: React.FC = () => {
                           }}>
                             <Box sx={{
                               width: 12, height: 12, borderRadius: '50%',
-                              backgroundColor: group.name ? eraColor : 'rgba(130,130,255,0.5)',
-                              border: '2px solid #0d1117',
+                              backgroundColor: group.name ? eraColor : alpha(theme.palette.primary.main, 0.5),
+                              border: `2px solid ${theme.palette.background.default}`,
                               transition: 'transform 0.15s',
                               transform: isDropTarget ? 'scale(1.8)' : 'scale(1)',
                             }} />
                           </Box>
 
                           {/* Card */}
-                          <Paper sx={{
+                          <GlassCard interactive={true} sx={{
                             flexGrow: 1, p: 2, ml: 1,
-                            backgroundColor: isDropTarget ? 'rgba(130,130,255,0.08)' : 'rgba(255,255,255,0.04)',
-                            border: isDropTarget ? '1px solid rgba(130,130,255,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: 2, transition: 'all 0.15s',
+                            backgroundColor: isDropTarget ? alpha(theme.palette.primary.main, 0.08) : undefined,
+                            borderColor: isDropTarget ? alpha(theme.palette.primary.main, 0.4) : undefined,
                             '&:hover': {
-                              backgroundColor: 'rgba(255,255,255,0.07)',
-                              borderColor: 'rgba(255,255,255,0.15)',
                               '& .event-actions': { opacity: 1 },
                             },
                           }}>
@@ -398,19 +406,19 @@ export const TimelinePage: React.FC = () => {
                               <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                                 <Box display="flex" alignItems="center" gap={1.5} mb={0.5} flexWrap="wrap">
                                   <Typography sx={{
-                                    color: group.name ? eraColor : 'rgba(130,130,255,0.8)',
+                                    color: group.name ? eraColor : alpha(theme.palette.primary.main, 0.8),
                                     fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap',
                                   }}>
                                     {event.eventDate}
                                   </Typography>
-                                  <Typography sx={{ fontWeight: 700, color: '#fff', fontSize: '1rem' }}>
+                                  <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1rem' }}>
                                     {event.title}
                                   </Typography>
                                 </Box>
 
                                 {event.description && (
                                   <Typography variant="body2" sx={{
-                                    color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', mt: 0.5,
+                                    color: 'text.secondary', fontSize: '0.85rem', mt: 0.5,
                                     overflow: 'hidden', textOverflow: 'ellipsis',
                                     display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
                                   }}>
@@ -421,19 +429,19 @@ export const TimelinePage: React.FC = () => {
                                 {/* Linked note */}
                                 {event.linkedNoteId && (
                                   <Box display="flex" alignItems="center" gap={0.5} mt={1}>
-                                    <DescriptionIcon sx={{ fontSize: 14, color: 'rgba(201,169,89,0.7)' }} />
+                                    <DescriptionIcon sx={{ fontSize: 14, color: alpha(theme.palette.warning.main, 0.7) }} />
                                     <Typography
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         navigate(`/project/${pid}/notes/${event.linkedNoteId}`);
                                       }}
                                       sx={{
-                                        fontSize: '0.8rem', color: 'rgba(201,169,89,0.8)',
+                                        fontSize: '0.8rem', color: alpha(theme.palette.warning.main, 0.8),
                                         cursor: 'pointer', textDecoration: 'underline',
-                                        textDecorationColor: 'rgba(201,169,89,0.3)',
+                                        textDecorationColor: alpha(theme.palette.warning.main, 0.3),
                                         '&:hover': {
-                                          color: 'rgba(201,169,89,1)',
-                                          textDecorationColor: 'rgba(201,169,89,0.7)',
+                                          color: theme.palette.warning.main,
+                                          textDecorationColor: alpha(theme.palette.warning.main, 0.7),
                                         },
                                       }}>
                                       {noteName || `Заметка #${event.linkedNoteId}`}
@@ -441,7 +449,7 @@ export const TimelinePage: React.FC = () => {
                                     <Tooltip title="Открепить заметку">
                                       <IconButton size="small"
                                         onClick={(e) => { e.stopPropagation(); handleUnlinkNote(event.id); }}
-                                        sx={{ color: 'rgba(255,255,255,0.2)', p: 0.3, '&:hover': { color: 'rgba(255,100,100,0.6)' } }}>
+                                        sx={{ color: 'text.disabled', p: 0.3, '&:hover': { color: alpha(theme.palette.error.main, 0.6) } }}>
                                         <LinkOffIcon sx={{ fontSize: 14 }} />
                                       </IconButton>
                                     </Tooltip>
@@ -454,8 +462,8 @@ export const TimelinePage: React.FC = () => {
                                     {event.tags.map((tag: any) => (
                                       <Chip key={tag.id} label={tag.name} size="small" sx={{
                                         height: 20, fontSize: '0.65rem', fontWeight: 600,
-                                        backgroundColor: tag.color || 'rgba(130,130,255,0.2)',
-                                        color: '#fff', borderRadius: 1,
+                                        backgroundColor: tag.color || alpha(theme.palette.primary.main, 0.2),
+                                        color: theme.palette.text.primary, borderRadius: 1,
                                       }} />
                                     ))}
                                   </Box>
@@ -468,37 +476,37 @@ export const TimelinePage: React.FC = () => {
                                 <Tooltip title="Вверх">
                                   <IconButton size="small" onClick={() => moveEvent(event.id, 'up')}
                                     disabled={globalIdx === 0}
-                                    sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#fff' } }}>
+                                    sx={{ color: 'text.disabled', '&:hover': { color: 'text.primary' } }}>
                                     <KeyboardArrowUpIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Вниз">
                                   <IconButton size="small" onClick={() => moveEvent(event.id, 'down')}
                                     disabled={globalIdx === events.length - 1}
-                                    sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#fff' } }}>
+                                    sx={{ color: 'text.disabled', '&:hover': { color: 'text.primary' } }}>
                                     <KeyboardArrowDownIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Редактировать">
                                   <IconButton size="small" onClick={() => handleOpenEdit(event)}
-                                    sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#fff' } }}>
+                                    sx={{ color: 'text.disabled', '&:hover': { color: 'text.primary' } }}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Удалить">
                                   <IconButton size="small" onClick={() => handleDelete(event.id, event.title)}
-                                    sx={{ color: 'rgba(255,100,100,0.4)', '&:hover': { color: 'rgba(255,100,100,0.8)' } }}>
+                                    sx={{ color: alpha(theme.palette.error.main, 0.4), '&:hover': { color: alpha(theme.palette.error.main, 0.8) } }}>
                                     <DeleteIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Перетащить">
-                                  <Box sx={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.2)' }}>
+                                  <Box sx={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: 'text.disabled' }}>
                                     <DragIndicatorIcon fontSize="small" />
                                   </Box>
                                 </Tooltip>
                               </Box>
                             </Box>
-                          </Paper>
+                          </GlassCard>
                         </Box>
                       );
                     })}

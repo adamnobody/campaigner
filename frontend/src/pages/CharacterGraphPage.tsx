@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Box, Typography, Button, Paper, IconButton, Chip,
+  Box, Typography, Button, Paper, IconButton, Chip, useTheme, alpha,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -9,6 +9,7 @@ import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { DndButton } from '@/components/ui/DndButton';
+import { GlassCard } from '@/components/ui/GlassCard';
 import {
   type GNode,
   type GEdge,
@@ -23,6 +24,7 @@ export const CharacterGraphPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const { characters, relationships, fetchCharacters, fetchRelationships } = useCharacterStore();
 
@@ -505,7 +507,7 @@ export const CharacterGraphPage: React.FC = () => {
       </Typography>
 
       {nodeCount === 0 ? (
-        <Paper
+        <GlassCard
           sx={{
             p: 6,
             textAlign: 'center',
@@ -514,17 +516,15 @@ export const CharacterGraphPage: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             flexDirection: 'column',
-            backgroundColor: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
           }}
         >
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
+          <Typography sx={{ color: 'text.secondary', mb: 2 }}>
             Нет персонажей для отображения
           </Typography>
           <Button variant="outlined" onClick={() => navigate(`/project/${pid}/characters`)}>
             К списку
           </Button>
-        </Paper>
+        </GlassCard>
       ) : (
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
           <Box
@@ -533,8 +533,8 @@ export const CharacterGraphPage: React.FC = () => {
               position: 'absolute',
               inset: 0,
               borderRadius: 2,
-              border: '1px solid rgba(255,255,255,0.1)',
-              backgroundColor: '#0a0a14',
+              border: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.background.default,
               overflow: 'hidden',
             }}
           >
@@ -553,22 +553,19 @@ export const CharacterGraphPage: React.FC = () => {
           </Box>
 
           {selectedNode && (
-            <Paper
+            <GlassCard
               sx={{
                 position: 'absolute',
                 bottom: 16,
                 left: 16,
                 p: 2,
                 maxWidth: 260,
-                backgroundColor: 'rgba(20,20,35,0.95)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                backdropFilter: 'blur(10px)',
                 zIndex: 20,
               }}
             >
-              <Typography sx={{ fontWeight: 700, color: '#fff' }}>{selectedNode.name}</Typography>
+              <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>{selectedNode.name}</Typography>
               {selectedNode.title && (
-                <Typography variant="caption" sx={{ color: 'rgba(201,169,89,0.8)', fontStyle: 'italic', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: alpha(theme.palette.warning.main, 0.8), fontStyle: 'italic', display: 'block' }}>
                   {selectedNode.title}
                 </Typography>
               )}
@@ -578,8 +575,8 @@ export const CharacterGraphPage: React.FC = () => {
                   variant="outlined"
                   onClick={() => navigate(`/project/${pid}/characters/${selectedNode.id}`)}
                   sx={{
-                    borderColor: 'rgba(130,130,255,0.3)',
-                    color: 'rgba(130,130,255,0.9)',
+                    borderColor: alpha(theme.palette.primary.main, 0.3),
+                    color: theme.palette.primary.main,
                     textTransform: 'none',
                     fontSize: '0.75rem',
                   }}
@@ -592,38 +589,35 @@ export const CharacterGraphPage: React.FC = () => {
                     selectedIdRef.current = null;
                     setSelectedNode(null);
                   }}
-                  sx={{ color: 'rgba(255,255,255,0.4)', textTransform: 'none', fontSize: '0.75rem' }}
+                  sx={{ color: 'text.secondary', textTransform: 'none', fontSize: '0.75rem' }}
                 >
                   Закрыть
                 </Button>
               </Box>
-            </Paper>
+            </GlassCard>
           )}
 
           {usedTypes.length > 0 && (
-            <Box
+            <GlassCard
               sx={{
                 position: 'absolute',
                 top: 12,
                 right: 12,
-                backgroundColor: 'rgba(20,20,35,0.85)',
-                borderRadius: 1.5,
-                border: '1px solid rgba(255,255,255,0.08)',
                 p: 1.5,
               }}
             >
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
                 Связи
               </Typography>
               {usedTypes.map((t) => (
                 <Box key={t} display="flex" alignItems="center" gap={1} sx={{ mb: 0.3 }}>
                   <Box sx={{ width: 14, height: 3, borderRadius: 1, backgroundColor: REL_COLORS[t] || REL_COLORS.custom }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>
+                  <Typography variant="caption" sx={{ color: 'text.primary', fontSize: '0.7rem' }}>
                     {REL_LABELS[t] || t}
                   </Typography>
                 </Box>
               ))}
-            </Box>
+            </GlassCard>
           )}
 
           <Box sx={{ position: 'absolute', bottom: 12, right: 12, display: 'flex', gap: 1 }}>
@@ -631,13 +625,13 @@ export const CharacterGraphPage: React.FC = () => {
               label={`${nodeCount} персонажей`}
               size="small"
               variant="outlined"
-              sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}
+              sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }}
             />
             <Chip
               label={`${edgeCount} связей`}
               size="small"
               variant="outlined"
-              sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}
+              sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }}
             />
           </Box>
         </Box>

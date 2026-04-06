@@ -13,6 +13,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import PaletteIcon from '@mui/icons-material/Palette';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -24,7 +25,9 @@ import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { shallow } from 'zustand/shallow';
 import { HomeBackground } from '@/pages/home/HomeBackground';
 import { CreateProjectDialog } from '@/pages/home/CreateProjectDialog';
-import { GlassCard, EmptyStateIllustration } from '@/pages/home/HomePrimitives';
+import { EmptyStateIllustration } from '@/pages/home/HomePrimitives';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export const HomePage: React.FC = () => {
   const theme = useTheme();
@@ -89,14 +92,16 @@ export const HomePage: React.FC = () => {
 
       try {
         const text = await file.text();
-        const data = JSON.parse(text);
+        const parsed = JSON.parse(text);
+        // Support both raw export payload and wrapped API response shape: { success, data }.
+        const importPayload = parsed?.data && parsed?.success ? parsed.data : parsed;
 
-        if (!data.version || !data.project) {
+        if (!importPayload?.version || !importPayload?.project) {
           showSnackbar('Неверный формат файла. Ожидается экспорт Campaigner.', 'error');
           return;
         }
 
-        const res = await projectsApi.importProject(data);
+        const res = await projectsApi.importProject(importPayload);
         showSnackbar(`📥 Проект "${res.data.data.name}" импортирован!`, 'success');
         fetchProjects();
         navigate(`/project/${res.data.data.id}/map`);
@@ -267,46 +272,15 @@ export const HomePage: React.FC = () => {
               flexWrap: 'wrap',
             }}
           >
-            <Box>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontFamily: theme.typography.h5.fontFamily,
-                  fontWeight: 700,
-                  color: 'text.primary',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                }}
-              >
-                <Box
-                  component="span"
-                  sx={{
-                    display: 'inline-block',
-                    width: 4,
-                    height: 24,
-                    borderRadius: 2,
-                    background: `linear-gradient(180deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                  }}
-                />
-                Проекты
-                <Chip
-                  label={projects.length}
-                  size="small"
-                  sx={{
-                    ml: 1,
-                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
-                    color: theme.palette.primary.main,
-                    fontWeight: 800,
-                    fontSize: '0.75rem',
-                    height: 24,
-                    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                  }}
-                />
-              </Typography>
+            <Box sx={{ flexGrow: 1 }}>
+              <SectionHeader
+                icon={<AccountTreeIcon sx={{ fontSize: '1.2rem' }} />}
+                title="Проекты"
+                subtitle={`Всего: ${projects.length}`}
+              />
             </Box>
 
-            <Box display="flex" gap={1.5} flexWrap="wrap">
+            <Box display="flex" gap={1.5} flexWrap="wrap" sx={{ mt: { xs: -1, sm: 0 } }}>
               <DndButton
                 variant="outlined"
                 startIcon={<PaletteIcon />}
@@ -380,6 +354,7 @@ export const HomePage: React.FC = () => {
             {projects.map((project, index) => (
               <GlassCard
                 key={project.id}
+                interactive={true}
                 onClick={() => navigate(`/project/${project.id}/map`)}
                 sx={{
                   opacity: isLoaded ? 1 : 0,

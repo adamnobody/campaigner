@@ -7,7 +7,8 @@ import {
   useTheme,
 } from '@mui/material';
 import { DndButton } from '@/components/ui/DndButton';
-import { GlassCard, safeRgba } from '@/pages/appearance/AppearancePrimitives';
+import { safeRgba } from '@/pages/appearance/AppearancePrimitives';
+import { GlassCard } from '@/components/ui/GlassCard';
 
 export interface LivePreviewProps {
   currentPreset: {

@@ -31,7 +31,9 @@ export function importProject(data: ImportedProjectPayload): Project {
     `).run(projectId);
 
     const mapService = new MapService();
-    mapService.createRootMapForProject(projectId);
+    if (!data.maps?.length) {
+      mapService.createRootMapForProject(projectId);
+    }
 
     if (data.project.mapImageBase64) {
       const mapPath = saveBase64ToFile(data.project.mapImageBase64, 'maps');
@@ -75,11 +77,14 @@ export function importProject(data: ImportedProjectPayload): Project {
         const newParentMapId = map.parentMapId
           ? (mapIdMap.get(map.parentMapId) || null)
           : null;
+        const importedMapImagePath = map.imageBase64
+          ? (saveBase64ToFile(map.imageBase64, 'maps') || null)
+          : (map.imagePath || null);
 
         const result = db.prepare(`
           INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path)
           VALUES (?, ?, NULL, ?, ?)
-        `).run(projectId, newParentMapId, map.name, map.imagePath || null);
+        `).run(projectId, newParentMapId, map.name, importedMapImagePath);
 
         mapIdMap.set(map.id, result.lastInsertRowid as number);
       }

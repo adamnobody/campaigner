@@ -1,69 +1,8 @@
 import React from 'react';
-import { Box, Paper } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
+import { Box } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import ImportContactsIcon from '@mui/icons-material/ImportContacts';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-
-export const GlassCard: React.FC<{
-  children: React.ReactNode;
-  onClick?: () => void;
-  sx?: any;
-  elevation?: number;
-}> = ({ children, onClick, sx = {}, elevation = 0 }) => {
-  const theme = useTheme();
-
-  return (
-    <Paper
-      elevation={elevation}
-      onClick={onClick}
-      sx={{
-        background: `linear-gradient(135deg, 
-          ${alpha(theme.palette.background.paper, 0.7)} 0%, 
-          ${alpha(theme.palette.background.paper, 0.4)} 100%
-        )`,
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-        borderRadius: 3,
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        cursor: onClick ? 'pointer' : 'default',
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 'inherit',
-          padding: '1px',
-          background: `linear-gradient(135deg, 
-            ${alpha(theme.palette.primary.main, 0.2)} 0%, 
-            transparent 50%, 
-            ${alpha(theme.palette.secondary.main, 0.1)} 100%
-          )`,
-          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          WebkitMaskComposite: 'xor',
-          maskComposite: 'exclude',
-          pointerEvents: 'none',
-          opacity: 0,
-          transition: 'opacity 0.4s ease',
-        },
-        '&:hover': {
-          transform: 'translateY(-4px) scale(1.01)',
-          borderColor: alpha(theme.palette.primary.main, 0.4),
-          boxShadow: `
-            0 20px 40px ${alpha(theme.palette.common.black, 0.3)},
-            0 0 60px ${alpha(theme.palette.primary.main, 0.08)}
-          `,
-          '&::before': { opacity: 1 },
-        },
-        ...sx,
-      }}
-    >
-      {children}
-    </Paper>
-  );
-};
 
 export const EmptyStateIllustration: React.FC = () => (
   <Box

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Paper, TextField, Button,
+  Box, Typography, TextField, Button,
   Avatar, IconButton, Chip, Dialog,
   DialogTitle, DialogContent, DialogActions,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, ListItemAvatar,
-  Grid, Tooltip, Collapse,
+  Grid, alpha, useTheme,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -16,8 +16,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import GroupsIcon from '@mui/icons-material/Groups';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import FaceIcon from '@mui/icons-material/Face';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -27,6 +25,11 @@ import { useTagStore } from '@/store/useTagStore';
 import { shallow } from 'zustand/shallow';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
+import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
+import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
+import { EntityTabs } from '@/components/ui/EntityTabs';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // ==================== Constants ====================
 
@@ -46,9 +49,25 @@ const getRelationshipLabel = (value: unknown): string => {
   return String(value ?? 'custom');
 };
 
-const getRelationshipColor = (value: unknown): string => {
-  if (typeof value === 'string' && isRelationshipType(value)) return RELATIONSHIP_COLORS[value];
-  return 'rgba(130,130,255,0.2)';
+const getRelationshipColor = (value: unknown, theme: any): string => {
+  if (typeof value === 'string' && isRelationshipType(value)) {
+    const colorMap: Record<RelationshipType, string> = {
+      ally: theme.palette.success.main,
+      enemy: theme.palette.error.main,
+      family: theme.palette.secondary.main,
+      friend: theme.palette.info.main,
+      rival: theme.palette.warning.main,
+      mentor: theme.palette.primary.light,
+      student: theme.palette.primary.light,
+      lover: theme.palette.secondary.light,
+      spouse: theme.palette.secondary.light,
+      employer: theme.palette.success.light,
+      employee: theme.palette.success.light,
+      custom: theme.palette.primary.main,
+    };
+    return colorMap[value] || theme.palette.primary.main;
+  }
+  return theme.palette.primary.main;
 };
 
 const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
@@ -56,15 +75,6 @@ const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
   rival: 'Соперник', mentor: 'Наставник', student: 'Ученик',
   lover: 'Возлюбленный', spouse: 'Супруг', employer: 'Работодатель',
   employee: 'Работник', custom: 'Другое',
-};
-
-const RELATIONSHIP_COLORS: Record<RelationshipType, string> = {
-  ally: 'rgba(78,205,196,0.25)', enemy: 'rgba(255,107,107,0.25)',
-  family: 'rgba(187,143,206,0.25)', friend: 'rgba(130,225,170,0.25)',
-  rival: 'rgba(255,200,100,0.25)', mentor: 'rgba(69,183,209,0.25)',
-  student: 'rgba(69,183,209,0.15)', lover: 'rgba(255,130,170,0.25)',
-  spouse: 'rgba(255,130,170,0.25)', employer: 'rgba(150,206,180,0.25)',
-  employee: 'rgba(150,206,180,0.15)', custom: 'rgba(130,130,255,0.2)',
 };
 
 interface CharacterForm {
@@ -77,55 +87,17 @@ const EMPTY_FORM: CharacterForm = {
   personality: '', backstory: '', notes: '', tagsStr: '',
 };
 
-// ==================== Section ====================
+// ==================== Helpers ====================
 
-const Section: React.FC<{
-  title: string; icon: React.ReactNode; badge?: number;
-  defaultOpen?: boolean; action?: React.ReactNode; children: React.ReactNode;
-}> = ({ title, icon, badge, defaultOpen = true, action, children }) => {
-  const [open, setOpen] = useState(defaultOpen);
+const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+  const theme = useTheme();
   return (
-    <Paper sx={{
-      mb: 2.5, overflow: 'hidden',
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.07)', borderRadius: 2,
-    }}>
-      <Box onClick={() => setOpen(!open)} sx={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        px: 3, py: 2, cursor: 'pointer',
-        backgroundColor: 'rgba(255,255,255,0.02)',
-        borderBottom: open ? '1px solid rgba(255,255,255,0.06)' : 'none',
-        '&:hover': { backgroundColor: 'rgba(255,255,255,0.04)' },
-        transition: 'background 0.15s',
-      }}>
-        <Box display="flex" alignItems="center" gap={1.5}>
-          <Box sx={{ color: 'rgba(201,169,89,0.7)', display: 'flex' }}>{icon}</Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.9)' }}>
-            {title}
-          </Typography>
-          {badge !== undefined && badge > 0 && (
-            <Chip label={badge} size="small" sx={{
-              height: 22, fontSize: '0.7rem', fontWeight: 700,
-              backgroundColor: 'rgba(201,169,89,0.15)', color: 'rgba(201,169,89,0.9)',
-            }} />
-          )}
-        </Box>
-        <Box display="flex" alignItems="center" gap={1}>
-          {action && open && <Box onClick={e => e.stopPropagation()}>{action}</Box>}
-          {open ? <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.3)' }} /> : <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />}
-        </Box>
-      </Box>
-      <Collapse in={open}><Box sx={{ p: 3 }}>{children}</Box></Collapse>
-    </Paper>
+    <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{label}</Typography>
+      <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{value}</Typography>
+    </Box>
   );
 };
-
-const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <Box sx={{ mb: 1, pb: 1, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', display: 'block', lineHeight: 1 }}>{label}</Typography>
-    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{value}</Typography>
-  </Box>
-);
 
 // ==================== Component ====================
 
@@ -134,6 +106,8 @@ export const CharacterDetailPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const isNew = !characterId || characterId === 'new';
   const navigate = useNavigate();
+  const theme = useTheme();
+  
   const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
@@ -171,6 +145,7 @@ export const CharacterDetailPage: React.FC = () => {
   const [form, setForm] = useState<CharacterForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [relForm, setRelForm] = useState<{ targetId: string; type: RelationshipType; description: string }>({
@@ -304,182 +279,184 @@ export const CharacterDetailPage: React.FC = () => {
   };
 
   if (loading && !isNew && !currentCharacter) {
-    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography></Box>;
+    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography></Box>;
   }
+
   return (
     <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate(`/project/${pid}/characters`)}><ArrowBackIcon /></IconButton>
-          <Box>
-            <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff', lineHeight: 1.2 }}>
-              {isNew ? 'Новый персонаж' : form.name || 'Персонаж'}
-            </Typography>
-            {form.title && (
-              <Typography sx={{ color: 'rgba(201,169,89,0.8)', fontStyle: 'italic', fontSize: '0.9rem', mt: 0.25 }}>
-                — {form.title}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-        <Box display="flex" gap={1}>
-          {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">Удалить</Button>}
-          <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
-            {isNew ? 'Создать' : 'Сохранить'}
-          </DndButton>
-        </Box>
+      <Box display="flex" alignItems="center" mb={2}>
+        <IconButton onClick={() => navigate(`/project/${pid}/characters`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <Typography variant="body2" color="text.secondary">К списку персонажей</Typography>
       </Box>
 
-      {/* Two-column */}
-      <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+      <EntityHeroLayout
+        avatarNode={
+          currentCharacter?.imagePath ? (
+            <Avatar src={currentCharacter.imagePath} sx={{ width: 140, height: 140, borderRadius: 3 }} variant="rounded" />
+          ) : (
+            <Avatar sx={{ width: 140, height: 140, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }} variant="rounded">
+              <PersonIcon sx={{ fontSize: 64 }} />
+            </Avatar>
+          )
+        }
+        title={isNew ? 'Новый персонаж' : form.name || 'Персонаж'}
+        subtitle={form.title ? `— ${form.title}` : undefined}
+        actionButtons={
+          <>
+            {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">Удалить</Button>}
+            <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
+              {isNew ? 'Создать' : 'Сохранить'}
+            </DndButton>
+          </>
+        }
+      />
 
-        {/* LEFT SIDEBAR */}
-        <Box sx={{ width: { xs: '100%', md: 280 }, flexShrink: 0 }}>
-          <Paper sx={{ p: 3, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', position: 'sticky', top: 80 }}>
-            <Box sx={{ mb: 2 }}>
-              {currentCharacter?.imagePath ? (
-                <Avatar src={currentCharacter.imagePath} sx={{ width: 160, height: 160, borderRadius: 3, mx: 'auto' }} variant="rounded" />
-              ) : (
-                <Avatar sx={{ width: 160, height: 160, borderRadius: 3, mx: 'auto', bgcolor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.2)' }} variant="rounded">
-                  <PersonIcon sx={{ fontSize: 64 }} />
-                </Avatar>
+      <EntityTabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        tabs={[
+          { value: 'overview', label: 'Обзор', icon: <EditIcon fontSize="small" /> },
+          { value: 'relations', label: 'Связи', icon: <GroupsIcon fontSize="small" /> },
+        ]}
+      />
+
+      {activeTab === 'overview' && (
+        <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+          {/* LEFT SIDEBAR */}
+          <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
+            <GlassCard sx={{ p: 3, position: 'sticky', top: 80 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Сводка</Typography>
+              
+              {!isNew && (
+                <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small"
+                  sx={{ borderColor: alpha(theme.palette.divider, 0.5), mb: 3, fontSize: '0.75rem' }}>
+                  Загрузить фото
+                  <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml,image/webp" onChange={handleImageUpload} />
+                </Button>
               )}
-            </Box>
 
-            {!isNew && (
-              <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small"
-                sx={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', mb: 2, fontSize: '0.75rem' }}>
-                Загрузить фото
-                <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml,image/webp" onChange={handleImageUpload} />
-              </Button>
-            )}
-
-            <Box sx={{ textAlign: 'left' }}>
-              {form.title && <InfoRow label="Титул" value={form.title} />}
-              {form.bio && (
-                <Box sx={{ mb: 1, pb: 1, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', display: 'block', lineHeight: 1 }}>Описание</Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
-                    {form.bio.length > 120 ? form.bio.slice(0, 120) + '…' : form.bio}
-                  </Typography>
-                </Box>
-              )}
-              {previewTagsStr.trim() && (
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', display: 'block', mb: 0.5 }}>Теги</Typography>
-                  <Box display="flex" gap={0.5} flexWrap="wrap">
-                    {previewTagsStr.split(',').map((t, i) => { const s = t.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 22, fontSize: '0.7rem', backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff' }} /> : null; })}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {form.title && <InfoRow label="Титул" value={form.title} />}
+                {form.bio && (
+                  <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Описание</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.85rem' }}>
+                      {form.bio.length > 120 ? form.bio.slice(0, 120) + '…' : form.bio}
+                    </Typography>
                   </Box>
-                </Box>
-              )}
-            </Box>
-
-            {!isNew && (
-              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'center', gap: 3 }}>
-                <Tooltip title="Связи"><Box display="flex" alignItems="center" gap={0.5}><GroupsIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.3)' }} /><Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>{characterRelationships.length}</Typography></Box></Tooltip>
+                )}
+                {previewTagsStr.trim() && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>Теги</Typography>
+                    <Box display="flex" gap={0.5} flexWrap="wrap">
+                      {previewTagsStr.split(',').map((t, i) => { const s = t.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 24, fontSize: '0.75rem' }} /> : null; })}
+                    </Box>
+                  </Box>
+                )}
               </Box>
-            )}
-          </Paper>
+            </GlassCard>
+          </Box>
+
+          {/* MAIN CONTENT */}
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            {/* Basic Info */}
+            <Section title="Основное" icon={<EditIcon />} defaultOpen={true}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth label="Имя *" value={form.name} onChange={e => handleChange('name', e.target.value)} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth label="Титул / Прозвище" value={form.title} onChange={e => handleChange('title', e.target.value)} placeholder="напр. Король Севера" />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="Краткое описание" value={form.bio} onChange={e => handleChange('bio', e.target.value)} multiline rows={3} placeholder="Кто этот персонаж..." />
+                </Grid>
+                <Grid item xs={12}>
+                  <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />
+                </Grid>
+              </Grid>
+            </Section>
+
+            {/* Appearance & Personality */}
+            <Section title="Внешность и характер" icon={<FaceIcon />} defaultOpen={!isNew && (!!form.appearance || !!form.personality)}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="Внешность" value={form.appearance} onChange={e => handleChange('appearance', e.target.value)} multiline rows={5} placeholder="Опишите внешний вид персонажа..." />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="Характер" value={form.personality} onChange={e => handleChange('personality', e.target.value)} multiline rows={5} placeholder="Черты характера, привычки, мотивации..." />
+                </Grid>
+              </Grid>
+            </Section>
+
+            {/* Backstory & Notes */}
+            <Section title="История и заметки" icon={<AutoStoriesIcon />} defaultOpen={!isNew && (!!form.backstory || !!form.notes)}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="Предыстория" value={form.backstory} onChange={e => handleChange('backstory', e.target.value)} multiline rows={7} placeholder="Откуда пришёл этот персонаж..." />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="Заметки" value={form.notes} onChange={e => handleChange('notes', e.target.value)} multiline rows={4} placeholder="Секреты, планы, идеи..." />
+                </Grid>
+              </Grid>
+            </Section>
+          </Box>
         </Box>
+      )}
 
-        {/* MAIN CONTENT */}
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-
-          {/* Basic Info */}
-          <Section title="Основное" icon={<EditIcon />} defaultOpen={true}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Имя *" value={form.name} onChange={e => handleChange('name', e.target.value)} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Титул / Прозвище" value={form.title} onChange={e => handleChange('title', e.target.value)} placeholder="напр. Король Севера" />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Краткое описание" value={form.bio} onChange={e => handleChange('bio', e.target.value)} multiline rows={3} placeholder="Кто этот персонаж..." />
-              </Grid>
-              <Grid item xs={12}>
-                <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />
-              </Grid>
-            </Grid>
-          </Section>
-
-          {/* Appearance & Personality */}
-          <Section title="Внешность и характер" icon={<FaceIcon />} defaultOpen={!isNew && (!!form.appearance || !!form.personality)}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Внешность" value={form.appearance} onChange={e => handleChange('appearance', e.target.value)} multiline rows={5} placeholder="Опишите внешний вид персонажа..." />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Характер" value={form.personality} onChange={e => handleChange('personality', e.target.value)} multiline rows={5} placeholder="Черты характера, привычки, мотивации..." />
-              </Grid>
-            </Grid>
-          </Section>
-
-          {/* Backstory & Notes */}
-          <Section title="История и заметки" icon={<AutoStoriesIcon />} defaultOpen={!isNew && (!!form.backstory || !!form.notes)}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Предыстория" value={form.backstory} onChange={e => handleChange('backstory', e.target.value)} multiline rows={7} placeholder="Откуда пришёл этот персонаж..." />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Заметки" value={form.notes} onChange={e => handleChange('notes', e.target.value)} multiline rows={4} placeholder="Секреты, планы, идеи..." />
-              </Grid>
-            </Grid>
-          </Section>
-
+      {activeTab === 'relations' && (
+        <Box>
           {/* Relationships */}
           {!isNew && (
-            <Section title="Связи" icon={<GroupsIcon />} badge={allRelsForDisplay.length} defaultOpen={allRelsForDisplay.length > 0}
-              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => setRelDialogOpen(true)} sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)' }}>Добавить</DndButton>}>
+            <Section title="Связи" icon={<GroupsIcon />} badge={allRelsForDisplay.length} defaultOpen={true}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => setRelDialogOpen(true)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
               {allRelsForDisplay.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 3 }}>
-                  <GroupsIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Добавьте связи с другими персонажами</Typography>
-                </Box>
+                <EmptyState icon={<GroupsIcon />} title="Нет связей" description="Добавьте связи с другими персонажами" actionLabel="Добавить связь" onAction={() => setRelDialogOpen(true)} />
               ) : (
                 <List disablePadding>
-                  {allRelsForDisplay.map((rel: any) => (
-                    <ListItem key={rel.id}
-                      secondaryAction={
-                        <IconButton size="small" onClick={e => { e.stopPropagation(); handleDeleteRelationship(rel.id); }}>
-                          <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
-                        </IconButton>
-                      }
-                      onClick={() => navigate(`/project/${pid}/characters/${rel.otherId}`)}
-                      sx={{
-                        backgroundColor: getRelationshipColor(rel.relationshipType),
-                        borderRadius: 1.5, mb: 1, cursor: 'pointer',
-                        border: '1px solid rgba(255,255,255,0.04)',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
-                      }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.06)', width: 36, height: 36 }}><PersonIcon fontSize="small" /></Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{rel.isOutgoing ? '→' : '←'}</Typography>
-                            <Chip label={getRelationshipLabel(rel.relationshipType)} size="small"
-                              sx={{ backgroundColor: getRelationshipColor(rel.relationshipType), color: '#fff', fontSize: '0.7rem', fontWeight: 600 }} />
-                            <Typography sx={{ color: '#fff', fontWeight: 600 }}>{rel.otherName}</Typography>
-                          </Box>
+                  {allRelsForDisplay.map((rel: any) => {
+                    const relColor = getRelationshipColor(rel.relationshipType, theme);
+                    return (
+                      <ListItem key={rel.id}
+                        secondaryAction={
+                          <IconButton size="small" onClick={e => { e.stopPropagation(); handleDeleteRelationship(rel.id); }}>
+                            <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
+                          </IconButton>
                         }
-                        secondary={rel.description ? <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mt: 0.5, display: 'block' }}>{rel.description}</Typography> : null}
-                      />
-                    </ListItem>
-                  ))}
+                        onClick={() => navigate(`/project/${pid}/characters/${rel.otherId}`)}
+                        sx={{
+                          backgroundColor: alpha(relColor, 0.08),
+                          borderRadius: 1.5, mb: 1, cursor: 'pointer',
+                          border: `1px solid ${alpha(relColor, 0.3)}`,
+                          '&:hover': { backgroundColor: alpha(relColor, 0.15) },
+                        }}>
+                        <ListItemAvatar>
+                          <Avatar sx={{ bgcolor: alpha(relColor, 0.2), color: relColor, width: 40, height: 40 }}><PersonIcon fontSize="small" /></Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{rel.isOutgoing ? '→' : '←'}</Typography>
+                              <Chip label={getRelationshipLabel(rel.relationshipType)} size="small"
+                                sx={{ backgroundColor: alpha(relColor, 0.2), color: relColor, fontSize: '0.7rem', fontWeight: 600 }} />
+                              <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{rel.otherName}</Typography>
+                            </Box>
+                          }
+                          secondary={rel.description ? <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>{rel.description}</Typography> : null}
+                        />
+                      </ListItem>
+                    );
+                  })}
                 </List>
               )}
             </Section>
           )}
-
         </Box>
-      </Box>
+      )}
 
       {/* Relationship Dialog */}
       <Dialog open={relDialogOpen} onClose={() => setRelDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
+        PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить связь</DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
@@ -496,7 +473,7 @@ export const CharacterDetailPage: React.FC = () => {
               {RELATIONSHIP_TYPES.map(t => (
                 <MenuItem key={t} value={t}>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: RELATIONSHIP_COLORS[t] }} />
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: getRelationshipColor(t, theme) }} />
                     {RELATIONSHIP_LABELS[t]}
                   </Box>
                 </MenuItem>

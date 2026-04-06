@@ -4,18 +4,49 @@ import { globby } from 'globby';
 import pc from 'picocolors';
 import { encoding_for_model, get_encoding } from 'tiktoken';
 
-const args = Object.fromEntries(
-  process.argv.slice(2).map((a) => {
-    const [k, v] = a.replace(/^--/, '').split('=');
-    return [k, v ?? true];
-  })
-);
+function parseArgs(argv) {
+  const out = {};
+  for (const raw of argv) {
+    if (!raw.startsWith('--')) continue;
+    const clean = raw.slice(2);
+    const eq = clean.indexOf('=');
+    if (eq === -1) {
+      out[clean] = true;
+      continue;
+    }
+    const k = clean.slice(0, eq);
+    const v = clean.slice(eq + 1);
+    out[k] = v;
+  }
+  return out;
+}
+
+const args = parseArgs(process.argv.slice(2));
 
 const root = path.resolve(String(args.root ?? '.'));
 const model = String(args.model ?? 'cl100k_base');
 const target = Number(args.target ?? 25000);
 const buffer = Number(args.buffer ?? Math.floor(target * 0.2));
 const maxChunk = target - buffer;
+const outDir = path.resolve(root, String(args.outDir ?? 'chunks'));
+const includeFromArgs = String(args.include ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const excludeFromArgs = String(args.exclude ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+if (!Number.isFinite(target) || target <= 0) {
+  throw new Error(`Invalid --target: ${args.target}`);
+}
+if (!Number.isFinite(buffer) || buffer < 0) {
+  throw new Error(`Invalid --buffer: ${args.buffer}`);
+}
+if (maxChunk <= 0) {
+  throw new Error(`Invalid chunk settings: target=${target}, buffer=${buffer}, maxChunk=${maxChunk}`);
+}
 
 const include = [
   '**/*.ts',
@@ -23,6 +54,7 @@ const include = [
   '**/*.js',
   '**/*.json',
   '**/*.md',
+  ...includeFromArgs,
 ];
 
 const exclude = [
@@ -37,6 +69,7 @@ const exclude = [
   '**/package-lock.json',
   '**/data/**/*.sqlite',
   '**/data/uploads/**',
+  ...excludeFromArgs,
 ];
 
 let enc;
@@ -58,16 +91,28 @@ function niceRel(p) {
   return path.relative(root, p) || path.basename(p);
 }
 
-function getVirtualSlice(text, totalTokens, maxChunk, partIdx) {
+function estimateStepChars(text, totalTokens) {
   const approxCharsPerToken = Math.max(3, Math.round(text.length / Math.max(totalTokens, 1)));
-  const step = Math.max(1, approxCharsPerToken * Math.floor(maxChunk * 0.9));
-  const start = step * partIdx;
-  const end = step * (partIdx + 1);
-  return text.slice(start, end);
+  return Math.max(1, approxCharsPerToken * Math.floor(maxChunk * 0.9));
+}
+
+function alignEndToLineBreak(text, start, desiredEnd) {
+  if (desiredEnd >= text.length) return text.length;
+  const minEnd = Math.max(start + 1, Math.floor(desiredEnd * 0.8));
+  const maxEnd = Math.min(text.length, Math.floor(desiredEnd * 1.2));
+
+  const forward = text.indexOf('\n', desiredEnd);
+  if (forward !== -1 && forward <= maxEnd) return forward + 1;
+
+  const back = text.lastIndexOf('\n', desiredEnd);
+  if (back !== -1 && back >= minEnd) return back + 1;
+
+  return desiredEnd;
 }
 
 (async () => {
   console.log(pc.cyan(`Root: ${root}`));
+  console.log(pc.cyan(`OutDir: ${outDir}`));
 
   const files = await globby(include, {
     cwd: root,
@@ -83,16 +128,31 @@ function getVirtualSlice(text, totalTokens, maxChunk, partIdx) {
     buffer,
     maxChunk,
     totalTokens: 0,
+    generatedAt: new Date().toISOString(),
+    warnings: [],
     files: [],
     chunks: [],
   };
 
   const chunks = [];
   let current = { id: 1, files: [], tokens: 0 };
+  const fileTextByRel = new Map();
 
   for (const file of files) {
     const rel = niceRel(file);
-    const text = await fs.readFile(file, 'utf8');
+    let text = '';
+    try {
+      text = await fs.readFile(file, 'utf8');
+    } catch (err) {
+      manifest.warnings.push({
+        path: rel,
+        reason: 'read_error',
+        message: err instanceof Error ? err.message : String(err),
+      });
+      continue;
+    }
+
+    fileTextByRel.set(rel, text);
     const tokens = countTokens(text);
 
     manifest.files.push({ path: rel, tokens });
@@ -100,11 +160,12 @@ function getVirtualSlice(text, totalTokens, maxChunk, partIdx) {
     if (tokens > maxChunk) {
       let start = 0;
       let part = 1;
-      const approxCharsPerToken = Math.max(3, Math.round(text.length / Math.max(tokens, 1)));
-      const step = Math.max(1, approxCharsPerToken * Math.floor(maxChunk * 0.9));
+      const step = estimateStepChars(text, tokens);
 
       while (start < text.length) {
-        const slice = text.slice(start, start + step);
+        const desiredEnd = start + step;
+        const end = alignEndToLineBreak(text, start, desiredEnd);
+        const slice = text.slice(start, end);
         const t = countTokens(slice);
 
         if (current.tokens + t > maxChunk && current.files.length) {
@@ -117,11 +178,13 @@ function getVirtualSlice(text, totalTokens, maxChunk, partIdx) {
           tokens: t,
           size: slice.length,
           virtual: true,
+          start,
+          end,
         });
         current.tokens += t;
 
         part += 1;
-        start += step;
+        start = end;
       }
 
       continue;
@@ -147,7 +210,6 @@ function getVirtualSlice(text, totalTokens, maxChunk, partIdx) {
     files: c.files,
   }));
 
-  const outDir = path.join(root, 'chunks');
   await fs.mkdir(outDir, { recursive: true });
 
   for (const c of chunks) {
@@ -156,13 +218,21 @@ function getVirtualSlice(text, totalTokens, maxChunk, partIdx) {
 
     for (const f of c.files) {
       const p = f.virtual ? f.path.split('#part')[0] : f.path;
-      const abs = path.join(root, p);
-      let text = await fs.readFile(abs, 'utf8');
+      const fullText = fileTextByRel.get(p);
+      if (typeof fullText !== 'string') {
+        manifest.warnings.push({
+          path: p,
+          reason: 'missing_file_cache',
+          message: 'File text was not cached; skipped while writing chunk',
+        });
+        continue;
+      }
+      let text = fullText;
 
       if (f.virtual) {
-        const totalTokens = countTokens(text);
-        const partIdx = Number(f.path.split('#part')[1]) - 1;
-        text = getVirtualSlice(text, totalTokens, maxChunk, partIdx);
+        const from = Number.isFinite(f.start) ? f.start : 0;
+        const to = Number.isFinite(f.end) ? f.end : text.length;
+        text = text.slice(from, to);
       }
 
       parts.push(`\n\n/* ==== ${f.path} (${f.tokens} tok) ==== */\n\n${text}`);
@@ -182,6 +252,9 @@ function getVirtualSlice(text, totalTokens, maxChunk, partIdx) {
   console.log(
     pc.green(`Chunks: ${manifest.chunks.length}, target ${target}, maxChunk ${maxChunk}`)
   );
+  if (manifest.warnings.length) {
+    console.log(pc.yellow(`Warnings: ${manifest.warnings.length}`));
+  }
 })().finally(() => {
-  enc.free();
+  if (enc && typeof enc.free === 'function') enc.free();
 });

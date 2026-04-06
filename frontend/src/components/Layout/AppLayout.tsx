@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { Outlet, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { useUIStore } from '@/store/useUIStore';
@@ -15,6 +16,7 @@ export const AppLayout: React.FC = () => {
   const motionMode = usePreferencesStore((state) => state.motionMode);
   const location = useLocation();
   const pageTransitionMs = motionMode === 'reduced' ? 0 : 220;
+  const shouldAnimatePage = motionMode !== 'reduced';
   const pageKey = `${location.pathname}${location.search}`;
 
   const isHomePage = location.pathname === '/';
@@ -41,20 +43,22 @@ export const AppLayout: React.FC = () => {
           p: 3,
           minHeight: 'calc(100vh - 64px)',
           minWidth: 0,
-          '@keyframes pageFadeSlideIn': {
-            from: { opacity: 0, transform: 'translateY(8px)' },
-            to: { opacity: 1, transform: 'translateY(0)' },
-          },
         }}
       >
-        <Box
-          key={pageKey}
-          sx={pageTransitionMs
-            ? { animation: `pageFadeSlideIn ${pageTransitionMs}ms cubic-bezier(0.22, 1, 0.36, 1)` }
-            : undefined}
-        >
-          <Outlet />
-        </Box>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pageKey}
+            initial={shouldAnimatePage ? { opacity: 0, y: 8 } : false}
+            animate={shouldAnimatePage ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+            exit={shouldAnimatePage ? { opacity: 0, y: -4 } : undefined}
+            transition={shouldAnimatePage
+              ? { duration: pageTransitionMs / 1000, ease: [0.22, 1, 0.36, 1] }
+              : undefined}
+            style={{ minHeight: '100%' }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </Box>
     </Box>
   );
