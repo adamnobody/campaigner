@@ -184,6 +184,11 @@ export class FactionController {
     return ok(res, undefined, 'Asset deleted');
   });
 
+  static bootstrapDefaultAssets = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    return ok(res, FactionService.bootstrapDefaultAssets(factionId));
+  });
+
   static createRelation = asyncHandler(async (req: Request, res: Response) => {
     const relation = FactionService.createRelation(req.body);
     return created(res, relation);

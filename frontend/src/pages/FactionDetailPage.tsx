@@ -93,7 +93,7 @@ export const FactionDetailPage: React.FC = () => {
     uploadImage, uploadBanner, setTags,
     createRank, updateRank, deleteRank,
     addMember, removeMember,
-    createAsset, updateAsset, deleteAsset,
+    createAsset, updateAsset, deleteAsset, bootstrapDefaultAssets,
     fetchRelations, createRelation, deleteRelation,
     setCurrentFaction,
   } = useFactionStore((state) => ({
@@ -117,6 +117,7 @@ export const FactionDetailPage: React.FC = () => {
     createAsset: state.createAsset,
     updateAsset: state.updateAsset,
     deleteAsset: state.deleteAsset,
+    bootstrapDefaultAssets: state.bootstrapDefaultAssets,
     fetchRelations: state.fetchRelations,
     createRelation: state.createRelation,
     deleteRelation: state.deleteRelation,
@@ -364,6 +365,19 @@ export const FactionDetailPage: React.FC = () => {
     });
   };
 
+  const handleBootstrapDefaultAssets = async () => {
+    try {
+      const result = await bootstrapDefaultAssets(fid);
+      if (result.created.length > 0) {
+        showSnackbar(`Добавлено базовых активов: ${result.created.length}`, 'success');
+      } else {
+        showSnackbar('Базовые активы уже добавлены', 'success');
+      }
+    } catch (err: any) {
+      showSnackbar(err.message || 'Ошибка', 'error');
+    }
+  };
+
   if (loading && !isNew && !currentFaction) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography></Box>;
   }
@@ -607,7 +621,16 @@ export const FactionDetailPage: React.FC = () => {
           {/* SECTION: Assets */}
           {!isNew && (
             <Section title="Активы" icon={<StarIcon />} badge={currentAssets.length} defaultOpen={currentAssets.length > 0}
-              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openAssetDialog()} sx={{ borderColor: 'rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.85)' }}>Добавить</DndButton>}>
+              action={
+                <Box display="flex" gap={1}>
+                  <DndButton variant="outlined" size="small" onClick={handleBootstrapDefaultAssets} sx={{ borderColor: 'rgba(201,169,89,0.4)', color: 'rgba(201,169,89,0.9)' }}>
+                    Добавить базовые активы
+                  </DndButton>
+                  <DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openAssetDialog()} sx={{ borderColor: 'rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.85)' }}>
+                    Добавить
+                  </DndButton>
+                </Box>
+              }>
               {currentAssets.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 3 }}>
                   <StarIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />

@@ -38,6 +38,10 @@ import {
 } from './faction/faction.mappers';
 
 export class FactionService {
+  private static normalizeAssetName(name: string): string {
+    return name.trim().toLowerCase();
+  }
+
   // ==================== FACTIONS CRUD ====================
 
   static getAll(projectId: number, filters: FactionFilters = {}) {
@@ -316,6 +320,34 @@ export class FactionService {
     ensureEntityExists('faction_assets', id, 'Faction asset');
     const db = getDb();
     db.prepare('DELETE FROM faction_assets WHERE id = ?').run(id);
+  }
+
+  static bootstrapDefaultAssets(factionId: number) {
+    const defaults = ['Казна', 'Земельные активы', 'Военный ресурс', 'Торговый ресурс'] as const;
+    const existing = this.getAssets(factionId);
+    const existingNormalized = new Set(existing.map((asset) => this.normalizeAssetName(asset.name)));
+
+    const created = [];
+    const skipped: string[] = [];
+
+    for (const defaultName of defaults) {
+      const normalized = this.normalizeAssetName(defaultName);
+      if (existingNormalized.has(normalized)) {
+        skipped.push(defaultName);
+        continue;
+      }
+
+      const createdAsset = this.createAsset({
+        factionId,
+        name: defaultName,
+        value: '',
+        sortOrder: existing.length + created.length,
+      });
+      created.push(createdAsset);
+      existingNormalized.add(normalized);
+    }
+
+    return { created, skipped };
   }
 
   static createRelation(data: RelationCreateData) {

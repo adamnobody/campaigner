@@ -94,6 +94,10 @@ export const PoliciesPage: React.FC = () => {
   const [linksLoading, setLinksLoading] = useState(false);
   const [linkDraft, setLinkDraft] = useState<LinkDraft>({ factionId: '', role: 'supporter' });
 
+  const [typeFilter, setTypeFilter] = useState<'all' | PolicyType>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | PolicyStatus>('all');
+  const [titleSearch, setTitleSearch] = useState('');
+
   const loadPolicies = async () => {
     setLoading(true);
     try {
@@ -135,6 +139,22 @@ export const PoliciesPage: React.FC = () => {
     () => [...policies].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)),
     [policies]
   );
+
+  const filteredPolicies = useMemo(() => {
+    const q = titleSearch.trim().toLowerCase();
+    return sortedPolicies.filter((policy) => {
+      if (typeFilter !== 'all' && policy.type !== typeFilter) return false;
+      if (statusFilter !== 'all' && policy.status !== statusFilter) return false;
+      if (q && !policy.title.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [sortedPolicies, typeFilter, statusFilter, titleSearch]);
+
+  const resetListFilters = () => {
+    setTypeFilter('all');
+    setStatusFilter('all');
+    setTitleSearch('');
+  };
 
   const handleOpenCreate = () => {
     setEditingPolicy(null);
@@ -278,6 +298,52 @@ export const PoliciesPage: React.FC = () => {
         </DndButton>
       </Box>
 
+      {sortedPolicies.length > 0 && (
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2,
+            mb: 2,
+            alignItems: 'flex-end',
+          }}
+        >
+          <TextField
+            size="small"
+            label="Поиск по названию"
+            value={titleSearch}
+            onChange={(e) => setTitleSearch(e.target.value)}
+            sx={{ minWidth: 200, flex: '1 1 200px' }}
+          />
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel>Тип</InputLabel>
+            <Select
+              label="Тип"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as 'all' | PolicyType)}
+            >
+              <MenuItem value="all">Все типы</MenuItem>
+              {POLICY_TYPES.map((type) => (
+                <MenuItem key={type} value={type}>{TYPE_LABELS[type]}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Статус</InputLabel>
+            <Select
+              label="Статус"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | PolicyStatus)}
+            >
+              <MenuItem value="all">Все статусы</MenuItem>
+              {POLICY_STATUSES.map((status) => (
+                <MenuItem key={status} value={status}>{STATUS_LABELS[status]}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      )}
+
       {sortedPolicies.length === 0 ? (
         <EmptyState
           icon={<TrackChangesIcon sx={{ fontSize: 64 }} />}
@@ -286,9 +352,27 @@ export const PoliciesPage: React.FC = () => {
           actionLabel="Добавить карточку"
           onAction={handleOpenCreate}
         />
+      ) : filteredPolicies.length === 0 ? (
+        <Box
+          sx={{
+            textAlign: 'center',
+            py: 6,
+            px: 2,
+            borderRadius: 2,
+            border: '1px dashed rgba(255,255,255,0.15)',
+            backgroundColor: 'rgba(255,255,255,0.02)',
+          }}
+        >
+          <Typography sx={{ color: 'rgba(255,255,255,0.55)', mb: 2 }}>
+            Ничего не найдено по текущим фильтрам и поиску
+          </Typography>
+          <Button variant="outlined" onClick={resetListFilters}>
+            Сбросить фильтры
+          </Button>
+        </Box>
       ) : (
         <List disablePadding>
-          {sortedPolicies.map((policy) => (
+          {filteredPolicies.map((policy) => (
             <ListItem
               key={policy.id}
               sx={{

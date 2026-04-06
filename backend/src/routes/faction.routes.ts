@@ -222,6 +222,12 @@ router.delete(
   FactionController.deleteAsset
 );
 
+router.post(
+  '/:id/assets/bootstrap-defaults',
+  validateRequest({ params: idParamsSchema }),
+  FactionController.bootstrapDefaultAssets
+);
+
 // ==================== RELATIONS ====================
 
 router.post(

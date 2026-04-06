@@ -53,6 +53,7 @@ interface FactionState {
   createAsset: (factionId: number, data: CreateFactionAsset) => Promise<FactionAsset>;
   updateAsset: (factionId: number, assetId: number, data: UpdateFactionAsset) => Promise<FactionAsset>;
   deleteAsset: (factionId: number, assetId: number) => Promise<void>;
+  bootstrapDefaultAssets: (factionId: number) => Promise<{ created: FactionAsset[]; skipped: string[] }>;
 
   // Relations
   fetchRelations: (projectId: number) => Promise<void>;
@@ -362,6 +363,24 @@ export const useFactionStore = create<FactionState>((set, get) => ({
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to delete faction asset') });
+      throw error;
+    }
+  },
+
+  bootstrapDefaultAssets: async (factionId) => {
+    set({ error: null });
+    try {
+      const res = await factionsApi.bootstrapDefaultAssets(factionId);
+      const result = res.data.data;
+      const fRes = await factionsApi.getById(factionId);
+      const refreshed = fRes.data.data;
+      set(state => ({
+        currentFaction: refreshed,
+        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+      }));
+      return result;
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to bootstrap faction assets') });
       throw error;
     }
   },
