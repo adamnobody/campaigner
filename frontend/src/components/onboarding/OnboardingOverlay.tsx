@@ -3,6 +3,7 @@ import { Backdrop, Box, Button, Paper, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { onboardingSteps } from './onboardingSteps';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 
 export const OnboardingOverlay: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ export const OnboardingOverlay: React.FC = () => {
     completeForProject,
   } = useOnboardingStore();
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const motionMode = usePreferencesStore((state) => state.motionMode);
+  const reducedMotion = motionMode === 'reduced';
+  const transitionMs = reducedMotion ? 0 : 220;
 
   const stepIndex = activeProjectId ? (progressByProject[activeProjectId]?.stepIndex ?? 0) : 0;
   const step = onboardingSteps[stepIndex];
@@ -31,19 +35,19 @@ export const OnboardingOverlay: React.FC = () => {
       if (el instanceof HTMLElement) {
         const rect = el.getBoundingClientRect();
         setTargetRect(rect);
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.scrollIntoView({ block: 'center', behavior: reducedMotion ? 'auto' : 'smooth' });
       } else {
         setTargetRect(null);
       }
     };
     updateRect();
-    const timer = setTimeout(updateRect, 300);
+    const timer = setTimeout(updateRect, reducedMotion ? 0 : 300);
     window.addEventListener('resize', updateRect);
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updateRect);
     };
-  }, [activeProjectId, isActive, location.pathname, navigate, step]);
+  }, [activeProjectId, isActive, location.pathname, navigate, reducedMotion, step]);
 
   const stepLabel = useMemo(
     () => `${Math.min(stepIndex + 1, onboardingSteps.length)} / ${onboardingSteps.length}`,
@@ -55,7 +59,11 @@ export const OnboardingOverlay: React.FC = () => {
   const finish = () => completeForProject(activeProjectId);
 
   return (
-    <Backdrop open sx={{ zIndex: (theme) => theme.zIndex.modal + 10, backgroundColor: 'rgba(0,0,0,0.65)' }}>
+    <Backdrop
+      open
+      transitionDuration={transitionMs}
+      sx={{ zIndex: (theme) => theme.zIndex.modal + 10, backgroundColor: 'rgba(0,0,0,0.65)' }}
+    >
       {targetRect && (
         <Box
           sx={{
@@ -67,10 +75,20 @@ export const OnboardingOverlay: React.FC = () => {
             borderRadius: 1.5,
             border: '2px solid rgba(255,255,255,0.9)',
             pointerEvents: 'none',
+            transition: reducedMotion ? 'none' : `all ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+            boxShadow: reducedMotion ? 'none' : '0 0 0 9999px rgba(0,0,0,0.08), 0 0 24px rgba(255,255,255,0.22)',
           }}
         />
       )}
-      <Paper sx={{ p: 2.5, width: 380, maxWidth: '90vw' }}>
+      <Paper
+        sx={{
+          p: 2.5,
+          width: 380,
+          maxWidth: '90vw',
+          transition: reducedMotion ? 'none' : `transform ${transitionMs}ms ease, opacity ${transitionMs}ms ease`,
+          transform: reducedMotion ? 'none' : 'translateY(0)',
+        }}
+      >
         <Typography variant="overline" color="text.secondary">
           Обучение · Шаг {stepLabel}
         </Typography>

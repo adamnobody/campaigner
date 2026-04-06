@@ -158,6 +158,32 @@ export class FactionController {
     return ok(res, relations);
   });
 
+  // ==================== ASSETS ====================
+
+  static getAssets = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const assets = FactionService.getAssets(factionId);
+    return ok(res, assets);
+  });
+
+  static createAsset = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const asset = FactionService.createAsset({ ...req.body, factionId });
+    return created(res, asset);
+  });
+
+  static updateAsset = asyncHandler(async (req: Request, res: Response) => {
+    const assetId = parseId(req.params.assetId, 'asset id');
+    const asset = FactionService.updateAsset(assetId, req.body);
+    return ok(res, asset);
+  });
+
+  static deleteAsset = asyncHandler(async (req: Request, res: Response) => {
+    const assetId = parseId(req.params.assetId, 'asset id');
+    FactionService.deleteAsset(assetId);
+    return ok(res, undefined, 'Asset deleted');
+  });
+
   static createRelation = asyncHandler(async (req: Request, res: Response) => {
     const relation = FactionService.createRelation(req.body);
     return created(res, relation);

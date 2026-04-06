@@ -13,6 +13,9 @@ import type {
   UpdateFactionMember,
   CreateFactionRelation,
   UpdateFactionRelation,
+  FactionAsset,
+  CreateFactionAsset,
+  UpdateFactionAsset,
 } from '@campaigner/shared';
 import type { FactionsListParams } from '@/api/types';
 import { getErrorMessage } from '@/utils/error';
@@ -45,6 +48,11 @@ interface FactionState {
   addMember: (factionId: number, data: CreateFactionMember) => Promise<FactionMember>;
   updateMember: (factionId: number, memberId: number, data: UpdateFactionMember) => Promise<FactionMember>;
   removeMember: (factionId: number, memberId: number) => Promise<void>;
+
+  // Assets
+  createAsset: (factionId: number, data: CreateFactionAsset) => Promise<FactionAsset>;
+  updateAsset: (factionId: number, assetId: number, data: UpdateFactionAsset) => Promise<FactionAsset>;
+  deleteAsset: (factionId: number, assetId: number) => Promise<void>;
 
   // Relations
   fetchRelations: (projectId: number) => Promise<void>;
@@ -301,6 +309,59 @@ export const useFactionStore = create<FactionState>((set, get) => ({
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to remove faction member') });
+      throw error;
+    }
+  },
+
+  // Assets
+  createAsset: async (factionId, data) => {
+    set({ error: null });
+    try {
+      const res = await factionsApi.createAsset(factionId, data);
+      const asset = res.data.data;
+      const fRes = await factionsApi.getById(factionId);
+      const refreshed = fRes.data.data;
+      set(state => ({
+        currentFaction: refreshed,
+        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+      }));
+      return asset;
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create faction asset') });
+      throw error;
+    }
+  },
+
+  updateAsset: async (factionId, assetId, data) => {
+    set({ error: null });
+    try {
+      const res = await factionsApi.updateAsset(factionId, assetId, data);
+      const asset = res.data.data;
+      const fRes = await factionsApi.getById(factionId);
+      const refreshed = fRes.data.data;
+      set(state => ({
+        currentFaction: refreshed,
+        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+      }));
+      return asset;
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update faction asset') });
+      throw error;
+    }
+  },
+
+  deleteAsset: async (factionId, assetId) => {
+    set({ error: null });
+    try {
+      await factionsApi.deleteAsset(factionId, assetId);
+      const fRes = await factionsApi.getById(factionId);
+      const refreshed = fRes.data.data;
+      set(state => ({
+        currentFaction: refreshed,
+        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+      }));
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete faction asset') });
       throw error;
     }
   },

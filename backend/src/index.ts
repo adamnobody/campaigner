@@ -22,6 +22,7 @@ import factionRoutes from './routes/faction.routes.js';
 import wikiRoutes from './routes/wiki.routes.js';
 import dynastyRoutes from './routes/dynasty.routes.js';
 import branchRoutes from './routes/branch.routes.js';
+import policyRoutes from './routes/policy.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -96,6 +97,7 @@ app.use('/api/dogmas', dogmaRoutes);
 app.use('/api/factions', factionRoutes);
 app.use('/api/dynasties', dynastyRoutes);
 app.use('/api/branches', branchRoutes);
+app.use('/api/policies', policyRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

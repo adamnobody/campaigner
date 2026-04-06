@@ -24,6 +24,7 @@ import { shallow } from 'zustand/shallow';
 import GavelIcon from '@mui/icons-material/Gavel';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 
 const projectMenuItems = [
   { label: 'Карта', icon: <MapIcon />, path: 'map' },
@@ -34,6 +35,7 @@ const projectMenuItems = [
   { label: 'Хронология', icon: <TimelineIcon />, path: 'timeline' },
   { label: 'Догмы', icon: <GavelIcon />, path: 'dogmas' },
   { label: 'Династии', icon: <AccountTreeIcon />, path: 'dynasties' },
+  { label: 'Амбиции и политика', icon: <TrackChangesIcon />, path: 'policies' },
 ];
 
 export const Sidebar: React.FC = () => {

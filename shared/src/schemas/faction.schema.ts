@@ -68,6 +68,29 @@ export const updateFactionRelationSchema = z.object({
   isBidirectional: z.boolean().optional(),
 });
 
+export const factionAssetSchema = z.object({
+  id: z.number().int().positive(),
+  factionId: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200),
+  value: z.string().max(1000).default(''),
+  sortOrder: z.number().int().default(0),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const createFactionAssetSchema = z.object({
+  factionId: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200),
+  value: z.string().trim().max(1000).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const updateFactionAssetSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  value: z.string().trim().max(1000).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
 export const factionGraphNodeSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),

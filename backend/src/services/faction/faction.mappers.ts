@@ -1,4 +1,4 @@
-import type { FactionRow, RankRow, MemberRow, RelationRow } from './faction.types';
+import type { FactionRow, RankRow, MemberRow, RelationRow, AssetRow } from './faction.types';
 
 export const FACTION_UPDATE_MAP: Record<string, string> = {
   projectId: 'project_id',
@@ -46,6 +46,12 @@ export const RELATION_UPDATE_MAP: Record<string, string> = {
   description: 'description',
   startedDate: 'started_date',
   isBidirectional: 'is_bidirectional',
+};
+
+export const ASSET_UPDATE_MAP: Record<string, string> = {
+  name: 'name',
+  value: 'value',
+  sortOrder: 'sort_order',
 };
 
 export function toFaction(row: FactionRow) {
@@ -122,6 +128,18 @@ export function toRelation(row: RelationRow) {
     createdAt: row.created_at,
     sourceFactionName: row.source_faction_name || '',
     targetFactionName: row.target_faction_name || '',
+  };
+}
+
+export function toAsset(row: AssetRow) {
+  return {
+    id: row.id,
+    factionId: row.faction_id,
+    name: row.name,
+    value: row.value || '',
+    sortOrder: row.sort_order || 0,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

@@ -54,6 +54,9 @@ import {
   updateFactionMemberSchema,
   createFactionRelationSchema,
   updateFactionRelationSchema,
+  factionAssetSchema,
+  createFactionAssetSchema,
+  updateFactionAssetSchema,
   factionGraphNodeSchema,
   factionGraphSchema,
 } from '../schemas/faction.schema.js';
@@ -69,6 +72,17 @@ import {
   branchOverrideSchema,
   branchLocalEntitySchema,
 } from '../schemas/branch.schema.js';
+import {
+  policySchema,
+  createPolicySchema,
+  updatePolicySchema,
+  policyTypeSchema,
+  policyStatusSchema,
+  policyFactionLinkSchema,
+  policyFactionLinkRoleSchema,
+  createPolicyFactionLinkSchema,
+  updatePolicyFactionLinkSchema,
+} from '../schemas/policy.schema.js';
 import {
   createDynastySchema,
   updateDynastySchema,
@@ -134,6 +148,9 @@ export type UpdateFactionMember = z.input<typeof updateFactionMemberSchema>;
 
 export type CreateFactionRelation = z.input<typeof createFactionRelationSchema>;
 export type UpdateFactionRelation = z.input<typeof updateFactionRelationSchema>;
+export type FactionAsset = z.infer<typeof factionAssetSchema>;
+export type CreateFactionAsset = Omit<z.input<typeof createFactionAssetSchema>, 'factionId'>;
+export type UpdateFactionAsset = z.input<typeof updateFactionAssetSchema>;
 export type FactionGraphNode = z.infer<typeof factionGraphNodeSchema>;
 export type FactionGraph = z.infer<typeof factionGraphSchema>;
 
@@ -160,6 +177,17 @@ export type CreateScenarioBranch = z.input<typeof createScenarioBranchSchema>;
 export type UpdateScenarioBranch = z.input<typeof updateScenarioBranchSchema>;
 export type BranchOverride = z.infer<typeof branchOverrideSchema>;
 export type BranchLocalEntity = z.infer<typeof branchLocalEntitySchema>;
+
+// ==================== Policies ====================
+export type Policy = z.infer<typeof policySchema>;
+export type CreatePolicy = z.input<typeof createPolicySchema>;
+export type UpdatePolicy = z.input<typeof updatePolicySchema>;
+export type PolicyType = z.infer<typeof policyTypeSchema>;
+export type PolicyStatus = z.infer<typeof policyStatusSchema>;
+export type PolicyFactionLink = z.infer<typeof policyFactionLinkSchema>;
+export type PolicyFactionLinkRole = z.infer<typeof policyFactionLinkRoleSchema>;
+export type CreatePolicyFactionLink = z.input<typeof createPolicyFactionLinkSchema>;
+export type UpdatePolicyFactionLink = z.input<typeof updatePolicyFactionLinkSchema>;
 
 // ==================== Common ====================
 // In backend responses `Tag` always includes `id` and `color` (color falls back to '#808080').
@@ -496,6 +524,7 @@ export interface Faction {
   updatedAt: string;
   // Joined
   tags?: any[];
+  assets?: FactionAsset[];
   ranks?: FactionRank[];
   members?: FactionMember[];
   memberCount?: number;

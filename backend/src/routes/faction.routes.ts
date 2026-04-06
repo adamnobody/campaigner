@@ -12,6 +12,8 @@ import {
   updateFactionMemberSchema,
   createFactionRelationSchema,
   updateFactionRelationSchema,
+  createFactionAssetSchema,
+  updateFactionAssetSchema,
 } from '@campaigner/shared';
 import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas';
 
@@ -34,6 +36,11 @@ const memberParamsSchema = z.object({
 
 const relationParamsSchema = z.object({
   relationId: z.coerce.number().int().positive(),
+});
+
+const assetParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  assetId: z.coerce.number().int().positive(),
 });
 
 const getAllQuerySchema = z.object({
@@ -181,6 +188,38 @@ router.delete(
   '/:id/members/:memberId',
   validateRequest({ params: memberParamsSchema }),
   FactionController.removeMember
+);
+
+// ==================== ASSETS ====================
+
+router.get(
+  '/:id/assets',
+  validateRequest({ params: idParamsSchema }),
+  FactionController.getAssets
+);
+
+router.post(
+  '/:id/assets',
+  validateRequest({
+    params: idParamsSchema,
+    body: createFactionAssetSchema.omit({ factionId: true }),
+  }),
+  FactionController.createAsset
+);
+
+router.put(
+  '/:id/assets/:assetId',
+  validateRequest({
+    params: assetParamsSchema,
+    body: updateFactionAssetSchema,
+  }),
+  FactionController.updateAsset
+);
+
+router.delete(
+  '/:id/assets/:assetId',
+  validateRequest({ params: assetParamsSchema }),
+  FactionController.deleteAsset
 );
 
 // ==================== RELATIONS ====================

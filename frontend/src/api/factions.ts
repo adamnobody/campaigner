@@ -12,6 +12,9 @@ import type {
   FactionRelation,
   CreateFactionRelation,
   UpdateFactionRelation,
+  FactionAsset,
+  CreateFactionAsset,
+  UpdateFactionAsset,
   FactionGraph,
   Tag,
 } from '@campaigner/shared';
@@ -54,6 +57,13 @@ export const factionsApi = {
     apiClient.put<ApiResponse<FactionMember>>(`/factions/${factionId}/members/${memberId}`, data),
   removeMember: (factionId: number, memberId: number) =>
     apiClient.delete<VoidResponse>(`/factions/${factionId}/members/${memberId}`),
+  getAssets: (factionId: number) => apiClient.get<ApiResponse<FactionAsset[]>>(`/factions/${factionId}/assets`),
+  createAsset: (factionId: number, data: CreateFactionAsset) =>
+    apiClient.post<ApiResponse<FactionAsset>>(`/factions/${factionId}/assets`, data),
+  updateAsset: (factionId: number, assetId: number, data: UpdateFactionAsset) =>
+    apiClient.put<ApiResponse<FactionAsset>>(`/factions/${factionId}/assets/${assetId}`, data),
+  deleteAsset: (factionId: number, assetId: number) =>
+    apiClient.delete<VoidResponse>(`/factions/${factionId}/assets/${assetId}`),
   getRelations: (projectId: number) => apiClient.get<ApiResponse<FactionRelation[]>>('/factions/relations', { params: { projectId } }),
   createRelation: (data: CreateFactionRelation) => apiClient.post<ApiResponse<FactionRelation>>('/factions/relations', data),
   updateRelation: (relationId: number, data: UpdateFactionRelation) =>
