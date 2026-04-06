@@ -95,6 +95,16 @@ export interface RelationRow {
   target_faction_name?: string | null;
 }
 
+export interface AssetRow {
+  id: number;
+  faction_id: number;
+  name: string;
+  value: string | null;
+  sort_order: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface FactionCreateData {
   projectId: number;
   name: string;
@@ -168,4 +178,17 @@ export interface RelationUpdateData {
   description?: string;
   startedDate?: string;
   isBidirectional?: boolean;
+}
+
+export interface AssetCreateData {
+  factionId: number;
+  name: string;
+  value?: string;
+  sortOrder?: number;
+}
+
+export interface AssetUpdateData {
+  name?: string;
+  value?: string;
+  sortOrder?: number;
 }

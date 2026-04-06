@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AppBar, Toolbar, Typography, IconButton, Box,
-  Breadcrumbs, Link as MuiLink, Button, Tooltip,
+  Breadcrumbs, Link as MuiLink, Button, Tooltip, FormControl, Select, MenuItem,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
 import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
@@ -15,6 +17,9 @@ import { useDynastyStore } from '@/store/useDynastyStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { SearchDialog } from '@/components/ui/SearchDialog';
 import { shallow } from 'zustand/shallow';
+import { useBranchStore } from '@/store/useBranchStore';
+import { branchesApi } from '@/api/branches';
+import { getErrorMessage } from '@/utils/error';
 
 const PAGE_LABELS: Record<string, string> = {
   map: 'Карта',
@@ -33,23 +38,40 @@ const PAGE_LABELS: Record<string, string> = {
 };
 
 export const TopBar: React.FC = () => {
-  const { toggleSidebar, searchOpen, setSearchOpen } = useUIStore((state) => ({
+  const { toggleSidebar, searchOpen, setSearchOpen, showSnackbar } = useUIStore((state) => ({
     toggleSidebar: state.toggleSidebar,
     searchOpen: state.searchOpen,
     setSearchOpen: state.setSearchOpen,
+    showSnackbar: state.showSnackbar,
   }), shallow);
   const currentProject = useProjectStore((state) => state.currentProject);
   const currentCharacter = useCharacterStore((state) => state.currentCharacter);
   const currentFaction = useFactionStore((state) => state.currentFaction);
   const currentDynasty = useDynastyStore((state) => state.currentDynasty);
+  const { branches, activeBranchId, loading: branchesLoading, fetchBranches, setActiveBranchId } = useBranchStore((state) => ({
+    branches: state.branches,
+    activeBranchId: state.activeBranchId,
+    loading: state.loading,
+    fetchBranches: state.fetchBranches,
+    setActiveBranchId: state.setActiveBranchId,
+  }), shallow);
   const navigate = useNavigate();
   const location = useLocation();
+  const [createBranchOpen, setCreateBranchOpen] = useState(false);
+  const [branchNameDraft, setBranchNameDraft] = useState('');
+  const [createBranchLoading, setCreateBranchLoading] = useState(false);
 
   useHotkeys([
     { key: 'k', ctrl: true, handler: () => setSearchOpen(true), description: 'Open search' },
   ]);
 
   const pathParts = location.pathname.split('/').filter(Boolean);
+
+  useEffect(() => {
+    if (currentProject?.id) {
+      fetchBranches(currentProject.id);
+    }
+  }, [currentProject?.id, fetchBranches]);
 
   const breadcrumbItems = useMemo(() => {
     const items: { label: string; path?: string }[] = [];
@@ -86,6 +108,44 @@ export const TopBar: React.FC = () => {
 
     return items;
   }, [pathParts, currentCharacter, currentFaction, currentDynasty]);
+
+  const handleOpenCreateBranch = () => {
+    setBranchNameDraft('');
+    setCreateBranchOpen(true);
+  };
+
+  const handleCloseCreateBranch = () => {
+    if (createBranchLoading) return;
+    setCreateBranchOpen(false);
+    setBranchNameDraft('');
+  };
+
+  const handleCreateBranch = async () => {
+    const projectId = currentProject?.id;
+    const name = branchNameDraft.trim();
+    if (!projectId || !name) return;
+
+    setCreateBranchLoading(true);
+    try {
+      const response = await branchesApi.create({
+        projectId,
+        name,
+        parentBranchId: activeBranchId ?? undefined,
+      });
+      const createdBranch = response.data.data;
+      await fetchBranches(projectId);
+      if (createdBranch?.id) {
+        setActiveBranchId(createdBranch.id);
+      }
+      showSnackbar('Ветка создана', 'success');
+      setCreateBranchOpen(false);
+      setBranchNameDraft('');
+    } catch (error: unknown) {
+      showSnackbar(getErrorMessage(error, 'Не удалось создать ветку'), 'error');
+    } finally {
+      setCreateBranchLoading(false);
+    }
+  };
 
   return (
     <>
@@ -148,8 +208,56 @@ export const TopBar: React.FC = () => {
           </Breadcrumbs>
 
           {currentProject && (
+            <FormControl data-tour="branch-selector" size="small" sx={{ mr: 1, minWidth: 130 }}>
+              <Select
+                value={activeBranchId ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setActiveBranchId(value === '' ? null : Number(value));
+                }}
+                displayEmpty
+                renderValue={(selected) => {
+                  if (branchesLoading) return 'Загрузка веток...';
+                  if (branches.length === 0) return 'Без веток';
+                  const selectedBranch = branches.find((branch) => branch.id === Number(selected));
+                  return selectedBranch?.name ?? 'Без веток';
+                }}
+                sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem' }}
+              >
+                {branches.map((branch) => (
+                  <MenuItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          {currentProject && (
+            <Tooltip title="Создать ветку what-if">
+              <span>
+                <IconButton
+                  data-tour="branch-create"
+                  size="small"
+                  onClick={handleOpenCreateBranch}
+                  disabled={branchesLoading}
+                  sx={{
+                    mr: 1.5,
+                    color: 'rgba(255,255,255,0.75)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 1,
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.08)' },
+                  }}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+
+          {currentProject && (
             <Tooltip title="Поиск (Ctrl+K)">
               <Button
+                data-tour="topbar-search"
                 onClick={() => setSearchOpen(true)}
                 size="small"
                 sx={{
@@ -175,6 +283,36 @@ export const TopBar: React.FC = () => {
       </AppBar>
 
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <Dialog open={createBranchOpen} onClose={handleCloseCreateBranch} fullWidth maxWidth="xs">
+        <DialogTitle>Новая ветка</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            margin="dense"
+            label="Название ветки"
+            value={branchNameDraft}
+            onChange={(e) => setBranchNameDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !createBranchLoading) {
+                e.preventDefault();
+                void handleCreateBranch();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCreateBranch} disabled={createBranchLoading}>Отмена</Button>
+          <Button
+            variant="contained"
+            onClick={() => void handleCreateBranch()}
+            disabled={createBranchLoading || branchNameDraft.trim().length === 0}
+          >
+            Создать
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

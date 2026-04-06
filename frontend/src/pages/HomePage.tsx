@@ -16,10 +16,11 @@ import PaletteIcon from '@mui/icons-material/Palette';
 import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
-import { projectsApi } from '@/api/axiosClient';
+import { projectsApi } from '@/api/projects';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { shallow } from 'zustand/shallow';
 import { HomeBackground } from '@/pages/home/HomeBackground';
 import { CreateProjectDialog } from '@/pages/home/CreateProjectDialog';
@@ -46,6 +47,7 @@ export const HomePage: React.FC = () => {
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const startOnboarding = useOnboardingStore((state) => state.startForProject);
 
   useEffect(() => {
     fetchProjects();
@@ -108,6 +110,19 @@ export const HomePage: React.FC = () => {
     };
 
     input.click();
+  };
+
+  const handleCreateTutorialProject = async () => {
+    try {
+      const res = await projectsApi.createDemoProject();
+      const project = res.data.data;
+      showSnackbar('Обучающая кампания создана', 'success');
+      startOnboarding(project.id);
+      navigate(`/project/${project.id}/map`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Не удалось создать обучающую кампанию';
+      showSnackbar(message, 'error');
+    }
   };
 
   if (loading && projects.length === 0) {
@@ -329,6 +344,16 @@ export const HomePage: React.FC = () => {
               >
                 Импорт
               </DndButton>
+              <DndButton
+                variant="outlined"
+                onClick={handleCreateTutorialProject}
+                sx={{
+                  fontWeight: 600,
+                  letterSpacing: '0.03em',
+                }}
+              >
+                Обучение
+              </DndButton>
 
               <DndButton
                 variant="contained"
@@ -521,6 +546,14 @@ export const HomePage: React.FC = () => {
                 }}
               >
                 ⚔️ Создать первый проект
+              </DndButton>
+              <DndButton
+                variant="outlined"
+                size="large"
+                onClick={handleCreateTutorialProject}
+                sx={{ mt: 1.5, px: 4, py: 1.5, fontWeight: 700, fontSize: '1rem' }}
+              >
+                🎓 Обучающая кампания
               </DndButton>
             </GlassCard>
           )}

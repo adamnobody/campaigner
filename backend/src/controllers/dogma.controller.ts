@@ -7,8 +7,24 @@ import { parseId } from '../utils/parseId';
 import { BadRequestError } from '../middleware/errorHandler';
 
 export class DogmaController {
+  private static parseBranchId(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    return Number.isInteger(branchId) && branchId > 0 ? branchId : undefined;
+  }
+
+  private static parseBranchIdRequiredIfPresent(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      throw new BadRequestError('Invalid branchId');
+    }
+    return branchId;
+  }
+
   static getAll = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.query.projectId as string, 'project id');
+    const branchId = DogmaController.parseBranchId(req.query.branchId);
 
     const limit = Number(req.query.limit);
     const offset = Number(req.query.offset);
@@ -20,37 +36,45 @@ export class DogmaController {
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       limit: Number.isFinite(limit) ? limit : undefined,
       offset: Number.isFinite(offset) ? offset : undefined,
-    });
+    }, branchId);
 
     return ok(res, result);
   });
 
   static getById = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dogma id');
-    const dogma = DogmaService.getById(id);
+    const branchId = DogmaController.parseBranchId(req.query.branchId);
+    const dogma = DogmaService.getById(id, branchId);
     return ok(res, dogma);
   });
 
   static create = asyncHandler(async (req: Request, res: Response) => {
+    const branchId = DogmaController.parseBranchId(req.body?.branchId);
+    if (branchId) {
+      throw new BadRequestError('Branch-local dogma create is not supported in MVP');
+    }
     const dogma = DogmaService.create(req.body);
     return created(res, dogma);
   });
 
   static update = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dogma id');
-    const dogma = DogmaService.update(id, req.body);
+    const branchId = DogmaController.parseBranchId(req.body?.branchId);
+    const dogma = DogmaService.update(id, req.body, branchId);
     return ok(res, dogma);
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dogma id');
-    DogmaService.delete(id);
+    const branchId = DogmaController.parseBranchIdRequiredIfPresent(req.query.branchId);
+    DogmaService.delete(id, branchId);
     return ok(res, undefined, 'Dogma deleted');
   });
 
   static reorder = asyncHandler(async (req: Request, res: Response) => {
     const projectId = req.body?.projectId;
     const orderedIds = req.body?.orderedIds;
+    const branchId = DogmaController.parseBranchId(req.body?.branchId);
 
     if (typeof projectId !== 'number') {
       throw new BadRequestError('projectId must be a number');
@@ -60,8 +84,8 @@ export class DogmaController {
       throw new BadRequestError('orderedIds must be an array');
     }
 
-    DogmaService.reorder(projectId, orderedIds);
-    const result = DogmaService.getAll(projectId);
+    DogmaService.reorder(projectId, orderedIds, branchId);
+    const result = DogmaService.getAll(projectId, undefined, branchId);
     return ok(res, result);
   });
 

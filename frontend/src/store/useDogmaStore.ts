@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Dogma, CreateDogma, UpdateDogma } from '@campaigner/shared';
-import { dogmasApi } from '@/api/axiosClient';
+import { dogmasApi } from '@/api/dogmas';
 
 interface DogmaState {
   dogmas: Dogma[];

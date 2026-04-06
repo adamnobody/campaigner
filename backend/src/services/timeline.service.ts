@@ -7,6 +7,7 @@ import {
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers';
+import { BranchOverlayService } from './branchOverlay.service';
 
 interface TimelineEventRow {
   id: number;
@@ -41,8 +42,16 @@ const UPDATE_FIELD_MAP: Record<string, string> = {
   linkedNoteId: 'linked_note_id',
 };
 
+function pickTimelinePatch(data: UpdateTimelineEvent): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  (Object.keys(UPDATE_FIELD_MAP) as Array<keyof UpdateTimelineEvent>).forEach((key) => {
+    if (data[key] !== undefined) patch[key] = data[key];
+  });
+  return patch;
+}
+
 export class TimelineService {
-  static getAll(projectId: number, era?: string): TimelineEvent[] {
+  static getAll(projectId: number, era?: string, branchId?: number): TimelineEvent[] {
     const db = getDb();
 
     let query = `SELECT ${SELECT_FIELDS} FROM timeline_events WHERE project_id = ?`;
@@ -55,7 +64,10 @@ export class TimelineService {
 
     query += ' ORDER BY sort_order ASC, created_at ASC';
 
-    const rows = db.prepare(query).all(...params) as TimelineEventRow[];
+    const baseRows = db.prepare(query).all(...params) as TimelineEventRow[];
+    const rows = branchId
+      ? BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'timeline_event'))
+      : baseRows;
 
     const tagsMap = loadTagsBatch(
       projectId,
@@ -70,19 +82,23 @@ export class TimelineService {
     });
   }
 
-  static getById(id: number): TimelineEvent {
+  static getById(id: number, branchId?: number): TimelineEvent {
     const db = getDb();
 
     const row = db.prepare(
       `SELECT ${SELECT_FIELDS} FROM timeline_events WHERE id = ?`
     ).get(id) as TimelineEventRow | undefined;
 
-    if (!row) {
+    const projectedRow = branchId
+      ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'timeline_event'))
+      : row ?? null;
+
+    if (!projectedRow) {
       throw new NotFoundError('Timeline event');
     }
 
-    const event = mapRow(row);
-    event.tags = TagService.getTagsForEntity(row.projectId, 'timeline_event', id);
+    const event = mapRow(projectedRow);
+    event.tags = TagService.getTagsForEntity(projectedRow.projectId, 'timeline_event', id);
     return event;
   }
 
@@ -114,31 +130,64 @@ export class TimelineService {
     return this.getById(result.lastInsertRowid as number);
   }
 
-  static update(id: number, data: UpdateTimelineEvent): TimelineEvent {
+  static update(id: number, data: UpdateTimelineEvent, branchId?: number): TimelineEvent {
     this.getById(id);
-    buildUpdateQuery('timeline_events', UPDATE_FIELD_MAP, data as Record<string, unknown>, id);
-    return this.getById(id);
-  }
+    if (!branchId) {
+      buildUpdateQuery('timeline_events', UPDATE_FIELD_MAP, data as Record<string, unknown>, id);
+      return this.getById(id);
+    }
 
-  static delete(id: number): void {
-    this.getById(id);
-    const db = getDb();
-    db.prepare('DELETE FROM timeline_events WHERE id = ?').run(id);
-  }
-
-  static reorder(projectId: number, orderedIds: number[]): TimelineEvent[] {
-    const db = getDb();
-    const updateStmt = db.prepare(
-      'UPDATE timeline_events SET sort_order = ? WHERE id = ? AND project_id = ?'
+    BranchOverlayService.saveUpsertOverride(
+      branchId,
+      'timeline_event',
+      id,
+      pickTimelinePatch(data),
     );
+    return this.getById(id, branchId);
+  }
 
+  static delete(id: number, branchId?: number): void {
+    this.getById(id);
+    if (!branchId) {
+      const db = getDb();
+      db.prepare('DELETE FROM timeline_events WHERE id = ?').run(id);
+      return;
+    }
+
+    BranchOverlayService.saveDeleteOverride(branchId, 'timeline_event', id);
+  }
+
+  static reorder(projectId: number, orderedIds: number[], branchId?: number): TimelineEvent[] {
+    if (!branchId) {
+      const db = getDb();
+      const updateStmt = db.prepare(
+        'UPDATE timeline_events SET sort_order = ? WHERE id = ? AND project_id = ?'
+      );
+
+      const transaction = db.transaction(() => {
+        orderedIds.forEach((id, index) => {
+          updateStmt.run(index + 1, id, projectId);
+        });
+      });
+
+      transaction();
+      return this.getAll(projectId);
+    }
+
+    const db = getDb();
+    const verifyOwnershipStmt = db.prepare(
+      'SELECT id FROM timeline_events WHERE id = ? AND project_id = ?'
+    );
     const transaction = db.transaction(() => {
       orderedIds.forEach((id, index) => {
-        updateStmt.run(index + 1, id, projectId);
+        const exists = verifyOwnershipStmt.get(id, projectId) as { id: number } | undefined;
+        if (exists) {
+          BranchOverlayService.saveUpsertOverride(branchId, 'timeline_event', id, { sortOrder: index + 1 });
+        }
       });
     });
 
     transaction();
-    return this.getAll(projectId);
+    return this.getAll(projectId, undefined, branchId);
   }
 }

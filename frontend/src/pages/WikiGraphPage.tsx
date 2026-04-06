@@ -7,7 +7,8 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import { useParams, useNavigate } from 'react-router-dom';
-import { wikiApi, notesApi } from '@/api/axiosClient';
+import { wikiApi } from '@/api/wiki';
+import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
 
 interface GNode {

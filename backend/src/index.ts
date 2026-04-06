@@ -21,6 +21,8 @@ import dogmaRoutes from './routes/dogma.routes.js';
 import factionRoutes from './routes/faction.routes.js';
 import wikiRoutes from './routes/wiki.routes.js';
 import dynastyRoutes from './routes/dynasty.routes.js';
+import branchRoutes from './routes/branch.routes.js';
+import policyRoutes from './routes/policy.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +31,27 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7926/ingest/67d2b135-3c0f-4cbe-ad30-af1a135feb8a';
+const DEBUG_SESSION_ID = '316f21';
+
+function sendDebugLog(hypothesisId: string, location: string, message: string, data: Record<string, unknown> = {}) {
+  fetch(DEBUG_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': DEBUG_SESSION_ID,
+    },
+    body: JSON.stringify({
+      sessionId: DEBUG_SESSION_ID,
+      runId: 'smoke-up',
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+}
 
 // Ensure data directories exist
 const dataDir = path.resolve(__dirname, '../../data');
@@ -73,6 +96,8 @@ app.use('/api/wiki', wikiRoutes);
 app.use('/api/dogmas', dogmaRoutes);
 app.use('/api/factions', factionRoutes);
 app.use('/api/dynasties', dynastyRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/policies', policyRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -97,12 +122,29 @@ const server = app.listen(PORT, () => {
 let isShuttingDown = false;
 
 const shutdown = (signal: string) => {
+  // #region agent log
+  sendDebugLog('H1', 'backend/src/index.ts:shutdown:entry', 'Shutdown handler invoked', {
+    signal,
+    pid: process.pid,
+    isShuttingDown,
+  });
+  // #endregion
+
   if (isShuttingDown) return;
   isShuttingDown = true;
 
   console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
 
   server.close((err) => {
+    // #region agent log
+    sendDebugLog('H2', 'backend/src/index.ts:shutdown:closeCallback', 'server.close callback fired', {
+      signal,
+      pid: process.pid,
+      hasError: Boolean(err),
+      errorMessage: err instanceof Error ? err.message : null,
+    });
+    // #endregion
+
     if (err) {
       console.error('❌ Error during server shutdown:', err);
       process.exit(1);
@@ -113,6 +155,12 @@ const shutdown = (signal: string) => {
   });
 
   setTimeout(() => {
+    // #region agent log
+    sendDebugLog('H2', 'backend/src/index.ts:shutdown:forcedTimeout', 'Forced shutdown timeout reached', {
+      signal,
+      pid: process.pid,
+    });
+    // #endregion
     console.error('⚠ Forced shutdown after timeout');
     process.exit(1);
   }, 5000).unref();

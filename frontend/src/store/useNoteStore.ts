@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Note, CreateNote, UpdateNote, Pagination } from '@campaigner/shared';
-import { notesApi } from '@/api/axiosClient';
+import { notesApi } from '@/api/notes';
 
 interface NoteListParams extends Partial<Pagination> {
   noteType?: string;

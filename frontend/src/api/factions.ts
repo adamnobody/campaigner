@@ -12,10 +12,19 @@ import type {
   FactionRelation,
   CreateFactionRelation,
   UpdateFactionRelation,
+  FactionAsset,
+  CreateFactionAsset,
+  UpdateFactionAsset,
+  FactionGraph,
   Tag,
 } from '@campaigner/shared';
 import { apiClient, type ListWithTotal, type VoidResponse } from './client';
-import type { FactionGraph, FactionsListParams } from './types';
+import type { FactionsListParams } from './types';
+
+type BootstrapFactionAssetsResponse = {
+  created: FactionAsset[];
+  skipped: string[];
+};
 
 export const factionsApi = {
   getAll: (projectId: number, params?: FactionsListParams) =>
@@ -53,6 +62,15 @@ export const factionsApi = {
     apiClient.put<ApiResponse<FactionMember>>(`/factions/${factionId}/members/${memberId}`, data),
   removeMember: (factionId: number, memberId: number) =>
     apiClient.delete<VoidResponse>(`/factions/${factionId}/members/${memberId}`),
+  getAssets: (factionId: number) => apiClient.get<ApiResponse<FactionAsset[]>>(`/factions/${factionId}/assets`),
+  createAsset: (factionId: number, data: CreateFactionAsset) =>
+    apiClient.post<ApiResponse<FactionAsset>>(`/factions/${factionId}/assets`, data),
+  updateAsset: (factionId: number, assetId: number, data: UpdateFactionAsset) =>
+    apiClient.put<ApiResponse<FactionAsset>>(`/factions/${factionId}/assets/${assetId}`, data),
+  deleteAsset: (factionId: number, assetId: number) =>
+    apiClient.delete<VoidResponse>(`/factions/${factionId}/assets/${assetId}`),
+  bootstrapDefaultAssets: (factionId: number) =>
+    apiClient.post<ApiResponse<BootstrapFactionAssetsResponse>>(`/factions/${factionId}/assets/bootstrap-defaults`),
   getRelations: (projectId: number) => apiClient.get<ApiResponse<FactionRelation[]>>('/factions/relations', { params: { projectId } }),
   createRelation: (data: CreateFactionRelation) => apiClient.post<ApiResponse<FactionRelation>>('/factions/relations', data),
   updateRelation: (relationId: number, data: UpdateFactionRelation) =>

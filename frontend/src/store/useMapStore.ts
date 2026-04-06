@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { mapApi } from '@/api/axiosClient';
+import { mapApi } from '@/api/maps';
 import type { Map, MapMarker, CreateMap, UpdateMap, CreateMarker, UpdateMarker } from '@campaigner/shared';
 
 interface MapState {

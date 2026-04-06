@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Tag, CreateTag } from '@campaigner/shared';
-import { tagsApi } from '@/api/axiosClient';
+import { tagsApi } from '@/api/tags';
 
 interface TagState {
   tags: Tag[];

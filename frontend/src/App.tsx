@@ -22,6 +22,7 @@ const FactionsPage = React.lazy(() => import('./pages/FactionsPage').then(m => (
 const FactionDetailPage = React.lazy(() => import('./pages/FactionDetailPage').then(m => ({ default: m.FactionDetailPage })));
 const DynastiesPage = React.lazy(() => import('./pages/DynastiesPage').then(m => ({ default: m.DynastiesPage })));
 const DynastyDetailPage = React.lazy(() => import('./pages/DynastyDetailPage').then(m => ({ default: m.DynastyDetailPage })));
+const PoliciesPage = React.lazy(() => import('./pages/PoliciesPage').then(m => ({ default: m.PoliciesPage })));
 
 const PageLoader = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -63,6 +64,7 @@ const App: React.FC = () => {
               <Route path="dynasties" element={<ErrorBoundary><DynastiesPage /></ErrorBoundary>} />
               <Route path="dynasties/new" element={<ErrorBoundary><DynastyDetailPage /></ErrorBoundary>} />
               <Route path="dynasties/:dynastyId" element={<ErrorBoundary><DynastyDetailPage /></ErrorBoundary>} />
+              <Route path="policies" element={<ErrorBoundary><PoliciesPage /></ErrorBoundary>} />
               <Route path="settings" element={<ErrorBoundary><ProjectSettingsPage /></ErrorBoundary>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

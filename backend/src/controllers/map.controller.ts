@@ -6,6 +6,21 @@ import { parseId } from '../utils/parseId';
 import { BadRequestError } from '../middleware/errorHandler';
 
 export class MapController {
+  private static parseBranchId(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    return Number.isInteger(branchId) && branchId > 0 ? branchId : undefined;
+  }
+
+  private static parseBranchIdRequiredIfPresent(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      throw new BadRequestError('Invalid branchId');
+    }
+    return branchId;
+  }
+
   // ==================== Карты ====================
 
   static getRootMap = asyncHandler(async (req: Request, res: Response) => {
@@ -58,11 +73,16 @@ export class MapController {
 
   static getMarkers = asyncHandler(async (req: Request, res: Response) => {
     const mapId = parseId(req.params.mapId, 'map id');
-    const markers = mapService.getMarkersByMapId(mapId);
+    const branchId = MapController.parseBranchId(req.query.branchId);
+    const markers = mapService.getMarkersByMapId(mapId, branchId);
     return ok(res, markers);
   });
 
   static createMarker = asyncHandler(async (req: Request, res: Response) => {
+    const branchId = MapController.parseBranchId(req.body?.branchId);
+    if (branchId) {
+      throw new BadRequestError('Branch-local marker create is not supported in MVP');
+    }
     const mapId = parseId(req.params.mapId, 'map id');
     const marker = mapService.createMarker(mapId, req.body);
     return created(res, marker);
@@ -70,13 +90,15 @@ export class MapController {
 
   static updateMarker = asyncHandler(async (req: Request, res: Response) => {
     const markerId = parseId(req.params.markerId, 'marker id');
-    const updated = mapService.updateMarker(markerId, req.body);
+    const branchId = MapController.parseBranchId(req.body?.branchId);
+    const updated = mapService.updateMarker(markerId, req.body, branchId);
     return ok(res, updated);
   });
 
   static deleteMarker = asyncHandler(async (req: Request, res: Response) => {
     const markerId = parseId(req.params.markerId, 'marker id');
-    mapService.deleteMarker(markerId);
+    const branchId = MapController.parseBranchIdRequiredIfPresent(req.query.branchId);
+    mapService.deleteMarker(markerId, branchId);
     return ok(res, undefined, 'Marker deleted');
   });
 
@@ -84,7 +106,8 @@ export class MapController {
 
   static getTerritories = asyncHandler(async (req: Request, res: Response) => {
     const mapId = parseId(req.params.mapId, 'map id');
-    const territories = mapService.getTerritoriesByMapId(mapId);
+    const branchId = MapController.parseBranchId(req.query.branchId);
+    const territories = mapService.getTerritoriesByMapId(mapId, branchId);
     return ok(res, territories);
   });
 
@@ -96,13 +119,15 @@ export class MapController {
 
   static updateTerritory = asyncHandler(async (req: Request, res: Response) => {
     const territoryId = parseId(req.params.territoryId, 'territory id');
-    const updated = mapService.updateTerritory(territoryId, req.body);
+    const branchId = MapController.parseBranchId(req.body?.branchId);
+    const updated = mapService.updateTerritory(territoryId, req.body, branchId);
     return ok(res, updated);
   });
 
   static deleteTerritory = asyncHandler(async (req: Request, res: Response) => {
     const territoryId = parseId(req.params.territoryId, 'territory id');
-    mapService.deleteTerritory(territoryId);
+    const branchId = MapController.parseBranchIdRequiredIfPresent(req.query.branchId);
+    mapService.deleteTerritory(territoryId, branchId);
     return ok(res, undefined, 'Territory deleted');
   });
 }

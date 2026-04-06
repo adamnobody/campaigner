@@ -53,7 +53,36 @@ import {
   createFactionMemberSchema,
   updateFactionMemberSchema,
   createFactionRelationSchema,
+  updateFactionRelationSchema,
+  factionAssetSchema,
+  createFactionAssetSchema,
+  updateFactionAssetSchema,
+  factionGraphNodeSchema,
+  factionGraphSchema,
 } from '../schemas/faction.schema.js';
+import {
+  wikiLinkSchema,
+  createWikiLinkSchema,
+  getWikiLinksQuerySchema,
+} from '../schemas/wiki.schema.js';
+import {
+  scenarioBranchSchema,
+  createScenarioBranchSchema,
+  updateScenarioBranchSchema,
+  branchOverrideSchema,
+  branchLocalEntitySchema,
+} from '../schemas/branch.schema.js';
+import {
+  policySchema,
+  createPolicySchema,
+  updatePolicySchema,
+  policyTypeSchema,
+  policyStatusSchema,
+  policyFactionLinkSchema,
+  policyFactionLinkRoleSchema,
+  createPolicyFactionLinkSchema,
+  updatePolicyFactionLinkSchema,
+} from '../schemas/policy.schema.js';
 import {
   createDynastySchema,
   updateDynastySchema,
@@ -118,16 +147,12 @@ export type CreateFactionMember = Omit<z.input<typeof createFactionMemberSchema>
 export type UpdateFactionMember = z.input<typeof updateFactionMemberSchema>;
 
 export type CreateFactionRelation = z.input<typeof createFactionRelationSchema>;
-
-// In backend `updateRelationSchema` is defined inline in routes (not in shared schemas),
-// so we model only the expected shape here.
-export interface UpdateFactionRelation {
-  relationType?: string;
-  customLabel?: string;
-  description?: string;
-  startedDate?: string;
-  isBidirectional?: boolean;
-}
+export type UpdateFactionRelation = z.input<typeof updateFactionRelationSchema>;
+export type FactionAsset = z.infer<typeof factionAssetSchema>;
+export type CreateFactionAsset = Omit<z.input<typeof createFactionAssetSchema>, 'factionId'>;
+export type UpdateFactionAsset = z.input<typeof updateFactionAssetSchema>;
+export type FactionGraphNode = z.infer<typeof factionGraphNodeSchema>;
+export type FactionGraph = z.infer<typeof factionGraphSchema>;
 
 // ==================== Dynasties ====================
 export type CreateDynasty = z.input<typeof createDynastySchema>;
@@ -140,6 +165,29 @@ export type CreateDynastyFamilyLink = Omit<z.input<typeof createDynastyRelationS
 
 export type CreateDynastyEvent = Omit<z.input<typeof createDynastyEventSchema>, 'dynastyId'>;
 export type UpdateDynastyEvent = z.input<typeof updateDynastyEventSchema>;
+
+// ==================== Wiki ====================
+export type WikiLink = z.infer<typeof wikiLinkSchema>;
+export type CreateWikiLink = z.input<typeof createWikiLinkSchema>;
+export type GetWikiLinksQuery = z.input<typeof getWikiLinksQuerySchema>;
+
+// ==================== Branches ====================
+export type ScenarioBranch = z.infer<typeof scenarioBranchSchema>;
+export type CreateScenarioBranch = z.input<typeof createScenarioBranchSchema>;
+export type UpdateScenarioBranch = z.input<typeof updateScenarioBranchSchema>;
+export type BranchOverride = z.infer<typeof branchOverrideSchema>;
+export type BranchLocalEntity = z.infer<typeof branchLocalEntitySchema>;
+
+// ==================== Policies ====================
+export type Policy = z.infer<typeof policySchema>;
+export type CreatePolicy = z.input<typeof createPolicySchema>;
+export type UpdatePolicy = z.input<typeof updatePolicySchema>;
+export type PolicyType = z.infer<typeof policyTypeSchema>;
+export type PolicyStatus = z.infer<typeof policyStatusSchema>;
+export type PolicyFactionLink = z.infer<typeof policyFactionLinkSchema>;
+export type PolicyFactionLinkRole = z.infer<typeof policyFactionLinkRoleSchema>;
+export type CreatePolicyFactionLink = z.input<typeof createPolicyFactionLinkSchema>;
+export type UpdatePolicyFactionLink = z.input<typeof updatePolicyFactionLinkSchema>;
 
 // ==================== Common ====================
 // In backend responses `Tag` always includes `id` and `color` (color falls back to '#808080').
@@ -192,6 +240,261 @@ export interface CharacterGraph {
   edges: CharacterEdge[];
 }
 
+export interface SearchResult {
+  type: 'character' | 'note' | 'marker' | 'event' | 'dogma' | 'tag' | 'faction';
+  id: number;
+  title: string;
+  subtitle: string;
+  icon: string;
+  url: string;
+}
+
+// ==================== Project Transfer ====================
+export interface ImportedProjectPayload {
+  version: string;
+  project: {
+    name: string;
+    description?: string;
+    status?: string;
+    mapImageBase64?: string | null;
+  };
+  characters?: Array<{
+    id: number;
+    name: string;
+    title: string;
+    race: string;
+    characterClass: string;
+    level: number | null;
+    status: string;
+    bio: string;
+    appearance: string;
+    personality: string;
+    backstory: string;
+    notes: string;
+    imagePath: string | null;
+    createdAt: string;
+    updatedAt: string;
+    imageBase64?: string | null;
+  }>;
+  relationships?: Array<{
+    id: number;
+    sourceCharacterId: number;
+    targetCharacterId: number;
+    relationshipType: string;
+    customLabel: string;
+    description: string;
+    isBidirectional: number | boolean;
+    createdAt: string;
+  }>;
+  notes?: Array<{
+    id: number;
+    folderId: number | null;
+    title: string;
+    content: string;
+    format: string;
+    noteType: string;
+    isPinned: number | boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  folders?: Array<{
+    id: number;
+    name: string;
+    parentId: number | null;
+    createdAt: string;
+  }>;
+  maps?: Array<{
+    id: number;
+    projectId: number;
+    parentMapId: number | null;
+    parentMarkerId: number | null;
+    name: string;
+    imagePath: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  markers?: Array<{
+    id: number;
+    mapId: number;
+    title: string;
+    description: string;
+    positionX: number;
+    positionY: number;
+    color: string;
+    icon: string;
+    linkedNoteId: number | null;
+    childMapId: number | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  territories?: Array<{
+    id: number;
+    mapId: number;
+    name: string;
+    description: string;
+    color: string;
+    opacity: number;
+    borderColor: string;
+    borderWidth: number;
+    points: string;
+    factionId: number | null;
+    smoothing: number;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  timelineEvents?: Array<{
+    id: number;
+    title: string;
+    description: string;
+    eventDate: string;
+    sortOrder: number;
+    era: string;
+    linkedNoteId: number | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  tags?: Array<{
+    id: number;
+    name: string;
+    color: string;
+  }>;
+  tagAssociations?: Array<{
+    tagId: number;
+    entityType: string;
+    entityId: number;
+  }>;
+  wikiLinks?: Array<{
+    id: number;
+    sourceNoteId: number;
+    targetNoteId: number;
+    label: string;
+    createdAt: string;
+  }>;
+  dogmas?: Array<{
+    id: number;
+    title: string;
+    category: string;
+    description: string;
+    impact: string;
+    exceptions: string;
+    isPublic: number | boolean;
+    importance: string;
+    status: string;
+    sortOrder: number;
+    icon: string;
+    color: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  factions?: Array<{
+    id: number;
+    name: string;
+    type: string;
+    customType: string;
+    stateType: string;
+    customStateType: string;
+    motto: string;
+    description: string;
+    history: string;
+    goals: string;
+    headquarters: string;
+    territory: string;
+    status: string;
+    color: string;
+    secondaryColor: string;
+    imagePath: string | null;
+    bannerPath: string | null;
+    foundedDate: string;
+    disbandedDate: string;
+    parentFactionId: number | null;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  factionRanks?: Array<{
+    id: number;
+    factionId: number;
+    name: string;
+    level: number;
+    description: string;
+    permissions: string;
+    icon: string;
+    color: string;
+  }>;
+  factionMembers?: Array<{
+    id: number;
+    factionId: number;
+    characterId: number;
+    rankId: number | null;
+    role: string;
+    joinedDate: string;
+    leftDate: string;
+    isActive: number | boolean;
+    notes: string;
+  }>;
+  factionRelations?: Array<{
+    id: number;
+    sourceFactionId: number;
+    targetFactionId: number;
+    relationType: string;
+    customLabel: string;
+    description: string;
+    startedDate: string;
+    isBidirectional: number | boolean;
+    createdAt: string;
+  }>;
+  dynasties?: Array<{
+    id: number;
+    name: string;
+    motto: string;
+    description: string;
+    history: string;
+    status: string;
+    color: string;
+    secondaryColor: string;
+    imagePath: string | null;
+    foundedDate: string;
+    extinctDate: string;
+    founderId: number | null;
+    currentLeaderId: number | null;
+    heirId: number | null;
+    linkedFactionId: number | null;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  dynastyMembers?: Array<{
+    id: number;
+    dynastyId: number;
+    characterId: number;
+    generation: number;
+    role: string;
+    birthDate: string;
+    deathDate: string;
+    isMainLine: number | boolean;
+    notes: string;
+  }>;
+  dynastyFamilyLinks?: Array<{
+    id: number;
+    dynastyId: number;
+    sourceCharacterId: number;
+    targetCharacterId: number;
+    relationType: string;
+    customLabel: string;
+  }>;
+  dynastyEvents?: Array<{
+    id: number;
+    dynastyId: number;
+    title: string;
+    description: string;
+    eventDate: string;
+    importance: string;
+    sortOrder: number;
+    createdAt: string;
+  }>;
+}
+
 // ==================== FACTIONS ====================
 
 export interface Faction {
@@ -221,6 +524,7 @@ export interface Faction {
   updatedAt: string;
   // Joined
   tags?: any[];
+  assets?: FactionAsset[];
   ranks?: FactionRank[];
   members?: FactionMember[];
   memberCount?: number;

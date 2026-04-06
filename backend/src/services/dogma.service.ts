@@ -3,6 +3,7 @@ import { CreateDogma, UpdateDogma, Dogma } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers';
+import { BranchOverlayService } from './branchOverlay.service';
 
 type DogmaCategory = Dogma['category'];
 type DogmaImportance = Dogma['importance'];
@@ -77,6 +78,14 @@ const UPDATE_FIELD_MAP: Record<string, string> = {
   color: 'color',
 };
 
+function pickDogmaPatch(data: UpdateDogma): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  (Object.keys(UPDATE_FIELD_MAP) as Array<keyof UpdateDogma>).forEach((key) => {
+    if (data[key] !== undefined) patch[key] = data[key];
+  });
+  return patch;
+}
+
 export class DogmaService {
   static getAll(
     projectId: number,
@@ -87,7 +96,8 @@ export class DogmaService {
       search?: string;
       limit?: number;
       offset?: number;
-    }
+    },
+    branchId?: number
   ): { items: Dogma[]; total: number } {
     const db = getDb();
     let whereClause = 'WHERE project_id = ?';
@@ -114,38 +124,30 @@ export class DogmaService {
       queryParams.push(searchTerm, searchTerm);
     }
 
-    const countRow = db.prepare(`
-      SELECT COUNT(*) as count FROM dogmas ${whereClause}
-    `).get(...queryParams) as CountRow;
-
-    const total = countRow.count;
-
-    let query = `
+    const query = `
       SELECT ${SELECT_FIELDS} FROM dogmas ${whereClause}
       ORDER BY sort_order ASC, created_at DESC
     `;
 
-    const paginationParams: Array<number | string> = [...queryParams];
-
-    if (params?.limit !== undefined) {
-      query += ' LIMIT ?';
-      paginationParams.push(params.limit);
-
-      if (params?.offset !== undefined) {
-        query += ' OFFSET ?';
-        paginationParams.push(params.offset);
-      }
-    }
-
-    const rows = db.prepare(query).all(...paginationParams) as DogmaRow[];
+    const baseRows = db.prepare(query).all(...queryParams) as DogmaRow[];
+    const rows = branchId
+      ? BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'dogma'))
+      : baseRows;
+    const total = rows.length;
+    const limit = params?.limit;
+    const offset = params?.offset ?? 0;
+    const pagedRows =
+      limit === undefined
+        ? rows
+        : rows.slice(offset, offset + limit);
 
     const tagsMap = loadTagsBatch(
       projectId,
       'dogma',
-      rows.map((r) => r.id)
+      pagedRows.map((r) => r.id)
     );
 
-    const items = rows.map((row) => {
+    const items = pagedRows.map((row) => {
       const dogma = mapRow(row);
       dogma.tags = tagsMap.get(row.id) || [];
       return dogma;
@@ -154,19 +156,23 @@ export class DogmaService {
     return { items, total };
   }
 
-  static getById(id: number): Dogma {
+  static getById(id: number, branchId?: number): Dogma {
     const db = getDb();
 
     const row = db.prepare(`
       SELECT ${SELECT_FIELDS} FROM dogmas WHERE id = ?
     `).get(id) as DogmaRow | undefined;
 
-    if (!row) {
+    const projectedRow = branchId
+      ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'dogma'))
+      : row ?? null;
+
+    if (!projectedRow) {
       throw new NotFoundError('Dogma');
     }
 
-    const dogma = mapRow(row);
-    dogma.tags = TagService.getTagsForEntity(row.projectId, 'dogma', id);
+    const dogma = mapRow(projectedRow);
+    dogma.tags = TagService.getTagsForEntity(projectedRow.projectId, 'dogma', id);
     return dogma;
   }
 
@@ -207,29 +213,57 @@ export class DogmaService {
     return this.getById(result.lastInsertRowid as number);
   }
 
-  static update(id: number, data: UpdateDogma): Dogma {
+  static update(id: number, data: UpdateDogma, branchId?: number): Dogma {
     this.getById(id);
+    if (branchId) {
+      BranchOverlayService.saveUpsertOverride(branchId, 'dogma', id, pickDogmaPatch(data));
+      return this.getById(id, branchId);
+    }
+
     buildUpdateQuery('dogmas', UPDATE_FIELD_MAP, data as Record<string, unknown>, id, {
       booleanFields: ['isPublic'],
     });
     return this.getById(id);
   }
 
-  static delete(id: number): void {
+  static delete(id: number, branchId?: number): void {
     this.getById(id);
+    if (branchId) {
+      BranchOverlayService.saveDeleteOverride(branchId, 'dogma', id);
+      return;
+    }
+
     const db = getDb();
     db.prepare('DELETE FROM dogmas WHERE id = ?').run(id);
   }
 
-  static reorder(projectId: number, orderedIds: number[]): void {
-    const db = getDb();
-    const updateStmt = db.prepare(
-      'UPDATE dogmas SET sort_order = ? WHERE id = ? AND project_id = ?'
-    );
+  static reorder(projectId: number, orderedIds: number[], branchId?: number): void {
+    if (!branchId) {
+      const db = getDb();
+      const updateStmt = db.prepare(
+        'UPDATE dogmas SET sort_order = ? WHERE id = ? AND project_id = ?'
+      );
 
+      const transaction = db.transaction(() => {
+        orderedIds.forEach((id, index) => {
+          updateStmt.run(index + 1, id, projectId);
+        });
+      });
+
+      transaction();
+      return;
+    }
+
+    const db = getDb();
+    const verifyOwnershipStmt = db.prepare(
+      'SELECT id FROM dogmas WHERE id = ? AND project_id = ?'
+    );
     const transaction = db.transaction(() => {
       orderedIds.forEach((id, index) => {
-        updateStmt.run(index + 1, id, projectId);
+        const exists = verifyOwnershipStmt.get(id, projectId) as { id: number } | undefined;
+        if (exists) {
+          BranchOverlayService.saveUpsertOverride(branchId, 'dogma', id, { sortOrder: index + 1 });
+        }
       });
     });
 

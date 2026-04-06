@@ -1,27 +1,11 @@
 import { create } from 'zustand';
-import { wikiApi } from '@/api/axiosClient';
-
-export interface WikiLink {
-  id: number;
-  projectId: number;
-  sourceNoteId: number;
-  targetNoteId: number;
-  label: string;
-  createdAt?: string;
-  sourceTitle?: string;
-  targetTitle?: string;
-}
+import { wikiApi } from '@/api/wiki';
+import type { WikiLink, CreateWikiLink } from '@campaigner/shared';
+import { getErrorMessage } from '@/utils/error';
 
 export interface WikiCategory {
   name: string;
   count: number;
-}
-
-interface CreateWikiLinkData {
-  projectId: number;
-  sourceNoteId: number;
-  targetNoteId: number;
-  label?: string;
 }
 
 interface WikiState {
@@ -33,7 +17,7 @@ interface WikiState {
 
   fetchLinks: (projectId: number, noteId?: number) => Promise<void>;
   fetchCategories: (projectId: number) => Promise<void>;
-  createLink: (data: CreateWikiLinkData) => Promise<WikiLink>;
+  createLink: (data: CreateWikiLink) => Promise<WikiLink>;
   deleteLink: (id: number) => Promise<void>;
 
   clearError: () => void;
@@ -56,9 +40,9 @@ export const useWikiStore = create<WikiState>((set) => ({
         loading: false,
         initialized: true,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || 'Failed to fetch wiki links',
+        error: getErrorMessage(error, 'Failed to fetch wiki links'),
         loading: false,
         initialized: true,
       });
@@ -72,8 +56,8 @@ export const useWikiStore = create<WikiState>((set) => ({
       set({
         categories: res.data.data || [],
       });
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to fetch wiki categories' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch wiki categories') });
     }
   },
 
@@ -81,13 +65,13 @@ export const useWikiStore = create<WikiState>((set) => ({
     set({ error: null });
     try {
       const res = await wikiApi.createLink(data);
-      const created = res.data.data as WikiLink;
+      const created = res.data.data;
       set((state) => ({
         links: [created, ...state.links],
       }));
       return created;
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to create wiki link' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create wiki link') });
       throw error;
     }
   },
@@ -99,8 +83,8 @@ export const useWikiStore = create<WikiState>((set) => ({
       set((state) => ({
         links: state.links.filter((link) => link.id !== id),
       }));
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to delete wiki link' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete wiki link') });
       throw error;
     }
   },

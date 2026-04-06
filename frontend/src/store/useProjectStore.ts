@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Project, CreateProject, UpdateProject } from '@campaigner/shared';
-import { projectsApi } from '@/api/axiosClient';
+import { projectsApi } from '@/api/projects';
 
 interface ProjectState {
   projects: Project[];

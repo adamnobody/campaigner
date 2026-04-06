@@ -1,4 +1,4 @@
-import { api, assertStatus, getEntityId, getEntityList, logStep, logOk } from '../lib.mjs';
+import { api, assertStatus, ensureOverlayBranch, getEntityId, getEntityList, logStep, logOk } from '../lib.mjs';
 
 export async function smokeTimeline(ctx) {
   logStep('Timeline CRUD');
@@ -71,6 +71,41 @@ export async function smokeTimeline(ctx) {
     assertStatus(setTagsRes, 200, 'set timeline tags');
     logOk('Timeline tags assigned');
   }
+
+  const branchId = await ensureOverlayBranch(ctx);
+  const branchTitle = `Smoke Timeline Branch Updated ${Date.now()}`;
+  const branchUpdateRes = await api(`/timeline/${timelineEventId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      branchId,
+      title: branchTitle,
+    }),
+  });
+  assertStatus(branchUpdateRes, 200, 'branch update timeline');
+
+  const branchGetRes = await api(`/timeline/${timelineEventId}?branchId=${branchId}`);
+  assertStatus(branchGetRes, 200, 'branch get timeline');
+  if (branchGetRes.data?.data?.title !== branchTitle) {
+    throw new Error(`branch get timeline: expected branch title override ${JSON.stringify(branchGetRes.data, null, 2)}`);
+  }
+
+  const mainGetRes = await api(`/timeline/${timelineEventId}`);
+  assertStatus(mainGetRes, 200, 'main get timeline after branch update');
+  if (mainGetRes.data?.data?.title === branchTitle) {
+    throw new Error('main timeline changed after branch update, expected base unchanged');
+  }
+
+  const branchDeleteRes = await api(`/timeline/${timelineEventId}?branchId=${branchId}`, {
+    method: 'DELETE',
+  });
+  assertStatus(branchDeleteRes, 200, 'branch delete timeline');
+
+  const branchGetAfterDeleteRes = await api(`/timeline/${timelineEventId}?branchId=${branchId}`);
+  assertStatus(branchGetAfterDeleteRes, 404, 'branch get timeline after branch delete');
+
+  const mainGetAfterDeleteRes = await api(`/timeline/${timelineEventId}`);
+  assertStatus(mainGetAfterDeleteRes, 200, 'main get timeline after branch delete');
+  logOk('Timeline branch overlay flow works (update/delete override)');
 }
 
 export async function smokeTimelineReorder(ctx) {

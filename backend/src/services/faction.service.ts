@@ -10,6 +10,7 @@ import type {
   RankRow,
   MemberRow,
   RelationRow,
+  AssetRow,
   FactionCreateData,
   FactionUpdateData,
   RankCreateData,
@@ -18,21 +19,29 @@ import type {
   MemberUpdateData,
   RelationCreateData,
   RelationUpdateData,
+  AssetCreateData,
+  AssetUpdateData,
 } from './faction/faction.types';
 import {
   FACTION_UPDATE_MAP,
   RANK_UPDATE_MAP,
   MEMBER_UPDATE_MAP,
   RELATION_UPDATE_MAP,
+  ASSET_UPDATE_MAP,
   toFaction,
   toRank,
   toMember,
   toRelation,
+  toAsset,
   MEMBER_SELECT,
   RELATION_SELECT,
 } from './faction/faction.mappers';
 
 export class FactionService {
+  private static normalizeAssetName(name: string): string {
+    return name.trim().toLowerCase();
+  }
+
   // ==================== FACTIONS CRUD ====================
 
   static getAll(projectId: number, filters: FactionFilters = {}) {
@@ -128,6 +137,10 @@ export class FactionService {
       SELECT id, name FROM factions WHERE parent_faction_id = ? ORDER BY name
     `).all(id) as ChildFactionRow[];
 
+    const assetRows = db.prepare(`
+      SELECT * FROM faction_assets WHERE faction_id = ? ORDER BY sort_order ASC, id ASC
+    `).all(id) as AssetRow[];
+
     return {
       ...faction,
       parentFaction: row.parent_faction_id
@@ -136,6 +149,7 @@ export class FactionService {
       tags,
       ranks: rankRows.map(toRank),
       members: memberRows.map(toMember),
+      assets: assetRows.map(toAsset),
       memberCount: memberRows.filter((member) => !!member.is_active).length,
       childFactions: childRows,
     };
@@ -263,6 +277,77 @@ export class FactionService {
     const db = getDb();
     const rows = db.prepare(`${RELATION_SELECT} WHERE fr.project_id = ? ORDER BY fr.created_at DESC`).all(projectId) as RelationRow[];
     return rows.map(toRelation);
+  }
+
+  // ==================== ASSETS ====================
+
+  static getAssets(factionId: number) {
+    ensureEntityExists('factions', factionId, 'Faction');
+    const db = getDb();
+    const rows = db.prepare(`
+      SELECT * FROM faction_assets WHERE faction_id = ? ORDER BY sort_order ASC, id ASC
+    `).all(factionId) as AssetRow[];
+    return rows.map(toAsset);
+  }
+
+  static createAsset(data: AssetCreateData) {
+    ensureEntityExists('factions', data.factionId, 'Faction');
+    const db = getDb();
+    const name = data.name.trim();
+    const value = (data.value ?? '').trim();
+    const result = db.prepare(`
+      INSERT INTO faction_assets (faction_id, name, value, sort_order)
+      VALUES (?, ?, ?, ?)
+    `).run(data.factionId, name, value, data.sortOrder ?? 0);
+    const row = db.prepare('SELECT * FROM faction_assets WHERE id = ?').get(result.lastInsertRowid as number) as AssetRow;
+    return toAsset(row);
+  }
+
+  static updateAsset(id: number, data: AssetUpdateData) {
+    ensureEntityExists('faction_assets', id, 'Faction asset');
+    const normalizedData: AssetUpdateData = {
+      ...data,
+      ...(typeof data.name === 'string' ? { name: data.name.trim() } : {}),
+      ...(typeof data.value === 'string' ? { value: data.value.trim() } : {}),
+    };
+    buildUpdateQuery('faction_assets', ASSET_UPDATE_MAP, normalizedData as Record<string, unknown>, id);
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM faction_assets WHERE id = ?').get(id) as AssetRow;
+    return toAsset(row);
+  }
+
+  static deleteAsset(id: number) {
+    ensureEntityExists('faction_assets', id, 'Faction asset');
+    const db = getDb();
+    db.prepare('DELETE FROM faction_assets WHERE id = ?').run(id);
+  }
+
+  static bootstrapDefaultAssets(factionId: number) {
+    const defaults = ['Казна', 'Земельные активы', 'Военный ресурс', 'Торговый ресурс'] as const;
+    const existing = this.getAssets(factionId);
+    const existingNormalized = new Set(existing.map((asset) => this.normalizeAssetName(asset.name)));
+
+    const created = [];
+    const skipped: string[] = [];
+
+    for (const defaultName of defaults) {
+      const normalized = this.normalizeAssetName(defaultName);
+      if (existingNormalized.has(normalized)) {
+        skipped.push(defaultName);
+        continue;
+      }
+
+      const createdAsset = this.createAsset({
+        factionId,
+        name: defaultName,
+        value: '',
+        sortOrder: existing.length + created.length,
+      });
+      created.push(createdAsset);
+      existingNormalized.add(normalized);
+    }
+
+    return { created, skipped };
   }
 
   static createRelation(data: RelationCreateData) {

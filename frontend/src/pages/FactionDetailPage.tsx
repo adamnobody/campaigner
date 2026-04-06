@@ -5,6 +5,7 @@ import {
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, ListItemAvatar,
   Grid, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -31,7 +32,7 @@ import {
   STATE_TYPES, STATE_TYPE_LABELS,
   FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
 } from '@campaigner/shared';
-import type { FactionRank, FactionMember } from '@campaigner/shared';
+import type { FactionRank, FactionMember, FactionAsset } from '@campaigner/shared';
 import { shallow } from 'zustand/shallow';
 
 // ==================== Types ====================
@@ -92,6 +93,7 @@ export const FactionDetailPage: React.FC = () => {
     uploadImage, uploadBanner, setTags,
     createRank, updateRank, deleteRank,
     addMember, removeMember,
+    createAsset, updateAsset, deleteAsset, bootstrapDefaultAssets,
     fetchRelations, createRelation, deleteRelation,
     setCurrentFaction,
   } = useFactionStore((state) => ({
@@ -112,6 +114,10 @@ export const FactionDetailPage: React.FC = () => {
     deleteRank: state.deleteRank,
     addMember: state.addMember,
     removeMember: state.removeMember,
+    createAsset: state.createAsset,
+    updateAsset: state.updateAsset,
+    deleteAsset: state.deleteAsset,
+    bootstrapDefaultAssets: state.bootstrapDefaultAssets,
     fetchRelations: state.fetchRelations,
     createRelation: state.createRelation,
     deleteRelation: state.deleteRelation,
@@ -141,6 +147,10 @@ export const FactionDetailPage: React.FC = () => {
 
   const [relationDialogOpen, setRelationDialogOpen] = useState(false);
   const [relationForm, setRelationForm] = useState({ targetFactionId: '', relationType: 'neutral', customLabel: '', description: '' });
+
+  const [assetDialogOpen, setAssetDialogOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<FactionAsset | null>(null);
+  const [assetForm, setAssetForm] = useState({ name: '', value: '' });
 
   // ==================== Load ====================
 
@@ -195,6 +205,7 @@ export const FactionDetailPage: React.FC = () => {
   const allCharacters = useMemo(() => characters || [], [characters]);
   const currentRanks: FactionRank[] = currentFaction?.ranks || [];
   const currentMembers: FactionMember[] = currentFaction?.members || [];
+  const currentAssets: FactionAsset[] = currentFaction?.assets || [];
   const factionRelations = useMemo(() => fid ? relations.filter(r => r.sourceFactionId === fid || r.targetFactionId === fid) : [], [relations, fid]);
   const previewTagsStr = mergeTagValues(form.tagsStr, tagsInput);
 
@@ -284,7 +295,13 @@ export const FactionDetailPage: React.FC = () => {
   const handleAddMember = async () => {
     if (!memberForm.characterId) return;
     try {
-      await addMember(fid, { characterId: parseInt(memberForm.characterId), rankId: memberForm.rankId ? parseInt(memberForm.rankId) : null, role: memberForm.role, joinedDate: memberForm.joinedDate, notes: memberForm.notes });
+      await addMember(fid, {
+        characterId: parseInt(memberForm.characterId),
+        rankId: memberForm.rankId ? parseInt(memberForm.rankId) : undefined,
+        role: memberForm.role,
+        joinedDate: memberForm.joinedDate,
+        notes: memberForm.notes,
+      });
       setMemberDialogOpen(false); showSnackbar('Добавлен', 'success');
     } catch (err: any) { showSnackbar(err.message || 'Ошибка', 'error'); }
   };
@@ -307,6 +324,58 @@ export const FactionDetailPage: React.FC = () => {
     showConfirmDialog('Удалить связь', 'Удалить?', async () => {
       try { await deleteRelation(id); showSnackbar('Удалена', 'success'); } catch { showSnackbar('Ошибка', 'error'); }
     });
+  };
+
+  // Assets
+  const openAssetDialog = (asset?: FactionAsset) => {
+    if (asset) {
+      setEditingAsset(asset);
+      setAssetForm({ name: asset.name, value: asset.value || '' });
+    } else {
+      setEditingAsset(null);
+      setAssetForm({ name: '', value: '' });
+    }
+    setAssetDialogOpen(true);
+  };
+
+  const handleSaveAsset = async () => {
+    if (!assetForm.name.trim()) return;
+    try {
+      if (editingAsset) {
+        await updateAsset(fid, editingAsset.id, { name: assetForm.name.trim(), value: assetForm.value });
+        showSnackbar('Актив обновлён', 'success');
+      } else {
+        await createAsset(fid, { name: assetForm.name.trim(), value: assetForm.value, sortOrder: currentAssets.length });
+        showSnackbar('Актив добавлен', 'success');
+      }
+      setAssetDialogOpen(false);
+    } catch (err: any) {
+      showSnackbar(err.message || 'Ошибка', 'error');
+    }
+  };
+
+  const handleDeleteAsset = (asset: FactionAsset) => {
+    showConfirmDialog('Удалить актив', `Удалить "${asset.name}"?`, async () => {
+      try {
+        await deleteAsset(fid, asset.id);
+        showSnackbar('Актив удалён', 'success');
+      } catch {
+        showSnackbar('Ошибка', 'error');
+      }
+    });
+  };
+
+  const handleBootstrapDefaultAssets = async () => {
+    try {
+      const result = await bootstrapDefaultAssets(fid);
+      if (result.created.length > 0) {
+        showSnackbar(`Добавлено базовых активов: ${result.created.length}`, 'success');
+      } else {
+        showSnackbar('Базовые активы уже добавлены', 'success');
+      }
+    } catch (err: any) {
+      showSnackbar(err.message || 'Ошибка', 'error');
+    }
   };
 
   if (loading && !isNew && !currentFaction) {
@@ -549,6 +618,46 @@ export const FactionDetailPage: React.FC = () => {
             </Section>
           )}
 
+          {/* SECTION: Assets */}
+          {!isNew && (
+            <Section title="Активы" icon={<StarIcon />} badge={currentAssets.length} defaultOpen={currentAssets.length > 0}
+              action={
+                <Box display="flex" gap={1}>
+                  <DndButton variant="outlined" size="small" onClick={handleBootstrapDefaultAssets} sx={{ borderColor: 'rgba(201,169,89,0.4)', color: 'rgba(201,169,89,0.9)' }}>
+                    Добавить базовые активы
+                  </DndButton>
+                  <DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openAssetDialog()} sx={{ borderColor: 'rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.85)' }}>
+                    Добавить
+                  </DndButton>
+                </Box>
+              }>
+              {currentAssets.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <StarIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
+                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Добавьте активы фракции (например, Казна, Земли)</Typography>
+                </Box>
+              ) : (
+                <List disablePadding>
+                  {currentAssets.map(asset => (
+                    <ListItem key={asset.id}
+                      secondaryAction={
+                        <Box display="flex" gap={0.5}>
+                          <IconButton size="small" onClick={() => openAssetDialog(asset)}><EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} /></IconButton>
+                          <IconButton size="small" onClick={() => handleDeleteAsset(asset)}><DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} /></IconButton>
+                        </Box>
+                      }
+                      sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1.5, mb: 1, border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <ListItemText
+                        primary={<Typography sx={{ color: '#fff', fontWeight: 600 }}>{asset.name}</Typography>}
+                        secondary={<Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>{asset.value || '—'}</Typography>}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Section>
+          )}
+
           {/* SECTION: Relations */}
           {!isNew && (
             <Section title="Связи с фракциями" icon={<LinkIcon />} badge={relationsForDisplay.length} defaultOpen={relationsForDisplay.length > 0}
@@ -608,6 +717,31 @@ export const FactionDetailPage: React.FC = () => {
         form={relationForm} onFormChange={setRelationForm} onSubmit={handleAddRelation}
         otherFactions={otherFactions}
       />
+      <Dialog open={assetDialogOpen} onClose={() => setAssetDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{editingAsset ? 'Редактировать актив' : 'Новый актив'}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: 2 }}>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Название *"
+            value={assetForm.name}
+            onChange={(e) => setAssetForm((prev) => ({ ...prev, name: e.target.value }))}
+          />
+          <TextField
+            fullWidth
+            label="Значение"
+            value={assetForm.value}
+            onChange={(e) => setAssetForm((prev) => ({ ...prev, value: e.target.value }))}
+            placeholder="например: 25000 золотых"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssetDialogOpen(false)}>Отмена</Button>
+          <Button variant="contained" onClick={handleSaveAsset} disabled={!assetForm.name.trim()}>
+            {editingAsset ? 'Сохранить' : 'Добавить'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

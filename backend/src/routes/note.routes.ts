@@ -9,6 +9,7 @@ const router = Router();
 
 const listQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(200).optional(),
   search: z.string().optional(),
@@ -16,6 +17,10 @@ const listQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional(),
   noteType: z.string().optional(),
   folderId: z.union([z.coerce.number().int().positive(), z.literal('null')]).optional(),
+});
+
+const branchDeleteQuerySchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
 });
 
 router.get(
@@ -32,7 +37,7 @@ router.get(
 
 router.post(
   '/',
-  validateRequest({ body: createNoteSchema }),
+  validateRequest({ body: createNoteSchema.extend({ branchId: z.number().int().positive().optional() }) }),
   NoteController.create
 );
 
@@ -40,14 +45,14 @@ router.put(
   '/:id',
   validateRequest({
     params: idParamsSchema,
-    body: updateNoteSchema,
+    body: updateNoteSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   NoteController.update
 );
 
 router.delete(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: branchDeleteQuerySchema }),
   NoteController.delete
 );
 

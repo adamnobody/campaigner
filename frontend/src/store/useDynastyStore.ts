@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { dynastiesApi } from '@/api/axiosClient';
+import { dynastiesApi } from '@/api/dynasties';
 import type {
   Dynasty,
   DynastyMember,

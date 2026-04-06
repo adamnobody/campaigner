@@ -59,3 +59,56 @@ export const createFactionRelationSchema = z.object({
   startedDate: z.string().max(100).optional(),
   isBidirectional: z.boolean().default(true),
 });
+
+export const updateFactionRelationSchema = z.object({
+  relationType: z.string().min(1).max(50).optional(),
+  customLabel: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  startedDate: z.string().max(100).optional(),
+  isBidirectional: z.boolean().optional(),
+});
+
+export const factionAssetSchema = z.object({
+  id: z.number().int().positive(),
+  factionId: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200),
+  value: z.string().max(1000).default(''),
+  sortOrder: z.number().int().default(0),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const createFactionAssetSchema = z.object({
+  factionId: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200),
+  value: z.string().trim().max(1000).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const updateFactionAssetSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  value: z.string().trim().max(1000).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const factionGraphNodeSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string(),
+  type: z.string(),
+  customType: z.string().optional().default(''),
+  stateType: z.string().optional().default(''),
+  status: z.string(),
+  color: z.string().optional().default(''),
+  imagePath: z.string().optional().default(''),
+  memberCount: z.number().int().default(0),
+});
+
+export const factionGraphSchema = z.object({
+  nodes: z.array(factionGraphNodeSchema),
+  edges: z.array(createFactionRelationSchema.extend({
+    id: z.number().int().positive(),
+    createdAt: z.string().optional(),
+    sourceFactionName: z.string().optional(),
+    targetFactionName: z.string().optional(),
+  })),
+});
