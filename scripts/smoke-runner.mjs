@@ -1,9 +1,32 @@
 import { exec, spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
 import pc from 'picocolors';
 
 const PORT = Number(process.env.SMOKE_PORT || process.env.PORT || 3001);
 const API_URL = process.env.API_URL || `http://localhost:${PORT}/api`;
 const HEALTH_URL = `${API_URL}/health`;
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7926/ingest/67d2b135-3c0f-4cbe-ad30-af1a135feb8a';
+const DEBUG_SESSION_ID = '316f21';
+
+function sendDebugLog({ runId, hypothesisId, location, message, data }) {
+  fetch(DEBUG_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': DEBUG_SESSION_ID,
+    },
+    body: JSON.stringify({
+      sessionId: DEBUG_SESSION_ID,
+      runId,
+      hypothesisId,
+      location,
+      message,
+      data: data ?? {},
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,11 +82,23 @@ async function getPidsByPort(port) {
     return [];
   }
 
-  return result.stdout
+  const pids = result.stdout
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => /^\d+$/.test(line))
     .map((line) => Number(line));
+
+  // #region agent log
+  sendDebugLog({
+    runId: 'smoke-up',
+    hypothesisId: 'H3',
+    location: 'scripts/smoke-runner.mjs:getPidsByPort',
+    message: 'Resolved listening PIDs for port',
+    data: { port, pids },
+  });
+  // #endregion
+
+  return pids;
 }
 
 async function killPid(pid) {
@@ -110,11 +145,40 @@ async function stopBackendProcess(proc) {
   if (!proc) return;
   if (proc.exitCode !== null) return;
 
+  // #region agent log
+  sendDebugLog({
+    runId: 'smoke-up',
+    hypothesisId: 'H1',
+    location: 'scripts/smoke-runner.mjs:stopBackendProcess:beforeSIGTERM',
+    message: 'Sending SIGTERM to backend process handle',
+    data: { pid: proc.pid, exitCode: proc.exitCode, killed: proc.killed },
+  });
+  // #endregion
+
   proc.kill('SIGTERM');
   await sleep(1500);
 
+  // #region agent log
+  sendDebugLog({
+    runId: 'smoke-up',
+    hypothesisId: 'H2',
+    location: 'scripts/smoke-runner.mjs:stopBackendProcess:afterWait',
+    message: 'Post-SIGTERM wait status',
+    data: { pid: proc.pid, exitCode: proc.exitCode, killed: proc.killed },
+  });
+  // #endregion
+
   if (proc.exitCode === null) {
     console.log(pc.yellow('⚠ Backend did not stop after SIGTERM, forcing...'));
+    // #region agent log
+    sendDebugLog({
+      runId: 'smoke-up',
+      hypothesisId: 'H1',
+      location: 'scripts/smoke-runner.mjs:stopBackendProcess:forceSIGKILL',
+      message: 'Escalating to SIGKILL',
+      data: { pid: proc.pid, exitCode: proc.exitCode, killed: proc.killed },
+    });
+    // #endregion
     proc.kill('SIGKILL');
     await sleep(1000);
   }
@@ -134,11 +198,36 @@ async function main() {
     await ensurePortIsFree(PORT, 'pre-run port cleanup');
 
     console.log(pc.cyan('\n▶ Starting backend'));
-    backendProcess = spawn('npm', ['run', 'backend:start:once'], {
+    const backendCwd = path.resolve(process.cwd(), 'backend');
+    const tsxCliCandidates = [
+      path.resolve(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs'),
+      path.resolve(backendCwd, 'node_modules', 'tsx', 'dist', 'cli.mjs'),
+    ];
+    const tsxCli = tsxCliCandidates.find((candidate) => fs.existsSync(candidate));
+    if (!tsxCli) {
+      throw new Error(`tsx CLI not found. Checked:\n- ${tsxCliCandidates.join('\n- ')}`);
+    }
+    backendProcess = spawn(process.execPath, [tsxCli, 'src/index.ts'], {
+      cwd: backendCwd,
       stdio: 'inherit',
-      shell: true,
+      shell: false,
       detached: false,
     });
+
+    // #region agent log
+    sendDebugLog({
+      runId: 'smoke-up',
+      hypothesisId: 'H1',
+      location: 'scripts/smoke-runner.mjs:main:spawnBackend',
+      message: 'Spawned backend process via npm',
+      data: {
+        pid: backendProcess.pid,
+        spawnfile: backendProcess.spawnfile,
+        shell: false,
+        detached: false,
+      },
+    });
+    // #endregion
 
     backendProcess.on('error', (err) => {
       console.error(pc.red(`✖ Backend process error: ${err.message}`));
