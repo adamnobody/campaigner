@@ -46,7 +46,7 @@ export class ProjectService {
     const projectId = result.lastInsertRowid as number;
     db.prepare(`
       INSERT INTO scenario_branches (project_id, name, is_main)
-      VALUES (?, 'main', 1)
+      VALUES (?, 'Каноничная ветвь', 1)
     `).run(projectId);
     const mapService = new MapService();
     mapService.createRootMapForProject(projectId);

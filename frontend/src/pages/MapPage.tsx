@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Box, Typography, Button, TextField } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -22,8 +22,6 @@ import { MapToolbar } from './map/MapToolbar';
 import { useMapViewport } from './map/useMapViewport';
 import { useMapTerritoryDrawing } from './map/useMapTerritoryDrawing';
 import { shallow } from 'zustand/shallow';
-import { useBranchStore } from '@/store/useBranchStore';
-import { useMapGeoHistory } from './map/useMapGeoHistory';
 import { useMapData } from './map/useMapData';
 import { useMapNavigation } from './map/useMapNavigation';
 import { useMapMarkerCrud } from './map/useMapMarkerCrud';
@@ -40,7 +38,6 @@ export const MapPage: React.FC = () => {
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
   }), shallow);
-  const activeBranchId = useBranchStore((state) => state.activeBranchId);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -259,12 +256,6 @@ export const MapPage: React.FC = () => {
     currentMap?.imagePath ? `/api${currentMap.imagePath}` : project?.mapImagePath || null,
     [currentMap?.imagePath, project?.mapImagePath]);
 
-  const { geoDate, setGeoDate, geoEventsCount } = useMapGeoHistory({
-    projectId: pid,
-    mapId: currentMap?.id ?? null,
-    branchId: activeBranchId,
-  });
-
   // ==================== Child map ops ====================
   const handleCreateChildMap = useCallback(async (marker: Marker) => {
     if (!currentMap) return;
@@ -326,21 +317,6 @@ export const MapPage: React.FC = () => {
         territoriesCount={territories.length}
         onUploadMap={handleUploadMap}
       />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-        <TextField
-          size="small"
-          type="date"
-          label="Гео-история"
-          InputLabelProps={{ shrink: true }}
-          value={geoDate}
-          onChange={(e) => setGeoDate(e.target.value)}
-          sx={{ width: 180 }}
-        />
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)' }}>
-          Событий в текущей ветке: {geoEventsCount}
-        </Typography>
-      </Box>
-
       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.42)', mb: 1, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>
         {editingTerritoryPoints
           ? 'Перетащите точки для изменения формы · ПКМ — удалить точку · Двойной клик — добавить точку на ребре'

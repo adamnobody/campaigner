@@ -37,4 +37,3 @@ export { dogmasApi } from './dogmas';
 export { factionsApi } from './factions';
 export { dynastiesApi } from './dynasties';
 export { branchesApi } from './branches';
-export { geoStoryApi } from './geoStory';

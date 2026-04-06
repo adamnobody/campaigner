@@ -25,6 +25,11 @@ export function importProject(data: ImportedProjectPayload): Project {
 
     const projectId = projectResult.lastInsertRowid as number;
 
+    db.prepare(`
+      INSERT INTO scenario_branches (project_id, name, is_main)
+      VALUES (?, 'Каноничная ветвь', 1)
+    `).run(projectId);
+
     const mapService = new MapService();
     mapService.createRootMapForProject(projectId);
 

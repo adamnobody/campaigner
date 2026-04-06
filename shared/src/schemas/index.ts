@@ -9,4 +9,3 @@ export * from './faction.schema.js';
 export * from './dynasty.schema.js';
 export * from './wiki.schema.js';
 export * from './branch.schema.js';
-export * from './geostory.schema.js';

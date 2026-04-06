@@ -70,12 +70,6 @@ import {
   branchLocalEntitySchema,
 } from '../schemas/branch.schema.js';
 import {
-  geoStoryEventSchema,
-  createGeoStoryEventSchema,
-  updateGeoStoryEventSchema,
-  geoStoryListQuerySchema,
-} from '../schemas/geostory.schema.js';
-import {
   createDynastySchema,
   updateDynastySchema,
   createDynastyMemberSchema,
@@ -166,12 +160,6 @@ export type CreateScenarioBranch = z.input<typeof createScenarioBranchSchema>;
 export type UpdateScenarioBranch = z.input<typeof updateScenarioBranchSchema>;
 export type BranchOverride = z.infer<typeof branchOverrideSchema>;
 export type BranchLocalEntity = z.infer<typeof branchLocalEntitySchema>;
-
-// ==================== Geo Story ====================
-export type GeoStoryEvent = z.infer<typeof geoStoryEventSchema>;
-export type CreateGeoStoryEvent = z.input<typeof createGeoStoryEventSchema>;
-export type UpdateGeoStoryEvent = z.input<typeof updateGeoStoryEventSchema>;
-export type GeoStoryListQuery = z.input<typeof geoStoryListQuerySchema>;
 
 // ==================== Common ====================
 // In backend responses `Tag` always includes `id` and `color` (color falls back to '#808080').
