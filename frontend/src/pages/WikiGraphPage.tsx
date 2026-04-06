@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Box, Typography, Button, Paper, IconButton, Chip,
+  Box, Typography, Button, Paper, IconButton, Chip, useTheme, alpha,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -10,6 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { wikiApi } from '@/api/wiki';
 import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
+import { GlassCard } from '@/components/ui/GlassCard';
 
 interface GNode {
   id: number;
@@ -41,6 +42,7 @@ export const WikiGraphPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -431,23 +433,21 @@ export const WikiGraphPage: React.FC = () => {
       </Typography>
 
       {nodeCount === 0 ? (
-        <Paper sx={{ p: 6, textAlign: 'center', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
-          backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>Нет вики-статей</Typography>
+        <GlassCard sx={{ p: 6, textAlign: 'center', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+          <Typography sx={{ color: 'text.secondary', mb: 2 }}>Нет вики-статей</Typography>
           <Button variant="outlined" onClick={() => navigate(`/project/${pid}/wiki`)}>К вики</Button>
-        </Paper>
+        </GlassCard>
       ) : (
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
-          <Box ref={wrapRef} sx={{ position: 'absolute', inset: 0, borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)', backgroundColor: '#0a0a14', overflow: 'hidden' }}>
+          <Box ref={wrapRef} sx={{ position: 'absolute', inset: 0, borderRadius: 2, border: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.default, overflow: 'hidden' }}>
             <canvas ref={canvasRef}
               style={{ display: 'block', cursor: dragIdRef.current ? 'grabbing' : panningRef.current ? 'grabbing' : 'grab' }}
               onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} onDoubleClick={onDblClick} />
           </Box>
 
           {selectedNode && (
-            <Paper sx={{ position: 'absolute', bottom: 16, left: 16, p: 2, maxWidth: 280,
-              backgroundColor: 'rgba(20,20,35,0.95)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', zIndex: 20 }}>
-              <Typography sx={{ fontWeight: 700, color: '#fff' }}>{selectedNode.name}</Typography>
+            <GlassCard sx={{ position: 'absolute', bottom: 16, left: 16, p: 2, maxWidth: 280, zIndex: 20 }}>
+              <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>{selectedNode.name}</Typography>
               {selectedNode.tags.length > 0 && (
                 <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
                   {selectedNode.tags.map(t => (
@@ -459,35 +459,34 @@ export const WikiGraphPage: React.FC = () => {
               <Box display="flex" gap={1} mt={1.5}>
                 <Button size="small" variant="outlined"
                   onClick={() => navigate(`/project/${pid}/notes/${selectedNode.id}`)}
-                  sx={{ borderColor: 'rgba(130,130,255,0.3)', color: 'rgba(130,130,255,0.9)', textTransform: 'none', fontSize: '0.75rem' }}>
+                  sx={{ borderColor: alpha(theme.palette.primary.main, 0.3), color: theme.palette.primary.main, textTransform: 'none', fontSize: '0.75rem' }}>
                   Открыть
                 </Button>
                 <Button size="small" onClick={() => { selectedIdRef.current = null; setSelectedNode(null); }}
-                  sx={{ color: 'rgba(255,255,255,0.4)', textTransform: 'none', fontSize: '0.75rem' }}>
+                  sx={{ color: 'text.secondary', textTransform: 'none', fontSize: '0.75rem' }}>
                   Закрыть
                 </Button>
               </Box>
-            </Paper>
+            </GlassCard>
           )}
 
           {allTagsUsed.length > 0 && (
-            <Box sx={{ position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(20,20,35,0.85)', borderRadius: 1.5,
-              border: '1px solid rgba(255,255,255,0.08)', p: 1.5, maxHeight: '40vh', overflow: 'auto' }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', mb: 0.5 }}>Категории</Typography>
+            <GlassCard sx={{ position: 'absolute', top: 12, right: 12, p: 1.5, maxHeight: '40vh', overflow: 'auto' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Категории</Typography>
               {allTagsUsed.map(t => (
                 <Box key={t} display="flex" alignItems="center" gap={1} sx={{ mb: 0.3 }}>
                   <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: tagColorMapRef.current[t] || '#8282FF' }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t}</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.primary', fontSize: '0.7rem' }}>{t}</Typography>
                 </Box>
               ))}
-            </Box>
+            </GlassCard>
           )}
 
           <Box sx={{ position: 'absolute', bottom: 12, right: 12, display: 'flex', gap: 1 }}>
             <Chip label={`${nodeCount} статей`} size="small" variant="outlined"
-              sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }} />
+              sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }} />
             <Chip label={`${edgeCount} связей`} size="small" variant="outlined"
-              sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }} />
+              sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }} />
           </Box>
         </Box>
       )}

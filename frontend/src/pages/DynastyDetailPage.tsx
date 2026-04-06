@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Paper, TextField, Button,
+  Box, Typography, TextField, Button,
   Avatar, IconButton, Chip,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText,
-  Grid, Tooltip,
+  Grid, Tooltip, alpha, useTheme,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -16,7 +16,6 @@ import PeopleIcon from '@mui/icons-material/People';
 import PersonIcon from '@mui/icons-material/Person';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import EventIcon from '@mui/icons-material/Event';
-import LinkIcon from '@mui/icons-material/Link';
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUIStore } from '@/store/useUIStore';
@@ -28,6 +27,10 @@ import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
 import { DynastyMemberDialog, DynastyFamilyLinkDialog, DynastyEventDialog } from '@/pages/dynasty/DynastyDialogs';
+import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
+import { EntityTabs } from '@/components/ui/EntityTabs';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   DYNASTY_STATUSES, DYNASTY_STATUS_LABELS, DYNASTY_STATUS_ICONS,
   DYNASTY_FAMILY_RELATION_LABELS,
@@ -72,6 +75,8 @@ export const DynastyDetailPage: React.FC = () => {
   const isNew = !dynastyId || dynastyId === 'new';
   const did = dynastyId && !isNew ? parseInt(dynastyId) : 0;
   const navigate = useNavigate();
+  const theme = useTheme();
+  
   const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
@@ -124,6 +129,7 @@ export const DynastyDetailPage: React.FC = () => {
   const [form, setForm] = useState<DynastyForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Dialogs
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
@@ -358,65 +364,35 @@ export const DynastyDetailPage: React.FC = () => {
   if (loading && !isNew && !currentDynasty) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>
-          Загрузка...
-        </Typography>
+        <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
       </Box>
     );
   }
 
+  const dynastyColor = form.color || theme.palette.primary.main;
+
   return (
     <Box>
-      {/* Header bar */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={2}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <IconButton onClick={() => navigate(`/project/${pid}/dynasties`)}><ArrowBackIcon /></IconButton>
-          <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
-            {isNew ? 'Создание династии' : 'Редактирование'}
-          </Typography>
-        </Box>
-        <Box display="flex" gap={1}>
-          {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">Удалить</Button>}
-          <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
-            {isNew ? 'Создать' : 'Сохранить'}
-          </DndButton>
-        </Box>
+      <Box display="flex" alignItems="center" mb={2}>
+        <IconButton onClick={() => navigate(`/project/${pid}/dynasties`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <Typography variant="body2" color="text.secondary">К списку династий</Typography>
       </Box>
 
-      {/* ===== CENTERED CREST PANEL ===== */}
-      <Paper sx={{
-        mb: 3, overflow: 'hidden',
-        background: `linear-gradient(135deg, ${form.color || '#c9a959'}15, ${form.secondaryColor || '#2a2a4a'}30)`,
-        border: '1px solid rgba(201,169,89,0.15)',
-        borderRadius: 3,
-      }}>
-        {/* Decorative top line */}
-        <Box sx={{
-          height: 3,
-          background: `linear-gradient(90deg, transparent, ${form.color || '#c9a959'}, transparent)`,
-        }} />
-
-        <Box sx={{ py: 5, textAlign: 'center', position: 'relative' }}>
-          {/* Decorative corners */}
-          <Box sx={{
-            position: 'absolute', top: 12, left: 12, right: 12, bottom: 12,
-            border: '1px solid rgba(201,169,89,0.08)', borderRadius: 2,
-            pointerEvents: 'none',
-          }} />
-
-          {/* Crest */}
-          <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
+      <EntityHeroLayout
+        avatarNode={
+          <Box sx={{ position: 'relative', display: 'inline-block' }}>
             <Avatar
               src={currentDynasty?.imagePath || undefined}
               sx={{
-                width: 120, height: 120, mx: 'auto',
-                borderRadius: '50%',
-                bgcolor: 'rgba(201,169,89,0.1)',
-                border: `3px solid ${form.color || 'rgba(201,169,89,0.4)'}`,
-                boxShadow: `0 0 30px ${form.color || 'rgba(201,169,89,0.2)'}40`,
-                color: 'rgba(201,169,89,0.5)',
-                fontSize: '3.5rem',
+                width: 140, height: 140,
+                borderRadius: 3,
+                bgcolor: alpha(dynastyColor, 0.1),
+                border: `3px solid ${alpha(dynastyColor, 0.4)}`,
+                boxShadow: `0 0 30px ${alpha(dynastyColor, 0.2)}`,
+                color: dynastyColor,
+                fontSize: '4rem',
               }}
+              variant="rounded"
             >
               👑
             </Avatar>
@@ -425,365 +401,365 @@ export const DynastyDetailPage: React.FC = () => {
                 <IconButton
                   component="label"
                   sx={{
-                    position: 'absolute', bottom: -4, right: -4,
-                    backgroundColor: 'rgba(201,169,89,0.2)',
-                    border: '1px solid rgba(201,169,89,0.3)',
-                    width: 32, height: 32,
-                    '&:hover': { backgroundColor: 'rgba(201,169,89,0.4)' },
+                    position: 'absolute', bottom: -8, right: -8,
+                    backgroundColor: alpha(dynastyColor, 0.2),
+                    border: `1px solid ${alpha(dynastyColor, 0.4)}`,
+                    width: 36, height: 36,
+                    '&:hover': { backgroundColor: alpha(dynastyColor, 0.4) },
                   }}
                 >
-                  <CloudUploadIcon sx={{ fontSize: 16, color: 'rgba(201,169,89,0.9)' }} />
+                  <CloudUploadIcon sx={{ fontSize: 18, color: dynastyColor }} />
                   <input type="file" hidden accept="image/*" onChange={handleImageUpload} />
                 </IconButton>
               </Tooltip>
             )}
           </Box>
+        }
+        title={isNew ? 'Новая династия' : form.name || 'Династия'}
+        subtitle={form.motto ? `«${form.motto}»` : undefined}
+        actionButtons={
+          <>
+            {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">Удалить</Button>}
+            <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
+              {isNew ? 'Создать' : 'Сохранить'}
+            </DndButton>
+          </>
+        }
+      />
 
-          {/* Name */}
-          <Typography sx={{
-            fontFamily: '"Cinzel", serif', fontWeight: 700,
-            fontSize: '2rem', color: '#fff',
-            letterSpacing: '0.05em',
-            textShadow: '0 2px 10px rgba(0,0,0,0.5)',
-          }}>
-            {form.name || 'Название династии'}
-          </Typography>
+      <EntityTabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        tabs={[
+          { value: 'overview', label: 'Обзор', icon: <EditIcon fontSize="small" /> },
+          { value: 'family', label: 'Семья и древо', icon: <AccountTreeIcon fontSize="small" /> },
+          { value: 'events', label: 'События', icon: <EventIcon fontSize="small" /> },
+        ]}
+      />
 
-          {/* Motto */}
-          {form.motto && (
-            <Typography sx={{
-              color: 'rgba(201,169,89,0.8)', fontStyle: 'italic',
-              fontSize: '1rem', mt: 0.5,
-              fontFamily: '"Cinzel", serif',
-            }}>
-              «{form.motto}»
-            </Typography>
-          )}
-
-          {/* Status + Key figures */}
-          <Box display="flex" justifyContent="center" gap={2} mt={2} flexWrap="wrap">
-            <Chip
-              label={`${DYNASTY_STATUS_ICONS[form.status] || ''} ${DYNASTY_STATUS_LABELS[form.status] || form.status}`}
-              sx={{
-                height: 28, fontSize: '0.8rem', fontWeight: 600,
-                backgroundColor: 'rgba(201,169,89,0.15)',
-                color: 'rgba(201,169,89,0.9)',
-                border: '1px solid rgba(201,169,89,0.2)',
-              }}
-            />
-            {currentDynasty?.founderName && (
-              <Chip label={`⚔️ Основатель: ${currentDynasty.founderName}`} sx={{
-                height: 28, fontSize: '0.75rem',
-                backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)',
-              }} />
-            )}
-            {currentDynasty?.currentLeaderName && (
-              <Chip label={`👑 Глава: ${currentDynasty.currentLeaderName}`} sx={{
-                height: 28, fontSize: '0.75rem',
-                backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)',
-              }} />
-            )}
-            {currentDynasty?.heirName && (
-              <Chip label={`🌟 Наследник: ${currentDynasty.heirName}`} sx={{
-                height: 28, fontSize: '0.75rem',
-                backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)',
-              }} />
-            )}
-            {currentDynasty?.linkedFactionName && (
-              <Chip label={`🏛️ ${currentDynasty.linkedFactionName}`} sx={{
-                height: 28, fontSize: '0.75rem',
-                backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)',
-              }} />
-            )}
-          </Box>
-
-          {/* Quick stats */}
-          {!isNew && (
-            <Box display="flex" justifyContent="center" gap={4} mt={2}>
-              <Tooltip title="Членов"><Box display="flex" alignItems="center" gap={0.5}>
-                <PeopleIcon sx={{ fontSize: 18, color: 'rgba(201,169,89,0.5)' }} />
-                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>{currentMembers.length}</Typography>
-              </Box></Tooltip>
-              <Tooltip title="Связей"><Box display="flex" alignItems="center" gap={0.5}>
-                <AccountTreeIcon sx={{ fontSize: 18, color: 'rgba(201,169,89,0.5)' }} />
-                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>{currentFamilyLinks.length}</Typography>
-              </Box></Tooltip>
-              <Tooltip title="Событий"><Box display="flex" alignItems="center" gap={0.5}>
-                <EventIcon sx={{ fontSize: 18, color: 'rgba(201,169,89,0.5)' }} />
-                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>{currentEvents.length}</Typography>
-              </Box></Tooltip>
-            </Box>
-          )}
-        </Box>
-
-        {/* Bottom decorative line */}
-        <Box sx={{
-          height: 3,
-          background: `linear-gradient(90deg, transparent, ${form.color || '#c9a959'}, transparent)`,
-        }} />
-      </Paper>
-
-      {/* ===== SECTIONS ===== */}
-      <Box sx={{ maxWidth: 900, mx: 'auto' }}>
-
-        {/* Basic info */}
-        <Section title="Основное" icon={<EditIcon />} defaultOpen={true}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Название *" value={form.name} onChange={e => handleChange('name', e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Девиз" value={form.motto} onChange={e => handleChange('motto', e.target.value)} placeholder="напр. Огонь и Кровь" />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth><InputLabel>Статус</InputLabel>
-                <Select value={form.status} label="Статус" onChange={e => handleChange('status', e.target.value)}>
-                  {DYNASTY_STATUSES.map(s => <MenuItem key={s} value={s}>{DYNASTY_STATUS_ICONS[s]} {DYNASTY_STATUS_LABELS[s]}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth><InputLabel>Связанная фракция</InputLabel>
-                <Select value={form.linkedFactionId} label="Связанная фракция" onChange={e => handleChange('linkedFactionId', e.target.value)}>
-                  <MenuItem value="">Нет</MenuItem>
-                  {factions.map(f => <MenuItem key={f.id} value={String(f.id)}>{f.name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Дата основания" value={form.foundedDate} onChange={e => handleChange('foundedDate', e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField fullWidth label="Дата угасания" value={form.extinctDate} onChange={e => handleChange('extinctDate', e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth><InputLabel>Основатель</InputLabel>
-                <Select value={form.founderId} label="Основатель" onChange={e => handleChange('founderId', e.target.value)}>
-                  <MenuItem value="">Не указан</MenuItem>
-                  {allCharacters.map((ch: any) => <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth><InputLabel>Глава</InputLabel>
-                <Select value={form.currentLeaderId} label="Глава" onChange={e => handleChange('currentLeaderId', e.target.value)}>
-                  <MenuItem value="">Не указан</MenuItem>
-                  {allCharacters.map((ch: any) => <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth><InputLabel>Наследник</InputLabel>
-                <Select value={form.heirId} label="Наследник" onChange={e => handleChange('heirId', e.target.value)}>
-                  <MenuItem value="">Не указан</MenuItem>
-                  {allCharacters.map((ch: any) => <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <TextField fullWidth label="Основной цвет" value={form.color || '#000000'} onChange={e => handleChange('color', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <TextField fullWidth label="Вторичный цвет" value={form.secondaryColor || '#000000'} onChange={e => handleChange('secondaryColor', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
-            </Grid>
-            <Grid item xs={12}>
-              <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />
-            </Grid>
-          </Grid>
-        </Section>
-
-        {/* Description & History */}
-        <Section title="Описание и история" icon={<HistoryEduIcon />} defaultOpen={!isNew}>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField fullWidth label="Описание" value={form.description} onChange={e => handleChange('description', e.target.value)} multiline rows={4} placeholder="Общее описание династии..." />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField fullWidth label="История рода" value={form.history} onChange={e => handleChange('history', e.target.value)} multiline rows={6} placeholder="Как был основан род, ключевые вехи..." />
-            </Grid>
-          </Grid>
-        </Section>
-
-        {/* Members by generation */}
-        {!isNew && (
-          <Section title="Члены династии" icon={<PeopleIcon />} badge={currentMembers.length} defaultOpen={currentMembers.length > 0}
-            action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openMemberDialog} sx={{ borderColor: 'rgba(201,169,89,0.4)', color: 'rgba(201,169,89,0.9)' }}>Добавить</DndButton>}>
-            {currentMembers.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 3 }}>
-                <PeopleIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Добавьте персонажей в династию</Typography>
-              </Box>
-            ) : (
-              <>
-                {membersByGeneration.map(([gen, members]) => (
-                  <Box key={gen} sx={{ mb: 3 }}>
-                    <Box display="flex" alignItems="center" gap={1} mb={1.5}>
-                      <Box sx={{ width: 24, height: 1, backgroundColor: 'rgba(201,169,89,0.3)' }} />
-                      <Typography sx={{
-                        fontFamily: '"Cinzel", serif', fontSize: '0.85rem', fontWeight: 700,
-                        color: 'rgba(201,169,89,0.7)', whiteSpace: 'nowrap',
-                      }}>
-                        {gen === 0 ? 'Основатели' : `Поколение ${gen}`}
-                      </Typography>
-                      <Box sx={{ flexGrow: 1, height: 1, backgroundColor: 'rgba(201,169,89,0.15)' }} />
-                    </Box>
-
-                    <Box sx={{
-                      display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-                      gap: 1.5,
-                    }}>
-                      {members.map(member => (
-                        <Paper key={member.id} sx={{
-                          p: 2, display: 'flex', alignItems: 'center', gap: 1.5,
-                          backgroundColor: member.isMainLine ? 'rgba(201,169,89,0.06)' : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${member.isMainLine ? 'rgba(201,169,89,0.15)' : 'rgba(255,255,255,0.06)'}`,
-                          borderRadius: 2, cursor: 'pointer',
-                          transition: 'all 0.15s',
-                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)', '& .member-delete': { opacity: 1 } },
-                        }}
-                          onClick={() => navigate(`/project/${pid}/characters/${member.characterId}`)}
-                        >
-                          <Avatar
-                            src={member.characterImagePath || undefined}
-                            sx={{
-                              width: 44, height: 44,
-                              bgcolor: 'rgba(201,169,89,0.1)',
-                              border: member.characterStatus === 'dead' ? '2px solid rgba(150,150,150,0.3)' : '2px solid rgba(201,169,89,0.2)',
-                              filter: member.characterStatus === 'dead' ? 'grayscale(0.7)' : 'none',
-                            }}
-                          >
-                            <PersonIcon sx={{ color: 'rgba(201,169,89,0.4)' }} />
-                          </Avatar>
-                          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                            <Typography sx={{
-                              fontWeight: 600, fontSize: '0.9rem', color: '#fff',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>
-                              {member.characterName || `ID: ${member.characterId}`}
-                            </Typography>
-                            <Box display="flex" gap={0.5} flexWrap="wrap" mt={0.25}>
-                              {member.role && (
-                                <Chip label={member.role} size="small" sx={{
-                                  height: 18, fontSize: '0.6rem',
-                                  backgroundColor: 'rgba(201,169,89,0.15)', color: 'rgba(201,169,89,0.8)', borderRadius: 1,
-                                }} />
-                              )}
-                              {member.isMainLine && (
-                                <Chip label="Главная линия" size="small" sx={{
-                                  height: 18, fontSize: '0.55rem',
-                                  backgroundColor: 'rgba(201,169,89,0.1)', color: 'rgba(201,169,89,0.6)', borderRadius: 1,
-                                }} />
-                              )}
-                              {member.characterStatus === 'dead' && (
-                                <Chip label="†" size="small" sx={{
-                                  height: 18, fontSize: '0.65rem',
-                                  backgroundColor: 'rgba(150,150,150,0.15)', color: 'rgba(150,150,150,0.7)', borderRadius: 1,
-                                }} />
-                              )}
-                            </Box>
-                          </Box>
-                          <IconButton size="small" className="member-delete" sx={{ opacity: 0, transition: 'opacity 0.15s' }}
-                            onClick={e => { e.stopPropagation(); handleRemoveMember(member.id, member.characterName || ''); }}>
-                            <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
-                          </IconButton>
-                        </Paper>
-                      ))}
+      {activeTab === 'overview' && (
+        <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+          {/* LEFT SIDEBAR */}
+          <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
+            <GlassCard sx={{ p: 3, position: 'sticky', top: 80 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Сводка</Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Статус</Typography>
+                  <Chip
+                    label={`${DYNASTY_STATUS_ICONS[form.status] || ''} ${DYNASTY_STATUS_LABELS[form.status] || form.status}`}
+                    size="small"
+                    sx={{
+                      height: 24, fontSize: '0.75rem', fontWeight: 600,
+                      backgroundColor: alpha(dynastyColor, 0.15),
+                      color: dynastyColor,
+                      border: `1px solid ${alpha(dynastyColor, 0.2)}`,
+                    }}
+                  />
+                </Box>
+                {currentDynasty?.founderName && (
+                  <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Основатель</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{currentDynasty.founderName}</Typography>
+                  </Box>
+                )}
+                {currentDynasty?.currentLeaderName && (
+                  <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Глава</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{currentDynasty.currentLeaderName}</Typography>
+                  </Box>
+                )}
+                {currentDynasty?.heirName && (
+                  <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Наследник</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{currentDynasty.heirName}</Typography>
+                  </Box>
+                )}
+                {currentDynasty?.linkedFactionName && (
+                  <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Связанная фракция</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{currentDynasty.linkedFactionName}</Typography>
+                  </Box>
+                )}
+                
+                {previewTagsStr.trim() && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>Теги</Typography>
+                    <Box display="flex" gap={0.5} flexWrap="wrap">
+                      {previewTagsStr.split(',').map((t, i) => { const s = t.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 24, fontSize: '0.75rem' }} /> : null; })}
                     </Box>
                   </Box>
-                ))}
-              </>
-            )}
-          </Section>
-        )}
-
-        {/* Family links */}
-        {!isNew && (
-          <Section title="Родственные связи" icon={<AccountTreeIcon />} badge={currentFamilyLinks.length} defaultOpen={currentFamilyLinks.length > 0}
-            action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openFamilyLinkDialog}
-              disabled={currentMembers.length < 2}
-              sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)' }}>Добавить</DndButton>}>
-            {currentFamilyLinks.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 3 }}>
-                <AccountTreeIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>
-                  {currentMembers.length < 2
-                    ? 'Добавьте минимум двух членов, чтобы создать связи'
-                    : 'Установите родственные связи между членами'}
-                </Typography>
+                )}
               </Box>
-            ) : (
-              <List disablePadding>
-                {currentFamilyLinks.map(link => (
-                  <ListItem key={link.id}
-                    secondaryAction={
-                      <IconButton size="small" onClick={() => handleDeleteFamilyLink(link.id)}>
-                        <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
-                      </IconButton>
-                    }
-                    sx={{
-                      backgroundColor: 'rgba(130,130,255,0.06)',
-                      borderRadius: 1.5, mb: 1,
-                      border: '1px solid rgba(255,255,255,0.04)',
-                    }}>
-                    <ListItemText
-                      primary={
-                        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                          <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>
-                            {link.sourceCharacterName}
-                          </Typography>
-                          <Chip
-                            label={link.customLabel || DYNASTY_FAMILY_RELATION_LABELS[link.relationType] || link.relationType}
-                            size="small"
-                            sx={{
-                              height: 22, fontSize: '0.7rem', fontWeight: 600,
-                              backgroundColor: 'rgba(201,169,89,0.2)', color: 'rgba(201,169,89,0.9)',
-                            }}
-                          />
-                          <Typography sx={{ color: 'rgba(255,255,255,0.4)' }}>→</Typography>
-                          <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>
-                            {link.targetCharacterName}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            )}
-          </Section>
-        )}
-        {/* Family Tree Visualization */}
-        {!isNew && currentMembers.length >= 2 && currentFamilyLinks.length > 0 && (
-          <Section title="Генеалогическое древо" icon={<AccountTreeIcon />} defaultOpen={true}>
-            <FamilyTree
-              members={currentMembers}
-              familyLinks={currentFamilyLinks}
-              dynastyColor={form.color}
-              dynastyId={currentDynasty?.id}
-              onSavePositions={(positions) => {
-                if (currentDynasty?.id) {
-                  saveGraphPositions(currentDynasty.id, positions);
-                }
-              }}
-            />
-          </Section>
-        )}
-        {/* Dynasty Events / Timeline */}
-        {!isNew && (
-          <Section title="Ключевые события" icon={<EventIcon />} badge={currentEvents.length} defaultOpen={currentEvents.length > 0}
-            action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openEventDialog()}
-              sx={{ borderColor: 'rgba(78,205,196,0.4)', color: 'rgba(78,205,196,0.9)' }}>Добавить</DndButton>}>
-            <DynastyEventsTimeline
-              events={currentEvents}
-              onEdit={openEventDialog}
-              onDelete={handleDeleteEvent}
-              onReorder={handleReorderEvents}
-            />
-          </Section>
-        )}
+            </GlassCard>
+          </Box>
 
-      </Box>
+          {/* MAIN CONTENT */}
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            {/* Basic info */}
+            <Section title="Основное" icon={<EditIcon />} defaultOpen={true}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth label="Название *" value={form.name} onChange={e => handleChange('name', e.target.value)} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth label="Девиз" value={form.motto} onChange={e => handleChange('motto', e.target.value)} placeholder="напр. Огонь и Кровь" />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth><InputLabel>Статус</InputLabel>
+                    <Select value={form.status} label="Статус" onChange={e => handleChange('status', e.target.value)}>
+                      {DYNASTY_STATUSES.map(s => <MenuItem key={s} value={s}>{DYNASTY_STATUS_ICONS[s]} {DYNASTY_STATUS_LABELS[s]}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth><InputLabel>Связанная фракция</InputLabel>
+                    <Select value={form.linkedFactionId} label="Связанная фракция" onChange={e => handleChange('linkedFactionId', e.target.value)}>
+                      <MenuItem value="">Нет</MenuItem>
+                      {factions.map(f => <MenuItem key={f.id} value={String(f.id)}>{f.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth label="Дата основания" value={form.foundedDate} onChange={e => handleChange('foundedDate', e.target.value)} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField fullWidth label="Дата угасания" value={form.extinctDate} onChange={e => handleChange('extinctDate', e.target.value)} />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth><InputLabel>Основатель</InputLabel>
+                    <Select value={form.founderId} label="Основатель" onChange={e => handleChange('founderId', e.target.value)}>
+                      <MenuItem value="">Не указан</MenuItem>
+                      {allCharacters.map((ch: any) => <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth><InputLabel>Глава</InputLabel>
+                    <Select value={form.currentLeaderId} label="Глава" onChange={e => handleChange('currentLeaderId', e.target.value)}>
+                      <MenuItem value="">Не указан</MenuItem>
+                      {allCharacters.map((ch: any) => <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth><InputLabel>Наследник</InputLabel>
+                    <Select value={form.heirId} label="Наследник" onChange={e => handleChange('heirId', e.target.value)}>
+                      <MenuItem value="">Не указан</MenuItem>
+                      {allCharacters.map((ch: any) => <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <TextField fullWidth label="Основной цвет" value={form.color || '#000000'} onChange={e => handleChange('color', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <TextField fullWidth label="Вторичный цвет" value={form.secondaryColor || '#000000'} onChange={e => handleChange('secondaryColor', e.target.value)} type="color" InputLabelProps={{ shrink: true }} />
+                </Grid>
+                <Grid item xs={12}>
+                  <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />
+                </Grid>
+              </Grid>
+            </Section>
+
+            {/* Description & History */}
+            <Section title="Описание и история" icon={<HistoryEduIcon />} defaultOpen={!isNew}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="Описание" value={form.description} onChange={e => handleChange('description', e.target.value)} multiline rows={4} placeholder="Общее описание династии..." />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField fullWidth label="История рода" value={form.history} onChange={e => handleChange('history', e.target.value)} multiline rows={6} placeholder="Как был основан род, ключевые вехи..." />
+                </Grid>
+              </Grid>
+            </Section>
+          </Box>
+        </Box>
+      )}
+
+      {activeTab === 'family' && (
+        <Box>
+          {/* Family Tree Visualization */}
+          {!isNew && currentMembers.length >= 2 && currentFamilyLinks.length > 0 && (
+            <Section title="Генеалогическое древо" icon={<AccountTreeIcon />} defaultOpen={true}>
+              <FamilyTree
+                members={currentMembers}
+                familyLinks={currentFamilyLinks}
+                dynastyColor={form.color}
+                dynastyId={currentDynasty?.id}
+                onSavePositions={(positions) => {
+                  if (currentDynasty?.id) {
+                    saveGraphPositions(currentDynasty.id, positions);
+                  }
+                }}
+              />
+            </Section>
+          )}
+
+          {/* Members by generation */}
+          {!isNew && (
+            <Section title="Члены династии" icon={<PeopleIcon />} badge={currentMembers.length} defaultOpen={true}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openMemberDialog} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
+              {currentMembers.length === 0 ? (
+                <EmptyState icon={<PeopleIcon />} title="Нет членов" description="Добавьте персонажей в династию" actionLabel="Добавить персонажа" onAction={openMemberDialog} />
+              ) : (
+                <>
+                  {membersByGeneration.map(([gen, members]) => (
+                    <Box key={gen} sx={{ mb: 3 }}>
+                      <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+                        <Box sx={{ width: 24, height: 1, backgroundColor: alpha(dynastyColor, 0.3) }} />
+                        <Typography sx={{
+                          fontFamily: '"Cinzel", serif', fontSize: '0.85rem', fontWeight: 700,
+                          color: dynastyColor, whiteSpace: 'nowrap',
+                        }}>
+                          {gen === 0 ? 'Основатели' : `Поколение ${gen}`}
+                        </Typography>
+                        <Box sx={{ flexGrow: 1, height: 1, backgroundColor: alpha(dynastyColor, 0.15) }} />
+                      </Box>
+
+                      <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+                        gap: 1.5,
+                      }}>
+                        {members.map(member => (
+                          <Box key={member.id} sx={{
+                            p: 2, display: 'flex', alignItems: 'center', gap: 1.5,
+                            backgroundColor: member.isMainLine ? alpha(dynastyColor, 0.08) : alpha(theme.palette.background.paper, 0.4),
+                            border: `1px solid ${member.isMainLine ? alpha(dynastyColor, 0.25) : alpha(theme.palette.divider, 0.5)}`,
+                            borderRadius: 2, cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.1), '& .member-delete': { opacity: 1 } },
+                          }}
+                            onClick={() => navigate(`/project/${pid}/characters/${member.characterId}`)}
+                          >
+                            <Avatar
+                              src={member.characterImagePath || undefined}
+                              sx={{
+                                width: 44, height: 44,
+                                bgcolor: alpha(dynastyColor, 0.1),
+                                border: member.characterStatus === 'dead' ? `2px solid ${alpha(theme.palette.text.disabled, 0.3)}` : `2px solid ${alpha(dynastyColor, 0.3)}`,
+                                filter: member.characterStatus === 'dead' ? 'grayscale(0.7)' : 'none',
+                              }}
+                            >
+                              <PersonIcon sx={{ color: alpha(dynastyColor, 0.5) }} />
+                            </Avatar>
+                            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                              <Typography sx={{
+                                fontWeight: 600, fontSize: '0.9rem', color: 'text.primary',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              }}>
+                                {member.characterName || `ID: ${member.characterId}`}
+                              </Typography>
+                              <Box display="flex" gap={0.5} flexWrap="wrap" mt={0.25}>
+                                {member.role && (
+                                  <Chip label={member.role} size="small" sx={{
+                                    height: 18, fontSize: '0.6rem',
+                                    backgroundColor: alpha(dynastyColor, 0.15), color: dynastyColor, borderRadius: 1,
+                                  }} />
+                                )}
+                                {member.isMainLine && (
+                                  <Chip label="Главная линия" size="small" sx={{
+                                    height: 18, fontSize: '0.55rem',
+                                    backgroundColor: alpha(dynastyColor, 0.1), color: dynastyColor, borderRadius: 1,
+                                  }} />
+                                )}
+                                {member.characterStatus === 'dead' && (
+                                  <Chip label="†" size="small" sx={{
+                                    height: 18, fontSize: '0.65rem',
+                                    backgroundColor: alpha(theme.palette.text.disabled, 0.15), color: theme.palette.text.secondary, borderRadius: 1,
+                                  }} />
+                                )}
+                              </Box>
+                            </Box>
+                            <IconButton size="small" className="member-delete" sx={{ opacity: 0, transition: 'opacity 0.15s' }}
+                              onClick={e => { e.stopPropagation(); handleRemoveMember(member.id, member.characterName || ''); }}>
+                              <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  ))}
+                </>
+              )}
+            </Section>
+          )}
+
+          {/* Family links */}
+          {!isNew && (
+            <Section title="Родственные связи" icon={<AccountTreeIcon />} badge={currentFamilyLinks.length} defaultOpen={currentFamilyLinks.length > 0}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openFamilyLinkDialog}
+                disabled={currentMembers.length < 2}
+                sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
+              {currentFamilyLinks.length === 0 ? (
+                <EmptyState icon={<AccountTreeIcon />} title="Нет связей" description={currentMembers.length < 2 ? 'Добавьте минимум двух членов, чтобы создать связи' : 'Установите родственные связи между членами'} actionLabel={currentMembers.length >= 2 ? "Добавить связь" : undefined} onAction={currentMembers.length >= 2 ? openFamilyLinkDialog : undefined} />
+              ) : (
+                <List disablePadding>
+                  {currentFamilyLinks.map(link => (
+                    <ListItem key={link.id}
+                      secondaryAction={
+                        <IconButton size="small" onClick={() => handleDeleteFamilyLink(link.id)}>
+                          <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
+                        </IconButton>
+                      }
+                      sx={{
+                        backgroundColor: alpha(theme.palette.background.paper, 0.4),
+                        borderRadius: 1.5, mb: 1,
+                        border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                      }}>
+                      <ListItemText
+                        primary={
+                          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                            <Typography sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.9rem' }}>
+                              {link.sourceCharacterName}
+                            </Typography>
+                            <Chip
+                              label={link.customLabel || DYNASTY_FAMILY_RELATION_LABELS[link.relationType] || link.relationType}
+                              size="small"
+                              sx={{
+                                height: 22, fontSize: '0.7rem', fontWeight: 600,
+                                backgroundColor: alpha(dynastyColor, 0.15), color: dynastyColor,
+                              }}
+                            />
+                            <Typography sx={{ color: 'text.secondary' }}>→</Typography>
+                            <Typography sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.9rem' }}>
+                              {link.targetCharacterName}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Section>
+          )}
+        </Box>
+      )}
+
+      {activeTab === 'events' && (
+        <Box>
+          {/* Dynasty Events / Timeline */}
+          {!isNew && (
+            <Section title="Ключевые события" icon={<EventIcon />} badge={currentEvents.length} defaultOpen={true}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openEventDialog()}
+                sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
+              {currentEvents.length === 0 ? (
+                <EmptyState icon={<EventIcon />} title="Нет событий" description="Добавьте ключевые события в историю династии" actionLabel="Добавить событие" onAction={() => openEventDialog()} />
+              ) : (
+                <DynastyEventsTimeline
+                  events={currentEvents}
+                  onEdit={openEventDialog}
+                  onDelete={handleDeleteEvent}
+                  onReorder={handleReorderEvents}
+                />
+              )}
+            </Section>
+          )}
+        </Box>
+      )}
 
       {/* ===== DIALOGS ===== */}
       <DynastyMemberDialog

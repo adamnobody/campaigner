@@ -67,6 +67,11 @@ export function exportProject(id: number): ImportedProjectPayload & {
     FROM maps WHERE project_id = ?
   `).all(id) as ExportMapRow[];
 
+  const mapsWithImages = maps.map((map) => ({
+    ...map,
+    imageBase64: readFileAsBase64(map.imagePath),
+  }));
+
   const markers = db.prepare(`
     SELECT mm.id, mm.map_id as mapId, mm.title, mm.description,
            mm.position_x as positionX, mm.position_y as positionY,
@@ -215,7 +220,7 @@ export function exportProject(id: number): ImportedProjectPayload & {
     relationships,
     notes,
     folders,
-    maps,
+    maps: mapsWithImages,
     markers,
     territories,
     timelineEvents,

@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, TextField, IconButton,
-  ToggleButtonGroup, ToggleButton, Chip, Tooltip,
+  ToggleButtonGroup, ToggleButton, Chip, Tooltip, useTheme, alpha,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -45,6 +45,7 @@ export const NoteEditorPage: React.FC = () => {
     updateNote: state.updateNote,
   }), shallow);
   const showSnackbar = useUIStore((state) => state.showSnackbar);
+  const theme = useTheme();
 
   const [mode, setMode] = useState<EditorMode>('split');
   const [title, setTitle] = useState('');
@@ -395,7 +396,7 @@ export const NoteEditorPage: React.FC = () => {
             fontFamily: isMarkdown ? '"Fira Code", monospace' : '"Crimson Text", serif',
             fontSize: isMarkdown ? '0.9rem' : '1rem',
             lineHeight: 1.8,
-            color: 'rgba(255,255,255,0.9)',
+            color: 'text.primary',
           },
           minHeight: '100%',
         }}
@@ -413,16 +414,16 @@ export const NoteEditorPage: React.FC = () => {
             <ArrowBackIcon />
           </IconButton>
           <TextField value={title} onChange={e => handleTitleChange(e.target.value)} variant="standard"
-            sx={{ '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600 }, minWidth: 300 }} />
-          <Chip label={currentNote.format.toUpperCase()} size="small" variant="outlined" />
-          {isWiki && <Chip label="WIKI" size="small" sx={{ backgroundColor: 'rgba(78,205,196,0.2)', color: '#4ECDC4', fontWeight: 600 }} />}
+            sx={{ '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600, color: 'text.primary' }, minWidth: 300 }} />
+          <Chip label={currentNote.format.toUpperCase()} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: theme.palette.divider }} />
+          {isWiki && <Chip label="WIKI" size="small" sx={{ backgroundColor: alpha(theme.palette.info.main, 0.2), color: theme.palette.info.main, fontWeight: 600 }} />}
           <IconButton onClick={handleTogglePin} color={currentNote.isPinned ? 'primary' : 'default'}>
             {currentNote.isPinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
           </IconButton>
           {isWiki && (
             <Tooltip title={showLinks ? 'Скрыть связи' : 'Показать связи'}>
               <IconButton onClick={() => setShowLinks(!showLinks)}
-                sx={{ color: showLinks ? 'rgba(78,205,196,0.8)' : 'rgba(255,255,255,0.3)' }}>
+                sx={{ color: showLinks ? theme.palette.info.main : 'text.disabled' }}>
                 <AccountTreeIcon />
               </IconButton>
             </Tooltip>
@@ -431,23 +432,33 @@ export const NoteEditorPage: React.FC = () => {
         <Box display="flex" alignItems="center" gap={2}>
           <Box display="flex" alignItems="center" gap={0.5}>
             {saveStatus === 'saved' && (
-              <><CloudDoneIcon sx={{ fontSize: 16, color: 'rgba(130,255,130,0.6)' }} />
-              <Typography variant="caption" sx={{ color: 'rgba(130,255,130,0.6)' }}>Сохранено {formatLastSaved()}</Typography></>
+              <><CloudDoneIcon sx={{ fontSize: 16, color: alpha(theme.palette.success.main, 0.6) }} />
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.success.main, 0.6) }}>Сохранено {formatLastSaved()}</Typography></>
             )}
             {saveStatus === 'unsaved' && (
-              <Typography variant="caption" sx={{ color: 'rgba(255,200,100,0.8)' }}>● Несохранённые изменения</Typography>
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.warning.main, 0.8) }}>● Несохранённые изменения</Typography>
             )}
             {saveStatus === 'saving' && (
-              <><SyncIcon sx={{ fontSize: 16, color: 'rgba(130,130,255,0.6)', animation: 'spin 1s linear infinite',
+              <><SyncIcon sx={{ fontSize: 16, color: alpha(theme.palette.info.main, 0.6), animation: 'spin 1s linear infinite',
                 '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />
-              <Typography variant="caption" sx={{ color: 'rgba(130,130,255,0.6)' }}>Сохранение...</Typography></>
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.info.main, 0.6) }}>Сохранение...</Typography></>
             )}
             {saveStatus === 'error' && (
-              <><CloudOffIcon sx={{ fontSize: 16, color: 'rgba(255,100,100,0.6)' }} />
-              <Typography variant="caption" sx={{ color: 'rgba(255,100,100,0.6)' }}>Ошибка сохранения</Typography></>
+              <><CloudOffIcon sx={{ fontSize: 16, color: alpha(theme.palette.error.main, 0.6) }} />
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.error.main, 0.6) }}>Ошибка сохранения</Typography></>
             )}
           </Box>
-          <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => { if (v) setMode(v); }} size="small">
+          <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => { if (v) setMode(v); }} size="small"
+            sx={{
+              '& .MuiToggleButton-root': {
+                color: 'text.secondary',
+                borderColor: theme.palette.divider,
+                '&.Mui-selected': {
+                  color: theme.palette.primary.main,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                },
+              },
+            }}>
             <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Код</ToggleButton>
             <ToggleButton value="split"><VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> Сплит</ToggleButton>
             <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Превью</ToggleButton>
@@ -459,22 +470,22 @@ export const NoteEditorPage: React.FC = () => {
       </Box>
 
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)' }}>
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
           Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить
           {isWiki && ' · [Текст ссылки](/__note__/ID) — внутренняя вики-ссылка'}
         </Typography>
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)' }}>
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
           {wordCount.words} слов · {wordCount.chars} символов
         </Typography>
       </Box>
 
       {/* Main area: editor + wiki sidebar */}
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
-        <Paper sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <Paper sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', border: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper }}>
           {mode === 'edit' && <Box sx={{ width: '100%', height: '100%' }}>{renderEditor()}</Box>}
           {mode === 'split' && (
             <>
-              <Box sx={{ width: '50%', height: '100%', borderRight: '1px solid rgba(255,255,255,0.08)' }}>{renderEditor()}</Box>
+              <Box sx={{ width: '50%', height: '100%', borderRight: `1px solid ${theme.palette.divider}` }}>{renderEditor()}</Box>
               <Box sx={{ width: '50%', height: '100%' }}>
                 <MarkdownPreview content={previewContent} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
               </Box>

@@ -48,11 +48,11 @@ import { motion } from 'framer-motion';
 import {
   presetOrder,
   safeRgba,
-  FloatingOrb,
-  GlassCard,
-  SectionHeader,
   AnimatedSlider,
 } from '@/pages/appearance/AppearancePrimitives';
+import { FloatingOrb } from '@/components/ui/FloatingOrb';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { AppearanceLivePreview } from '@/pages/appearance/AppearanceLivePreview';
 import { FONT_PRESET_OPTIONS } from '@/pages/appearance/fontPresets';
 import { useDebouncedDraft } from '@/pages/appearance/useDebouncedDraft';

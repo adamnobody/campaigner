@@ -44,13 +44,13 @@ export const DEFAULT_FORM = {
   createChildMap: false,
 };
 
-export const sxDivider = { borderColor: 'rgba(255,255,255,0.06)', my: 1.5 } as const;
-export const sxSectionLabel = { color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.65rem' } as const;
-export const sxPanelRoot = {
+export const sxDivider = (theme: any) => ({ borderColor: theme.palette.divider, my: 1.5 });
+export const sxSectionLabel = (theme: any) => ({ color: theme.palette.text.secondary, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.65rem' });
+export const sxPanelRoot = (theme: any) => ({
   width: PANEL_WIDTH, minWidth: PANEL_WIDTH, height: '100%',
-  backgroundColor: 'rgba(15,15,28,0.98)', borderLeft: '1px solid rgba(255,255,255,0.1)',
+  backgroundColor: theme.palette.background.paper, borderLeft: `1px solid ${theme.palette.divider}`,
   display: 'flex', flexDirection: 'column', overflow: 'hidden',
-} as const;
+});
 export const sxMapContainer = { flexGrow: 1, display: 'flex', overflow: 'hidden', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' } as const;
 
 export interface Marker {

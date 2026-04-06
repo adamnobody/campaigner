@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Typography, TextField,
   Button, Chip, Select, MenuItem, FormControl,
-  InputAdornment, Collapse,
+  InputAdornment, Collapse, useTheme, alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -15,6 +15,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { tagsApi } from '@/api/tags';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   DOGMA_CATEGORIES,
@@ -32,6 +33,7 @@ const PAGE_SIZE = 30;
 export const DogmasPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
+  const theme = useTheme();
   const {
     dogmas, total, loading, loadingMore,
     fetchDogmas, createDogma, updateDogma, deleteDogma, setTags,
@@ -256,7 +258,7 @@ export const DogmasPage: React.FC = () => {
   if (!initialized && loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
       </Box>
     );
   }
@@ -266,10 +268,10 @@ export const DogmasPage: React.FC = () => {
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff' }}>
+          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
             Догмы мира
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
             Фундаментальные законы и правила мироустройства
           </Typography>
         </Box>
@@ -280,21 +282,15 @@ export const DogmasPage: React.FC = () => {
 
       {/* Filters — видны если есть хотя бы одна догма в проекте или активны фильтры */}
       {(totalUnfiltered > 0 || hasFilters) && (
-        <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
+        <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
             placeholder="Поиск догм..."
             value={search} onChange={e => setSearch(e.target.value)}
-            sx={{
-              flexGrow: 1, maxWidth: 400,
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
-              },
-            }}
+            sx={{ flexGrow: 1, maxWidth: 400 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
+                  <SearchIcon sx={{ color: 'text.secondary' }} />
                 </InputAdornment>
               ),
             }}
@@ -302,12 +298,7 @@ export const DogmasPage: React.FC = () => {
           />
 
           <FormControl size="small" sx={{ minWidth: 200 }}>
-            <Select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} displayEmpty
-              sx={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                color: '#fff',
-              }}>
+            <Select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} displayEmpty>
               <MenuItem value="">Все категории</MenuItem>
               {DOGMA_CATEGORIES.map(cat => (
                 <MenuItem key={cat} value={cat}>
@@ -318,12 +309,7 @@ export const DogmasPage: React.FC = () => {
           </FormControl>
 
           <FormControl size="small" sx={{ minWidth: 180 }}>
-            <Select value={filterImportance} onChange={e => setFilterImportance(e.target.value)} displayEmpty
-              sx={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                color: '#fff',
-              }}>
+            <Select value={filterImportance} onChange={e => setFilterImportance(e.target.value)} displayEmpty>
               <MenuItem value="">Любая важность</MenuItem>
               {DOGMA_IMPORTANCE.map(imp => (
                 <MenuItem key={imp} value={imp}>{DOGMA_IMPORTANCE_LABELS[imp]}</MenuItem>
@@ -333,34 +319,28 @@ export const DogmasPage: React.FC = () => {
 
           {hasFilters && (
             <Button variant="outlined" onClick={clearFilters}
-              size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
+              size="small" sx={{ borderColor: alpha(theme.palette.primary.main, 0.5), textTransform: 'none' }}>
               Сброс
             </Button>
           )}
 
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
             {dogmas.length} из {total}
           </Typography>
-        </Box>
+        </GlassCard>
       )}
 
       {/* Content */}
       {dogmas.length === 0 && !loading ? (
         hasFilters ? (
           /* Пустой результат фильтрации */
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <SearchIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.15)', mb: 2 }} />
-            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '1.1rem', mb: 1 }}>
-              Ничего не найдено
-            </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.9rem', mb: 2 }}>
-              Попробуйте изменить параметры поиска или фильтры
-            </Typography>
-            <Button variant="outlined" onClick={clearFilters}
-              size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
-              Сбросить фильтры
-            </Button>
-          </Box>
+          <EmptyState
+            icon={<SearchIcon sx={{ fontSize: 64 }} />}
+            title="Ничего не найдено"
+            description="Попробуйте изменить параметры поиска или фильтры"
+            actionLabel="Сбросить фильтры"
+            onAction={clearFilters}
+          />
         ) : (
           /* Вообще нет догм в проекте */
           <EmptyState
@@ -385,31 +365,32 @@ export const DogmasPage: React.FC = () => {
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer',
                     mb: 1.5, py: 1, px: 2,
-                    backgroundColor: 'rgba(255,255,255,0.03)',
+                    backgroundColor: alpha(theme.palette.background.paper, 0.4),
                     borderRadius: 2,
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
                     transition: 'all 0.15s',
                     '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.06)',
-                      borderColor: 'rgba(255,255,255,0.1)',
+                      backgroundColor: alpha(theme.palette.action.hover, 0.1),
+                      borderColor: alpha(theme.palette.divider, 0.8),
                     },
                   }}
                 >
                   <Typography sx={{ fontSize: '1.4rem' }}>{group.icon}</Typography>
                   <Typography sx={{
                     fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.1rem',
-                    color: 'rgba(255,255,255,0.85)', flexGrow: 1,
+                    color: 'text.primary', flexGrow: 1,
                   }}>
                     {group.label}
                   </Typography>
                   <Chip label={`${group.dogmas.length}`} size="small"
                     sx={{
                       height: 22, fontSize: '0.75rem',
-                      backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+                      backgroundColor: alpha(theme.palette.text.secondary, 0.1),
+                      color: 'text.secondary',
                     }} />
                   {collapsed
-                    ? <ExpandMoreIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
-                    : <ExpandLessIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />}
+                    ? <ExpandMoreIcon sx={{ color: 'text.secondary' }} />
+                    : <ExpandLessIcon sx={{ color: 'text.secondary' }} />}
                 </Box>
 
                 <Collapse in={!collapsed}>
@@ -432,7 +413,7 @@ export const DogmasPage: React.FC = () => {
           {dogmas.length < total && (
             <Box ref={sentinelRef} sx={{ py: 3, textAlign: 'center' }}>
               {loadingMore && (
-                <Typography sx={{ color: 'rgba(255,255,255,0.4)' }}>Загрузка...</Typography>
+                <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
               )}
             </Box>
           )}

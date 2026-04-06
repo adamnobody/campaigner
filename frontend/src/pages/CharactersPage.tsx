@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Paper, TextField, InputAdornment,
+  Box, Typography, TextField, InputAdornment,
   Chip, Avatar, Select, MenuItem, FormControl, Button,
-  IconButton,
+  IconButton, useTheme, alpha,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -16,11 +16,13 @@ import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { GlassCard } from '@/components/ui/GlassCard';
 
 export const CharactersPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const {
     characters,
@@ -75,7 +77,7 @@ export const CharactersPage: React.FC = () => {
   if (loading && characters.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
       </Box>
     );
   }
@@ -83,15 +85,20 @@ export const CharactersPage: React.FC = () => {
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff' }}>
-          Персонажи
-        </Typography>
+        <Box>
+          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
+            Персонажи
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Действующие лица вашей истории
+          </Typography>
+        </Box>
         <Box display="flex" gap={1}>
           <DndButton
             variant="outlined"
             startIcon={<AccountTreeIcon />}
             onClick={() => navigate(`/project/${pid}/characters/graph`)}
-            sx={{ borderColor: 'rgba(130,130,255,0.3)', color: 'rgba(130,130,255,0.9)' }}
+            sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}
           >
             Граф связей
           </DndButton>
@@ -105,72 +112,73 @@ export const CharactersPage: React.FC = () => {
         </Box>
       </Box>
 
-      <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
-        <TextField
-          placeholder="Поиск по имени..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{
-            flexGrow: 1,
-            maxWidth: 400,
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
-            },
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
-              </InputAdornment>
-            ),
-          }}
-          size="small"
-        />
-
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <Select
-            value={selectedTag}
-            onChange={(e) => setSelectedTag(e.target.value)}
-            displayEmpty
+      {characters.length > 0 && (
+        <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+          <TextField
+            placeholder="Поиск по имени..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             sx={{
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-              color: '#fff',
+              flexGrow: 1,
+              maxWidth: 400,
             }}
-          >
-            <MenuItem value="">Все теги</MenuItem>
-            {tags.map((tag: any) => (
-              <MenuItem key={tag.id} value={tag.name}>
-                {tag.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {(search || selectedTag) && (
-          <Button
-            variant="outlined"
-            onClick={handleReset}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
             size="small"
-            sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}
-          >
-            Сброс
-          </Button>
-        )}
+          />
 
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-          {filtered.length} из {characters.length}
-        </Typography>
-      </Box>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <Select
+              value={selectedTag}
+              onChange={(e) => setSelectedTag(e.target.value)}
+              displayEmpty
+            >
+              <MenuItem value="">Все теги</MenuItem>
+              {tags.map((tag: any) => (
+                <MenuItem key={tag.id} value={tag.name}>
+                  {tag.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-      {filtered.length === 0 ? (
+          {(search || selectedTag) && (
+            <Button
+              variant="outlined"
+              onClick={handleReset}
+              size="small"
+              sx={{ borderColor: alpha(theme.palette.primary.main, 0.5), textTransform: 'none' }}
+            >
+              Сброс
+            </Button>
+          )}
+
+          <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
+            {filtered.length} из {characters.length}
+          </Typography>
+        </GlassCard>
+      )}
+
+      {characters.length === 0 ? (
         <EmptyState
           icon={<PersonIcon sx={{ fontSize: 64 }} />}
           title="Персонажи не найдены"
-          description={characters.length > 0 ? 'Попробуйте изменить фильтры' : 'Создайте первого персонажа'}
-          actionLabel={characters.length > 0 ? undefined : 'Создать персонажа'}
-          onAction={characters.length > 0 ? undefined : () => navigate(`/project/${pid}/characters/new`)}
+          description="Создайте первого персонажа вашей истории"
+          actionLabel="Создать персонажа"
+          onAction={() => navigate(`/project/${pid}/characters/new`)}
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<SearchIcon sx={{ fontSize: 64 }} />}
+          title="Ничего не найдено"
+          description="Попробуйте изменить параметры поиска или фильтры"
+          actionLabel="Сбросить фильтры"
+          onAction={handleReset}
         />
       ) : (
         <Box
@@ -189,23 +197,16 @@ export const CharactersPage: React.FC = () => {
                 width: '100%',
               }}
             >
-              <Paper
+              <GlassCard
+                interactive
                 onClick={() => navigate(`/project/${pid}/characters/${ch.id}`)}
                 sx={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: 2,
                   p: 2,
-                  cursor: 'pointer',
                   width: '100%',
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 2,
-                  transition: 'all 0.2s',
-                  position: 'relative',
                   '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    borderColor: 'rgba(130,130,255,0.3)',
                     '& .delete-btn': { opacity: 1 },
                   },
                 }}
@@ -220,8 +221,8 @@ export const CharactersPage: React.FC = () => {
                     right: 8,
                     opacity: 0,
                     transition: 'opacity 0.2s',
-                    color: 'rgba(255,100,100,0.5)',
-                    '&:hover': { color: 'rgba(255,100,100,0.8)' },
+                    color: theme.palette.error.main,
+                    '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) },
                   }}
                 >
                   <DeleteIcon fontSize="small" />
@@ -239,8 +240,8 @@ export const CharactersPage: React.FC = () => {
                       width: 52,
                       height: 52,
                       borderRadius: 1.5,
-                      bgcolor: 'rgba(255,255,255,0.06)',
-                      color: 'rgba(255,255,255,0.2)',
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      color: theme.palette.primary.main,
                     }}
                     variant="rounded"
                   >
@@ -248,8 +249,8 @@ export const CharactersPage: React.FC = () => {
                   </Avatar>
                 )}
 
-                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                  <Typography sx={{ fontWeight: 700, color: '#fff', lineHeight: 1.3 }} noWrap>
+                <Box sx={{ minWidth: 0, flexGrow: 1, pr: 3 }}>
+                  <Typography sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.3 }} noWrap>
                     {ch.name}
                   </Typography>
 
@@ -257,7 +258,7 @@ export const CharactersPage: React.FC = () => {
                     <Typography
                       variant="caption"
                       sx={{
-                        color: 'rgba(201,169,89,0.8)',
+                        color: theme.palette.primary.main,
                         display: 'block',
                         lineHeight: 1.3,
                         fontStyle: 'italic',
@@ -272,7 +273,7 @@ export const CharactersPage: React.FC = () => {
                     <Typography
                       variant="body2"
                       sx={{
-                        color: 'rgba(255,255,255,0.4)',
+                        color: 'text.secondary',
                         fontSize: '0.8rem',
                         mt: 0.5,
                         overflow: 'hidden',
@@ -297,8 +298,8 @@ export const CharactersPage: React.FC = () => {
                             height: 20,
                             fontSize: '0.65rem',
                             fontWeight: 600,
-                            backgroundColor: tag.color || 'rgba(130,130,255,0.2)',
-                            color: '#fff',
+                            backgroundColor: tag.color ? alpha(tag.color, 0.2) : alpha(theme.palette.primary.main, 0.15),
+                            color: tag.color || theme.palette.primary.main,
                             borderRadius: 1,
                           }}
                         />
@@ -310,8 +311,8 @@ export const CharactersPage: React.FC = () => {
                           sx={{
                             height: 20,
                             fontSize: '0.65rem',
-                            backgroundColor: 'rgba(255,255,255,0.06)',
-                            color: 'rgba(255,255,255,0.4)',
+                            backgroundColor: alpha(theme.palette.text.secondary, 0.1),
+                            color: 'text.secondary',
                             borderRadius: 1,
                           }}
                         />
@@ -319,7 +320,7 @@ export const CharactersPage: React.FC = () => {
                     </Box>
                   )}
                 </Box>
-              </Paper>
+              </GlassCard>
             </Box>
           ))}
         </Box>

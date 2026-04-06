@@ -53,6 +53,7 @@ export interface ExportMapRow {
   parentMarkerId: number | null;
   name: string;
   imagePath: string | null;
+  imageBase64?: string | null;
   createdAt: string;
   updatedAt: string;
 }

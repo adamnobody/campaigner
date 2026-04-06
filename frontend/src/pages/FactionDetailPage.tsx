@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Paper, TextField, Button,
+  Box, Typography, TextField, Button,
   Avatar, IconButton, Chip,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, ListItemAvatar,
   Grid, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions,
+  alpha, useTheme,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -30,6 +31,10 @@ import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
 import { FactionRankDialog, FactionMemberDialog, FactionRelationDialog } from '@/pages/faction/FactionDialogs';
+import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
+import { EntityTabs } from '@/components/ui/EntityTabs';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   FACTION_TYPES, FACTION_TYPE_LABELS, FACTION_TYPE_ICONS,
   FACTION_STATUSES, FACTION_STATUS_LABELS, FACTION_STATUS_ICONS,
@@ -84,12 +89,15 @@ const POLICY_STATUS_LABELS: Record<PolicyStatus, string> = {
 
 // ==================== Helpers ====================
 
-const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <Box sx={{ mb: 1, pb: 1, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', display: 'block', lineHeight: 1 }}>{label}</Typography>
-    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>{value}</Typography>
-  </Box>
-);
+const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+  const theme = useTheme();
+  return (
+    <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{label}</Typography>
+      <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{value}</Typography>
+    </Box>
+  );
+};
 
 // ==================== Component ====================
 
@@ -99,6 +107,8 @@ export const FactionDetailPage: React.FC = () => {
   const isNew = !factionId || factionId === 'new';
   const fid = factionId && !isNew ? parseInt(factionId, 10) : 0;
   const navigate = useNavigate();
+  const theme = useTheme();
+
   const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
@@ -155,6 +165,7 @@ export const FactionDetailPage: React.FC = () => {
   const [form, setForm] = useState<FactionForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const [rankDialogOpen, setRankDialogOpen] = useState(false);
   const [editingRank, setEditingRank] = useState<FactionRank | null>(null);
@@ -533,196 +544,253 @@ export const FactionDetailPage: React.FC = () => {
   };
 
   if (loading && !isNew && !currentFaction) {
-    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography></Box>;
+    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography></Box>;
   }
   return (
     <Box>
-      {/* Banner */}
-      {currentFaction?.bannerPath && (
-        <Box sx={{
-          position: 'relative', height: 220, mx: -3, mt: -3, mb: 3,
-          borderRadius: 2, overflow: 'hidden',
-          '&::after': {
-            content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
-            background: 'linear-gradient(transparent, rgba(15,15,25,0.95))',
-          },
-        }}>
-          <Box component="img" src={currentFaction.bannerPath} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </Box>
-      )}
-
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate(`/project/${pid}/factions`)}><ArrowBackIcon /></IconButton>
-          <Box>
-            <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff', lineHeight: 1.2 }}>
-              {isNew ? 'Новая фракция' : form.name || 'Фракция'}
-            </Typography>
-            {form.motto && (
-              <Typography sx={{ color: 'rgba(201,169,89,0.8)', fontStyle: 'italic', fontSize: '0.9rem', mt: 0.25 }}>«{form.motto}»</Typography>
-            )}
-          </Box>
-        </Box>
-        <Box display="flex" gap={1}>
-          {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">Удалить</Button>}
-          <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
-            {isNew ? 'Создать' : 'Сохранить'}
-          </DndButton>
-        </Box>
+      <Box display="flex" alignItems="center" mb={2}>
+        <IconButton onClick={() => navigate(`/project/${pid}/factions`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <Typography variant="body2" color="text.secondary">К списку фракций</Typography>
       </Box>
 
-      {/* Two-column */}
-      <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+      <EntityHeroLayout
+        bannerUrl={currentFaction?.bannerPath}
+        avatarNode={
+          currentFaction?.imagePath ? (
+            <Avatar src={currentFaction.imagePath} sx={{ width: 120, height: 120, borderRadius: 3 }} variant="rounded" />
+          ) : (
+            <Avatar sx={{ width: 120, height: 120, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, fontSize: '3rem' }} variant="rounded">
+              {FACTION_TYPE_ICONS[form.type] || '🏴'}
+            </Avatar>
+          )
+        }
+        title={isNew ? 'Новая фракция' : form.name || 'Фракция'}
+        subtitle={form.motto ? `«${form.motto}»` : undefined}
+        actionButtons={
+          <>
+            {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">Удалить</Button>}
+            <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
+              {isNew ? 'Создать' : 'Сохранить'}
+            </DndButton>
+          </>
+        }
+      />
 
-        {/* LEFT SIDEBAR */}
-        <Box sx={{ width: { xs: '100%', md: 280 }, flexShrink: 0 }}>
-          <Paper sx={{ p: 3, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', position: 'sticky', top: 80 }}>
-            <Box sx={{ mb: 2 }}>
-              {currentFaction?.imagePath ? (
-                <Avatar src={currentFaction.imagePath} sx={{ width: 140, height: 140, borderRadius: 3, mx: 'auto' }} variant="rounded" />
-              ) : (
-                <Avatar sx={{ width: 140, height: 140, borderRadius: 3, mx: 'auto', bgcolor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.2)', fontSize: '3rem' }} variant="rounded">
-                  {FACTION_TYPE_ICONS[form.type] || '🏴'}
-                </Avatar>
-              )}
-            </Box>
+      <EntityTabs
+        value={activeTab}
+        onChange={(_, v) => setActiveTab(v)}
+        tabs={[
+          { value: 'overview', label: 'Обзор', icon: <EditIcon fontSize="small" /> },
+          { value: 'structure', label: 'Структура', icon: <PeopleIcon fontSize="small" /> },
+          { value: 'politics', label: 'Политика', icon: <TrackChangesIcon fontSize="small" /> },
+          { value: 'assets', label: 'Активы', icon: <StarIcon fontSize="small" /> },
+        ]}
+      />
 
-            {!isNew && (
-              <Box display="flex" gap={1} mb={2}>
-                <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small"
-                  sx={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>
-                  Герб<input type="file" hidden accept="image/*" onChange={handleImageUpload} />
-                </Button>
-                <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small"
-                  sx={{ borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>
-                  Фон<input type="file" hidden accept="image/*" onChange={handleBannerUpload} />
-                </Button>
-              </Box>
-            )}
-
-            <Box sx={{ textAlign: 'left' }}>
-              {form.type && <InfoRow label="Тип" value={`${FACTION_TYPE_ICONS[form.type] || ''} ${FACTION_TYPE_LABELS[form.type] || form.customType || form.type}`} />}
-              {form.type === 'state' && form.stateType && <InfoRow label="Строй" value={STATE_TYPE_LABELS[form.stateType] || form.customStateType || form.stateType} />}
-              {form.status && <InfoRow label="Статус" value={`${FACTION_STATUS_ICONS[form.status] || ''} ${FACTION_STATUS_LABELS[form.status] || form.status}`} />}
-              {form.headquarters && <InfoRow label="Столица" value={form.headquarters} />}
-              {form.territory && <InfoRow label="Территория" value={form.territory} />}
-              {form.foundedDate && <InfoRow label="Основана" value={form.foundedDate} />}
-              {form.disbandedDate && <InfoRow label="Распущена" value={form.disbandedDate} />}
-              {previewTagsStr.trim() && (
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', display: 'block', mb: 0.5 }}>Теги</Typography>
-                  <Box display="flex" gap={0.5} flexWrap="wrap">
-                    {previewTagsStr.split(',').map((t, i) => { const s = t.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 22, fontSize: '0.7rem', backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff' }} /> : null; })}
-                  </Box>
+      {activeTab === 'overview' && (
+        <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+          {/* LEFT SIDEBAR */}
+          <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
+            <GlassCard sx={{ p: 3, position: 'sticky', top: 80 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Сводка</Typography>
+              
+              {!isNew && (
+                <Box display="flex" gap={1} mb={3}>
+                  <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small" sx={{ fontSize: '0.75rem', borderColor: alpha(theme.palette.divider, 0.5) }}>
+                    Герб<input type="file" hidden accept="image/*" onChange={handleImageUpload} />
+                  </Button>
+                  <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small" sx={{ fontSize: '0.75rem', borderColor: alpha(theme.palette.divider, 0.5) }}>
+                    Фон<input type="file" hidden accept="image/*" onChange={handleBannerUpload} />
+                  </Button>
                 </Box>
               )}
-            </Box>
 
-            {!isNew && (
-              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'center', gap: 3 }}>
-                <Tooltip title="Члены"><Box display="flex" alignItems="center" gap={0.5}><PeopleIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.3)' }} /><Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>{currentMembers.length}</Typography></Box></Tooltip>
-                <Tooltip title="Ранги"><Box display="flex" alignItems="center" gap={0.5}><StarIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.3)' }} /><Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>{currentRanks.length}</Typography></Box></Tooltip>
-                <Tooltip title="Связи"><Box display="flex" alignItems="center" gap={0.5}><LinkIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.3)' }} /><Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>{factionRelations.length}</Typography></Box></Tooltip>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {form.type && <InfoRow label="Тип" value={`${FACTION_TYPE_ICONS[form.type] || ''} ${FACTION_TYPE_LABELS[form.type] || form.customType || form.type}`} />}
+                {form.type === 'state' && form.stateType && <InfoRow label="Строй" value={STATE_TYPE_LABELS[form.stateType] || form.customStateType || form.stateType} />}
+                {form.status && <InfoRow label="Статус" value={`${FACTION_STATUS_ICONS[form.status] || ''} ${FACTION_STATUS_LABELS[form.status] || form.status}`} />}
+                {form.headquarters && <InfoRow label="Столица" value={form.headquarters} />}
+                {form.territory && <InfoRow label="Территория" value={form.territory} />}
+                {form.foundedDate && <InfoRow label="Основана" value={form.foundedDate} />}
+                {form.disbandedDate && <InfoRow label="Распущена" value={form.disbandedDate} />}
+                {previewTagsStr.trim() && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>Теги</Typography>
+                    <Box display="flex" gap={0.5} flexWrap="wrap">
+                      {previewTagsStr.split(',').map((t, i) => { const s = t.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 24, fontSize: '0.75rem' }} /> : null; })}
+                    </Box>
+                  </Box>
+                )}
               </Box>
-            )}
-          </Paper>
-        </Box>
+            </GlassCard>
+          </Box>
 
-        {/* ===== MAIN CONTENT ===== */}
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-
-          {/* SECTION: Basic Info */}
-          <Section title="Основное" icon={<EditIcon />} defaultOpen={true}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Название *" value={form.name} onChange={e => handleChange('name', e.target.value)} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Девиз" value={form.motto} onChange={e => handleChange('motto', e.target.value)} placeholder="напр. Зима близко" /></Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth><InputLabel>Тип</InputLabel>
-                  <Select value={form.type} label="Тип" onChange={e => handleChange('type', e.target.value)}>
-                    {FACTION_TYPES.map(t => <MenuItem key={t} value={t}>{FACTION_TYPE_ICONS[t]} {FACTION_TYPE_LABELS[t]}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              </Grid>
-              {form.type === 'other' && (
-                <Grid item xs={12} sm={6}><TextField fullWidth label="Укажите тип" value={form.customType} onChange={e => handleChange('customType', e.target.value)} /></Grid>
-              )}
-              {form.type === 'state' && (
+          {/* MAIN CONTENT */}
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Section title="Основная информация" icon={<EditIcon />} defaultOpen={true}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}><TextField fullWidth label="Название *" value={form.name} onChange={e => handleChange('name', e.target.value)} /></Grid>
+                <Grid item xs={12} sm={6}><TextField fullWidth label="Девиз" value={form.motto} onChange={e => handleChange('motto', e.target.value)} placeholder="напр. Зима близко" /></Grid>
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth><InputLabel>Государственный строй</InputLabel>
-                    <Select value={form.stateType} label="Государственный строй" onChange={e => handleChange('stateType', e.target.value)}>
-                      {STATE_TYPES.map(st => <MenuItem key={st} value={st}>{STATE_TYPE_LABELS[st]}</MenuItem>)}
+                  <FormControl fullWidth><InputLabel>Тип</InputLabel>
+                    <Select value={form.type} label="Тип" onChange={e => handleChange('type', e.target.value)}>
+                      {FACTION_TYPES.map(t => <MenuItem key={t} value={t}>{FACTION_TYPE_ICONS[t]} {FACTION_TYPE_LABELS[t]}</MenuItem>)}
                     </Select>
                   </FormControl>
                 </Grid>
-              )}
-              {form.type === 'state' && form.stateType === 'other' && (
-                <Grid item xs={12} sm={6}><TextField fullWidth label="Тип государства" value={form.customStateType} onChange={e => handleChange('customStateType', e.target.value)} /></Grid>
-              )}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth><InputLabel>Статус</InputLabel>
-                  <Select value={form.status} label="Статус" onChange={e => handleChange('status', e.target.value)}>
-                    {FACTION_STATUSES.map(s => <MenuItem key={s} value={s}>{FACTION_STATUS_ICONS[s]} {FACTION_STATUS_LABELS[s]}</MenuItem>)}
-                  </Select>
-                </FormControl>
+                {form.type === 'other' && (
+                  <Grid item xs={12} sm={6}><TextField fullWidth label="Укажите тип" value={form.customType} onChange={e => handleChange('customType', e.target.value)} /></Grid>
+                )}
+                {form.type === 'state' && (
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth><InputLabel>Государственный строй</InputLabel>
+                      <Select value={form.stateType} label="Государственный строй" onChange={e => handleChange('stateType', e.target.value)}>
+                        {STATE_TYPES.map(st => <MenuItem key={st} value={st}>{STATE_TYPE_LABELS[st]}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+                {form.type === 'state' && form.stateType === 'other' && (
+                  <Grid item xs={12} sm={6}><TextField fullWidth label="Тип государства" value={form.customStateType} onChange={e => handleChange('customStateType', e.target.value)} /></Grid>
+                )}
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth><InputLabel>Статус</InputLabel>
+                    <Select value={form.status} label="Статус" onChange={e => handleChange('status', e.target.value)}>
+                      {FACTION_STATUSES.map(s => <MenuItem key={s} value={s}>{FACTION_STATUS_ICONS[s]} {FACTION_STATUS_LABELS[s]}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}><TextField fullWidth label="Штаб-квартира / Столица" value={form.headquarters} onChange={e => handleChange('headquarters', e.target.value)} /></Grid>
+                <Grid item xs={12} sm={6}><TextField fullWidth label="Территория" value={form.territory} onChange={e => handleChange('territory', e.target.value)} /></Grid>
+                <Grid item xs={12} sm={6}><TextField fullWidth label="Дата основания" value={form.foundedDate} onChange={e => handleChange('foundedDate', e.target.value)} /></Grid>
+                <Grid item xs={12} sm={6}><TextField fullWidth label="Дата роспуска" value={form.disbandedDate} onChange={e => handleChange('disbandedDate', e.target.value)} /></Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth><InputLabel>Родительская фракция</InputLabel>
+                    <Select value={form.parentFactionId} label="Родительская фракция" onChange={e => handleChange('parentFactionId', e.target.value)}>
+                      <MenuItem value="">Нет</MenuItem>
+                      {otherFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={6} sm={3}><TextField fullWidth label="Основной цвет" value={form.color || '#000000'} onChange={e => handleChange('color', e.target.value)} type="color" InputLabelProps={{ shrink: true }} /></Grid>
+                <Grid item xs={6} sm={3}><TextField fullWidth label="Вторичный цвет" value={form.secondaryColor || '#000000'} onChange={e => handleChange('secondaryColor', e.target.value)} type="color" InputLabelProps={{ shrink: true }} /></Grid>
+                <Grid item xs={12}>
+                  <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Штаб-квартира / Столица" value={form.headquarters} onChange={e => handleChange('headquarters', e.target.value)} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Территория" value={form.territory} onChange={e => handleChange('territory', e.target.value)} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Дата основания" value={form.foundedDate} onChange={e => handleChange('foundedDate', e.target.value)} /></Grid>
-              <Grid item xs={12} sm={6}><TextField fullWidth label="Дата роспуска" value={form.disbandedDate} onChange={e => handleChange('disbandedDate', e.target.value)} /></Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth><InputLabel>Родительская фракция</InputLabel>
-                  <Select value={form.parentFactionId} label="Родительская фракция" onChange={e => handleChange('parentFactionId', e.target.value)}>
-                    <MenuItem value="">Нет</MenuItem>
-                    {otherFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6} sm={3}><TextField fullWidth label="Основной цвет" value={form.color || '#000000'} onChange={e => handleChange('color', e.target.value)} type="color" InputLabelProps={{ shrink: true }} /></Grid>
-              <Grid item xs={6} sm={3}><TextField fullWidth label="Вторичный цвет" value={form.secondaryColor || '#000000'} onChange={e => handleChange('secondaryColor', e.target.value)} type="color" InputLabelProps={{ shrink: true }} /></Grid>
-              <Grid item xs={12}>
-                <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />
-              </Grid>
-            </Grid>
-          </Section>
+            </Section>
 
-          {/* SECTION: Description */}
-          <Section title="Описание и история" icon={<EditIcon />} defaultOpen={!isNew}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}><TextField fullWidth label="Описание" value={form.description} onChange={e => handleChange('description', e.target.value)} multiline rows={4} placeholder="Общее описание фракции..." /></Grid>
-              <Grid item xs={12}><TextField fullWidth label="История" value={form.history} onChange={e => handleChange('history', e.target.value)} multiline rows={6} placeholder="Как была основана, ключевые события..." /></Grid>
-              <Grid item xs={12}><TextField fullWidth label="Цели и мотивация" value={form.goals} onChange={e => handleChange('goals', e.target.value)} multiline rows={4} placeholder="Чего добивается фракция..." /></Grid>
-            </Grid>
-          </Section>
+            <Section title="Описание и история" icon={<EditIcon />} defaultOpen={!isNew}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}><TextField fullWidth label="Описание" value={form.description} onChange={e => handleChange('description', e.target.value)} multiline rows={4} placeholder="Общее описание фракции..." /></Grid>
+                <Grid item xs={12}><TextField fullWidth label="История" value={form.history} onChange={e => handleChange('history', e.target.value)} multiline rows={6} placeholder="Как была основана, ключевые события..." /></Grid>
+                <Grid item xs={12}><TextField fullWidth label="Цели и мотивация" value={form.goals} onChange={e => handleChange('goals', e.target.value)} multiline rows={4} placeholder="Чего добивается фракция..." /></Grid>
+              </Grid>
+            </Section>
+          </Box>
+        </Box>
+      )}
 
+      {activeTab === 'structure' && (
+        <Box>
+          {/* SECTION: Ranks */}
+          {!isNew && (
+            <Section title="Ранги" icon={<StarIcon />} badge={currentRanks.length} defaultOpen={true}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openRankDialog()} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
+              {currentRanks.length === 0 ? (
+                <EmptyState icon={<StarIcon />} title="Нет рангов" description="Создайте иерархию рангов" actionLabel="Добавить ранг" onAction={() => openRankDialog()} />
+              ) : (
+                <List disablePadding>
+                  {currentRanks.map(rank => (
+                    <ListItem key={rank.id}
+                      secondaryAction={
+                        <Box display="flex" gap={0.5}>
+                          <IconButton size="small" onClick={() => openRankDialog(rank)}><EditIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} /></IconButton>
+                          <IconButton size="small" onClick={() => handleDeleteRank(rank.id, rank.name)}><DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} /></IconButton>
+                        </Box>
+                      }
+                      sx={{ backgroundColor: rank.color ? alpha(rank.color, 0.1) : alpha(theme.palette.primary.main, 0.05), borderRadius: 1.5, mb: 1, border: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: rank.color || alpha(theme.palette.primary.main, 0.2), color: rank.color || theme.palette.primary.main, width: 40, height: 40, fontSize: '1.2rem' }}>{rank.icon || rank.level}</Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={<Box display="flex" alignItems="center" gap={1}>
+                          <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{rank.name}</Typography>
+                          <Chip label={`Ур. ${rank.level}`} size="small" sx={{ height: 20, fontSize: '0.65rem' }} />
+                          <Chip label={`${currentMembers.filter(m => m.rankId === rank.id).length} чел.`} size="small" color="primary" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
+                        </Box>}
+                        secondary={rank.description ? <Typography variant="caption" sx={{ color: 'text.secondary' }}>{rank.description}</Typography> : null}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Section>
+          )}
+
+          {/* SECTION: Members */}
+          {!isNew && (
+            <Section title="Члены" icon={<PeopleIcon />} badge={currentMembers.length} defaultOpen={true}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openMemberDialog} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
+              {currentMembers.length === 0 ? (
+                <EmptyState icon={<PeopleIcon />} title="Нет членов" description="Добавьте персонажей в фракцию" actionLabel="Добавить персонажа" onAction={openMemberDialog} />
+              ) : (
+                <List disablePadding>
+                  {currentMembers.map(member => (
+                    <ListItem key={member.id}
+                      secondaryAction={
+                        <IconButton size="small" onClick={e => { e.stopPropagation(); handleRemoveMember(member.id, member.characterName || ''); }}>
+                          <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
+                        </IconButton>
+                      }
+                      onClick={() => navigate(`/project/${pid}/characters/${member.characterId}`)}
+                      sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.5), borderRadius: 1.5, mb: 1, cursor: 'pointer', border: `1px solid ${alpha(theme.palette.divider, 0.5)}`, '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.1) } }}>
+                      <ListItemAvatar>
+                        <Avatar src={member.characterImagePath || undefined} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }}><PersonIcon /></Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={<Box display="flex" alignItems="center" gap={1}>
+                          <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{member.characterName || `ID: ${member.characterId}`}</Typography>
+                          {member.rankName && <Chip label={member.rankName} size="small" color="primary" sx={{ height: 20, fontSize: '0.65rem' }} />}
+                          {member.role && <Chip label={member.role} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />}
+                          {!member.isActive && <Chip label="Бывший" size="small" color="error" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />}
+                        </Box>}
+                        secondary={member.notes ? <Typography variant="caption" sx={{ color: 'text.secondary' }}>{member.notes}</Typography> : null}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Section>
+          )}
+        </Box>
+      )}
+
+      {activeTab === 'politics' && (
+        <Box>
           {/* SECTION: Faction policies */}
           {!isNew && (
             <Section
               title="Амбиции и политика"
               icon={<TrackChangesIcon />}
               badge={sortedFactionPolicies.length}
-              defaultOpen={sortedFactionPolicies.length > 0}
+              defaultOpen={true}
               action={
                 <DndButton
                   variant="outlined"
                   startIcon={<AddIcon />}
                   size="small"
                   onClick={() => openPolicyDialog()}
-                  sx={{ borderColor: 'rgba(201,169,89,0.4)', color: 'rgba(201,169,89,0.9)' }}
+                  sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}
                 >
                   Добавить
                 </DndButton>
               }
             >
               {policiesLoading && sortedFactionPolicies.length === 0 ? (
-                <Typography sx={{ color: 'rgba(255,255,255,0.35)', py: 2 }}>Загрузка…</Typography>
+                <Typography sx={{ color: 'text.secondary', py: 2 }}>Загрузка…</Typography>
               ) : sortedFactionPolicies.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 3 }}>
-                  <TrackChangesIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>
-                    Добавьте амбиции и политические линии фракции
-                  </Typography>
-                </Box>
+                <EmptyState icon={<TrackChangesIcon />} title="Нет политик" description="Добавьте амбиции и политические линии фракции" actionLabel="Добавить политику" onAction={() => openPolicyDialog()} />
               ) : (
                 <>
                   <Box
@@ -770,7 +838,7 @@ export const FactionDetailPage: React.FC = () => {
                   {filteredFactionPolicies.length === 0 ? (
                     <Box
                       sx={{
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
                         borderRadius: 1.5,
                         p: 2,
                         display: 'flex',
@@ -780,7 +848,7 @@ export const FactionDetailPage: React.FC = () => {
                         flexWrap: 'wrap',
                       }}
                     >
-                      <Typography sx={{ color: 'rgba(255,255,255,0.55)' }}>Ничего не найдено</Typography>
+                      <Typography sx={{ color: 'text.secondary' }}>Ничего не найдено</Typography>
                       <Button size="small" onClick={handleResetPolicyFilters}>
                         Сбросить фильтры
                       </Button>
@@ -793,40 +861,42 @@ export const FactionDetailPage: React.FC = () => {
                           secondaryAction={
                             <Box display="flex" gap={0.5}>
                               <IconButton size="small" onClick={() => openPolicyDialog(p)}>
-                                <EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} />
+                                <EditIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                               </IconButton>
                               <IconButton size="small" onClick={() => handleDeletePolicy(p)}>
-                                <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
+                                <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
                               </IconButton>
                             </Box>
                           }
                           sx={{
-                            backgroundColor: 'rgba(201,169,89,0.06)',
+                            backgroundColor: alpha(theme.palette.background.paper, 0.5),
                             borderRadius: 1.5,
                             mb: 1,
-                            border: '1px solid rgba(255,255,255,0.04)',
+                            border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
                             alignItems: 'flex-start',
                           }}
                         >
                           <ListItemText
                             primary={
                               <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{p.title}</Typography>
+                                <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{p.title}</Typography>
                                 <Chip
                                   label={POLICY_TYPE_LABELS[p.type]}
                                   size="small"
-                                  sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.65)' }}
+                                  sx={{ height: 20, fontSize: '0.65rem' }}
                                 />
                                 <Chip
                                   label={POLICY_STATUS_LABELS[p.status]}
                                   size="small"
-                                  sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(130,130,255,0.15)', color: 'rgba(130,130,255,0.85)' }}
+                                  color="primary"
+                                  variant="outlined"
+                                  sx={{ height: 20, fontSize: '0.65rem' }}
                                 />
                               </Box>
                             }
                             secondary={
                               p.description ? (
-                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.75, whiteSpace: 'pre-wrap' }}>
+                                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.75, whiteSpace: 'pre-wrap' }}>
                                   {p.description}
                                 </Typography>
                               ) : null
@@ -841,75 +911,35 @@ export const FactionDetailPage: React.FC = () => {
             </Section>
           )}
 
-          {/* SECTION: Ranks */}
+          {/* SECTION: Relations */}
           {!isNew && (
-            <Section title="Ранги" icon={<StarIcon />} badge={currentRanks.length} defaultOpen={currentRanks.length > 0}
-              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openRankDialog()} sx={{ borderColor: 'rgba(201,169,89,0.4)', color: 'rgba(201,169,89,0.9)' }}>Добавить</DndButton>}>
-              {currentRanks.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 3 }}>
-                  <StarIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Создайте иерархию рангов</Typography>
-                </Box>
+            <Section title="Связи с фракциями" icon={<LinkIcon />} badge={relationsForDisplay.length} defaultOpen={true}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openRelationDialog} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
+              {relationsForDisplay.length === 0 ? (
+                <EmptyState icon={<LinkIcon />} title="Нет связей" description="Установите отношения с другими фракциями" actionLabel="Добавить связь" onAction={openRelationDialog} />
               ) : (
                 <List disablePadding>
-                  {currentRanks.map(rank => (
-                    <ListItem key={rank.id}
+                  {relationsForDisplay.map(rel => (
+                    <ListItem key={rel.id}
                       secondaryAction={
-                        <Box display="flex" gap={0.5}>
-                          <IconButton size="small" onClick={() => openRankDialog(rank)}><EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} /></IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteRank(rank.id, rank.name)}><DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} /></IconButton>
-                        </Box>
-                      }
-                      sx={{ backgroundColor: rank.color ? `${rank.color}20` : 'rgba(201,169,89,0.06)', borderRadius: 1.5, mb: 1, border: '1px solid rgba(255,255,255,0.04)' }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: rank.color || 'rgba(201,169,89,0.3)', width: 40, height: 40, fontSize: '1.2rem' }}>{rank.icon || rank.level}</Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={<Box display="flex" alignItems="center" gap={1}>
-                          <Typography sx={{ color: '#fff', fontWeight: 600 }}>{rank.name}</Typography>
-                          <Chip label={`Ур. ${rank.level}`} size="small" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }} />
-                          <Chip label={`${currentMembers.filter(m => m.rankId === rank.id).length} чел.`} size="small" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(130,130,255,0.15)', color: 'rgba(130,130,255,0.8)' }} />
-                        </Box>}
-                        secondary={rank.description ? <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)' }}>{rank.description}</Typography> : null}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </Section>
-          )}
-
-          {/* SECTION: Members */}
-          {!isNew && (
-            <Section title="Члены" icon={<PeopleIcon />} badge={currentMembers.length} defaultOpen={currentMembers.length > 0}
-              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openMemberDialog} sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)' }}>Добавить</DndButton>}>
-              {currentMembers.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 3 }}>
-                  <PeopleIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Добавьте персонажей в фракцию</Typography>
-                </Box>
-              ) : (
-                <List disablePadding>
-                  {currentMembers.map(member => (
-                    <ListItem key={member.id}
-                      secondaryAction={
-                        <IconButton size="small" onClick={e => { e.stopPropagation(); handleRemoveMember(member.id, member.characterName || ''); }}>
-                          <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
+                        <IconButton size="small" onClick={e => { e.stopPropagation(); handleDeleteRelation(rel.id); }}>
+                          <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
                         </IconButton>
                       }
-                      onClick={() => navigate(`/project/${pid}/characters/${member.characterId}`)}
-                      sx={{ backgroundColor: 'rgba(130,130,255,0.06)', borderRadius: 1.5, mb: 1, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.04)', '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' } }}>
-                      <ListItemAvatar>
-                        <Avatar src={member.characterImagePath || undefined} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }}><PersonIcon /></Avatar>
-                      </ListItemAvatar>
+                      onClick={() => navigate(`/project/${pid}/factions/${rel.otherId}`)}
+                      sx={{
+                        backgroundColor: `${FACTION_RELATION_COLORS[rel.relationType] || alpha(theme.palette.primary.main, 0.2)}20`,
+                        borderRadius: 1.5, mb: 1, cursor: 'pointer', border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                        '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.1) },
+                      }}>
                       <ListItemText
                         primary={<Box display="flex" alignItems="center" gap={1}>
-                          <Typography sx={{ color: '#fff', fontWeight: 600 }}>{member.characterName || `ID: ${member.characterId}`}</Typography>
-                          {member.rankName && <Chip label={member.rankName} size="small" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(201,169,89,0.2)', color: 'rgba(201,169,89,0.9)' }} />}
-                          {member.role && <Chip label={member.role} size="small" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }} />}
-                          {!member.isActive && <Chip label="Бывший" size="small" sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255,100,100,0.15)', color: 'rgba(255,100,100,0.7)' }} />}
+                          <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{rel.isOutgoing ? '→' : '←'}</Typography>
+                          <Chip label={rel.customLabel || FACTION_RELATION_LABELS[rel.relationType] || rel.relationType} size="small"
+                            sx={{ backgroundColor: FACTION_RELATION_COLORS[rel.relationType] || alpha(theme.palette.primary.main, 0.3), color: '#fff', fontSize: '0.7rem', fontWeight: 600 }} />
+                          <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{rel.otherName}</Typography>
                         </Box>}
-                        secondary={member.notes ? <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)' }}>{member.notes}</Typography> : null}
+                        secondary={rel.description ? <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>{rel.description}</Typography> : null}
                       />
                     </ListItem>
                   ))}
@@ -917,25 +947,26 @@ export const FactionDetailPage: React.FC = () => {
               )}
             </Section>
           )}
+        </Box>
+      )}
 
+      {activeTab === 'assets' && (
+        <Box>
           {/* SECTION: Assets */}
           {!isNew && (
-            <Section title="Активы" icon={<StarIcon />} badge={currentAssets.length} defaultOpen={currentAssets.length > 0}
+            <Section title="Активы" icon={<StarIcon />} badge={currentAssets.length} defaultOpen={true}
               action={
                 <Box display="flex" gap={1}>
-                  <DndButton variant="outlined" size="small" onClick={handleBootstrapDefaultAssets} sx={{ borderColor: 'rgba(201,169,89,0.4)', color: 'rgba(201,169,89,0.9)' }}>
+                  <DndButton variant="outlined" size="small" onClick={handleBootstrapDefaultAssets} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
                     Добавить базовые активы
                   </DndButton>
-                  <DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openAssetDialog()} sx={{ borderColor: 'rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.85)' }}>
+                  <DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openAssetDialog()} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
                     Добавить
                   </DndButton>
                 </Box>
               }>
               {currentAssets.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 3 }}>
-                  <StarIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Добавьте активы фракции (например, Казна, Земли)</Typography>
-                </Box>
+                <EmptyState icon={<StarIcon />} title="Нет активов" description="Добавьте активы фракции (например, Казна, Земли)" actionLabel="Добавить актив" onAction={() => openAssetDialog()} />
               ) : (
                 <List disablePadding>
                   {sortedAssets.map((asset, index) => (
@@ -949,7 +980,7 @@ export const FactionDetailPage: React.FC = () => {
                                 disabled={isReordering || index === 0}
                                 onClick={() => handleMoveAsset(index, 'up')}
                               >
-                                <KeyboardArrowUpIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.45)' }} />
+                                <KeyboardArrowUpIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                               </IconButton>
                             </span>
                           </Tooltip>
@@ -960,18 +991,18 @@ export const FactionDetailPage: React.FC = () => {
                                 disabled={isReordering || index === sortedAssets.length - 1}
                                 onClick={() => handleMoveAsset(index, 'down')}
                               >
-                                <KeyboardArrowDownIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.45)' }} />
+                                <KeyboardArrowDownIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                               </IconButton>
                             </span>
                           </Tooltip>
-                          <IconButton size="small" onClick={() => openAssetDialog(asset)} disabled={isReordering}><EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} /></IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteAsset(asset)} disabled={isReordering}><DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} /></IconButton>
+                          <IconButton size="small" onClick={() => openAssetDialog(asset)} disabled={isReordering}><EditIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} /></IconButton>
+                          <IconButton size="small" onClick={() => handleDeleteAsset(asset)} disabled={isReordering}><DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} /></IconButton>
                         </Box>
                       }
-                      sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1.5, mb: 1, border: '1px solid rgba(255,255,255,0.04)' }}>
+                      sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.5), borderRadius: 1.5, mb: 1, border: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
                       <ListItemText
-                        primary={<Typography sx={{ color: '#fff', fontWeight: 600 }}>{asset.name}</Typography>}
-                        secondary={<Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>{asset.value || '—'}</Typography>}
+                        primary={<Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{asset.name}</Typography>}
+                        secondary={<Typography variant="body2" sx={{ color: 'text.secondary' }}>{asset.value || '—'}</Typography>}
                       />
                     </ListItem>
                   ))}
@@ -979,49 +1010,8 @@ export const FactionDetailPage: React.FC = () => {
               )}
             </Section>
           )}
-
-          {/* SECTION: Relations */}
-          {!isNew && (
-            <Section title="Связи с фракциями" icon={<LinkIcon />} badge={relationsForDisplay.length} defaultOpen={relationsForDisplay.length > 0}
-              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openRelationDialog} sx={{ borderColor: 'rgba(78,205,196,0.4)', color: 'rgba(78,205,196,0.9)' }}>Добавить</DndButton>}>
-              {relationsForDisplay.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 3 }}>
-                  <LinkIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Установите отношения с другими фракциями</Typography>
-                </Box>
-              ) : (
-                <List disablePadding>
-                  {relationsForDisplay.map(rel => (
-                    <ListItem key={rel.id}
-                      secondaryAction={
-                        <IconButton size="small" onClick={e => { e.stopPropagation(); handleDeleteRelation(rel.id); }}>
-                          <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
-                        </IconButton>
-                      }
-                      onClick={() => navigate(`/project/${pid}/factions/${rel.otherId}`)}
-                      sx={{
-                        backgroundColor: `${FACTION_RELATION_COLORS[rel.relationType] || 'rgba(130,130,255,0.2)'}30`,
-                        borderRadius: 1.5, mb: 1, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.04)',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
-                      }}>
-                      <ListItemText
-                        primary={<Box display="flex" alignItems="center" gap={1}>
-                          <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>{rel.isOutgoing ? '→' : '←'}</Typography>
-                          <Chip label={rel.customLabel || FACTION_RELATION_LABELS[rel.relationType] || rel.relationType} size="small"
-                            sx={{ backgroundColor: FACTION_RELATION_COLORS[rel.relationType] || 'rgba(130,130,255,0.3)', color: '#fff', fontSize: '0.7rem', fontWeight: 600 }} />
-                          <Typography sx={{ color: '#fff', fontWeight: 600 }}>{rel.otherName}</Typography>
-                        </Box>}
-                        secondary={rel.description ? <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mt: 0.5, display: 'block' }}>{rel.description}</Typography> : null}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </Section>
-          )}
-
         </Box>
-      </Box>
+      )}
 
       {/* ===== DIALOGS ===== */}
       <FactionRankDialog

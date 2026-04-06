@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Paper, TextField, Button,
+  Box, Typography, TextField, Button,
   FormControl, InputLabel, Select, MenuItem, Divider,
+  useTheme, alpha,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import SettingsIcon from '@mui/icons-material/Settings';
+import WarningIcon from '@mui/icons-material/Warning';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -13,11 +16,14 @@ import { PROJECT_STATUSES } from '@campaigner/shared';
 import { projectsApi } from '@/api/projects';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export const ProjectSettingsPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+  const theme = useTheme();
   const { currentProject, fetchProject, updateProject, deleteProject } = useProjectStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
@@ -95,23 +101,17 @@ export const ProjectSettingsPage: React.FC = () => {
     <Box maxWidth={700}>
       <Typography
         variant="h4"
-        sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, color: '#fff', mb: 3 }}
+        sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, color: 'text.primary', mb: 3 }}
       >
         Настройки проекта
       </Typography>
 
       {/* General */}
-      <Paper sx={{
-        p: 3, mb: 3,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-      }}>
-        <Typography
-          variant="h6"
-          sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: '#fff', mb: 2 }}
-        >
-          Основное
-        </Typography>
+      <GlassCard sx={{ p: 3, mb: 3 }}>
+        <SectionHeader
+          icon={<SettingsIcon sx={{ fontSize: '1.2rem' }} />}
+          title="Основное"
+        />
         <TextField
           fullWidth
           label="Название проекта"
@@ -149,21 +149,15 @@ export const ProjectSettingsPage: React.FC = () => {
             Сохранить
           </DndButton>
         </Box>
-      </Paper>
+      </GlassCard>
 
       {/* Export */}
-      <Paper sx={{
-        p: 3, mb: 3,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-      }}>
-        <Typography
-          variant="h6"
-          sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: '#fff', mb: 1 }}
-        >
-          Экспорт данных
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
+      <GlassCard sx={{ p: 3, mb: 3 }}>
+        <SectionHeader
+          icon={<FileDownloadIcon sx={{ fontSize: '1.2rem' }} />}
+          title="Экспорт данных"
+        />
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
           Скачайте полную копию проекта в формате JSON. Включает все персонажи, заметки,
           маркеры карты, таймлайн, теги и связи. Файл можно импортировать обратно на главной странице.
         </Typography>
@@ -172,25 +166,32 @@ export const ProjectSettingsPage: React.FC = () => {
           startIcon={<FileDownloadIcon />}
           onClick={handleExport}
           loading={exporting}
-          sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)' }}
+          sx={{ borderColor: alpha(theme.palette.info.main, 0.4), color: theme.palette.info.main }}
         >
           Экспортировать в JSON
         </DndButton>
-      </Paper>
+      </GlassCard>
 
       {/* Danger Zone */}
-      <Paper sx={{
+      <GlassCard sx={{
         p: 3,
-        backgroundColor: 'rgba(255,50,50,0.04)',
-        border: '1px solid rgba(255,50,50,0.2)',
+        backgroundColor: alpha(theme.palette.error.main, 0.04),
+        border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
       }}>
-        <Typography
-          variant="h6"
-          sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: 'rgba(255,100,100,0.9)', mb: 1 }}
-        >
-          Опасная зона
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Box sx={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 40, height: 40, borderRadius: 2,
+            backgroundColor: theme.palette.error.main, color: '#fff',
+            boxShadow: `0 4px 12px ${alpha(theme.palette.error.main, 0.3)}`,
+          }}>
+            <WarningIcon sx={{ fontSize: '1.2rem' }} />
+          </Box>
+          <Typography variant="h6" sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: theme.palette.error.main }}>
+            Опасная зона
+          </Typography>
+        </Box>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
           Удаление проекта необратимо. Рекомендуем сначала сделать экспорт.
         </Typography>
         <Button
@@ -201,7 +202,7 @@ export const ProjectSettingsPage: React.FC = () => {
         >
           Удалить проект
         </Button>
-      </Paper>
+      </GlassCard>
     </Box>
   );
 };

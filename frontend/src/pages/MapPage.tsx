@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography, Button, alpha } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -328,12 +328,12 @@ export const MapPage: React.FC = () => {
 
       {/* Map + Panel */}
       <Box sx={{ ...sxMapContainer, position: 'relative' }}>
-        <Box
-          ref={containerRef}
-          sx={{
-            width: '100%', height: '100%', overflow: 'hidden',
-            backgroundColor: '#0a0a14',
-            position: 'relative',
+          <Box
+            ref={containerRef}
+            sx={{
+              width: '100%', height: '100%', overflow: 'hidden',
+              backgroundColor: (theme) => theme.palette.background.default,
+              position: 'relative',
             cursor: isPanningRef.current ? 'grabbing'
               : (draggingMarker && didDragRef.current) ? 'grabbing'
               : mode === 'draw_territory' ? 'crosshair'
@@ -427,16 +427,16 @@ export const MapPage: React.FC = () => {
           <Box sx={{
             position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
             zIndex: 30, display: 'flex', alignItems: 'center', gap: 1.5,
-            backgroundColor: 'rgba(26,26,46,0.95)', padding: '10px 20px',
-            borderRadius: 2, border: '1px solid rgba(255,215,0,0.3)',
-            backdropFilter: 'blur(8px)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.95), padding: '10px 20px',
+            borderRadius: 2, border: (theme) => `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+            backdropFilter: 'blur(8px)', boxShadow: (theme) => `0 4px 20px ${alpha(theme.palette.common.black, 0.5)}`,
           }}>
-            <Typography variant="body2" sx={{ color: '#FFD700', mr: 1, whiteSpace: 'nowrap' }}>
+            <Typography variant="body2" sx={{ color: 'warning.main', mr: 1, whiteSpace: 'nowrap' }}>
               ✏️ {editingTerritoryPoints.name} — {editingTerritoryPoints.rings.length} контура, {territoryTotalPointCount(editingTerritoryPoints)} точек
             </Typography>
             <Button size="small" variant="outlined" onClick={cancelEditingPoints}
-              sx={{ borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)',
-                '&:hover': { borderColor: 'rgba(255,255,255,0.4)' } }}>
+              sx={{ borderColor: (theme) => alpha(theme.palette.text.primary, 0.2), color: 'text.secondary',
+                '&:hover': { borderColor: (theme) => alpha(theme.palette.text.primary, 0.4) } }}>
               Отмена
             </Button>
             <DndButton size="small" variant="contained" onClick={saveEditingPoints}
@@ -450,13 +450,13 @@ export const MapPage: React.FC = () => {
         {transitioning && (
           <Box sx={{
             position: 'absolute', inset: 0,
-            backgroundColor: 'rgba(10,10,20,0.85)',
+            backgroundColor: (theme) => alpha(theme.palette.background.default, 0.85),
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 50, backdropFilter: 'blur(4px)',
           }}>
             <Box sx={{ textAlign: 'center' }}>
-              <MapIcon sx={{ fontSize: 40, color: 'rgba(187,143,206,0.5)', mb: 1 }} />
-              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Загрузка карты...</Typography>
+              <MapIcon sx={{ fontSize: 40, color: 'primary.main', opacity: 0.5, mb: 1 }} />
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>Загрузка карты...</Typography>
             </Box>
           </Box>
         )}
