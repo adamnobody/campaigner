@@ -137,7 +137,23 @@ export const Sidebar: React.FC = () => {
               return (
                 <ListItemButton
                   key={item.path}
-                  data-tour={item.path === 'characters' ? 'sidebar-characters' : item.path === 'notes' ? 'sidebar-notes' : undefined}
+                  data-tour={
+                    item.path === 'characters'
+                      ? 'sidebar-characters'
+                      : item.path === 'factions'
+                      ? 'sidebar-factions'
+                      : item.path === 'notes'
+                      ? 'sidebar-notes'
+                      : item.path === 'wiki'
+                      ? 'sidebar-wiki'
+                      : item.path === 'timeline'
+                      ? 'sidebar-timeline'
+                      : item.path === 'dogmas'
+                      ? 'sidebar-dogmas'
+                      : item.path === 'dynasties'
+                      ? 'sidebar-dynasties'
+                      : undefined
+                  }
                   selected={isActive}
                   onClick={() => navigate(fullPath)}
                   sx={{
@@ -161,6 +177,7 @@ export const Sidebar: React.FC = () => {
 
           <List>
             <ListItemButton
+              data-tour="sidebar-settings"
               selected={location.pathname === `/project/${projectId}/settings`}
               onClick={() => navigate(`/project/${projectId}/settings`)}
               sx={{

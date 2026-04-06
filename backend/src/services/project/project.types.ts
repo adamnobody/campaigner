@@ -72,6 +72,23 @@ export interface ExportMarkerRow {
   updatedAt: string;
 }
 
+export interface ExportTerritoryRow {
+  id: number;
+  mapId: number;
+  name: string;
+  description: string;
+  color: string;
+  opacity: number;
+  borderColor: string;
+  borderWidth: number;
+  points: string;
+  factionId: number | null;
+  smoothing: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ExportTimelineEventRow {
   id: number;
   title: string;
@@ -96,6 +113,145 @@ export interface ExportTagAssociationRow {
   entityId: number;
 }
 
+export interface ExportWikiLinkRow {
+  id: number;
+  sourceNoteId: number;
+  targetNoteId: number;
+  label: string;
+  createdAt: string;
+}
+
+export interface ExportDogmaRow {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  impact: string;
+  exceptions: string;
+  isPublic: number | boolean;
+  importance: string;
+  status: string;
+  sortOrder: number;
+  icon: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExportFactionRow {
+  id: number;
+  name: string;
+  type: string;
+  customType: string;
+  stateType: string;
+  customStateType: string;
+  motto: string;
+  description: string;
+  history: string;
+  goals: string;
+  headquarters: string;
+  territory: string;
+  status: string;
+  color: string;
+  secondaryColor: string;
+  imagePath: string | null;
+  bannerPath: string | null;
+  foundedDate: string;
+  disbandedDate: string;
+  parentFactionId: number | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExportFactionRankRow {
+  id: number;
+  factionId: number;
+  name: string;
+  level: number;
+  description: string;
+  permissions: string;
+  icon: string;
+  color: string;
+}
+
+export interface ExportFactionMemberRow {
+  id: number;
+  factionId: number;
+  characterId: number;
+  rankId: number | null;
+  role: string;
+  joinedDate: string;
+  leftDate: string;
+  isActive: number | boolean;
+  notes: string;
+}
+
+export interface ExportFactionRelationRow {
+  id: number;
+  sourceFactionId: number;
+  targetFactionId: number;
+  relationType: string;
+  customLabel: string;
+  description: string;
+  startedDate: string;
+  isBidirectional: number | boolean;
+  createdAt: string;
+}
+
+export interface ExportDynastyRow {
+  id: number;
+  name: string;
+  motto: string;
+  description: string;
+  history: string;
+  status: string;
+  color: string;
+  secondaryColor: string;
+  imagePath: string | null;
+  foundedDate: string;
+  extinctDate: string;
+  founderId: number | null;
+  currentLeaderId: number | null;
+  heirId: number | null;
+  linkedFactionId: number | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExportDynastyMemberRow {
+  id: number;
+  dynastyId: number;
+  characterId: number;
+  generation: number;
+  role: string;
+  birthDate: string;
+  deathDate: string;
+  isMainLine: number | boolean;
+  notes: string;
+}
+
+export interface ExportDynastyFamilyLinkRow {
+  id: number;
+  dynastyId: number;
+  sourceCharacterId: number;
+  targetCharacterId: number;
+  relationType: string;
+  customLabel: string;
+}
+
+export interface ExportDynastyEventRow {
+  id: number;
+  dynastyId: number;
+  title: string;
+  description: string;
+  eventDate: string;
+  importance: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface ImportedProjectPayload {
   version: string;
   project: {
@@ -110,7 +266,18 @@ export interface ImportedProjectPayload {
   folders?: ExportFolderRow[];
   maps?: ExportMapRow[];
   markers?: ExportMarkerRow[];
+  territories?: ExportTerritoryRow[];
   timelineEvents?: ExportTimelineEventRow[];
   tags?: ExportTagRow[];
   tagAssociations?: ExportTagAssociationRow[];
+  wikiLinks?: ExportWikiLinkRow[];
+  dogmas?: ExportDogmaRow[];
+  factions?: ExportFactionRow[];
+  factionRanks?: ExportFactionRankRow[];
+  factionMembers?: ExportFactionMemberRow[];
+  factionRelations?: ExportFactionRelationRow[];
+  dynasties?: ExportDynastyRow[];
+  dynastyMembers?: ExportDynastyMemberRow[];
+  dynastyFamilyLinks?: ExportDynastyFamilyLinkRow[];
+  dynastyEvents?: ExportDynastyEventRow[];
 }

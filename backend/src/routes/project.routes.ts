@@ -16,6 +16,8 @@ const upload = createDiskUpload({
   filenamePrefix: 'project-map',
 });
 
+const importArraySchema = z.array(z.record(z.string(), z.unknown())).optional();
+
 const importProjectSchema = z.object({
   version: z.string(),
   project: z.object({
@@ -24,15 +26,26 @@ const importProjectSchema = z.object({
     status: z.string().optional(),
     mapImageBase64: z.string().nullable().optional(),
   }),
-  characters: z.array(z.any()).optional(),
-  relationships: z.array(z.any()).optional(),
-  notes: z.array(z.any()).optional(),
-  folders: z.array(z.any()).optional(),
-  maps: z.array(z.any()).optional(),
-  markers: z.array(z.any()).optional(),
-  timelineEvents: z.array(z.any()).optional(),
-  tags: z.array(z.any()).optional(),
-  tagAssociations: z.array(z.any()).optional(),
+  characters: importArraySchema,
+  relationships: importArraySchema,
+  notes: importArraySchema,
+  folders: importArraySchema,
+  maps: importArraySchema,
+  markers: importArraySchema,
+  territories: importArraySchema,
+  timelineEvents: importArraySchema,
+  tags: importArraySchema,
+  tagAssociations: importArraySchema,
+  wikiLinks: importArraySchema,
+  dogmas: importArraySchema,
+  factions: importArraySchema,
+  factionRanks: importArraySchema,
+  factionMembers: importArraySchema,
+  factionRelations: importArraySchema,
+  dynasties: importArraySchema,
+  dynastyMembers: importArraySchema,
+  dynastyFamilyLinks: importArraySchema,
+  dynastyEvents: importArraySchema,
 });
 
 router.get('/', ProjectController.getAll);

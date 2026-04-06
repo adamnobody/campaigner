@@ -299,6 +299,22 @@ export interface ImportedProjectPayload {
     createdAt: string;
     updatedAt: string;
   }>;
+  territories?: Array<{
+    id: number;
+    mapId: number;
+    name: string;
+    description: string;
+    color: string;
+    opacity: number;
+    borderColor: string;
+    borderWidth: number;
+    points: string;
+    factionId: number | null;
+    smoothing: number;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   timelineEvents?: Array<{
     id: number;
     title: string;
@@ -319,6 +335,135 @@ export interface ImportedProjectPayload {
     tagId: number;
     entityType: string;
     entityId: number;
+  }>;
+  wikiLinks?: Array<{
+    id: number;
+    sourceNoteId: number;
+    targetNoteId: number;
+    label: string;
+    createdAt: string;
+  }>;
+  dogmas?: Array<{
+    id: number;
+    title: string;
+    category: string;
+    description: string;
+    impact: string;
+    exceptions: string;
+    isPublic: number | boolean;
+    importance: string;
+    status: string;
+    sortOrder: number;
+    icon: string;
+    color: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  factions?: Array<{
+    id: number;
+    name: string;
+    type: string;
+    customType: string;
+    stateType: string;
+    customStateType: string;
+    motto: string;
+    description: string;
+    history: string;
+    goals: string;
+    headquarters: string;
+    territory: string;
+    status: string;
+    color: string;
+    secondaryColor: string;
+    imagePath: string | null;
+    bannerPath: string | null;
+    foundedDate: string;
+    disbandedDate: string;
+    parentFactionId: number | null;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  factionRanks?: Array<{
+    id: number;
+    factionId: number;
+    name: string;
+    level: number;
+    description: string;
+    permissions: string;
+    icon: string;
+    color: string;
+  }>;
+  factionMembers?: Array<{
+    id: number;
+    factionId: number;
+    characterId: number;
+    rankId: number | null;
+    role: string;
+    joinedDate: string;
+    leftDate: string;
+    isActive: number | boolean;
+    notes: string;
+  }>;
+  factionRelations?: Array<{
+    id: number;
+    sourceFactionId: number;
+    targetFactionId: number;
+    relationType: string;
+    customLabel: string;
+    description: string;
+    startedDate: string;
+    isBidirectional: number | boolean;
+    createdAt: string;
+  }>;
+  dynasties?: Array<{
+    id: number;
+    name: string;
+    motto: string;
+    description: string;
+    history: string;
+    status: string;
+    color: string;
+    secondaryColor: string;
+    imagePath: string | null;
+    foundedDate: string;
+    extinctDate: string;
+    founderId: number | null;
+    currentLeaderId: number | null;
+    heirId: number | null;
+    linkedFactionId: number | null;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  dynastyMembers?: Array<{
+    id: number;
+    dynastyId: number;
+    characterId: number;
+    generation: number;
+    role: string;
+    birthDate: string;
+    deathDate: string;
+    isMainLine: number | boolean;
+    notes: string;
+  }>;
+  dynastyFamilyLinks?: Array<{
+    id: number;
+    dynastyId: number;
+    sourceCharacterId: number;
+    targetCharacterId: number;
+    relationType: string;
+    customLabel: string;
+  }>;
+  dynastyEvents?: Array<{
+    id: number;
+    dynastyId: number;
+    title: string;
+    description: string;
+    eventDate: string;
+    importance: string;
+    sortOrder: number;
+    createdAt: string;
   }>;
 }
 

@@ -9,9 +9,20 @@ import type {
   ExportFolderRow,
   ExportMapRow,
   ExportMarkerRow,
+  ExportTerritoryRow,
   ExportTimelineEventRow,
   ExportTagRow,
   ExportTagAssociationRow,
+  ExportWikiLinkRow,
+  ExportDogmaRow,
+  ExportFactionRow,
+  ExportFactionRankRow,
+  ExportFactionMemberRow,
+  ExportFactionRelationRow,
+  ExportDynastyRow,
+  ExportDynastyMemberRow,
+  ExportDynastyFamilyLinkRow,
+  ExportDynastyEventRow,
 } from './project.types';
 
 export function exportProject(id: number): ImportedProjectPayload & {
@@ -67,6 +78,16 @@ export function exportProject(id: number): ImportedProjectPayload & {
     WHERE m.project_id = ?
   `).all(id) as ExportMarkerRow[];
 
+  const territories = db.prepare(`
+    SELECT mt.id, mt.map_id as mapId, mt.name, mt.description, mt.color,
+           mt.opacity, mt.border_color as borderColor, mt.border_width as borderWidth,
+           mt.points, mt.faction_id as factionId, mt.smoothing, mt.sort_order as sortOrder,
+           mt.created_at as createdAt, mt.updated_at as updatedAt
+    FROM map_territories mt
+    JOIN maps m ON mt.map_id = m.id
+    WHERE m.project_id = ?
+  `).all(id) as ExportTerritoryRow[];
+
   const timelineEvents = db.prepare(`
     SELECT id, title, description, event_date as eventDate,
            sort_order as sortOrder, era,
@@ -86,6 +107,94 @@ export function exportProject(id: number): ImportedProjectPayload & {
     WHERE t.project_id = ?
   `).all(id) as ExportTagAssociationRow[];
 
+  const wikiLinks = db.prepare(`
+    SELECT id, source_note_id as sourceNoteId, target_note_id as targetNoteId,
+           label, created_at as createdAt
+    FROM wiki_links WHERE project_id = ?
+  `).all(id) as ExportWikiLinkRow[];
+
+  const dogmas = db.prepare(`
+    SELECT id, title, category, description, impact, exceptions,
+           is_public as isPublic, importance, status, sort_order as sortOrder,
+           icon, color, created_at as createdAt, updated_at as updatedAt
+    FROM dogmas WHERE project_id = ?
+  `).all(id) as ExportDogmaRow[];
+
+  const factions = db.prepare(`
+    SELECT id, name, type, custom_type as customType, state_type as stateType,
+           custom_state_type as customStateType, motto, description, history,
+           goals, headquarters, territory, status, color,
+           secondary_color as secondaryColor, image_path as imagePath,
+           banner_path as bannerPath, founded_date as foundedDate,
+           disbanded_date as disbandedDate, parent_faction_id as parentFactionId,
+           sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    FROM factions WHERE project_id = ?
+  `).all(id) as ExportFactionRow[];
+
+  const factionRanks = db.prepare(`
+    SELECT fr.id, fr.faction_id as factionId, fr.name, fr.level, fr.description,
+           fr.permissions, fr.icon, fr.color
+    FROM faction_ranks fr
+    JOIN factions f ON fr.faction_id = f.id
+    WHERE f.project_id = ?
+  `).all(id) as ExportFactionRankRow[];
+
+  const factionMembers = db.prepare(`
+    SELECT fm.id, fm.faction_id as factionId, fm.character_id as characterId,
+           fm.rank_id as rankId, fm.role, fm.joined_date as joinedDate,
+           fm.left_date as leftDate, fm.is_active as isActive, fm.notes
+    FROM faction_members fm
+    JOIN factions f ON fm.faction_id = f.id
+    WHERE f.project_id = ?
+  `).all(id) as ExportFactionMemberRow[];
+
+  const factionRelations = db.prepare(`
+    SELECT fr.id, fr.source_faction_id as sourceFactionId,
+           fr.target_faction_id as targetFactionId, fr.relation_type as relationType,
+           fr.custom_label as customLabel, fr.description, fr.started_date as startedDate,
+           fr.is_bidirectional as isBidirectional, fr.created_at as createdAt
+    FROM faction_relations fr
+    WHERE fr.project_id = ?
+  `).all(id) as ExportFactionRelationRow[];
+
+  const dynasties = db.prepare(`
+    SELECT id, name, motto, description, history, status, color,
+           secondary_color as secondaryColor, image_path as imagePath,
+           founded_date as foundedDate, extinct_date as extinctDate,
+           founder_id as founderId, current_leader_id as currentLeaderId,
+           heir_id as heirId, linked_faction_id as linkedFactionId,
+           sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    FROM dynasties WHERE project_id = ?
+  `).all(id) as ExportDynastyRow[];
+
+  const dynastyMembers = db.prepare(`
+    SELECT dm.id, dm.dynasty_id as dynastyId, dm.character_id as characterId,
+           dm.generation, dm.role, dm.birth_date as birthDate, dm.death_date as deathDate,
+           dm.is_main_line as isMainLine, dm.notes
+    FROM dynasty_members dm
+    JOIN dynasties d ON dm.dynasty_id = d.id
+    WHERE d.project_id = ?
+  `).all(id) as ExportDynastyMemberRow[];
+
+  const dynastyFamilyLinks = db.prepare(`
+    SELECT dfl.id, dfl.dynasty_id as dynastyId,
+           dfl.source_character_id as sourceCharacterId,
+           dfl.target_character_id as targetCharacterId,
+           dfl.relation_type as relationType, dfl.custom_label as customLabel
+    FROM dynasty_family_links dfl
+    JOIN dynasties d ON dfl.dynasty_id = d.id
+    WHERE d.project_id = ?
+  `).all(id) as ExportDynastyFamilyLinkRow[];
+
+  const dynastyEvents = db.prepare(`
+    SELECT de.id, de.dynasty_id as dynastyId, de.title, de.description,
+           de.event_date as eventDate, de.importance, de.sort_order as sortOrder,
+           de.created_at as createdAt
+    FROM dynasty_events de
+    JOIN dynasties d ON de.dynasty_id = d.id
+    WHERE d.project_id = ?
+  `).all(id) as ExportDynastyEventRow[];
+
   const mapImageBase64 = readFileAsBase64(project.mapImagePath || null);
 
   const charactersWithImages = characters.map((character) => ({
@@ -94,7 +203,7 @@ export function exportProject(id: number): ImportedProjectPayload & {
   }));
 
   return {
-    version: '1.0',
+    version: '2.0',
     exportedAt: new Date().toISOString(),
     project: {
       name: project.name,
@@ -108,8 +217,19 @@ export function exportProject(id: number): ImportedProjectPayload & {
     folders,
     maps,
     markers,
+    territories,
     timelineEvents,
     tags,
     tagAssociations,
+    wikiLinks,
+    dogmas,
+    factions,
+    factionRanks,
+    factionMembers,
+    factionRelations,
+    dynasties,
+    dynastyMembers,
+    dynastyFamilyLinks,
+    dynastyEvents,
   };
 }

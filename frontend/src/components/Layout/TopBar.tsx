@@ -208,7 +208,7 @@ export const TopBar: React.FC = () => {
           </Breadcrumbs>
 
           {currentProject && (
-            <FormControl size="small" sx={{ mr: 1, minWidth: 130 }}>
+            <FormControl data-tour="branch-selector" size="small" sx={{ mr: 1, minWidth: 130 }}>
               <Select
                 value={activeBranchId ?? ''}
                 onChange={(e) => {
@@ -236,6 +236,7 @@ export const TopBar: React.FC = () => {
             <Tooltip title="Создать ветку what-if">
               <span>
                 <IconButton
+                  data-tour="branch-create"
                   size="small"
                   onClick={handleOpenCreateBranch}
                   disabled={branchesLoading}
@@ -256,6 +257,7 @@ export const TopBar: React.FC = () => {
           {currentProject && (
             <Tooltip title="Поиск (Ctrl+K)">
               <Button
+                data-tour="topbar-search"
                 onClick={() => setSearchOpen(true)}
                 size="small"
                 sx={{
