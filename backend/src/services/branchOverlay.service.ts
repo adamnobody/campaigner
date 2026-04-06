@@ -1,6 +1,6 @@
 import { getDb } from '../db/connection';
 
-export type OverlayEntityType = 'timeline_event' | 'map_marker' | 'map_territory' | 'note';
+export type OverlayEntityType = 'timeline_event' | 'map_marker' | 'map_territory' | 'note' | 'dogma';
 export type OverlayOperation = 'upsert' | 'delete' | 'create';
 
 type BranchOverrideRow = {
