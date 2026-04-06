@@ -1,5 +1,5 @@
 import { getDb } from '../db/connection';
-import { NotFoundError } from '../middleware/errorHandler';
+import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
 import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers';
 import type {
   FactionFilters,
@@ -320,6 +320,44 @@ export class FactionService {
     ensureEntityExists('faction_assets', id, 'Faction asset');
     const db = getDb();
     db.prepare('DELETE FROM faction_assets WHERE id = ?').run(id);
+  }
+
+  static reorderAssets(factionId: number, orderedIds: number[]) {
+    ensureEntityExists('factions', factionId, 'Faction');
+    const existing = this.getAssets(factionId);
+    const dbIdsSorted = [...existing.map((a) => a.id)].sort((a, b) => a - b);
+
+    if (orderedIds.length !== dbIdsSorted.length) {
+      throw new BadRequestError('orderedIds must list every asset id for this faction exactly once');
+    }
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      throw new BadRequestError('orderedIds must not contain duplicates');
+    }
+    const inputSorted = [...orderedIds].sort((a, b) => a - b);
+    for (let i = 0; i < dbIdsSorted.length; i++) {
+      if (dbIdsSorted[i] !== inputSorted[i]) {
+        throw new BadRequestError('orderedIds must match the current asset ids for this faction');
+      }
+    }
+
+    if (orderedIds.length === 0) {
+      return existing;
+    }
+
+    const db = getDb();
+    const run = db.transaction(() => {
+      orderedIds.forEach((assetId, index) => {
+        const result = db.prepare(`
+          UPDATE faction_assets SET sort_order = ?, updated_at = datetime('now')
+          WHERE id = ? AND faction_id = ?
+        `).run(index, assetId, factionId);
+        if (result.changes !== 1) {
+          throw new BadRequestError('Invalid asset id for this faction');
+        }
+      });
+    });
+    run();
+    return this.getAssets(factionId);
   }
 
   static bootstrapDefaultAssets(factionId: number) {

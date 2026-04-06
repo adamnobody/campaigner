@@ -17,7 +17,11 @@ import PeopleIcon from '@mui/icons-material/People';
 import StarIcon from '@mui/icons-material/Star';
 import LinkIcon from '@mui/icons-material/Link';
 import PersonIcon from '@mui/icons-material/Person';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import { useParams, useNavigate } from 'react-router-dom';
+import { factionsApi } from '@/api/factions';
 import { useUIStore } from '@/store/useUIStore';
 import { useFactionStore } from '@/store/useFactionStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
@@ -31,8 +35,10 @@ import {
   FACTION_STATUSES, FACTION_STATUS_LABELS, FACTION_STATUS_ICONS,
   STATE_TYPES, STATE_TYPE_LABELS,
   FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
+  POLICY_TYPES,
+  POLICY_STATUSES,
 } from '@campaigner/shared';
-import type { FactionRank, FactionMember, FactionAsset } from '@campaigner/shared';
+import type { FactionRank, FactionMember, FactionAsset, FactionPolicy, PolicyType, PolicyStatus } from '@campaigner/shared';
 import { shallow } from 'zustand/shallow';
 
 // ==================== Types ====================
@@ -66,6 +72,16 @@ const EMPTY_FORM: FactionForm = {
   parentFactionId: '', tagsStr: '',
 };
 
+const POLICY_TYPE_LABELS: Record<PolicyType, string> = {
+  ambition: 'Амбиция',
+  policy: 'Политика',
+};
+const POLICY_STATUS_LABELS: Record<PolicyStatus, string> = {
+  planned: 'План',
+  active: 'Активна',
+  archived: 'Архив',
+};
+
 // ==================== Helpers ====================
 
 const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
@@ -81,6 +97,7 @@ export const FactionDetailPage: React.FC = () => {
   const { projectId, factionId } = useParams<{ projectId: string; factionId: string }>();
   const pid = parseInt(projectId!);
   const isNew = !factionId || factionId === 'new';
+  const fid = factionId && !isNew ? parseInt(factionId, 10) : 0;
   const navigate = useNavigate();
   const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
     showSnackbar: state.showSnackbar,
@@ -93,7 +110,7 @@ export const FactionDetailPage: React.FC = () => {
     uploadImage, uploadBanner, setTags,
     createRank, updateRank, deleteRank,
     addMember, removeMember,
-    createAsset, updateAsset, deleteAsset, bootstrapDefaultAssets,
+    createAsset, updateAsset, deleteAsset, reorderAssets, bootstrapDefaultAssets,
     fetchRelations, createRelation, deleteRelation,
     setCurrentFaction,
   } = useFactionStore((state) => ({
@@ -117,6 +134,7 @@ export const FactionDetailPage: React.FC = () => {
     createAsset: state.createAsset,
     updateAsset: state.updateAsset,
     deleteAsset: state.deleteAsset,
+    reorderAssets: state.reorderAssets,
     bootstrapDefaultAssets: state.bootstrapDefaultAssets,
     fetchRelations: state.fetchRelations,
     createRelation: state.createRelation,
@@ -151,6 +169,21 @@ export const FactionDetailPage: React.FC = () => {
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<FactionAsset | null>(null);
   const [assetForm, setAssetForm] = useState({ name: '', value: '' });
+  const [isReordering, setIsReordering] = useState(false);
+
+  const [factionPolicies, setFactionPolicies] = useState<FactionPolicy[]>([]);
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<FactionPolicy | null>(null);
+  const [policyForm, setPolicyForm] = useState({
+    title: '',
+    type: 'policy' as PolicyType,
+    status: 'active' as PolicyStatus,
+    description: '',
+  });
+  const [policyTitleSearch, setPolicyTitleSearch] = useState('');
+  const [policyTypeFilter, setPolicyTypeFilter] = useState<'all' | PolicyType>('all');
+  const [policyStatusFilter, setPolicyStatusFilter] = useState<'all' | PolicyStatus>('all');
 
   // ==================== Load ====================
 
@@ -165,6 +198,29 @@ export const FactionDetailPage: React.FC = () => {
     if (isNew) { setForm(EMPTY_FORM); setCurrentFaction(null); setTagsInput(''); return; }
     fetchFaction(parseInt(factionId!)).catch(() => showSnackbar('Ошибка загрузки', 'error'));
   }, [factionId, isNew]);
+
+  useEffect(() => {
+    if (isNew || !fid) {
+      setFactionPolicies([]);
+      return;
+    }
+    let cancelled = false;
+    setPoliciesLoading(true);
+    factionsApi
+      .getPolicies(fid)
+      .then((res) => {
+        if (!cancelled) setFactionPolicies(res.data.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) showSnackbar('Не удалось загрузить политики', 'error');
+      })
+      .finally(() => {
+        if (!cancelled) setPoliciesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fid, isNew]);
 
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;
@@ -200,12 +256,15 @@ export const FactionDetailPage: React.FC = () => {
   };
 
   const allTagNames = useMemo(() => tags.map(t => t.name), [tags]);
-  const fid = factionId && !isNew ? parseInt(factionId) : 0;
   const otherFactions = useMemo(() => factions.filter(f => f.id !== fid), [factions, fid]);
   const allCharacters = useMemo(() => characters || [], [characters]);
   const currentRanks: FactionRank[] = currentFaction?.ranks || [];
   const currentMembers: FactionMember[] = currentFaction?.members || [];
   const currentAssets: FactionAsset[] = currentFaction?.assets || [];
+  const sortedAssets = useMemo(
+    () => [...currentAssets].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)),
+    [currentAssets]
+  );
   const factionRelations = useMemo(() => fid ? relations.filter(r => r.sourceFactionId === fid || r.targetFactionId === fid) : [], [relations, fid]);
   const previewTagsStr = mergeTagValues(form.tagsStr, tagsInput);
 
@@ -217,6 +276,20 @@ export const FactionDetailPage: React.FC = () => {
       otherId: isOut ? rel.targetFactionId : rel.sourceFactionId,
     };
   }), [factionRelations, fid]);
+
+  const sortedFactionPolicies = useMemo(
+    () => [...factionPolicies].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)),
+    [factionPolicies]
+  );
+  const filteredFactionPolicies = useMemo(() => {
+    const q = policyTitleSearch.trim().toLowerCase();
+    return sortedFactionPolicies.filter((policy) => {
+      if (policyTypeFilter !== 'all' && policy.type !== policyTypeFilter) return false;
+      if (policyStatusFilter !== 'all' && policy.status !== policyStatusFilter) return false;
+      if (q && !policy.title.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [sortedFactionPolicies, policyTypeFilter, policyStatusFilter, policyTitleSearch]);
 
   // ==================== Actions ====================
 
@@ -375,6 +448,87 @@ export const FactionDetailPage: React.FC = () => {
       }
     } catch (err: any) {
       showSnackbar(err.message || 'Ошибка', 'error');
+    }
+  };
+
+  const openPolicyDialog = (policy?: FactionPolicy) => {
+    if (policy) {
+      setEditingPolicy(policy);
+      setPolicyForm({
+        title: policy.title,
+        type: policy.type,
+        status: policy.status,
+        description: policy.description || '',
+      });
+    } else {
+      setEditingPolicy(null);
+      setPolicyForm({ title: '', type: 'policy', status: 'active', description: '' });
+    }
+    setPolicyDialogOpen(true);
+  };
+
+  const handleSavePolicy = async () => {
+    if (!policyForm.title.trim() || !fid) return;
+    try {
+      if (editingPolicy) {
+        await factionsApi.updatePolicy(fid, editingPolicy.id, {
+          title: policyForm.title.trim(),
+          type: policyForm.type,
+          status: policyForm.status,
+          description: policyForm.description,
+        });
+        showSnackbar('Политика обновлена', 'success');
+      } else {
+        await factionsApi.createPolicy(fid, {
+          title: policyForm.title.trim(),
+          type: policyForm.type,
+          status: policyForm.status,
+          description: policyForm.description,
+          sortOrder: factionPolicies.length,
+        });
+        showSnackbar('Политика добавлена', 'success');
+      }
+      setPolicyDialogOpen(false);
+      const res = await factionsApi.getPolicies(fid);
+      setFactionPolicies(res.data.data || []);
+    } catch (err: unknown) {
+      showSnackbar(err instanceof Error ? err.message : 'Ошибка', 'error');
+    }
+  };
+
+  const handleDeletePolicy = (policy: FactionPolicy) => {
+    showConfirmDialog('Удалить', `Удалить «${policy.title}»?`, async () => {
+      try {
+        await factionsApi.deletePolicy(fid, policy.id);
+        showSnackbar('Удалено', 'success');
+        const res = await factionsApi.getPolicies(fid);
+        setFactionPolicies(res.data.data || []);
+      } catch {
+        showSnackbar('Ошибка', 'error');
+      }
+    });
+  };
+  const handleResetPolicyFilters = () => {
+    setPolicyTitleSearch('');
+    setPolicyTypeFilter('all');
+    setPolicyStatusFilter('all');
+  };
+
+  const handleMoveAsset = async (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= sortedAssets.length) return;
+    const orderedIds = sortedAssets.map((a) => a.id);
+    const t = orderedIds[index];
+    orderedIds[index] = orderedIds[target];
+    orderedIds[target] = t;
+    setIsReordering(true);
+    try {
+      await reorderAssets(fid, { orderedIds });
+      showSnackbar('Порядок активов обновлён', 'success');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Ошибка', 'error');
+    } finally {
+      setIsReordering(false);
     }
   };
 
@@ -541,6 +695,152 @@ export const FactionDetailPage: React.FC = () => {
             </Grid>
           </Section>
 
+          {/* SECTION: Faction policies */}
+          {!isNew && (
+            <Section
+              title="Амбиции и политика"
+              icon={<TrackChangesIcon />}
+              badge={sortedFactionPolicies.length}
+              defaultOpen={sortedFactionPolicies.length > 0}
+              action={
+                <DndButton
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  size="small"
+                  onClick={() => openPolicyDialog()}
+                  sx={{ borderColor: 'rgba(201,169,89,0.4)', color: 'rgba(201,169,89,0.9)' }}
+                >
+                  Добавить
+                </DndButton>
+              }
+            >
+              {policiesLoading && sortedFactionPolicies.length === 0 ? (
+                <Typography sx={{ color: 'rgba(255,255,255,0.35)', py: 2 }}>Загрузка…</Typography>
+              ) : sortedFactionPolicies.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <TrackChangesIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
+                  <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>
+                    Добавьте амбиции и политические линии фракции
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
+                      gap: 1.25,
+                      mb: 1.5,
+                    }}
+                  >
+                    <TextField
+                      size="small"
+                      label="Поиск по названию"
+                      value={policyTitleSearch}
+                      onChange={(e) => setPolicyTitleSearch(e.target.value)}
+                      placeholder="Введите название"
+                    />
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>Тип</InputLabel>
+                      <Select
+                        label="Тип"
+                        value={policyTypeFilter}
+                        onChange={(e) => setPolicyTypeFilter(e.target.value as 'all' | PolicyType)}
+                      >
+                        <MenuItem value="all">Все типы</MenuItem>
+                        <MenuItem value="ambition">Амбиция</MenuItem>
+                        <MenuItem value="policy">Политика</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>Статус</InputLabel>
+                      <Select
+                        label="Статус"
+                        value={policyStatusFilter}
+                        onChange={(e) => setPolicyStatusFilter(e.target.value as 'all' | PolicyStatus)}
+                      >
+                        <MenuItem value="all">Все статусы</MenuItem>
+                        <MenuItem value="planned">Запланировано</MenuItem>
+                        <MenuItem value="active">Активно</MenuItem>
+                        <MenuItem value="archived">В архиве</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  {filteredFactionPolicies.length === 0 ? (
+                    <Box
+                      sx={{
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 1.5,
+                        p: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 1,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <Typography sx={{ color: 'rgba(255,255,255,0.55)' }}>Ничего не найдено</Typography>
+                      <Button size="small" onClick={handleResetPolicyFilters}>
+                        Сбросить фильтры
+                      </Button>
+                    </Box>
+                  ) : (
+                    <List disablePadding>
+                      {filteredFactionPolicies.map((p) => (
+                        <ListItem
+                          key={p.id}
+                          secondaryAction={
+                            <Box display="flex" gap={0.5}>
+                              <IconButton size="small" onClick={() => openPolicyDialog(p)}>
+                                <EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} />
+                              </IconButton>
+                              <IconButton size="small" onClick={() => handleDeletePolicy(p)}>
+                                <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
+                              </IconButton>
+                            </Box>
+                          }
+                          sx={{
+                            backgroundColor: 'rgba(201,169,89,0.06)',
+                            borderRadius: 1.5,
+                            mb: 1,
+                            border: '1px solid rgba(255,255,255,0.04)',
+                            alignItems: 'flex-start',
+                          }}
+                        >
+                          <ListItemText
+                            primary={
+                              <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                                <Typography sx={{ color: '#fff', fontWeight: 600 }}>{p.title}</Typography>
+                                <Chip
+                                  label={POLICY_TYPE_LABELS[p.type]}
+                                  size="small"
+                                  sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.65)' }}
+                                />
+                                <Chip
+                                  label={POLICY_STATUS_LABELS[p.status]}
+                                  size="small"
+                                  sx={{ height: 20, fontSize: '0.65rem', backgroundColor: 'rgba(130,130,255,0.15)', color: 'rgba(130,130,255,0.85)' }}
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              p.description ? (
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.75, whiteSpace: 'pre-wrap' }}>
+                                  {p.description}
+                                </Typography>
+                              ) : null
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </>
+              )}
+            </Section>
+          )}
+
           {/* SECTION: Ranks */}
           {!isNew && (
             <Section title="Ранги" icon={<StarIcon />} badge={currentRanks.length} defaultOpen={currentRanks.length > 0}
@@ -638,12 +938,34 @@ export const FactionDetailPage: React.FC = () => {
                 </Box>
               ) : (
                 <List disablePadding>
-                  {currentAssets.map(asset => (
+                  {sortedAssets.map((asset, index) => (
                     <ListItem key={asset.id}
                       secondaryAction={
-                        <Box display="flex" gap={0.5}>
-                          <IconButton size="small" onClick={() => openAssetDialog(asset)}><EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} /></IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteAsset(asset)}><DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} /></IconButton>
+                        <Box display="flex" gap={0.5} alignItems="center">
+                          <Tooltip title="Вверх">
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={isReordering || index === 0}
+                                onClick={() => handleMoveAsset(index, 'up')}
+                              >
+                                <KeyboardArrowUpIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.45)' }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Вниз">
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={isReordering || index === sortedAssets.length - 1}
+                                onClick={() => handleMoveAsset(index, 'down')}
+                              >
+                                <KeyboardArrowDownIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.45)' }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <IconButton size="small" onClick={() => openAssetDialog(asset)} disabled={isReordering}><EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} /></IconButton>
+                          <IconButton size="small" onClick={() => handleDeleteAsset(asset)} disabled={isReordering}><DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} /></IconButton>
                         </Box>
                       }
                       sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1.5, mb: 1, border: '1px solid rgba(255,255,255,0.04)' }}>
@@ -739,6 +1061,61 @@ export const FactionDetailPage: React.FC = () => {
           <Button onClick={() => setAssetDialogOpen(false)}>Отмена</Button>
           <Button variant="contained" onClick={handleSaveAsset} disabled={!assetForm.name.trim()}>
             {editingAsset ? 'Сохранить' : 'Добавить'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={policyDialogOpen} onClose={() => setPolicyDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{editingPolicy ? 'Редактировать политику' : 'Новая политика'}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: 2 }}>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Название *"
+            value={policyForm.title}
+            onChange={(e) => setPolicyForm((prev) => ({ ...prev, title: e.target.value }))}
+          />
+          <FormControl fullWidth>
+            <InputLabel>Тип</InputLabel>
+            <Select
+              label="Тип"
+              value={policyForm.type}
+              onChange={(e) => setPolicyForm((prev) => ({ ...prev, type: e.target.value as PolicyType }))}
+            >
+              {POLICY_TYPES.map((t) => (
+                <MenuItem key={t} value={t}>
+                  {POLICY_TYPE_LABELS[t]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth>
+            <InputLabel>Статус</InputLabel>
+            <Select
+              label="Статус"
+              value={policyForm.status}
+              onChange={(e) => setPolicyForm((prev) => ({ ...prev, status: e.target.value as PolicyStatus }))}
+            >
+              {POLICY_STATUSES.map((s) => (
+                <MenuItem key={s} value={s}>
+                  {POLICY_STATUS_LABELS[s]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            label="Описание"
+            value={policyForm.description}
+            onChange={(e) => setPolicyForm((prev) => ({ ...prev, description: e.target.value }))}
+            multiline
+            minRows={3}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPolicyDialogOpen(false)}>Отмена</Button>
+          <Button variant="contained" onClick={handleSavePolicy} disabled={!policyForm.title.trim()}>
+            {editingPolicy ? 'Сохранить' : 'Создать'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { createTables, createIndexes } from './schema';
+import { migrateFactionPolicies } from './migrations/004_faction_policies';
 import { migrateTagAssociationsForDynasty } from './migrations/002_tag_associations_dynasty';
 import { migrateDynastyMembersGraph } from './migrations/003_dynasty_members_graph';
 
@@ -32,6 +33,7 @@ export function initializeDatabase(): void {
   const database = getDb();
 
   createTables(database);
+  migrateFactionPolicies(database);
   migrateTagAssociationsForDynasty(database);
   migrateDynastyMembersGraph(database);
   createIndexes(database);

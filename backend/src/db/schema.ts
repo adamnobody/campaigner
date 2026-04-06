@@ -192,35 +192,6 @@ export function createTables(db: Database.Database): void {
   `);
 
   db.exec(`
-    CREATE TABLE IF NOT EXISTS project_policies (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      project_id INTEGER NOT NULL,
-      title TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('ambition','policy')),
-      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('planned','active','archived')),
-      description TEXT DEFAULT '',
-      sort_order INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-    );
-  `);
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS policy_faction_links (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      policy_id INTEGER NOT NULL,
-      faction_id INTEGER NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('owner','supporter','opponent')),
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (policy_id) REFERENCES project_policies(id) ON DELETE CASCADE,
-      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE,
-      UNIQUE(policy_id, faction_id)
-    );
-  `);
-
-  db.exec(`
     CREATE TABLE IF NOT EXISTS factions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
@@ -248,6 +219,21 @@ export function createTables(db: Database.Database): void {
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (parent_faction_id) REFERENCES factions(id) ON DELETE SET NULL
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS faction_policies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      faction_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('ambition','policy')),
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('planned','active','archived')),
+      description TEXT DEFAULT '',
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE
     );
   `);
 
@@ -520,6 +506,7 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_factions_type ON factions(project_id, type);
     CREATE INDEX IF NOT EXISTS idx_factions_status ON factions(project_id, status);
     CREATE INDEX IF NOT EXISTS idx_factions_parent ON factions(parent_faction_id);
+    CREATE INDEX IF NOT EXISTS idx_faction_policies_faction ON faction_policies(faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_ranks_faction ON faction_ranks(faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_ranks_level ON faction_ranks(faction_id, level);
     CREATE INDEX IF NOT EXISTS idx_faction_members_faction ON faction_members(faction_id);

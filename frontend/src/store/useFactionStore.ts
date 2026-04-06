@@ -16,6 +16,7 @@ import type {
   FactionAsset,
   CreateFactionAsset,
   UpdateFactionAsset,
+  ReorderFactionAssets,
 } from '@campaigner/shared';
 import type { FactionsListParams } from '@/api/types';
 import { getErrorMessage } from '@/utils/error';
@@ -53,6 +54,7 @@ interface FactionState {
   createAsset: (factionId: number, data: CreateFactionAsset) => Promise<FactionAsset>;
   updateAsset: (factionId: number, assetId: number, data: UpdateFactionAsset) => Promise<FactionAsset>;
   deleteAsset: (factionId: number, assetId: number) => Promise<void>;
+  reorderAssets: (factionId: number, data: ReorderFactionAssets) => Promise<FactionAsset[]>;
   bootstrapDefaultAssets: (factionId: number) => Promise<{ created: FactionAsset[]; skipped: string[] }>;
 
   // Relations
@@ -363,6 +365,23 @@ export const useFactionStore = create<FactionState>((set, get) => ({
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to delete faction asset') });
+      throw error;
+    }
+  },
+
+  reorderAssets: async (factionId, data) => {
+    set({ error: null });
+    try {
+      await factionsApi.reorderAssets(factionId, data);
+      const fRes = await factionsApi.getById(factionId);
+      const refreshed = fRes.data.data;
+      set(state => ({
+        currentFaction: refreshed,
+        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+      }));
+      return refreshed.assets || [];
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to reorder faction assets') });
       throw error;
     }
   },
