@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { FactionService } from '../services/faction.service';
+import { FactionPolicyService } from '../services/factionPolicy.service';
 import { TagService } from '../services/tag.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ok, created } from '../utils/apiResponse';
@@ -36,6 +37,31 @@ export class FactionController {
     const id = parseId(req.params.id, 'faction id');
     const faction = FactionService.getById(id);
     return ok(res, faction);
+  });
+
+  // ==================== POLICIES (faction_policies) ====================
+
+  static getPolicies = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    return ok(res, FactionPolicyService.list(factionId));
+  });
+
+  static createPolicy = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    return created(res, FactionPolicyService.create(factionId, req.body));
+  });
+
+  static updatePolicy = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const policyId = parseId(req.params.policyId, 'policy id');
+    return ok(res, FactionPolicyService.update(factionId, policyId, req.body));
+  });
+
+  static deletePolicy = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const policyId = parseId(req.params.policyId, 'policy id');
+    FactionPolicyService.delete(factionId, policyId);
+    return ok(res, undefined, 'Faction policy deleted');
   });
 
   static create = asyncHandler(async (req: Request, res: Response) => {
@@ -187,6 +213,13 @@ export class FactionController {
   static bootstrapDefaultAssets = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
     return ok(res, FactionService.bootstrapDefaultAssets(factionId));
+  });
+
+  static reorderAssets = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
+    const orderedIds = req.body?.orderedIds as number[];
+    const assets = FactionService.reorderAssets(factionId, orderedIds);
+    return ok(res, assets);
   });
 
   static createRelation = asyncHandler(async (req: Request, res: Response) => {

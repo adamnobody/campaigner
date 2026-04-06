@@ -15,8 +15,12 @@ import type {
   FactionAsset,
   CreateFactionAsset,
   UpdateFactionAsset,
+  ReorderFactionAssets,
   FactionGraph,
   Tag,
+  FactionPolicy,
+  CreateFactionPolicy,
+  UpdateFactionPolicy,
 } from '@campaigner/shared';
 import { apiClient, type ListWithTotal, type VoidResponse } from './client';
 import type { FactionsListParams } from './types';
@@ -71,6 +75,8 @@ export const factionsApi = {
     apiClient.delete<VoidResponse>(`/factions/${factionId}/assets/${assetId}`),
   bootstrapDefaultAssets: (factionId: number) =>
     apiClient.post<ApiResponse<BootstrapFactionAssetsResponse>>(`/factions/${factionId}/assets/bootstrap-defaults`),
+  reorderAssets: (factionId: number, data: ReorderFactionAssets) =>
+    apiClient.put<ApiResponse<FactionAsset[]>>(`/factions/${factionId}/assets/reorder`, data),
   getRelations: (projectId: number) => apiClient.get<ApiResponse<FactionRelation[]>>('/factions/relations', { params: { projectId } }),
   createRelation: (data: CreateFactionRelation) => apiClient.post<ApiResponse<FactionRelation>>('/factions/relations', data),
   updateRelation: (relationId: number, data: UpdateFactionRelation) =>
@@ -78,4 +84,12 @@ export const factionsApi = {
   deleteRelation: (relationId: number) =>
     apiClient.delete<VoidResponse>(`/factions/relations/${relationId}`),
   getGraph: (projectId: number) => apiClient.get<ApiResponse<FactionGraph>>('/factions/graph', { params: { projectId } }),
+  getPolicies: (factionId: number) =>
+    apiClient.get<ApiResponse<FactionPolicy[]>>(`/factions/${factionId}/policies`),
+  createPolicy: (factionId: number, data: CreateFactionPolicy) =>
+    apiClient.post<ApiResponse<FactionPolicy>>(`/factions/${factionId}/policies`, data),
+  updatePolicy: (factionId: number, policyId: number, data: UpdateFactionPolicy) =>
+    apiClient.put<ApiResponse<FactionPolicy>>(`/factions/${factionId}/policies/${policyId}`, data),
+  deletePolicy: (factionId: number, policyId: number) =>
+    apiClient.delete<VoidResponse>(`/factions/${factionId}/policies/${policyId}`),
 };

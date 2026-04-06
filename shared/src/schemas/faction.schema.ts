@@ -91,6 +91,11 @@ export const updateFactionAssetSchema = z.object({
   sortOrder: z.number().int().optional(),
 });
 
+/** Full permutation of asset ids for a faction; must match DB exactly (no dupes/extras/missing). */
+export const reorderFactionAssetsSchema = z.object({
+  orderedIds: z.array(z.number().int().positive()),
+});
+
 export const factionGraphNodeSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),

@@ -14,6 +14,9 @@ import {
   updateFactionRelationSchema,
   createFactionAssetSchema,
   updateFactionAssetSchema,
+  reorderFactionAssetsSchema,
+  createFactionPolicyBodySchema,
+  updateFactionPolicySchema,
 } from '@campaigner/shared';
 import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas';
 
@@ -41,6 +44,11 @@ const relationParamsSchema = z.object({
 const assetParamsSchema = z.object({
   id: z.coerce.number().int().positive(),
   assetId: z.coerce.number().int().positive(),
+});
+
+const factionPolicyParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  policyId: z.coerce.number().int().positive(),
 });
 
 const getAllQuerySchema = z.object({
@@ -76,6 +84,38 @@ router.get(
   '/:id',
   validateRequest({ params: idParamsSchema }),
   FactionController.getById
+);
+
+// ==================== FACTION POLICIES ====================
+
+router.get(
+  '/:id/policies',
+  validateRequest({ params: idParamsSchema }),
+  FactionController.getPolicies
+);
+
+router.post(
+  '/:id/policies',
+  validateRequest({
+    params: idParamsSchema,
+    body: createFactionPolicyBodySchema,
+  }),
+  FactionController.createPolicy
+);
+
+router.put(
+  '/:id/policies/:policyId',
+  validateRequest({
+    params: factionPolicyParamsSchema,
+    body: updateFactionPolicySchema,
+  }),
+  FactionController.updatePolicy
+);
+
+router.delete(
+  '/:id/policies/:policyId',
+  validateRequest({ params: factionPolicyParamsSchema }),
+  FactionController.deletePolicy
 );
 
 router.post(
@@ -205,6 +245,15 @@ router.post(
     body: createFactionAssetSchema.omit({ factionId: true }),
   }),
   FactionController.createAsset
+);
+
+router.put(
+  '/:id/assets/reorder',
+  validateRequest({
+    params: idParamsSchema,
+    body: reorderFactionAssetsSchema,
+  }),
+  FactionController.reorderAssets
 );
 
 router.put(
