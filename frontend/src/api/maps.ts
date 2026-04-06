@@ -35,11 +35,13 @@ export const mapApi = {
   getMarkersByMapId: (mapId: number) => apiClient.get<ApiResponse<MapMarker[]>>(`/maps/${mapId}/markers`, { params: withBranch({}) }),
   createMarker: (mapId: number, data: CreateMarker) => apiClient.post<ApiResponse<MapMarker>>(`/maps/${mapId}/markers`, withBranch({ ...data })),
   updateMarker: (markerId: number, data: UpdateMarker) => apiClient.put<ApiResponse<MapMarker>>(`/markers/${markerId}`, withBranch({ ...data })),
-  deleteMarker: (markerId: number) => apiClient.delete<VoidResponse>(`/markers/${markerId}`),
+  deleteMarker: (markerId: number) =>
+    apiClient.delete<VoidResponse>(`/markers/${markerId}`, { params: withBranch({}) }),
   getTerritoriesByMapId: (mapId: number) => apiClient.get<ApiResponse<MapTerritory[]>>(`/maps/${mapId}/territories`, { params: withBranch({}) }),
   createTerritory: (mapId: number, data: CreateTerritory) =>
     apiClient.post<ApiResponse<MapTerritory>>(`/maps/${mapId}/territories`, withBranch(data as Record<string, unknown>)),
   updateTerritory: (territoryId: number, data: UpdateTerritory) =>
     apiClient.put<ApiResponse<MapTerritory>>(`/territories/${territoryId}`, withBranch(data as Record<string, unknown>)),
-  deleteTerritory: (territoryId: number) => apiClient.delete<VoidResponse>(`/territories/${territoryId}`),
+  deleteTerritory: (territoryId: number) =>
+    apiClient.delete<VoidResponse>(`/territories/${territoryId}`, { params: withBranch({}) }),
 };

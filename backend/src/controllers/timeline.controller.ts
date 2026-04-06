@@ -7,40 +7,64 @@ import { parseId } from '../utils/parseId';
 import { BadRequestError } from '../middleware/errorHandler';
 
 export class TimelineController {
+  private static parseBranchId(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    return Number.isInteger(branchId) && branchId > 0 ? branchId : undefined;
+  }
+
+  private static parseBranchIdRequiredIfPresent(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      throw new BadRequestError('Invalid branchId');
+    }
+    return branchId;
+  }
+
   static getAll = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.query.projectId as string, 'project id');
     const era = typeof req.query.era === 'string' ? req.query.era : undefined;
+    const branchId = TimelineController.parseBranchId(req.query.branchId);
 
-    const events = TimelineService.getAll(projectId, era);
+    const events = TimelineService.getAll(projectId, era, branchId);
     return ok(res, events);
   });
 
   static getById = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'timeline event id');
-    const event = TimelineService.getById(id);
+    const branchId = TimelineController.parseBranchId(req.query.branchId);
+    const event = TimelineService.getById(id, branchId);
     return ok(res, event);
   });
 
   static create = asyncHandler(async (req: Request, res: Response) => {
+    const branchId = TimelineController.parseBranchId(req.body?.branchId);
+    if (branchId) {
+      throw new BadRequestError('Branch-local timeline create is not supported in MVP');
+    }
     const event = TimelineService.create(req.body);
     return created(res, event);
   });
 
   static update = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'timeline event id');
-    const event = TimelineService.update(id, req.body);
+    const branchId = TimelineController.parseBranchId(req.body?.branchId);
+    const event = TimelineService.update(id, req.body, branchId);
     return ok(res, event);
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'timeline event id');
-    TimelineService.delete(id);
+    const branchId = TimelineController.parseBranchIdRequiredIfPresent(req.query.branchId);
+    TimelineService.delete(id, branchId);
     return ok(res, undefined, 'Timeline event deleted');
   });
 
   static reorder = asyncHandler(async (req: Request, res: Response) => {
     const projectId = Number(req.body?.projectId);
     const orderedIds = req.body?.orderedIds;
+    const branchId = TimelineController.parseBranchId(req.body?.branchId);
 
     if (!Number.isInteger(projectId) || projectId <= 0) {
       throw new BadRequestError('Valid projectId is required');
@@ -50,7 +74,7 @@ export class TimelineController {
       throw new BadRequestError('orderedIds must be an array');
     }
 
-    const events = TimelineService.reorder(projectId, orderedIds);
+    const events = TimelineService.reorder(projectId, orderedIds, branchId);
     return ok(res, events);
   });
 

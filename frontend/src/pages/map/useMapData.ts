@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Project } from '@campaigner/shared';
 import { mapApi } from '@/api/maps';
 import { projectsApi } from '@/api/projects';
@@ -34,6 +34,12 @@ export function useMapData({
   onBeforeMapLoad,
   onInitialMapResolved,
 }: UseMapDataArgs) {
+  const onInitialMapResolvedRef = useRef(onInitialMapResolved);
+
+  useEffect(() => {
+    onInitialMapResolvedRef.current = onInitialMapResolved;
+  }, [onInitialMapResolved]);
+
   const [project, setProject] = useState<Project | null>(null);
   const [currentMap, setCurrentMap] = useState<MapData | null>(null);
   const [markers, setMarkers] = useState<Marker[]>([]);
@@ -103,7 +109,7 @@ export function useMapData({
         if (cancelled) return;
 
         setCurrentMap(mapToLoad);
-        onInitialMapResolved?.(mapToLoad);
+        onInitialMapResolvedRef.current?.(mapToLoad);
 
         const [markersRes, territoriesRes, notesRes, factionsRes] = await Promise.all([
           mapApi.getMarkersByMapId(mapToLoad.id),
@@ -125,7 +131,7 @@ export function useMapData({
 
     init();
     return () => { cancelled = true; };
-  }, [projectId, mapId, onInitialMapResolved]);
+  }, [projectId, mapId]);
 
   return {
     project,

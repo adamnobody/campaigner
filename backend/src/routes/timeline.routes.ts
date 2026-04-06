@@ -16,6 +16,10 @@ const getAllQuerySchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
 });
 
+const deleteQuerySchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
+});
+
 const reorderSchema = z.object({
   projectId: z.number().int().positive(),
   orderedIds: z.array(z.number().int().positive()),
@@ -51,7 +55,7 @@ router.put(
 
 router.delete(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: deleteQuerySchema }),
   TimelineController.delete
 );
 

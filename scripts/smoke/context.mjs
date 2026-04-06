@@ -22,6 +22,7 @@ export function createSmokeContext() {
     dogmaId: null,
     secondaryDogmaId: null,
     importedProjectId: null,
+    overlayBranchId: null,
     uniqueCharacterName: null,
     uniqueSecondaryCharacterName: null,
     uniqueNoteTitle: null,

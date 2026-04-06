@@ -14,6 +14,7 @@ export const notesApi = {
   getById: (id: number) => apiClient.get<ApiResponse<Note>>(`/notes/${id}`, { params: withBranch({}) }),
   create: (data: CreateNote) => apiClient.post<ApiResponse<Note>>('/notes', withBranch({ ...data })),
   update: (id: number, data: UpdateNote) => apiClient.put<ApiResponse<Note>>(`/notes/${id}`, withBranch({ ...data })),
-  delete: (id: number) => apiClient.delete<VoidResponse>(`/notes/${id}`),
+  delete: (id: number) =>
+    apiClient.delete<VoidResponse>(`/notes/${id}`, { params: withBranch({}) }),
   setTags: (id: number, tagIds: number[]) => apiClient.put<ApiResponse<Tag[]>>(`/notes/${id}/tags`, { tagIds }),
 };

@@ -7,8 +7,24 @@ import { parseId } from '../utils/parseId';
 import { BadRequestError } from '../middleware/errorHandler';
 
 export class NoteController {
+  private static parseBranchId(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    return Number.isInteger(branchId) && branchId > 0 ? branchId : undefined;
+  }
+
+  private static parseBranchIdRequiredIfPresent(input: unknown): number | undefined {
+    if (input === undefined || input === null || input === '') return undefined;
+    const branchId = Number(input);
+    if (!Number.isInteger(branchId) || branchId <= 0) {
+      throw new BadRequestError('Invalid branchId');
+    }
+    return branchId;
+  }
+
   static getAll = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.query.projectId as string, 'project id');
+    const branchId = NoteController.parseBranchId(req.query.branchId);
 
     const page = Number(req.query.page);
     const limit = Number(req.query.limit);
@@ -28,7 +44,7 @@ export class NoteController {
             : undefined,
     };
 
-    const result = NoteService.getAll(projectId, pagination);
+    const result = NoteService.getAll(projectId, pagination, branchId);
 
     return res.status(200).json({
       success: true,
@@ -44,24 +60,31 @@ export class NoteController {
 
   static getById = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'note id');
-    const note = NoteService.getById(id);
+    const branchId = NoteController.parseBranchId(req.query.branchId);
+    const note = NoteService.getById(id, branchId);
     return ok(res, note);
   });
 
   static create = asyncHandler(async (req: Request, res: Response) => {
+    const branchId = NoteController.parseBranchId(req.body?.branchId);
+    if (branchId) {
+      throw new BadRequestError('Branch-local note create is not supported in MVP');
+    }
     const note = NoteService.create(req.body);
     return created(res, note);
   });
 
   static update = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'note id');
-    const note = NoteService.update(id, req.body);
+    const branchId = NoteController.parseBranchId(req.body?.branchId);
+    const note = NoteService.update(id, req.body, branchId);
     return ok(res, note);
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'note id');
-    NoteService.delete(id);
+    const branchId = NoteController.parseBranchIdRequiredIfPresent(req.query.branchId);
+    NoteService.delete(id, branchId);
     return ok(res, undefined, 'Note deleted');
   });
 

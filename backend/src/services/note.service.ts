@@ -3,6 +3,7 @@ import { CreateNote, UpdateNote, Note, Pagination } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { TagService } from './tag.service';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers';
+import { BranchOverlayService } from './branchOverlay.service';
 
 type NoteFormat = Note['format'];
 type NoteType = Note['noteType'];
@@ -37,10 +38,19 @@ const UPDATE_FIELD_MAP: Record<string, string> = {
   isPinned: 'is_pinned',
 };
 
+function pickNotePatch(data: UpdateNote): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  (Object.keys(UPDATE_FIELD_MAP) as Array<keyof UpdateNote>).forEach((key) => {
+    if (data[key] !== undefined) patch[key] = data[key];
+  });
+  return patch;
+}
+
 export class NoteService {
   static getAll(
     projectId: number,
-    pagination?: Pagination & { noteType?: string; folderId?: number | null }
+    pagination?: Pagination & { noteType?: string; folderId?: number | null },
+    branchId?: number,
   ): { items: Note[]; total: number } {
     const db = getDb();
     const {
@@ -86,32 +96,32 @@ export class NoteService {
     const sortColumn = allowedSortColumns[sortBy] || 'updated_at';
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
-    const totalRow = db.prepare(`
-      SELECT COUNT(*) as count FROM notes ${whereClause}
-    `).get(...params) as { count: number };
-
-    const rows = db.prepare(`
+    const baseRows = db.prepare(`
       SELECT id, project_id as projectId, folder_id as folderId, title, content,
              format, note_type as noteType, is_pinned as isPinned,
              created_at as createdAt, updated_at as updatedAt
       FROM notes
       ${whereClause}
       ORDER BY is_pinned DESC, ${sortColumn} ${order}
-      LIMIT ? OFFSET ?
-    `).all(...params, limit, offset) as NoteRow[];
+    `).all(...params) as NoteRow[];
 
-    const tagsMap = loadTagsBatch(projectId, 'note', rows.map((r) => r.id));
+    const rows = branchId
+      ? BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'note'))
+      : baseRows;
+    const pagedRows = rows.slice(offset, offset + limit);
 
-    const items = rows.map((row) => {
+    const tagsMap = loadTagsBatch(projectId, 'note', pagedRows.map((r) => r.id));
+
+    const items = pagedRows.map((row) => {
       const note = mapRow(row);
       note.tags = tagsMap.get(row.id) || [];
       return note;
     });
 
-    return { items, total: totalRow.count };
+    return { items, total: rows.length };
   }
 
-  static getById(id: number): Note {
+  static getById(id: number, branchId?: number): Note {
     const db = getDb();
 
     const row = db.prepare(`
@@ -122,12 +132,16 @@ export class NoteService {
       WHERE id = ?
     `).get(id) as NoteRow | undefined;
 
-    if (!row) {
+    const projectedRow = branchId
+      ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'note'))
+      : row ?? null;
+
+    if (!projectedRow) {
       throw new NotFoundError('Note');
     }
 
-    const note = mapRow(row);
-    note.tags = TagService.getTagsForEntity(row.projectId, 'note', id);
+    const note = mapRow(projectedRow);
+    note.tags = TagService.getTagsForEntity(projectedRow.projectId, 'note', id);
     return note;
   }
 
@@ -150,16 +164,26 @@ export class NoteService {
     return this.getById(result.lastInsertRowid as number);
   }
 
-  static update(id: number, data: UpdateNote): Note {
+  static update(id: number, data: UpdateNote, branchId?: number): Note {
     this.getById(id);
+    if (branchId) {
+      BranchOverlayService.saveUpsertOverride(branchId, 'note', id, pickNotePatch(data));
+      return this.getById(id, branchId);
+    }
+
     buildUpdateQuery('notes', UPDATE_FIELD_MAP, data as Record<string, unknown>, id, {
       booleanFields: ['isPinned'],
     });
     return this.getById(id);
   }
 
-  static delete(id: number): void {
+  static delete(id: number, branchId?: number): void {
     this.getById(id);
+    if (branchId) {
+      BranchOverlayService.saveDeleteOverride(branchId, 'note', id);
+      return;
+    }
+
     const db = getDb();
     db.prepare('DELETE FROM notes WHERE id = ?').run(id);
   }

@@ -39,6 +39,10 @@ const branchQuerySchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
 });
 
+const updateTerritoryWithBranchSchema = z.object({
+  branchId: z.number().int().positive().optional(),
+}).and(updateTerritorySchema);
+
 // ==================== Карты ====================
 
 router.get(
@@ -115,7 +119,7 @@ router.put(
 
 router.delete(
   '/markers/:markerId',
-  validateRequest({ params: markerIdParamsSchema }),
+  validateRequest({ params: markerIdParamsSchema, query: branchQuerySchema }),
   MapController.deleteMarker
 );
 
@@ -140,14 +144,14 @@ router.put(
   '/territories/:territoryId',
   validateRequest({
     params: territoryIdParamsSchema,
-    body: updateTerritorySchema,
+    body: updateTerritoryWithBranchSchema,
   }),
   MapController.updateTerritory
 );
 
 router.delete(
   '/territories/:territoryId',
-  validateRequest({ params: territoryIdParamsSchema }),
+  validateRequest({ params: territoryIdParamsSchema, query: branchQuerySchema }),
   MapController.deleteTerritory
 );
 

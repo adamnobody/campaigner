@@ -6,10 +6,39 @@ import type { Map, CreateMap, UpdateMap, MapMarker, CreateMarker, UpdateMarker }
 import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
 import type { MapTerritory, CreateMapTerritoryData, UpdateMapTerritoryData, TerritoryRawRow } from './map/map.types';
 import { parseTerritoryRings, serializeTerritoryRings } from './map/map.types';
+import { BranchOverlayService } from './branchOverlay.service';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../../../data');
+
+function pickMarkerPatch(data: UpdateMarker): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  if (data.title !== undefined) patch.title = data.title;
+  if (data.description !== undefined) patch.description = data.description;
+  if (data.positionX !== undefined) patch.positionX = data.positionX;
+  if (data.positionY !== undefined) patch.positionY = data.positionY;
+  if (data.color !== undefined) patch.color = data.color;
+  if (data.icon !== undefined) patch.icon = data.icon;
+  if (data.linkedNoteId !== undefined) patch.linkedNoteId = data.linkedNoteId;
+  if (data.childMapId !== undefined) patch.childMapId = data.childMapId;
+  return patch;
+}
+
+function pickTerritoryPatch(data: UpdateMapTerritoryData): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  if (data.name !== undefined) patch.name = data.name;
+  if (data.description !== undefined) patch.description = data.description;
+  if (data.color !== undefined) patch.color = data.color;
+  if (data.opacity !== undefined) patch.opacity = data.opacity;
+  if (data.borderColor !== undefined) patch.borderColor = data.borderColor;
+  if (data.borderWidth !== undefined) patch.borderWidth = data.borderWidth;
+  if (data.smoothing !== undefined) patch.smoothing = data.smoothing;
+  if (data.rings !== undefined) patch.rings = data.rings;
+  if (data.factionId !== undefined) patch.factionId = data.factionId;
+  if (data.sortOrder !== undefined) patch.sortOrder = data.sortOrder;
+  return patch;
+}
 
 export class MapService {
   // ==================== Maps ====================
@@ -109,29 +138,34 @@ export class MapService {
 
   // ==================== Markers ====================
 
-  getMarkersByMapId(mapId: number): MapMarker[] {
+  getMarkersByMapId(mapId: number, branchId?: number): MapMarker[] {
     this.getMapByIdOrThrow(mapId);
-    return getDb().prepare(`
+    const baseRows = getDb().prepare(`
       SELECT id, map_id as mapId, title, description,
         position_x as positionX, position_y as positionY,
         color, icon, linked_note_id as linkedNoteId, child_map_id as childMapId,
         created_at as createdAt, updated_at as updatedAt
       FROM map_markers WHERE map_id = ? ORDER BY created_at
     `).all(mapId) as MapMarker[];
+    if (!branchId) return baseRows;
+    return BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'map_marker'));
   }
 
-  getMarkerById(markerId: number): MapMarker | null {
-    return (getDb().prepare(`
+  getMarkerById(markerId: number, branchId?: number): MapMarker | null {
+    const baseRow = (getDb().prepare(`
       SELECT id, map_id as mapId, title, description,
         position_x as positionX, position_y as positionY,
         color, icon, linked_note_id as linkedNoteId, child_map_id as childMapId,
         created_at as createdAt, updated_at as updatedAt
       FROM map_markers WHERE id = ?
     `).get(markerId) as MapMarker | undefined) || null;
+
+    if (!branchId) return baseRow;
+    return BranchOverlayService.applyItemOverlay(baseRow, BranchOverlayService.getOverrides(branchId, 'map_marker'));
   }
 
-  getMarkerByIdOrThrow(markerId: number): MapMarker {
-    const marker = this.getMarkerById(markerId);
+  getMarkerByIdOrThrow(markerId: number, branchId?: number): MapMarker {
+    const marker = this.getMarkerById(markerId, branchId);
     if (!marker) throw new NotFoundError('Map marker');
     return marker;
   }
@@ -146,8 +180,18 @@ export class MapService {
     return this.getMarkerByIdOrThrow(result.lastInsertRowid as number);
   }
 
-  updateMarker(markerId: number, data: UpdateMarker): MapMarker {
+  updateMarker(markerId: number, data: UpdateMarker, branchId?: number): MapMarker {
     this.getMarkerByIdOrThrow(markerId);
+    if (branchId) {
+      BranchOverlayService.saveUpsertOverride(
+        branchId,
+        'map_marker',
+        markerId,
+        pickMarkerPatch(data),
+      );
+      return this.getMarkerByIdOrThrow(markerId, branchId);
+    }
+
     const db = getDb();
     const updates: string[] = [];
     const values: unknown[] = [];
@@ -168,8 +212,13 @@ export class MapService {
     return this.getMarkerByIdOrThrow(markerId);
   }
 
-  deleteMarker(markerId: number): void {
+  deleteMarker(markerId: number, branchId?: number): void {
     this.getMarkerByIdOrThrow(markerId);
+    if (branchId) {
+      BranchOverlayService.saveDeleteOverride(branchId, 'map_marker', markerId);
+      return;
+    }
+
     getDb().prepare('DELETE FROM map_markers WHERE id = ?').run(markerId);
   }
 
@@ -185,7 +234,7 @@ export class MapService {
 
   // ==================== Territories ====================
 
-  getTerritoriesByMapId(mapId: number): MapTerritory[] {
+  getTerritoriesByMapId(mapId: number, branchId?: number): MapTerritory[] {
     this.getMapByIdOrThrow(mapId);
     const rows = getDb().prepare(`
       SELECT id, map_id as mapId, name, description,
@@ -196,13 +245,15 @@ export class MapService {
       FROM map_territories WHERE map_id = ? ORDER BY sort_order, created_at
     `).all(mapId) as TerritoryRawRow[];
 
-    return rows.map((row) => {
+    const baseRows = rows.map((row) => {
       const { points: rawPoints, ...rest } = row;
       return { ...rest, rings: parseTerritoryRings(rawPoints) };
     });
+    if (!branchId) return baseRows;
+    return BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'map_territory'));
   }
 
-  getTerritoryById(territoryId: number): MapTerritory | null {
+  getTerritoryById(territoryId: number, branchId?: number): MapTerritory | null {
     const row = getDb().prepare(`
       SELECT id, map_id as mapId, name, description,
         color, opacity, border_color as borderColor,
@@ -214,11 +265,13 @@ export class MapService {
 
     if (!row) return null;
     const { points: rawPoints, ...rest } = row;
-    return { ...rest, rings: parseTerritoryRings(rawPoints) };
+    const baseRow = { ...rest, rings: parseTerritoryRings(rawPoints) };
+    if (!branchId) return baseRow;
+    return BranchOverlayService.applyItemOverlay(baseRow, BranchOverlayService.getOverrides(branchId, 'map_territory'));
   }
 
-  getTerritoryByIdOrThrow(territoryId: number): MapTerritory {
-    const territory = this.getTerritoryById(territoryId);
+  getTerritoryByIdOrThrow(territoryId: number, branchId?: number): MapTerritory {
+    const territory = this.getTerritoryById(territoryId, branchId);
     if (!territory) throw new NotFoundError('Map territory');
     return territory;
   }
@@ -236,8 +289,18 @@ export class MapService {
     return this.getTerritoryByIdOrThrow(result.lastInsertRowid as number);
   }
 
-  updateTerritory(territoryId: number, data: UpdateMapTerritoryData): MapTerritory {
+  updateTerritory(territoryId: number, data: UpdateMapTerritoryData, branchId?: number): MapTerritory {
     this.getTerritoryByIdOrThrow(territoryId);
+    if (branchId) {
+      BranchOverlayService.saveUpsertOverride(
+        branchId,
+        'map_territory',
+        territoryId,
+        pickTerritoryPatch(data),
+      );
+      return this.getTerritoryByIdOrThrow(territoryId, branchId);
+    }
+
     const db = getDb();
     const updates: string[] = [];
     const values: unknown[] = [];
@@ -260,8 +323,13 @@ export class MapService {
     return this.getTerritoryByIdOrThrow(territoryId);
   }
 
-  deleteTerritory(territoryId: number): void {
+  deleteTerritory(territoryId: number, branchId?: number): void {
     this.getTerritoryByIdOrThrow(territoryId);
+    if (branchId) {
+      BranchOverlayService.saveDeleteOverride(branchId, 'map_territory', territoryId);
+      return;
+    }
+
     getDb().prepare('DELETE FROM map_territories WHERE id = ?').run(territoryId);
   }
 }

@@ -16,7 +16,8 @@ export const timelineApi = {
     apiClient.post<ApiResponse<TimelineEvent>>('/timeline', withBranch({ ...data })),
   update: (id: number, data: UpdateTimelineEvent) =>
     apiClient.put<ApiResponse<TimelineEvent>>(`/timeline/${id}`, withBranch({ ...data })),
-  delete: (id: number) => apiClient.delete<VoidResponse>(`/timeline/${id}`),
+  delete: (id: number) =>
+    apiClient.delete<VoidResponse>(`/timeline/${id}`, { params: withBranch({}) }),
   reorder: (projectId: number, orderedIds: number[]) =>
     apiClient.post<ApiResponse<TimelineEvent[]>>('/timeline/reorder', withBranch({ projectId, orderedIds })),
   setTags: (id: number, tagIds: number[]) => apiClient.put<ApiResponse<Tag[]>>(`/timeline/${id}/tags`, { tagIds }),

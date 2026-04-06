@@ -19,6 +19,10 @@ const listQuerySchema = z.object({
   folderId: z.union([z.coerce.number().int().positive(), z.literal('null')]).optional(),
 });
 
+const branchDeleteQuerySchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
+});
+
 router.get(
   '/',
   validateRequest({ query: listQuerySchema }),
@@ -48,7 +52,7 @@ router.put(
 
 router.delete(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: branchDeleteQuerySchema }),
   NoteController.delete
 );
 

@@ -1,4 +1,4 @@
-import { api, assertStatus, getEntityId, getEntityList, logStep, logOk } from '../lib.mjs';
+import { api, assertStatus, ensureOverlayBranch, getEntityId, getEntityList, logStep, logOk } from '../lib.mjs';
 
 export async function smokeNotes(ctx) {
   logStep('Notes CRUD');
@@ -71,4 +71,42 @@ export async function smokeNotes(ctx) {
     assertStatus(setTagsRes, 200, 'set note tags');
     logOk('Note tags assigned');
   }
+
+  const branchId = await ensureOverlayBranch(ctx);
+  const branchUpdateTitle = `Smoke Note Branch Updated ${Date.now()}`;
+
+  const branchUpdateRes = await api(`/notes/${noteId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      branchId,
+      title: branchUpdateTitle,
+    }),
+  });
+  assertStatus(branchUpdateRes, 200, 'branch update note');
+
+  const branchGetRes = await api(`/notes/${noteId}?branchId=${branchId}`);
+  assertStatus(branchGetRes, 200, 'branch get note');
+  const branchNote = branchGetRes.data?.data;
+  if (branchNote?.title !== branchUpdateTitle) {
+    throw new Error(`branch get note: expected branch title override, got ${JSON.stringify(branchGetRes.data, null, 2)}`);
+  }
+
+  const mainGetRes = await api(`/notes/${noteId}`);
+  assertStatus(mainGetRes, 200, 'main get note after branch update');
+  const mainNote = mainGetRes.data?.data;
+  if (mainNote?.title === branchUpdateTitle) {
+    throw new Error('main note changed after branch update, expected base unchanged');
+  }
+
+  const branchDeleteRes = await api(`/notes/${noteId}?branchId=${branchId}`, {
+    method: 'DELETE',
+  });
+  assertStatus(branchDeleteRes, 200, 'branch delete note');
+
+  const branchGetAfterDeleteRes = await api(`/notes/${noteId}?branchId=${branchId}`);
+  assertStatus(branchGetAfterDeleteRes, 404, 'branch get note after branch delete');
+
+  const mainGetAfterDeleteRes = await api(`/notes/${noteId}`);
+  assertStatus(mainGetAfterDeleteRes, 200, 'main get note after branch delete');
+  logOk('Notes branch overlay flow works (update/delete override)');
 }

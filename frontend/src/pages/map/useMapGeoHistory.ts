@@ -8,7 +8,7 @@ interface UseMapGeoHistoryArgs {
 }
 
 export function useMapGeoHistory({ projectId, mapId, branchId }: UseMapGeoHistoryArgs) {
-  const [geoDate, setGeoDate] = useState('');
+  const [geoDate, setGeoDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [geoEventsCount, setGeoEventsCount] = useState(0);
 
   useEffect(() => {
