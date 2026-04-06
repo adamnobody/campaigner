@@ -12,10 +12,11 @@ import type {
   FactionRelation,
   CreateFactionRelation,
   UpdateFactionRelation,
+  FactionGraph,
   Tag,
 } from '@campaigner/shared';
 import { apiClient, type ListWithTotal, type VoidResponse } from './client';
-import type { FactionGraph, FactionsListParams } from './types';
+import type { FactionsListParams } from './types';
 
 export const factionsApi = {
   getAll: (projectId: number, params?: FactionsListParams) =>

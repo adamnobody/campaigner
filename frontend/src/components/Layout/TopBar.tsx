@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   AppBar, Toolbar, Typography, IconButton, Box,
-  Breadcrumbs, Link as MuiLink, Button, Tooltip,
+  Breadcrumbs, Link as MuiLink, Button, Tooltip, FormControl, Select, MenuItem,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
@@ -15,6 +15,7 @@ import { useDynastyStore } from '@/store/useDynastyStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { SearchDialog } from '@/components/ui/SearchDialog';
 import { shallow } from 'zustand/shallow';
+import { useBranchStore } from '@/store/useBranchStore';
 
 const PAGE_LABELS: Record<string, string> = {
   map: 'Карта',
@@ -42,6 +43,12 @@ export const TopBar: React.FC = () => {
   const currentCharacter = useCharacterStore((state) => state.currentCharacter);
   const currentFaction = useFactionStore((state) => state.currentFaction);
   const currentDynasty = useDynastyStore((state) => state.currentDynasty);
+  const { branches, activeBranchId, fetchBranches, setActiveBranchId } = useBranchStore((state) => ({
+    branches: state.branches,
+    activeBranchId: state.activeBranchId,
+    fetchBranches: state.fetchBranches,
+    setActiveBranchId: state.setActiveBranchId,
+  }), shallow);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -50,6 +57,12 @@ export const TopBar: React.FC = () => {
   ]);
 
   const pathParts = location.pathname.split('/').filter(Boolean);
+
+  useEffect(() => {
+    if (currentProject?.id) {
+      fetchBranches(currentProject.id);
+    }
+  }, [currentProject?.id, fetchBranches]);
 
   const breadcrumbItems = useMemo(() => {
     const items: { label: string; path?: string }[] = [];
@@ -146,6 +159,23 @@ export const TopBar: React.FC = () => {
               )
             )}
           </Breadcrumbs>
+
+          {currentProject && (
+            <FormControl size="small" sx={{ mr: 1.5, minWidth: 130 }}>
+              <Select
+                value={activeBranchId ?? ''}
+                onChange={(e) => setActiveBranchId(Number(e.target.value))}
+                displayEmpty
+                sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem' }}
+              >
+                {branches.map((branch) => (
+                  <MenuItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
           {currentProject && (
             <Tooltip title="Поиск (Ctrl+K)">

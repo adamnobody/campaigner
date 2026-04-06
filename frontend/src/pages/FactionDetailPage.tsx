@@ -284,7 +284,13 @@ export const FactionDetailPage: React.FC = () => {
   const handleAddMember = async () => {
     if (!memberForm.characterId) return;
     try {
-      await addMember(fid, { characterId: parseInt(memberForm.characterId), rankId: memberForm.rankId ? parseInt(memberForm.rankId) : null, role: memberForm.role, joinedDate: memberForm.joinedDate, notes: memberForm.notes });
+      await addMember(fid, {
+        characterId: parseInt(memberForm.characterId),
+        rankId: memberForm.rankId ? parseInt(memberForm.rankId) : undefined,
+        role: memberForm.role,
+        joinedDate: memberForm.joinedDate,
+        notes: memberForm.notes,
+      });
       setMemberDialogOpen(false); showSnackbar('Добавлен', 'success');
     } catch (err: any) { showSnackbar(err.message || 'Ошибка', 'error'); }
   };

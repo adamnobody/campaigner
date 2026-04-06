@@ -1,16 +1,6 @@
 import { getDb } from '../db/connection';
 import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
-
-export interface WikiLink {
-  id: number;
-  projectId: number;
-  sourceNoteId: number;
-  targetNoteId: number;
-  label: string;
-  createdAt: string;
-  sourceTitle?: string;
-  targetTitle?: string;
-}
+import type { WikiLink } from '@campaigner/shared';
 
 export class WikiService {
   static getLinksForNote(noteId: number): WikiLink[] {

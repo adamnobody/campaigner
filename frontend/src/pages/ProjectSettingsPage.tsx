@@ -10,7 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
 import { PROJECT_STATUSES } from '@campaigner/shared';
-import { projectsApi } from '@/api/axiosClient';
+import { projectsApi } from '@/api/projects';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 

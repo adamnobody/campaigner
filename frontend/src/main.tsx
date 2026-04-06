@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AppThemeProvider } from './theme/AppThemeProvider';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { GlobalSnackbar } from './components/ui/GlobalSnackbar';
+import { OnboardingOverlay } from './components/onboarding/OnboardingOverlay';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -18,6 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <App />
         <ConfirmDialog />
         <GlobalSnackbar />
+        <OnboardingOverlay />
       </AppThemeProvider>
     </BrowserRouter>
   </React.StrictMode>

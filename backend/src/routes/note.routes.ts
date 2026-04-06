@@ -9,6 +9,7 @@ const router = Router();
 
 const listQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(200).optional(),
   search: z.string().optional(),
@@ -32,7 +33,7 @@ router.get(
 
 router.post(
   '/',
-  validateRequest({ body: createNoteSchema }),
+  validateRequest({ body: createNoteSchema.extend({ branchId: z.number().int().positive().optional() }) }),
   NoteController.create
 );
 
@@ -40,7 +41,7 @@ router.put(
   '/:id',
   validateRequest({
     params: idParamsSchema,
-    body: updateNoteSchema,
+    body: updateNoteSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   NoteController.update
 );

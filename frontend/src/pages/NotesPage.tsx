@@ -19,7 +19,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { tagsApi } from '@/api/axiosClient';
+import { tagsApi } from '@/api/tags';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ALLOWED_NOTE_FORMATS } from '@campaigner/shared';

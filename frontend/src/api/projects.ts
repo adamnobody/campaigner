@@ -1,6 +1,11 @@
-import type { ApiResponse, Project, CreateProject, UpdateProject } from '@campaigner/shared';
+import type {
+  ApiResponse,
+  Project,
+  CreateProject,
+  UpdateProject,
+  ImportedProjectPayload,
+} from '@campaigner/shared';
 import { apiClient } from './client';
-import type { ImportedProjectPayload } from './types';
 
 export const projectsApi = {
   getAll: () => apiClient.get<ApiResponse<Project[]>>('/projects'),
@@ -17,4 +22,5 @@ export const projectsApi = {
   },
   exportProject: (id: number) => apiClient.get<Blob>(`/projects/${id}/export`, { responseType: 'blob' }),
   importProject: (data: ImportedProjectPayload) => apiClient.post<ApiResponse<Project>>('/projects/import', data),
+  createDemoProject: () => apiClient.post<ApiResponse<Project>>('/projects/demo'),
 };

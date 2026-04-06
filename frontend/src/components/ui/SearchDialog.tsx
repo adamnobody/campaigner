@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useNavigate } from 'react-router-dom';
-import { searchApi } from '@/api/axiosClient';
+import { searchApi } from '@/api/search';
 import { useProjectStore } from '@/store/useProjectStore';
 
 interface SearchResult {

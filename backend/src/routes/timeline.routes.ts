@@ -13,11 +13,13 @@ const router = Router();
 const getAllQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
   era: z.string().optional(),
+  branchId: z.coerce.number().int().positive().optional(),
 });
 
 const reorderSchema = z.object({
   projectId: z.number().int().positive(),
   orderedIds: z.array(z.number().int().positive()),
+  branchId: z.number().int().positive().optional(),
 });
 
 router.get(
@@ -34,7 +36,7 @@ router.get(
 
 router.post(
   '/',
-  validateRequest({ body: createTimelineEventSchema }),
+  validateRequest({ body: createTimelineEventSchema.extend({ branchId: z.number().int().positive().optional() }) }),
   TimelineController.create
 );
 
@@ -42,7 +44,7 @@ router.put(
   '/:id',
   validateRequest({
     params: idParamsSchema,
-    body: updateTimelineEventSchema,
+    body: updateTimelineEventSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   TimelineController.update
 );

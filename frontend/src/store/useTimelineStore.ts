@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { TimelineEvent, CreateTimelineEvent, UpdateTimelineEvent } from '@campaigner/shared';
-import { timelineApi } from '@/api/axiosClient';
+import { timelineApi } from '@/api/timeline';
 
 interface TimelineState {
   events: TimelineEvent[];

@@ -1,6 +1,20 @@
 import { create } from 'zustand';
-import { factionsApi } from '@/api/axiosClient';
-import type { Faction, FactionRank, FactionMember, FactionRelation } from '@campaigner/shared';
+import { factionsApi } from '@/api/factions';
+import type {
+  Faction,
+  FactionRank,
+  FactionMember,
+  FactionRelation,
+  CreateFaction,
+  UpdateFaction,
+  CreateFactionRank,
+  UpdateFactionRank,
+  CreateFactionMember,
+  UpdateFactionMember,
+  CreateFactionRelation,
+  UpdateFactionRelation,
+} from '@campaigner/shared';
+import type { FactionsListParams } from '@/api/types';
 
 interface FactionState {
   factions: Faction[];
@@ -10,29 +24,29 @@ interface FactionState {
   currentFaction: Faction | null;
   relations: FactionRelation[];
 
-  fetchFactions: (projectId: number, params?: any) => Promise<void>;
+  fetchFactions: (projectId: number, params?: FactionsListParams) => Promise<void>;
   fetchFaction: (id: number) => Promise<Faction>;
-  createFaction: (data: any) => Promise<Faction>;
-  updateFaction: (id: number, data: any) => Promise<Faction>;
+  createFaction: (data: CreateFaction) => Promise<Faction>;
+  updateFaction: (id: number, data: UpdateFaction) => Promise<Faction>;
   deleteFaction: (id: number) => Promise<void>;
   uploadImage: (id: number, file: File) => Promise<Faction>;
   uploadBanner: (id: number, file: File) => Promise<Faction>;
   setTags: (id: number, tagIds: number[]) => Promise<void>;
 
   // Ranks
-  createRank: (factionId: number, data: any) => Promise<FactionRank>;
-  updateRank: (factionId: number, rankId: number, data: any) => Promise<FactionRank>;
+  createRank: (factionId: number, data: CreateFactionRank) => Promise<FactionRank>;
+  updateRank: (factionId: number, rankId: number, data: UpdateFactionRank) => Promise<FactionRank>;
   deleteRank: (factionId: number, rankId: number) => Promise<void>;
 
   // Members
-  addMember: (factionId: number, data: any) => Promise<FactionMember>;
-  updateMember: (factionId: number, memberId: number, data: any) => Promise<FactionMember>;
+  addMember: (factionId: number, data: CreateFactionMember) => Promise<FactionMember>;
+  updateMember: (factionId: number, memberId: number, data: UpdateFactionMember) => Promise<FactionMember>;
   removeMember: (factionId: number, memberId: number) => Promise<void>;
 
   // Relations
   fetchRelations: (projectId: number) => Promise<void>;
-  createRelation: (data: any) => Promise<FactionRelation>;
-  updateRelation: (relationId: number, data: any) => Promise<FactionRelation>;
+  createRelation: (data: CreateFactionRelation) => Promise<FactionRelation>;
+  updateRelation: (relationId: number, data: UpdateFactionRelation) => Promise<FactionRelation>;
   deleteRelation: (relationId: number) => Promise<void>;
 
   setCurrentFaction: (f: Faction | null) => void;

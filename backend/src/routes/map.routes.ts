@@ -35,29 +35,33 @@ const territoryIdParamsSchema = z.object({
   territoryId: z.coerce.number().int().positive(),
 });
 
+const branchQuerySchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
+});
+
 // ==================== Карты ====================
 
 router.get(
   '/projects/:projectId/maps/root',
-  validateRequest({ params: projectIdParamsSchema }),
+  validateRequest({ params: projectIdParamsSchema, query: branchQuerySchema }),
   MapController.getRootMap
 );
 
 router.get(
   '/projects/:projectId/maps/tree',
-  validateRequest({ params: projectIdParamsSchema }),
+  validateRequest({ params: projectIdParamsSchema, query: branchQuerySchema }),
   MapController.getMapTree
 );
 
 router.get(
   '/maps/:mapId',
-  validateRequest({ params: mapIdParamsSchema }),
+  validateRequest({ params: mapIdParamsSchema, query: branchQuerySchema }),
   MapController.getMapById
 );
 
 router.post(
   '/maps',
-  validateRequest({ body: createMapSchema }),
+  validateRequest({ body: createMapSchema.extend({ branchId: z.number().int().positive().optional() }) }),
   MapController.createMap
 );
 
@@ -65,7 +69,7 @@ router.put(
   '/maps/:mapId',
   validateRequest({
     params: mapIdParamsSchema,
-    body: updateMapSchema,
+    body: updateMapSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   MapController.updateMap
 );
@@ -87,7 +91,7 @@ router.post(
 
 router.get(
   '/maps/:mapId/markers',
-  validateRequest({ params: mapIdParamsSchema }),
+  validateRequest({ params: mapIdParamsSchema, query: branchQuerySchema }),
   MapController.getMarkers
 );
 
@@ -95,7 +99,7 @@ router.post(
   '/maps/:mapId/markers',
   validateRequest({
     params: mapIdParamsSchema,
-    body: createMarkerSchema,
+    body: createMarkerSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   MapController.createMarker
 );
@@ -104,7 +108,7 @@ router.put(
   '/markers/:markerId',
   validateRequest({
     params: markerIdParamsSchema,
-    body: updateMarkerSchema,
+    body: updateMarkerSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   MapController.updateMarker
 );
@@ -119,7 +123,7 @@ router.delete(
 
 router.get(
   '/maps/:mapId/territories',
-  validateRequest({ params: mapIdParamsSchema }),
+  validateRequest({ params: mapIdParamsSchema, query: branchQuerySchema }),
   MapController.getTerritories
 );
 

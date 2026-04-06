@@ -5,8 +5,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import type { Note } from '@campaigner/shared';
-import type { WikiLink } from '@/store/useWikiStore';
+import type { Note, WikiLink } from '@campaigner/shared';
 import { getPlainPreviewText } from './wikiPreviewText';
 
 type Props = {

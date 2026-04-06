@@ -63,4 +63,9 @@ export class ProjectController {
     const project = ProjectService.importProject(req.body);
     return created(res, project);
   });
+
+  static createDemo = asyncHandler(async (_req: Request, res: Response) => {
+    const project = ProjectService.createDemoProject();
+    return created(res, project);
+  });
 }

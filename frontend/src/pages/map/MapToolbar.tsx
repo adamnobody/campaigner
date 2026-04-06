@@ -58,7 +58,7 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
   territoriesCount,
   onUploadMap,
 }) => (
-  <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+  <Box data-tour="map-toolbar" display="flex" justifyContent="space-between" alignItems="center" mb={1}>
     <Box display="flex" alignItems="center" gap={1}>
       {mapBreadcrumbs.length > 1 && (
         <IconButton size="small" onClick={onNavigateToParent} sx={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -174,6 +174,7 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
         }} />
 
       <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small"
+        data-tour="map-upload"
         sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>
         Загрузить карту
         <input type="file" hidden accept="image/*" onChange={onUploadMap} />

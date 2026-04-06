@@ -21,6 +21,8 @@ import dogmaRoutes from './routes/dogma.routes.js';
 import factionRoutes from './routes/faction.routes.js';
 import wikiRoutes from './routes/wiki.routes.js';
 import dynastyRoutes from './routes/dynasty.routes.js';
+import branchRoutes from './routes/branch.routes.js';
+import geoStoryRoutes from './routes/geoStory.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,6 +75,8 @@ app.use('/api/wiki', wikiRoutes);
 app.use('/api/dogmas', dogmaRoutes);
 app.use('/api/factions', factionRoutes);
 app.use('/api/dynasties', dynastyRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/geo-story', geoStoryRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -137,6 +137,7 @@ export const Sidebar: React.FC = () => {
               return (
                 <ListItemButton
                   key={item.path}
+                  data-tour={item.path === 'characters' ? 'sidebar-characters' : item.path === 'notes' ? 'sidebar-notes' : undefined}
                   selected={isActive}
                   onClick={() => navigate(fullPath)}
                   sx={{

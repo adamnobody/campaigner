@@ -12,7 +12,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import { useParams } from 'react-router-dom';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { useUIStore } from '@/store/useUIStore';
-import { tagsApi } from '@/api/axiosClient';
+import { tagsApi } from '@/api/tags';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useDebounce } from '@/hooks/useDebounce';

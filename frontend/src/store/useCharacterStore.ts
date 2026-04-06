@@ -4,7 +4,9 @@ import {
   CharacterRelationship, CreateRelationship,
   CharacterGraph
 } from '@campaigner/shared';
-import { charactersApi } from '@/api/axiosClient';
+import { charactersApi } from '@/api/characters';
+import type { CharacterListParams } from '@/api/types';
+import { getErrorMessage } from '@/utils/error';
 
 interface CharacterState {
   characters: Character[];
@@ -16,7 +18,7 @@ interface CharacterState {
   initialized: boolean;
   error: string | null;
 
-  fetchCharacters: (projectId: number, params?: any) => Promise<void>;
+  fetchCharacters: (projectId: number, params?: CharacterListParams) => Promise<void>;
   fetchCharacter: (id: number) => Promise<void>;
   createCharacter: (data: CreateCharacter) => Promise<Character>;
   updateCharacter: (id: number, data: UpdateCharacter) => Promise<void>;
@@ -54,8 +56,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
         loading: false,
         initialized: true,
       });
-    } catch (error: any) {
-      set({ error: error.message, loading: false, initialized: true });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch characters'), loading: false, initialized: true });
     }
   },
 
@@ -64,8 +66,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     try {
       const res = await charactersApi.getById(id);
       set({ currentCharacter: res.data.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch character'), loading: false });
     }
   },
 
@@ -80,8 +82,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
         loading: false,
       }));
       return character;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create character'), loading: false });
       throw error;
     }
   },
@@ -95,8 +97,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
         characters: state.characters.map(c => c.id === id ? updated : c),
         currentCharacter: state.currentCharacter?.id === id ? updated : state.currentCharacter,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update character') });
       throw error;
     }
   },
@@ -110,8 +112,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
         total: state.total - 1,
         currentCharacter: state.currentCharacter?.id === id ? null : state.currentCharacter,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete character') });
       throw error;
     }
   },
@@ -125,8 +127,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
         characters: state.characters.map(c => c.id === id ? updated : c),
         currentCharacter: state.currentCharacter?.id === id ? updated : state.currentCharacter,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to upload image') });
       throw error;
     }
   },
@@ -141,8 +143,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
         characters: state.characters.map(c => c.id === id ? updated : c),
         currentCharacter: state.currentCharacter?.id === id ? updated : state.currentCharacter,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update tags') });
       throw error;
     }
   },
@@ -151,8 +153,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     try {
       const res = await charactersApi.getRelationships(projectId);
       set({ relationships: res.data.data });
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch relationships') });
     }
   },
 
@@ -163,8 +165,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
       set(state => ({
         relationships: [...state.relationships, res.data.data],
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create relationship') });
       throw error;
     }
   },
@@ -176,8 +178,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
       set(state => ({
         relationships: state.relationships.filter(r => r.id !== id),
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete relationship') });
       throw error;
     }
   },
@@ -186,8 +188,8 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     try {
       const res = await charactersApi.getGraph(projectId);
       set({ graph: res.data.data });
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch character graph') });
     }
   },
 

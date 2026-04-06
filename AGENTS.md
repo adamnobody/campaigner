@@ -97,3 +97,39 @@ $env:API_BASE="http://localhost:3001/api"; npm run smoke
 2. TypeScript-сборка пакетов проходит.
 3. По возможности прогнать smoke или описать, почему сценарий не применим.
 4. Поведение UI и API для затронутых сценариев сохранено.
+
+### Структурные соглашения
+
+Для структурных изменений, перемещения файлов, выбора между shared и domain-local кодом, а также для правил импортов API см.:
+
+- `docs/architecture/conventions.md`
+
+- **Canonical API imports**:
+  - транспортный слой — `frontend/src/api/client.ts`
+  - доменные API — `frontend/src/api/<domain>.ts`
+  - `frontend/src/api/axiosClient.ts` — **только compatibility layer для legacy-кода**
+- В **новом коде** не импортировать доменные API через `axiosClient.ts`.
+- Не добавлять новые re-export доменных клиентов в `axiosClient.ts`, если нет явной необходимости для мягкой миграции.
+
+- **Размещение кода**:
+  - `frontend/src/components/ui/*` — только переиспользуемые domain-agnostic UI-примитивы
+  - `frontend/src/components/forms/*` — только переиспользуемые form-компоненты
+  - `frontend/src/components/Layout/*` — глобальный layout/navigation shell
+  - `frontend/src/pages/<domain>/*` — route-level страница и весь domain-local код: подкомпоненты, хуки, утилиты, локальные стили/константы
+- Если компонент используется только внутри одного домена/маршрута, его **не нужно** поднимать в глобальные `components/*`.
+
+- **Сторы (`frontend/src/store/*`)**:
+  - хранить там только global/cross-page state или доменный state, реально используемый несколькими экранами
+  - не выносить в Zustand page-local modal state, локальные draft'ы форм, временные фильтры и другой ephemeral UI state без явной причины
+
+- **Именование**:
+  - доменные папки — `kebab-case`
+  - React-компоненты — `PascalCase.tsx`
+  - hooks — `useXxx.ts`
+  - stores — `useXxxStore.ts`
+  - utility/helper файлы — `camelCase.ts`
+
+- **Refactor policy**:
+  - предпочитать маленькие PR и минимальный diff
+  - giant files декомпозировать постепенно (strangler pattern), а не переписывать целиком
+  - не переносить файлы “на будущее”, если переиспользование пока не подтверждено

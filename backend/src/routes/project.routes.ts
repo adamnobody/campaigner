@@ -83,4 +83,6 @@ router.post(
   ProjectController.import
 );
 
+router.post('/demo', ProjectController.createDemo);
+
 export default router;

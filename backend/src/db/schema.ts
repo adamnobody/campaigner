@@ -366,6 +366,75 @@ export function createTables(db: Database.Database): void {
       FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE SET NULL
     );
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS scenario_branches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      parent_branch_id INTEGER,
+      base_revision INTEGER DEFAULT 0,
+      is_main INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_branch_id) REFERENCES scenario_branches(id) ON DELETE SET NULL,
+      UNIQUE(project_id, name)
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS branch_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      branch_id INTEGER NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER NOT NULL,
+      op TEXT NOT NULL CHECK(op IN ('upsert', 'delete', 'create')),
+      patch_json TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (branch_id) REFERENCES scenario_branches(id) ON DELETE CASCADE,
+      UNIQUE(branch_id, entity_type, entity_id)
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS branch_local_entities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      branch_id INTEGER NOT NULL,
+      entity_type TEXT NOT NULL,
+      local_id TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (branch_id) REFERENCES scenario_branches(id) ON DELETE CASCADE,
+      UNIQUE(branch_id, entity_type, local_id)
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS geo_story_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      branch_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      event_date TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      map_id INTEGER,
+      territory_id INTEGER,
+      action_type TEXT NOT NULL,
+      payload_json TEXT NOT NULL DEFAULT '{}',
+      linked_note_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (branch_id) REFERENCES scenario_branches(id) ON DELETE CASCADE,
+      FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE SET NULL,
+      FOREIGN KEY (territory_id) REFERENCES map_territories(id) ON DELETE SET NULL,
+      FOREIGN KEY (linked_note_id) REFERENCES notes(id) ON DELETE SET NULL
+    );
+  `);
 }
 
 export function createIndexes(db: Database.Database): void {
@@ -424,5 +493,12 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_dynasty_family_links_dynasty ON dynasty_family_links(dynasty_id);
     CREATE INDEX IF NOT EXISTS idx_dynasty_events_dynasty ON dynasty_events(dynasty_id);
     CREATE INDEX IF NOT EXISTS idx_dynasty_events_sort ON dynasty_events(dynasty_id, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_branches_project ON scenario_branches(project_id);
+    CREATE INDEX IF NOT EXISTS idx_branches_parent ON scenario_branches(parent_branch_id);
+    CREATE INDEX IF NOT EXISTS idx_branch_overrides_branch_entity ON branch_overrides(branch_id, entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_branch_local_branch_entity ON branch_local_entities(branch_id, entity_type);
+    CREATE INDEX IF NOT EXISTS idx_geo_story_branch_date ON geo_story_events(branch_id, event_date, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_geo_story_map ON geo_story_events(map_id);
+    CREATE INDEX IF NOT EXISTS idx_geo_story_territory ON geo_story_events(territory_id);
   `);
 }

@@ -5,7 +5,8 @@ import { MapService } from './map.service.js';
 import { buildUpdateQuery } from '../utils/dbHelpers';
 import { exportProject } from './project/projectExport.service';
 import { importProject } from './project/projectImport.service';
-import type { ImportedProjectPayload } from './project/project.types';
+import type { ImportedProjectPayload } from '@campaigner/shared';
+import { demoProjectPayload } from './project/demoProject.payload';
 
 const PROJECT_UPDATE_MAP: Record<string, string> = {
   name: 'name',
@@ -43,6 +44,10 @@ export class ProjectService {
     `).run(data.name, data.description || '', data.status || 'active');
 
     const projectId = result.lastInsertRowid as number;
+    db.prepare(`
+      INSERT INTO scenario_branches (project_id, name, is_main)
+      VALUES (?, 'main', 1)
+    `).run(projectId);
     const mapService = new MapService();
     mapService.createRootMapForProject(projectId);
 
@@ -76,5 +81,9 @@ export class ProjectService {
 
   static importProject(data: ImportedProjectPayload): Project {
     return importProject(data);
+  }
+
+  static createDemoProject(): Project {
+    return importProject(demoProjectPayload);
   }
 }

@@ -11,6 +11,7 @@ import {
   createFactionMemberSchema,
   updateFactionMemberSchema,
   createFactionRelationSchema,
+  updateFactionRelationSchema,
 } from '@campaigner/shared';
 import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas';
 
@@ -42,14 +43,6 @@ const getAllQuerySchema = z.object({
   search: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().min(0).optional(),
-});
-
-const updateRelationSchema = z.object({
-  relationType: z.string().min(1).max(50).optional(),
-  customLabel: z.string().max(200).optional(),
-  description: z.string().max(2000).optional(),
-  startedDate: z.string().max(100).optional(),
-  isBidirectional: z.boolean().optional(),
 });
 
 // ==================== CRUD ====================
@@ -202,7 +195,7 @@ router.put(
   '/relations/:relationId',
   validateRequest({
     params: relationParamsSchema,
-    body: updateRelationSchema,
+    body: updateFactionRelationSchema,
   }),
   FactionController.updateRelation
 );

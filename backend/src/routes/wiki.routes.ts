@@ -1,26 +1,14 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { WikiController } from '../controllers/wiki.controller';
 import { validateRequest } from '../middleware/validateRequest';
+import { createWikiLinkSchema, getWikiLinksQuerySchema } from '@campaigner/shared';
 import { idParamsSchema, projectIdQuerySchema } from './commonSchemas';
 
 const router = Router();
 
-const getLinksQuerySchema = z.object({
-  projectId: z.coerce.number().int().positive(),
-  noteId: z.coerce.number().int().positive().optional(),
-});
-
-const createWikiLinkSchema = z.object({
-  projectId: z.number().int().positive(),
-  sourceNoteId: z.number().int().positive(),
-  targetNoteId: z.number().int().positive(),
-  label: z.string().max(200).optional().default(''),
-});
-
 router.get(
   '/links',
-  validateRequest({ query: getLinksQuerySchema }),
+  validateRequest({ query: getWikiLinksQuerySchema }),
   WikiController.getLinks
 );
 
