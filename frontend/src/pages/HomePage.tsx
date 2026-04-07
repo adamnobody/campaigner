@@ -501,35 +501,44 @@ export const HomePage: React.FC = () => {
                 Создайте первый проект, чтобы начать увлекательное путешествие по построению вашей вселенной.
               </Typography>
 
-              <DndButton
-                variant="contained"
-                size="large"
-                startIcon={<AddIcon />}
-                onClick={() => setCreateDialogOpen(true)}
+              <Box
                 sx={{
-                  px: 4,
-                  py: 1.5,
-                  fontWeight: 700,
-                  fontSize: '1rem',
-                  letterSpacing: '0.05em',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                  boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
-                  '&:hover': {
-                    transform: 'translateY(-3px)',
-                    boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.5)}`,
-                  },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 1.5,
                 }}
               >
-                ⚔️ Создать первый проект
-              </DndButton>
-              <DndButton
-                variant="outlined"
-                size="large"
-                onClick={handleCreateTutorialProject}
-                sx={{ mt: 1.5, px: 4, py: 1.5, fontWeight: 700, fontSize: '1rem' }}
-              >
-                🎓 Обучающая кампания
-              </DndButton>
+                <DndButton
+                  variant="contained"
+                  size="large"
+                  startIcon={<AddIcon />}
+                  onClick={() => setCreateDialogOpen(true)}
+                  sx={{
+                    px: 4,
+                    py: 1.5,
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    letterSpacing: '0.05em',
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                    '&:hover': {
+                      transform: 'translateY(-3px)',
+                      boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.5)}`,
+                    },
+                  }}
+                >
+                  ⚔️ Создать первый проект
+                </DndButton>
+                <DndButton
+                  variant="outlined"
+                  size="large"
+                  onClick={handleCreateTutorialProject}
+                  sx={{ px: 4, py: 1.5, fontWeight: 700, fontSize: '1rem' }}
+                >
+                  🎓 Обучающая кампания
+                </DndButton>
+              </Box>
             </GlassCard>
           )}
         </Container>
