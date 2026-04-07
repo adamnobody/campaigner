@@ -57,3 +57,7 @@ ehthumbs.db
 .temp/
 .tmp/
 coverage/
+.cursor/
+AGENTS.md
+PROJECT_TREE.md
+docs/
