@@ -2,6 +2,7 @@ import { getDb } from '../db/connection';
 import { CreateProject, UpdateProject, Project } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler';
 import { MapService } from './map.service.js';
+import { CharacterTraitService } from './character-trait.service.js';
 import { buildUpdateQuery } from '../utils/dbHelpers';
 import { exportProject } from './project/projectExport.service';
 import { importProject } from './project/projectImport.service';
@@ -50,6 +51,7 @@ export class ProjectService {
     `).run(projectId);
     const mapService = new MapService();
     mapService.createRootMapForProject(projectId);
+    CharacterTraitService.seedPredefined(projectId);
 
     return this.getById(projectId);
   }
