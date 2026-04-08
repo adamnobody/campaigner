@@ -175,72 +175,151 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
           cursor: 'pointer',
           display: 'flex',
           flexDirection: 'column',
-          p: 1.5,
-          bgcolor:
-            theme.palette.mode === 'dark'
-              ? alpha(theme.palette.primary.main, 0.06)
-              : alpha(theme.palette.primary.main, 0.05),
           border: `1px solid ${theme.palette.divider}`,
           boxSizing: 'border-box',
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, flexShrink: 0 }}>
-          {name}
-        </Typography>
+        {!imageFailed ? (
+          <>
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 0,
+                overflow: 'hidden',
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  width: '110%',
+                  height: '110%',
+                  transform: 'translate(-50%, -50%) scale(1.1)',
+                  backgroundImage: `url(${imageSrc})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(8px)',
+                }}
+              />
+            </Box>
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 1,
+                bgcolor:
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(0, 0, 0, 0.55)'
+                    : 'rgba(0, 0, 0, 0.45)',
+              }}
+            />
+          </>
+        ) : (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              bgcolor: alpha(theme.palette.primary.main, 0.15),
+            }}
+          />
+        )}
         <Box
           sx={{
+            position: 'relative',
+            zIndex: 2,
             flex: 1,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'auto',
+            flexDirection: 'column',
+            p: 1.5,
             minHeight: 0,
-            px: 0.5,
           }}
         >
-          <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', lineHeight: 1.5 }}>
-            {description}
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 700,
+              mb: 1,
+              flexShrink: 0,
+              color: imageFailed ? 'text.primary' : '#fff',
+            }}
+          >
+            {name}
           </Typography>
-        </Box>
-        <Box sx={{ pt: 1.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-          {isAttached ? (
-            <Tooltip
-              title="Сначала сохраните персонажа"
-              disableHoverListener={!attachActionsDisabled}
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'auto',
+              minHeight: 0,
+              px: 0.5,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                color: imageFailed ? 'text.secondary' : '#fff',
+                textAlign: 'center',
+                lineHeight: 1.5,
+              }}
             >
-              <span>
-                <Button
-                  fullWidth
-                  size="small"
-                  variant="outlined"
-                  color="inherit"
-                  disabled={attachActionsDisabled}
-                  onClick={handleToggleClick}
-                  sx={{ borderColor: alpha(theme.palette.text.primary, 0.25) }}
-                >
-                  Открепить
-                </Button>
-              </span>
-            </Tooltip>
-          ) : (
-            <Tooltip
-              title="Сначала сохраните персонажа"
-              disableHoverListener={!attachActionsDisabled}
-            >
-              <span style={{ display: 'block', width: '100%' }}>
-                <Button
-                  fullWidth
-                  size="small"
-                  variant="contained"
-                  color="primary"
-                  disabled={attachActionsDisabled}
-                  onClick={handleToggleClick}
-                >
-                  Прикрепить
-                </Button>
-              </span>
-            </Tooltip>
-          )}
+              {description}
+            </Typography>
+          </Box>
+          <Box sx={{ pt: 1.5, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+            {isAttached ? (
+              <Tooltip
+                title="Сначала сохраните персонажа"
+                disableHoverListener={!attachActionsDisabled}
+              >
+                <span>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    disabled={attachActionsDisabled}
+                    onClick={handleToggleClick}
+                    sx={
+                      imageFailed
+                        ? { borderColor: alpha(theme.palette.text.primary, 0.25) }
+                        : {
+                            borderColor: 'rgba(255,255,255,0.7)',
+                            color: 'rgba(255,255,255,0.7)',
+                            '&:hover': {
+                              borderColor: 'rgba(255,255,255,0.9)',
+                              bgcolor: 'rgba(255,255,255,0.08)',
+                            },
+                          }
+                    }
+                  >
+                    Открепить
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : (
+              <Tooltip
+                title="Сначала сохраните персонажа"
+                disableHoverListener={!attachActionsDisabled}
+              >
+                <span style={{ display: 'block', width: '100%' }}>
+                  <Button
+                    fullWidth
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    disabled={attachActionsDisabled}
+                    onClick={handleToggleClick}
+                  >
+                    Прикрепить
+                  </Button>
+                </span>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
       </Box>
     </Box>
