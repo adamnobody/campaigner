@@ -3,10 +3,10 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import type { Map, CreateMap, UpdateMap, MapMarker, CreateMarker, UpdateMarker } from '@campaigner/shared';
-import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
-import type { MapTerritory, CreateMapTerritoryData, UpdateMapTerritoryData, TerritoryRawRow } from './map/map.types';
-import { parseTerritoryRings, serializeTerritoryRings } from './map/map.types';
-import { BranchOverlayService } from './branchOverlay.service';
+import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
+import type { MapTerritory, CreateMapTerritoryData, UpdateMapTerritoryData, TerritoryRawRow } from './map/map.types.js';
+import { parseTerritoryRings, serializeTerritoryRings } from './map/map.types.js';
+import { BranchOverlayService } from './branchOverlay.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
-import { ProjectService } from '../services/project.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created, noContent } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
-import { BadRequestError } from '../middleware/errorHandler';
+import { ProjectService } from '../services/project.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created, noContent } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
 
 export class ProjectController {
   static getAll = asyncHandler(async (_req: Request, res: Response) => {

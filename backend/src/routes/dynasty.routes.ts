@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { DynastyController } from '../controllers/dynasty.controller';
-import { validateRequest } from '../middleware/validateRequest';
-import { createDiskUpload } from '../middleware/createUpload';
+import { DynastyController } from '../controllers/dynasty.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { createDiskUpload } from '../middleware/createUpload.js';
 import {
   createDynastySchema,
   updateDynastySchema,
@@ -12,7 +12,7 @@ import {
   createDynastyEventSchema,
   updateDynastyEventSchema,
 } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema } from './commonSchemas';
+import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
 
 const router = Router();
 const upload = createDiskUpload({

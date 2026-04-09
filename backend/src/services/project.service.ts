@@ -1,12 +1,13 @@
-import { getDb } from '../db/connection';
+import { getDb } from '../db/connection.js';
 import { CreateProject, UpdateProject, Project } from '@campaigner/shared';
-import { NotFoundError } from '../middleware/errorHandler';
+import { NotFoundError } from '../middleware/errorHandler.js';
 import { MapService } from './map.service.js';
-import { buildUpdateQuery } from '../utils/dbHelpers';
-import { exportProject } from './project/projectExport.service';
-import { importProject } from './project/projectImport.service';
+import { CharacterTraitService } from './character-trait.service.js';
+import { buildUpdateQuery } from '../utils/dbHelpers.js';
+import { exportProject } from './project/projectExport.service.js';
+import { importProject } from './project/projectImport.service.js';
 import type { ImportedProjectPayload } from '@campaigner/shared';
-import { demoProjectPayload } from './project/demoProject.payload';
+import { demoProjectPayload } from './project/demoProject.payload.js';
 
 const PROJECT_UPDATE_MAP: Record<string, string> = {
   name: 'name',
@@ -50,6 +51,7 @@ export class ProjectService {
     `).run(projectId);
     const mapService = new MapService();
     mapService.createRootMapForProject(projectId);
+    CharacterTraitService.seedPredefined(projectId);
 
     return this.getById(projectId);
   }

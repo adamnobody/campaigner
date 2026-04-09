@@ -17,6 +17,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 
 export const CharactersPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -230,7 +231,7 @@ export const CharactersPage: React.FC = () => {
 
                 {ch.imagePath ? (
                   <Avatar
-                    src={ch.imagePath}
+                    src={uploadAssetUrl(ch.imagePath)}
                     sx={{ width: 52, height: 52, borderRadius: 1.5 }}
                     variant="rounded"
                   />

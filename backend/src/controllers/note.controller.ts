@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
-import { NoteService } from '../services/note.service';
-import { TagService } from '../services/tag.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
-import { BadRequestError } from '../middleware/errorHandler';
+import { NoteService } from '../services/note.service.js';
+import { TagService } from '../services/tag.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
 
 export class NoteController {
   private static parseBranchId(input: unknown): number | undefined {

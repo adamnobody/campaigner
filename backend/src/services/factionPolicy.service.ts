@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection';
-import { NotFoundError } from '../middleware/errorHandler';
-import { buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers';
+import { getDb } from '../db/connection.js';
+import { NotFoundError } from '../middleware/errorHandler.js';
+import { buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
 import type { CreateFactionPolicy, UpdateFactionPolicy } from '@campaigner/shared';
 
 type FactionPolicyRow = {

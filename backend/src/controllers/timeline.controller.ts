@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
-import { TimelineService } from '../services/timeline.service';
-import { TagService } from '../services/tag.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
-import { BadRequestError } from '../middleware/errorHandler';
+import { TimelineService } from '../services/timeline.service.js';
+import { TagService } from '../services/tag.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
 
 export class TimelineController {
   private static parseBranchId(input: unknown): number | undefined {

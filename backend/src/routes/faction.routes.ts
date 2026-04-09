@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { FactionController } from '../controllers/faction.controller';
-import { validateRequest } from '../middleware/validateRequest';
-import { createDiskUpload } from '../middleware/createUpload';
+import { FactionController } from '../controllers/faction.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { createDiskUpload } from '../middleware/createUpload.js';
 import {
   createFactionSchema,
   updateFactionSchema,
@@ -18,7 +18,7 @@ import {
   createFactionPolicyBodySchema,
   updateFactionPolicySchema,
 } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas';
+import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas.js';
 
 const router = Router();
 const upload = createDiskUpload({

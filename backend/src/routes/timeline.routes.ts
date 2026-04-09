@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { TimelineController } from '../controllers/timeline.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { TimelineController } from '../controllers/timeline.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 import {
   createTimelineEventSchema,
   updateTimelineEventSchema,
 } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema } from './commonSchemas';
+import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
 
 const router = Router();
 

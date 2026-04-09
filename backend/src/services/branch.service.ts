@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection';
+import { getDb } from '../db/connection.js';
 import type { CreateScenarioBranch, ScenarioBranch, UpdateScenarioBranch } from '@campaigner/shared';
-import { NotFoundError } from '../middleware/errorHandler';
+import { NotFoundError } from '../middleware/errorHandler.js';
 
 export class BranchService {
   static getAll(projectId: number): ScenarioBranch[] {

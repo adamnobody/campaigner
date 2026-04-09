@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getTags, createTag, deleteTag } from '../controllers/tag.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { getTags, createTag, deleteTag } from '../controllers/tag.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 
 const router = Router();
 

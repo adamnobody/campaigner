@@ -18,7 +18,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import FaceIcon from '@mui/icons-material/Face';
+import PsychologyIcon from '@mui/icons-material/Psychology';
 import { useParams, useNavigate } from 'react-router-dom';
+import { CharacterTraitsTab } from '@/pages/character/CharacterTraitsTab';
+import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { useUIStore } from '@/store/useUIStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
@@ -224,7 +227,7 @@ export const CharacterDetailPage: React.FC = () => {
     try {
       const payload = {
         name: form.name.trim(), title: form.title.trim(), bio: form.bio.trim(),
-        appearance: form.appearance.trim(), personality: form.personality.trim(),
+        appearance: form.appearance.trim(),
         backstory: form.backstory.trim(), notes: form.notes.trim(),
       };
       const finalTags = mergeTagValues(form.tagsStr, tagsInput);
@@ -292,7 +295,7 @@ export const CharacterDetailPage: React.FC = () => {
       <EntityHeroLayout
         avatarNode={
           currentCharacter?.imagePath ? (
-            <Avatar src={currentCharacter.imagePath} sx={{ width: 140, height: 140, borderRadius: 3 }} variant="rounded" />
+            <Avatar src={uploadAssetUrl(currentCharacter.imagePath)} sx={{ width: 140, height: 140, borderRadius: 3 }} variant="rounded" />
           ) : (
             <Avatar sx={{ width: 140, height: 140, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }} variant="rounded">
               <PersonIcon sx={{ fontSize: 64 }} />
@@ -316,6 +319,7 @@ export const CharacterDetailPage: React.FC = () => {
         onChange={(_, v) => setActiveTab(v)}
         tabs={[
           { value: 'overview', label: 'Обзор', icon: <EditIcon fontSize="small" /> },
+          { value: 'traits', label: 'Характер', icon: <PsychologyIcon fontSize="small" /> },
           { value: 'relations', label: 'Связи', icon: <GroupsIcon fontSize="small" /> },
         ]}
       />
@@ -377,14 +381,11 @@ export const CharacterDetailPage: React.FC = () => {
               </Grid>
             </Section>
 
-            {/* Appearance & Personality */}
-            <Section title="Внешность и характер" icon={<FaceIcon />} defaultOpen={!isNew && (!!form.appearance || !!form.personality)}>
+            {/* Appearance */}
+            <Section title="Внешность" icon={<FaceIcon />} defaultOpen={!isNew && !!form.appearance}>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <TextField fullWidth label="Внешность" value={form.appearance} onChange={e => handleChange('appearance', e.target.value)} multiline rows={5} placeholder="Опишите внешний вид персонажа..." />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField fullWidth label="Характер" value={form.personality} onChange={e => handleChange('personality', e.target.value)} multiline rows={5} placeholder="Черты характера, привычки, мотивации..." />
                 </Grid>
               </Grid>
             </Section>
@@ -402,6 +403,10 @@ export const CharacterDetailPage: React.FC = () => {
             </Section>
           </Box>
         </Box>
+      )}
+
+      {activeTab === 'traits' && (
+        <CharacterTraitsTab projectId={pid} characterId={isNew ? null : cid} />
       )}
 
       {activeTab === 'relations' && (

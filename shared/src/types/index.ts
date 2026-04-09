@@ -89,6 +89,10 @@ import {
   createDynastyEventSchema,
   updateDynastyEventSchema,
 } from '../schemas/dynasty.schema.js';
+import {
+  characterTraitSchema,
+  createCharacterTraitBodySchema,
+} from '../schemas/character-trait.schema.js';
 
 // ==================== Project ====================
 export type Project = z.infer<typeof projectSchema>;
@@ -104,6 +108,10 @@ export type UpdateCharacter = z.input<typeof updateCharacterSchema>;
 export type CharacterRelationship = z.infer<typeof characterRelationshipSchema>;
 export type CreateRelationship = z.input<typeof createRelationshipSchema>;
 export type UpdateRelationship = z.input<typeof updateRelationshipSchema>;
+
+// ==================== Character traits ====================
+export type CharacterTrait = z.infer<typeof characterTraitSchema>;
+export type CreateCharacterTrait = z.input<typeof createCharacterTraitBodySchema>;
 
 // ==================== Note ====================
 export type Note = z.infer<typeof noteSchema>;

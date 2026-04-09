@@ -1,7 +1,8 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { BadRequestError } from './errorHandler';
+import { fileURLToPath } from 'url';
+import { BadRequestError } from './errorHandler.js';
 
 const DEFAULT_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.svg'];
 const DEFAULT_ALLOWED_MIME_TYPES = [
@@ -44,7 +45,12 @@ export function createDiskUpload(options: CreateDiskUploadOptions) {
     filenamePrefix = 'upload',
   } = options;
 
-  const uploadDir = path.resolve(`data/uploads/${folder}`);
+  // Must match backend/src/index.ts: dataDir = path.resolve(__dirname, '../../data') + '/uploads'.
+  // Do NOT use path.resolve('data/uploads/...') — that is relative to process.cwd() and writes to
+  // backend/data/uploads when cwd is backend/, while static serving uses repo-root data/uploads/.
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uploadDir = path.resolve(__dirname, '../../../data/uploads', folder);
   ensureDirExists(uploadDir);
 
   const storage = multer.diskStorage({

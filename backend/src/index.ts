@@ -5,9 +5,9 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import fs from 'fs';
 
-import { initializeDatabase } from './db/connection';
-import { errorHandler } from './middleware/errorHandler';
-import { getRequestMetricsSnapshot, requestMetricsMiddleware } from './middleware/requestMetrics';
+import { initializeDatabase } from './db/connection.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { getRequestMetricsSnapshot, requestMetricsMiddleware } from './middleware/requestMetrics.js';
 
 import projectRoutes from './routes/project.routes.js';
 import characterRoutes from './routes/character.routes.js';
@@ -22,6 +22,7 @@ import factionRoutes from './routes/faction.routes.js';
 import wikiRoutes from './routes/wiki.routes.js';
 import dynastyRoutes from './routes/dynasty.routes.js';
 import branchRoutes from './routes/branch.routes.js';
+import characterTraitRoutes from './routes/character-traits.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -96,6 +97,7 @@ app.use('/api/dogmas', dogmaRoutes);
 app.use('/api/factions', factionRoutes);
 app.use('/api/dynasties', dynastyRoutes);
 app.use('/api/branches', branchRoutes);
+app.use('/api/character-traits', characterTraitRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

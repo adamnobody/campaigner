@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
-import { CharacterService } from '../services/character.service';
-import { TagService } from '../services/tag.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
-import { BadRequestError } from '../middleware/errorHandler';
+import { CharacterService } from '../services/character.service.js';
+import { TagService } from '../services/tag.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
 
 export class CharacterController {
   static getAll = asyncHandler(async (req: Request, res: Response) => {

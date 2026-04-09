@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import { MapController } from '../controllers/map.controller.js';
-import { validateRequest } from '../middleware/validateRequest';
+import { validateRequest } from '../middleware/validateRequest.js';
 import {
   createMapSchema,
   updateMapSchema,

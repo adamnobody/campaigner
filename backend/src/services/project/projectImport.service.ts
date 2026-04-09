@@ -1,9 +1,9 @@
-import { getDb } from '../../db/connection';
-import { ValidationError } from '../../middleware/errorHandler';
+import { getDb } from '../../db/connection.js';
+import { ValidationError } from '../../middleware/errorHandler.js';
 import { MapService } from '../map.service.js';
-import { ProjectService } from '../project.service';
-import { saveBase64ToFile } from './assetHelpers';
-import type { ImportedProjectPayload } from './project.types';
+import { ProjectService } from '../project.service.js';
+import { saveBase64ToFile } from './assetHelpers.js';
+import type { ImportedProjectPayload } from './project.types.js';
 import type { Project } from '@campaigner/shared';
 
 export function importProject(data: ImportedProjectPayload): Project {

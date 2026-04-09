@@ -1,4 +1,4 @@
-import type { DynastyRow, DynastyMemberRow, DynastyFamilyLinkRow, DynastyEventRow } from './dynasty.types';
+import type { DynastyRow, DynastyMemberRow, DynastyFamilyLinkRow, DynastyEventRow } from './dynasty.types.js';
 
 export const DYNASTY_UPDATE_MAP: Record<string, string> = {
   name: 'name',

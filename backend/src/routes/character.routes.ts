@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { CharacterController } from '../controllers/character.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { CharacterController } from '../controllers/character.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 import {
   createCharacterSchema,
   updateCharacterSchema,
   createRelationshipSchema,
   updateRelationshipSchema,
 } from '@campaigner/shared';
-import { uploadCharacterImage } from '../middleware/upload';
-import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas';
+import { uploadCharacterImage } from '../middleware/upload.js';
+import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas.js';
 
 const router = Router();
 

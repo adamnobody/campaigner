@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { DogmaController } from '../controllers/dogma.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { DogmaController } from '../controllers/dogma.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 import { createDogmaSchema, updateDogmaSchema } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema } from './commonSchemas';
+import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
 
 const router = Router();
 

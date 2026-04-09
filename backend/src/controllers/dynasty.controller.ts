@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
-import { DynastyService } from '../services/dynasty.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
-import { BadRequestError } from '../middleware/errorHandler';
+import { DynastyService } from '../services/dynasty.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
 
 export class DynastyController {
   static getAll = asyncHandler(async (req: Request, res: Response) => {
