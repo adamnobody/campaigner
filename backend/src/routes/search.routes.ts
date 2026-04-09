@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { SearchController } from '../controllers/search.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { SearchController } from '../controllers/search.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 
 const router = Router();
 

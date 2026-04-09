@@ -1,4 +1,4 @@
-import { getDb } from '../db/connection';
+import { getDb } from '../db/connection.js';
 import {
   CreateCharacter,
   UpdateCharacter,
@@ -9,9 +9,9 @@ import {
   CharacterGraph,
   Pagination,
 } from '@campaigner/shared';
-import { NotFoundError } from '../middleware/errorHandler';
-import { TagService } from './tag.service';
-import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers';
+import { NotFoundError } from '../middleware/errorHandler.js';
+import { TagService } from './tag.service.js';
+import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
 
 type CharacterStatus = Character['status'];
 

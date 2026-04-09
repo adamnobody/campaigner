@@ -1,4 +1,4 @@
-import { initializeDatabase, closeDatabase } from './connection';
+import { initializeDatabase, closeDatabase } from './connection.js';
 
 console.log('Running database migrations...');
 initializeDatabase();

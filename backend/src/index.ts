@@ -5,9 +5,9 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import fs from 'fs';
 
-import { initializeDatabase } from './db/connection';
-import { errorHandler } from './middleware/errorHandler';
-import { getRequestMetricsSnapshot, requestMetricsMiddleware } from './middleware/requestMetrics';
+import { initializeDatabase } from './db/connection.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { getRequestMetricsSnapshot, requestMetricsMiddleware } from './middleware/requestMetrics.js';
 
 import projectRoutes from './routes/project.routes.js';
 import characterRoutes from './routes/character.routes.js';

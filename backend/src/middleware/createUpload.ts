@@ -2,7 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { BadRequestError } from './errorHandler';
+import { BadRequestError } from './errorHandler.js';
 
 const DEFAULT_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.svg'];
 const DEFAULT_ALLOWED_MIME_TYPES = [

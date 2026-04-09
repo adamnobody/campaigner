@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { CharacterTraitService } from '../services/character-trait.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created, noContent } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
+import { CharacterTraitService } from '../services/character-trait.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created, noContent } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
 
 export class CharacterTraitsController {
   static getAll = asyncHandler(async (req: Request, res: Response) => {

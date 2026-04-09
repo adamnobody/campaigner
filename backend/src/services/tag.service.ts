@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection';
+import { getDb } from '../db/connection.js';
 import { Tag, CreateTag } from '@campaigner/shared';
-import { NotFoundError, ConflictError } from '../middleware/errorHandler';
+import { NotFoundError, ConflictError } from '../middleware/errorHandler.js';
 
 export class TagService {
   static getAll(projectId: number): Tag[] {

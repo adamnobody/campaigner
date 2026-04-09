@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { SearchService } from '../services/search.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
+import { SearchService } from '../services/search.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
 
 export class SearchController {
   static search = asyncHandler(async (req: Request, res: Response) => {

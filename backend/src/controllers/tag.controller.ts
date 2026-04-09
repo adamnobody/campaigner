@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
-import { TagService } from '../services/tag.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created, noContent } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
-import { BadRequestError } from '../middleware/errorHandler';
+import { TagService } from '../services/tag.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created, noContent } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
 
 export const getTags = asyncHandler(async (req: Request, res: Response) => {
   const projectId = Number(req.query.projectId);

@@ -1,5 +1,5 @@
-import { getDb } from '../db/connection';
-import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
+import { getDb } from '../db/connection.js';
+import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
 import type { WikiLink } from '@campaigner/shared';
 
 export class WikiService {

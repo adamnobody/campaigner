@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { NoteController } from '../controllers/note.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { NoteController } from '../controllers/note.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 import { createNoteSchema, updateNoteSchema } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema } from './commonSchemas';
+import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
 
 const router = Router();
 

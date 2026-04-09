@@ -2,10 +2,10 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { createTables, createIndexes } from './schema';
-import { migrateFactionPolicies } from './migrations/004_faction_policies';
-import { migrateTagAssociationsForDynasty } from './migrations/002_tag_associations_dynasty';
-import { migrateDynastyMembersGraph } from './migrations/003_dynasty_members_graph';
+import { createTables, createIndexes } from './schema.js';
+import { migrateFactionPolicies } from './migrations/004_faction_policies.js';
+import { migrateTagAssociationsForDynasty } from './migrations/002_tag_associations_dynasty.js';
+import { migrateDynastyMembersGraph } from './migrations/003_dynasty_members_graph.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

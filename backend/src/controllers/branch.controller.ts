@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
-import { asyncHandler } from '../utils/asyncHandler';
-import { BranchService } from '../services/branch.service';
-import { created, noContent, ok } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { BranchService } from '../services/branch.service.js';
+import { created, noContent, ok } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
 
 export class BranchController {
   static getAll = asyncHandler(async (req: Request, res: Response) => {

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { uploadMapImage, uploadCharacterImage, uploadTraitImage } from '../middleware/upload';
+import { uploadMapImage, uploadCharacterImage, uploadTraitImage } from '../middleware/upload.js';
 import { Request, Response, NextFunction } from 'express';
 
 const router = Router();

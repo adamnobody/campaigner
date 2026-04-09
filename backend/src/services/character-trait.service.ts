@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection';
+import { getDb } from '../db/connection.js';
 import type { CharacterTrait, CreateCharacterTrait } from '@campaigner/shared';
-import { NotFoundError, BadRequestError } from '../middleware/errorHandler';
+import { NotFoundError, BadRequestError } from '../middleware/errorHandler.js';
 
 export const PREDEFINED_TRAITS = [
   {

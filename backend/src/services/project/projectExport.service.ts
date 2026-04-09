@@ -1,6 +1,6 @@
-import { getDb } from '../../db/connection';
-import { ProjectService } from '../project.service';
-import { readFileAsBase64 } from './assetHelpers';
+import { getDb } from '../../db/connection.js';
+import { ProjectService } from '../project.service.js';
+import { readFileAsBase64 } from './assetHelpers.js';
 import type {
   ImportedProjectPayload,
   ExportCharacterRow,
@@ -23,7 +23,7 @@ import type {
   ExportDynastyMemberRow,
   ExportDynastyFamilyLinkRow,
   ExportDynastyEventRow,
-} from './project.types';
+} from './project.types.js';
 
 export function exportProject(id: number): ImportedProjectPayload & {
   exportedAt: string;

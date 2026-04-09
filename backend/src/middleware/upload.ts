@@ -1,4 +1,4 @@
-import { createDiskUpload } from './createUpload';
+import { createDiskUpload } from './createUpload.js';
 import { LIMITS } from '@campaigner/shared';
 
 const mapUpload = createDiskUpload({

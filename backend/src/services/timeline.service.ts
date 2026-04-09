@@ -1,13 +1,13 @@
-import { getDb } from '../db/connection';
+import { getDb } from '../db/connection.js';
 import {
   CreateTimelineEvent,
   UpdateTimelineEvent,
   TimelineEvent,
 } from '@campaigner/shared';
-import { NotFoundError } from '../middleware/errorHandler';
-import { TagService } from './tag.service';
-import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers';
-import { BranchOverlayService } from './branchOverlay.service';
+import { NotFoundError } from '../middleware/errorHandler.js';
+import { TagService } from './tag.service.js';
+import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers.js';
+import { BranchOverlayService } from './branchOverlay.service.js';
 
 interface TimelineEventRow {
   id: number;

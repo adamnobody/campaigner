@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createDiskUpload } from '../middleware/createUpload';
-import { ProjectController } from '../controllers/project.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { createDiskUpload } from '../middleware/createUpload.js';
+import { ProjectController } from '../controllers/project.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 import {
   createProjectSchema,
   updateProjectSchema,
 } from '@campaigner/shared';
-import { idParamsSchema } from './commonSchemas';
+import { idParamsSchema } from './commonSchemas.js';
 
 const router = Router();
 

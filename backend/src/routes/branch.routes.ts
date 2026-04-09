@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { validateRequest } from '../middleware/validateRequest';
-import { BranchController } from '../controllers/branch.controller';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { BranchController } from '../controllers/branch.controller.js';
 import { createScenarioBranchSchema, updateScenarioBranchSchema } from '@campaigner/shared';
-import { idParamsSchema, projectIdQuerySchema } from './commonSchemas';
+import { idParamsSchema, projectIdQuerySchema } from './commonSchemas.js';
 
 const router = Router();
 

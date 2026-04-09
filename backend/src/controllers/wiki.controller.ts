@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
-import { WikiService } from '../services/wiki.service';
-import { asyncHandler } from '../utils/asyncHandler';
-import { ok, created } from '../utils/apiResponse';
-import { parseId } from '../utils/parseId';
-import { BadRequestError } from '../middleware/errorHandler';
+import { WikiService } from '../services/wiki.service.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ok, created } from '../utils/apiResponse.js';
+import { parseId } from '../utils/parseId.js';
+import { BadRequestError } from '../middleware/errorHandler.js';
 
 export class WikiController {
   static getLinks = asyncHandler(async (req: Request, res: Response) => {

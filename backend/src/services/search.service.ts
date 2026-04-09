@@ -1,4 +1,4 @@
-import { getDb } from '../db/connection';
+import { getDb } from '../db/connection.js';
 
 export interface SearchResult {
   type: 'character' | 'note' | 'marker' | 'event' | 'dogma' | 'tag' | 'faction';

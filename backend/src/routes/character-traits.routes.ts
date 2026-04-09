@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { CharacterTraitsController } from '../controllers/character-traits.controller';
-import { validateRequest } from '../middleware/validateRequest';
+import { CharacterTraitsController } from '../controllers/character-traits.controller.js';
+import { validateRequest } from '../middleware/validateRequest.js';
 import {
   createCharacterTraitBodySchema,
   assignTraitBodySchema,

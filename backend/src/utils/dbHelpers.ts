@@ -1,5 +1,5 @@
-import { getDb } from '../db/connection';
-import { NotFoundError } from '../middleware/errorHandler';
+import { getDb } from '../db/connection.js';
+import { NotFoundError } from '../middleware/errorHandler.js';
 import type { Tag } from '@campaigner/shared';
 
 interface TagAssociationRow {

@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection';
-import { BadRequestError, NotFoundError } from '../middleware/errorHandler';
-import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers';
+import { getDb } from '../db/connection.js';
+import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
+import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
 import type {
   FactionFilters,
   TagRow,
@@ -21,7 +21,7 @@ import type {
   RelationUpdateData,
   AssetCreateData,
   AssetUpdateData,
-} from './faction/faction.types';
+} from './faction/faction.types.js';
 import {
   FACTION_UPDATE_MAP,
   RANK_UPDATE_MAP,
@@ -35,7 +35,7 @@ import {
   toAsset,
   MEMBER_SELECT,
   RELATION_SELECT,
-} from './faction/faction.mappers';
+} from './faction/faction.mappers.js';
 
 export class FactionService {
   private static normalizeAssetName(name: string): string {

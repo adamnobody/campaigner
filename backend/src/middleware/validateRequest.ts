@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import type { ZodSchema } from 'zod';
-import { ValidationError } from './errorHandler';
+import { ValidationError } from './errorHandler.js';
 
 interface ValidateSchemas {
   body?: ZodSchema;

@@ -1,4 +1,4 @@
-import type { FactionRow, RankRow, MemberRow, RelationRow, AssetRow } from './faction.types';
+import type { FactionRow, RankRow, MemberRow, RelationRow, AssetRow } from './faction.types.js';
 
 export const FACTION_UPDATE_MAP: Record<string, string> = {
   projectId: 'project_id',
