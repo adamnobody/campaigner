@@ -1,12 +1,15 @@
-import React, { useEffect, useMemo } from 'react';
-import { Box, Button, Tooltip, Typography, CircularProgress } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import AddIcon from '@mui/icons-material/Add';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { TraitFlipCard } from './TraitFlipCard';
+import { CreateTraitDialog } from './CreateTraitDialog';
 import { useCharacterTraitsStore } from '@/store/useCharacterTraitsStore';
+import { useUIStore } from '@/store/useUIStore';
 import { shallow } from 'zustand/shallow';
 import type { CharacterTrait } from '@campaigner/shared';
+import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 
 export interface CharacterTraitsTabProps {
   projectId: number;
@@ -15,6 +18,7 @@ export interface CharacterTraitsTabProps {
 }
 
 export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectId, characterId }) => {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const {
     traits,
     assignedTraitIds,
@@ -24,6 +28,7 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
     fetchAssigned,
     clearAssigned,
     toggleAssign,
+    deleteTrait,
   } = useCharacterTraitsStore(
     (s) => ({
       traits: s.traits,
@@ -34,7 +39,12 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
       fetchAssigned: s.fetchAssigned,
       clearAssigned: s.clearAssigned,
       toggleAssign: s.toggleAssign,
+      deleteTrait: s.deleteTrait,
     }),
+    shallow
+  );
+  const { showConfirmDialog, showSnackbar } = useUIStore(
+    (s) => ({ showConfirmDialog: s.showConfirmDialog, showSnackbar: s.showSnackbar }),
     shallow
   );
 
@@ -63,6 +73,22 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
   const attachActionsDisabled = characterId == null || characterId <= 0;
   const canToggle = !attachActionsDisabled;
 
+  const handleDeleteTrait = (traitId: number, traitName: string) => {
+    showConfirmDialog(
+      'Удалить черту',
+      `Удалить черту «${traitName}»?\nОна будет убрана у всех персонажей проекта.\nЭто действие нельзя отменить.`,
+      async () => {
+        try {
+          await deleteTrait(traitId);
+          showSnackbar('Черта удалена', 'success');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Не удалось удалить черту';
+          showSnackbar(message, 'error');
+        }
+      }
+    );
+  };
+
   return (
     <Box>
       <Box
@@ -76,13 +102,9 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
         }}
       >
         <SectionHeader icon={<PsychologyIcon sx={{ fontSize: '1.2rem' }} />} title="Черты характера" />
-        <Tooltip title="Скоро будет доступно">
-          <span>
-            <Button variant="outlined" disabled startIcon={<AddIcon />}>
-              Добавить свою черту
-            </Button>
-          </span>
-        </Tooltip>
+        <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setCreateDialogOpen(true)}>
+          Добавить свою черту
+        </Button>
       </Box>
 
       {error && (
@@ -109,9 +131,12 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
               id={t.id}
               name={t.name}
               description={t.description}
-              imageSrc={t.imagePath}
+              imageSrc={uploadAssetUrl(t.imagePath)}
               isAttached={assignedTraitIds.has(t.id)}
               isCustom={!t.isPredefined}
+              onDelete={
+                t.isPredefined ? undefined : () => handleDeleteTrait(t.id, t.name)
+              }
               attachActionsDisabled={attachActionsDisabled}
               onToggleAttach={() => {
                 if (!canToggle || characterId == null) return;
@@ -121,6 +146,11 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
           ))}
         </Box>
       )}
+      <CreateTraitDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        projectId={projectId}
+      />
     </Box>
   );
 };

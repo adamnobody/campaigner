@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, alpha, useTheme, Tooltip } from '@mui/material';
+import { Box, Typography, Button, alpha, useTheme, Tooltip, IconButton } from '@mui/material';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 export interface TraitFlipCardProps {
   id: number;
   name: string;
   description: string;
-  imageSrc: string;
+  imageSrc?: string;
   isAttached: boolean;
   isCustom: boolean;
   onToggleAttach: () => void;
@@ -21,6 +22,8 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
   description,
   imageSrc,
   isAttached,
+  isCustom,
+  onDelete,
   onToggleAttach,
   attachActionsDisabled = false,
 }) => {
@@ -83,7 +86,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
           },
         }}
       >
-        {!imageFailed ? (
+        {imageSrc && !imageFailed ? (
           <Box
             component="img"
             src={imageSrc}
@@ -179,7 +182,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
           boxSizing: 'border-box',
         }}
       >
-        {!imageFailed ? (
+        {imageSrc && !imageFailed ? (
           <>
             <Box
               sx={{
@@ -237,6 +240,28 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
             minHeight: 0,
           }}
         >
+          {isCustom && onDelete && (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                zIndex: 3,
+                color: 'rgba(255,255,255,0.7)',
+                '&:hover': {
+                  color: 'rgba(255,100,100,0.9)',
+                  bgcolor: 'rgba(255,255,255,0.08)',
+                },
+              }}
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          )}
           <Typography
             variant="subtitle1"
             sx={{
@@ -244,6 +269,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
               mb: 1,
               flexShrink: 0,
               color: imageFailed ? 'text.primary' : '#fff',
+              pr: isCustom && onDelete ? 4 : 0,
             }}
           >
             {name}

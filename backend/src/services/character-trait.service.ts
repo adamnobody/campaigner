@@ -180,6 +180,17 @@ export const PREDEFINED_TRAITS = [
     description:
       'Холодная прагматика, каждое действие подчинено выгоде и логике.',
   },
+  {
+    slug: 'umstvennaya-otstalost',
+    name: 'Умственная отсталость',
+    description:
+      'Ограниченные способности к обучению и пониманию сложных концепций.',
+  },
+  {
+    slug: 'utonchennost',
+    name: 'Утончённость',
+    description: 'Изысканные манеры, тонкий вкус и внимание к деталям.',
+  },
 ] as const;
 
 interface TraitRow {
