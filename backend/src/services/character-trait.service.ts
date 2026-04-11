@@ -2,6 +2,8 @@ import { getDb } from '../db/connection.js';
 import type { CharacterTrait, CreateCharacterTrait } from '@campaigner/shared';
 import { NotFoundError, BadRequestError } from '../middleware/errorHandler.js';
 
+const seededProjects = new Set<number>();
+
 export const PREDEFINED_TRAITS = [
   {
     slug: 'dobrota',
@@ -221,6 +223,7 @@ function mapRow(row: TraitRow): CharacterTrait {
 
 export class CharacterTraitService {
   static seedPredefined(projectId: number): void {
+    if (seededProjects.has(projectId)) return;
     const db = getDb();
     const stmt = db.prepare(`
       INSERT OR IGNORE INTO character_traits (project_id, name, description, image_path, is_predefined, sort_order)
@@ -229,6 +232,7 @@ export class CharacterTraitService {
     PREDEFINED_TRAITS.forEach((t, i) => {
       stmt.run(projectId, t.name, t.description, `/traits/${t.slug}.jpg`, i);
     });
+    seededProjects.add(projectId);
   }
 
   static getAll(projectId: number): CharacterTrait[] {

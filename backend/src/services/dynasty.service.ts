@@ -246,16 +246,6 @@ export class DynastyService {
     return mapDynastyEvent(event);
   }
 
-  // ==================== Tags ====================
-
-  static setTags(id: number, tagIds: number[]) {
-    this.getById(id);
-    const db = getDb();
-    db.prepare(`DELETE FROM tag_associations WHERE entity_type = 'dynasty' AND entity_id = ?`).run(id);
-    const insert = db.prepare(`INSERT INTO tag_associations (tag_id, entity_type, entity_id) VALUES (?, ?, ?)`);
-    for (const tagId of tagIds) insert.run(tagId, 'dynasty', id);
-  }
-
   // ==================== Graph Layout ====================
 
   static saveGraphPositions(dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) {

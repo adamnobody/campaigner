@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { DynastyService } from '../services/dynasty.service.js';
+import { TagService } from '../services/tag.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
@@ -69,7 +70,8 @@ export class DynastyController {
       throw new BadRequestError('tagIds must be an array');
     }
 
-    DynastyService.setTags(id, tagIds);
+    const existing = DynastyService.getById(id);
+    TagService.setTagsForEntity(existing.projectId, 'dynasty', id, tagIds);
     const dynasty = DynastyService.getById(id);
     return ok(res, dynasty);
   });

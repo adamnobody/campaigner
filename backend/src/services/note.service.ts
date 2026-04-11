@@ -96,29 +96,51 @@ export class NoteService {
     const sortColumn = allowedSortColumns[sortBy] || 'updated_at';
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
-    const baseRows = db.prepare(`
-      SELECT id, project_id as projectId, folder_id as folderId, title, content,
-             format, note_type as noteType, is_pinned as isPinned,
-             created_at as createdAt, updated_at as updatedAt
-      FROM notes
-      ${whereClause}
-      ORDER BY is_pinned DESC, ${sortColumn} ${order}
-    `).all(...params) as NoteRow[];
+    let rows: NoteRow[];
+    let total: number;
 
-    const rows = branchId
-      ? BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'note'))
-      : baseRows;
-    const pagedRows = rows.slice(offset, offset + limit);
+    if (branchId) {
+      const baseRows = db.prepare(`
+        SELECT id, project_id as projectId, folder_id as folderId, title, content,
+               format, note_type as noteType, is_pinned as isPinned,
+               created_at as createdAt, updated_at as updatedAt
+        FROM notes
+        ${whereClause}
+        ORDER BY is_pinned DESC, ${sortColumn} ${order}
+      `).all(...params) as NoteRow[];
 
-    const tagsMap = loadTagsBatch(projectId, 'note', pagedRows.map((r) => r.id));
+      const overlaid = BranchOverlayService.applyListOverlay(
+        baseRows,
+        BranchOverlayService.getOverrides(branchId, 'note'),
+      );
+      total = overlaid.length;
+      rows = overlaid.slice(offset, offset + limit);
+    } else {
+      const countRow = db.prepare(`
+        SELECT COUNT(*) as count FROM notes ${whereClause}
+      `).get(...params) as { count: number };
+      total = countRow.count;
 
-    const items = pagedRows.map((row) => {
+      rows = db.prepare(`
+        SELECT id, project_id as projectId, folder_id as folderId, title, content,
+               format, note_type as noteType, is_pinned as isPinned,
+               created_at as createdAt, updated_at as updatedAt
+        FROM notes
+        ${whereClause}
+        ORDER BY is_pinned DESC, ${sortColumn} ${order}
+        LIMIT ? OFFSET ?
+      `).all(...params, limit, offset) as NoteRow[];
+    }
+
+    const tagsMap = loadTagsBatch(projectId, 'note', rows.map((r) => r.id));
+
+    const items = rows.map((row) => {
       const note = mapRow(row);
       note.tags = tagsMap.get(row.id) || [];
       return note;
     });
 
-    return { items, total: rows.length };
+    return { items, total };
   }
 
   static getById(id: number, branchId?: number): Note {

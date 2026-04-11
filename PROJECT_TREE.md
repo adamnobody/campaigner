@@ -1,18 +1,16 @@
 
 ```
 campaigner
-├─ .cursor
-├─ AGENTS.md
 ├─ backend
 │  ├─ package.json
 │  ├─ src
 │  │  ├─ controllers
 │  │  │  ├─ branch.controller.ts
+│  │  │  ├─ character-traits.controller.ts
 │  │  │  ├─ character.controller.ts
 │  │  │  ├─ dogma.controller.ts
 │  │  │  ├─ dynasty.controller.ts
 │  │  │  ├─ faction.controller.ts
-│  │  │  ├─ geoStory.controller.ts
 │  │  │  ├─ map.controller.ts
 │  │  │  ├─ note.controller.ts
 │  │  │  ├─ project.controller.ts
@@ -26,7 +24,8 @@ campaigner
 │  │  │  ├─ migrations
 │  │  │  │  ├─ 001_create_maps_table.ts
 │  │  │  │  ├─ 002_tag_associations_dynasty.ts
-│  │  │  │  └─ 003_dynasty_members_graph.ts
+│  │  │  │  ├─ 003_dynasty_members_graph.ts
+│  │  │  │  └─ 004_faction_policies.ts
 │  │  │  └─ schema.ts
 │  │  ├─ index.ts
 │  │  ├─ middleware
@@ -37,12 +36,12 @@ campaigner
 │  │  │  └─ validateRequest.ts
 │  │  ├─ routes
 │  │  │  ├─ branch.routes.ts
+│  │  │  ├─ character-traits.routes.ts
 │  │  │  ├─ character.routes.ts
 │  │  │  ├─ commonSchemas.ts
 │  │  │  ├─ dogma.routes.ts
 │  │  │  ├─ dynasty.routes.ts
 │  │  │  ├─ faction.routes.ts
-│  │  │  ├─ geoStory.routes.ts
 │  │  │  ├─ map.routes.ts
 │  │  │  ├─ note.routes.ts
 │  │  │  ├─ project.routes.ts
@@ -53,6 +52,8 @@ campaigner
 │  │  │  └─ wiki.routes.ts
 │  │  ├─ services
 │  │  │  ├─ branch.service.ts
+│  │  │  ├─ branchOverlay.service.ts
+│  │  │  ├─ character-trait.service.ts
 │  │  │  ├─ character.service.ts
 │  │  │  ├─ dogma.service.ts
 │  │  │  ├─ dynasty
@@ -63,7 +64,7 @@ campaigner
 │  │  │  │  ├─ faction.mappers.ts
 │  │  │  │  └─ faction.types.ts
 │  │  │  ├─ faction.service.ts
-│  │  │  ├─ geoStory.service.ts
+│  │  │  ├─ factionPolicy.service.ts
 │  │  │  ├─ map
 │  │  │  │  └─ map.types.ts
 │  │  │  ├─ map.service.ts
@@ -84,26 +85,63 @@ campaigner
 │  │     ├─ asyncHandler.ts
 │  │     ├─ dbHelpers.ts
 │  │     └─ parseId.ts
-│  └─ tsconfig.json
-├─ docs
-│  └─ performance-regression-checklist.md
+│  ├─ tsconfig.json
+│  └─ uploads
+│     └─ factions
+│        └─ faction-1774159645120-b70l7n.png
 ├─ frontend
 │  ├─ index.html
 │  ├─ package.json
 │  ├─ public
-│  │  └─ fonts
-│  │     ├─ my-local-font.css
-│  │     └─ README.md
+│  │  ├─ fonts
+│  │  │  ├─ my-local-font.css
+│  │  │  └─ README.md
+│  │  └─ traits
+│  │     ├─ ambitsioznost.jpg
+│  │     ├─ apatiya.jpg
+│  │     ├─ chestnost.jpg
+│  │     ├─ chrevogudie.jpg
+│  │     ├─ dobrota.jpg
+│  │     ├─ doverchivost.jpg
+│  │     ├─ egoizm.jpg
+│  │     ├─ fanatizm.jpg
+│  │     ├─ kharizma.jpg
+│  │     ├─ khitrost.jpg
+│  │     ├─ khladnokrovie.jpg
+│  │     ├─ khrabrost.jpg
+│  │     ├─ kreativnost.jpg
+│  │     ├─ litsemerie.jpg
+│  │     ├─ lyubopytstvo.jpg
+│  │     ├─ malodushie.jpg
+│  │     ├─ melankholiya.jpg
+│  │     ├─ miloserdie.jpg
+│  │     ├─ mudrost.jpg
+│  │     ├─ nervoznost.jpg
+│  │     ├─ optimizm.jpg
+│  │     ├─ paranoyya.jpg
+│  │     ├─ pokhot.jpg
+│  │     ├─ raschetlivost.jpg
+│  │     ├─ reshitelnost.jpg
+│  │     ├─ samokontrol.jpg
+│  │     ├─ shchedrost.jpg
+│  │     ├─ umstvennaya-otstalost.jpg
+│  │     ├─ upryamstvo.jpg
+│  │     ├─ utonchennost.jpg
+│  │     ├─ vernost.jpg
+│  │     ├─ vysokomerie.jpg
+│  │     ├─ zhadnost.jpg
+│  │     ├─ zhestokost.jpg
+│  │     └─ zlost.jpg
 │  ├─ src
 │  │  ├─ api
 │  │  │  ├─ axiosClient.ts
 │  │  │  ├─ branches.ts
 │  │  │  ├─ characters.ts
+│  │  │  ├─ characterTraits.ts
 │  │  │  ├─ client.ts
 │  │  │  ├─ dogmas.ts
 │  │  │  ├─ dynasties.ts
 │  │  │  ├─ factions.ts
-│  │  │  ├─ geoStory.ts
 │  │  │  ├─ maps.ts
 │  │  │  ├─ notes.ts
 │  │  │  ├─ projects.ts
@@ -116,9 +154,6 @@ campaigner
 │  │  ├─ components
 │  │  │  ├─ detail
 │  │  │  │  └─ CollapsibleSection.tsx
-│  │  │  ├─ dynasty
-│  │  │  │  ├─ DynastyEventsTimeline.tsx
-│  │  │  │  └─ FamilyTree.tsx
 │  │  │  ├─ forms
 │  │  │  │  └─ TagAutocompleteField.tsx
 │  │  │  ├─ Layout
@@ -136,10 +171,15 @@ campaigner
 │  │  │     ├─ ConfirmDialog.tsx
 │  │  │     ├─ DndButton.tsx
 │  │  │     ├─ EmptyState.tsx
+│  │  │     ├─ EntityHeroLayout.tsx
+│  │  │     ├─ EntityTabs.tsx
 │  │  │     ├─ ErrorBoundary.tsx
+│  │  │     ├─ FloatingOrb.tsx
+│  │  │     ├─ GlassCard.tsx
 │  │  │     ├─ GlobalSnackbar.tsx
 │  │  │     ├─ LoadingScreen.tsx
 │  │  │     ├─ SearchDialog.tsx
+│  │  │     ├─ SectionHeader.tsx
 │  │  │     ├─ SplashScreen.tsx
 │  │  │     └─ StyleCustomizer.tsx
 │  │  ├─ hooks
@@ -154,6 +194,10 @@ campaigner
 │  │  │  │  ├─ fontPresets.ts
 │  │  │  │  └─ useDebouncedDraft.ts
 │  │  │  ├─ AppearanceSettingsPage.tsx
+│  │  │  ├─ character
+│  │  │  │  ├─ CharacterTraitsTab.tsx
+│  │  │  │  ├─ CreateTraitDialog.tsx
+│  │  │  │  └─ TraitFlipCard.tsx
 │  │  │  ├─ character-graph
 │  │  │  │  └─ graphConstants.ts
 │  │  │  ├─ CharacterDetailPage.tsx
@@ -166,7 +210,9 @@ campaigner
 │  │  │  ├─ DogmasPage.tsx
 │  │  │  ├─ DynastiesPage.tsx
 │  │  │  ├─ dynasty
-│  │  │  │  └─ DynastyDialogs.tsx
+│  │  │  │  ├─ DynastyDialogs.tsx
+│  │  │  │  ├─ DynastyEventsTimeline.tsx
+│  │  │  │  └─ FamilyTree.tsx
 │  │  │  ├─ DynastyDetailPage.tsx
 │  │  │  ├─ faction
 │  │  │  │  └─ FactionDialogs.tsx
@@ -186,7 +232,11 @@ campaigner
 │  │  │  │  ├─ MapTerritorySvg.tsx
 │  │  │  │  ├─ MapToolbar.tsx
 │  │  │  │  ├─ mapUtils.ts
-│  │  │  │  ├─ useMapGeoHistory.ts
+│  │  │  │  ├─ useMapData.ts
+│  │  │  │  ├─ useMapInteractions.ts
+│  │  │  │  ├─ useMapMarkerCrud.ts
+│  │  │  │  ├─ useMapNavigation.ts
+│  │  │  │  ├─ useMapTerritoryCrud.ts
 │  │  │  │  ├─ useMapTerritoryDrawing.ts
 │  │  │  │  └─ useMapViewport.ts
 │  │  │  ├─ MapPage.tsx
@@ -212,6 +262,7 @@ campaigner
 │  │  │  ├─ debouncedStorage.ts
 │  │  │  ├─ useBranchStore.ts
 │  │  │  ├─ useCharacterStore.ts
+│  │  │  ├─ useCharacterTraitsStore.ts
 │  │  │  ├─ useDogmaStore.ts
 │  │  │  ├─ useDynastyStore.ts
 │  │  │  ├─ useFactionStore.ts
@@ -233,11 +284,11 @@ campaigner
 │  │  │  ├─ presets.ts
 │  │  │  └─ tokens.ts
 │  │  └─ utils
-│  │     └─ error.ts
+│  │     ├─ error.ts
+│  │     └─ uploadAssetUrl.ts
 │  ├─ tsconfig.json
 │  └─ vite.config.ts
 ├─ LICENSE
-├─ package-lock.json
 ├─ package.json
 ├─ scripts
 │  ├─ chunker.mjs
@@ -280,21 +331,23 @@ campaigner
 │  │  ├─ index.ts
 │  │  ├─ schemas
 │  │  │  ├─ branch.schema.ts
+│  │  │  ├─ character-trait.schema.ts
 │  │  │  ├─ character.schema.ts
 │  │  │  ├─ common.schema.ts
 │  │  │  ├─ dogma.schema.ts
 │  │  │  ├─ dynasty.schema.ts
 │  │  │  ├─ faction.schema.ts
-│  │  │  ├─ geostory.schema.ts
 │  │  │  ├─ index.ts
 │  │  │  ├─ map.schema.ts
 │  │  │  ├─ note.schema.ts
+│  │  │  ├─ policy.schema.ts
 │  │  │  ├─ project.schema.ts
 │  │  │  ├─ timeline.schema.ts
 │  │  │  └─ wiki.schema.ts
 │  │  └─ types
 │  │     └─ index.ts
 │  └─ tsconfig.json
+├─ start.bat
 └─ tsconfig.json
 
 ```

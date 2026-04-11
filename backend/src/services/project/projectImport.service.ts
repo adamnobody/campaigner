@@ -510,6 +510,10 @@ export function importProject(data: ImportedProjectPayload): Project {
           newEntityId = timelineEventIdMap.get(ta.entityId);
         } else if (ta.entityType === 'dogma') {
           newEntityId = dogmaIdMap.get(ta.entityId);
+        } else if (ta.entityType === 'faction') {
+          newEntityId = factionIdMap.get(ta.entityId);
+        } else if (ta.entityType === 'dynasty') {
+          newEntityId = dynastyIdMap.get(ta.entityId);
         }
 
         if (newEntityId) {
