@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { TimelineEvent, CreateTimelineEvent, UpdateTimelineEvent } from '@campaigner/shared';
 import { timelineApi } from '@/api/timeline';
+import { getErrorMessage } from '@/utils/error';
 
 interface TimelineState {
   events: TimelineEvent[];
@@ -17,6 +18,7 @@ interface TimelineState {
   setTags: (id: number, tagIds: number[]) => Promise<void>;
   setCurrentEvent: (event: TimelineEvent | null) => void;
   clearError: () => void;
+  reset: () => void;
 }
 
 export const useTimelineStore = create<TimelineState>((set) => ({
@@ -30,8 +32,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
     try {
       const res = await timelineApi.getAll(projectId, era);
       set({ events: res.data.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch timeline events'), loading: false });
     }
   },
 
@@ -40,8 +42,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
     try {
       const res = await timelineApi.getById(id);
       set({ currentEvent: res.data.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch timeline event'), loading: false });
     }
   },
 
@@ -55,8 +57,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
         loading: false,
       }));
       return event;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create timeline event'), loading: false });
       throw error;
     }
   },
@@ -70,8 +72,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
         events: state.events.map(e => e.id === id ? updated : e),
         currentEvent: state.currentEvent?.id === id ? updated : state.currentEvent,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update timeline event') });
       throw error;
     }
   },
@@ -84,8 +86,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
         events: state.events.filter(e => e.id !== id),
         currentEvent: state.currentEvent?.id === id ? null : state.currentEvent,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete timeline event') });
       throw error;
     }
   },
@@ -95,8 +97,8 @@ export const useTimelineStore = create<TimelineState>((set) => ({
     try {
       const res = await timelineApi.reorder(projectId, orderedIds);
       set({ events: res.data.data });
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to reorder timeline events') });
       throw error;
     }
   },
@@ -111,11 +113,15 @@ export const useTimelineStore = create<TimelineState>((set) => ({
         events: state.events.map(e => e.id === id ? updated : e),
         currentEvent: state.currentEvent?.id === id ? updated : state.currentEvent,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update timeline event tags') });
     }
   },
 
   setCurrentEvent: (event) => set({ currentEvent: event }),
   clearError: () => set({ error: null }),
+
+  reset: () => set({
+    events: [], currentEvent: null, loading: false, error: null,
+  }),
 }));

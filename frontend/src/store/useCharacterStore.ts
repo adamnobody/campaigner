@@ -34,6 +34,7 @@ interface CharacterState {
 
   setCurrentCharacter: (character: Character | null) => void;
   clearError: () => void;
+  reset: () => void;
 }
 
 export const useCharacterStore = create<CharacterState>((set) => ({
@@ -197,4 +198,9 @@ export const useCharacterStore = create<CharacterState>((set) => ({
 
   setCurrentCharacter: (character) => set({ currentCharacter: character }),
   clearError: () => set({ error: null }),
+
+  reset: () => set({
+    characters: [], currentCharacter: null, relationships: [],
+    graph: null, total: 0, loading: false, initialized: false, error: null,
+  }),
 }));
