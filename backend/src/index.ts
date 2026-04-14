@@ -110,7 +110,26 @@ app.get('/api/metrics/perf', (_req, res) => {
     data: getRequestMetricsSnapshot(),
   });
 });
+// ============ Serve frontend static files ============
+const frontendDistPath = process.env.FRONTEND_DIST_PATH 
+  || path.resolve(__dirname, '../../frontend/dist');
 
+if (fs.existsSync(frontendDistPath)) {
+  console.log(`📦 Serving frontend from: ${frontendDistPath}`);
+  
+  // Раздаём статические файлы (JS, CSS, шрифты, картинки)
+  app.use(express.static(frontendDistPath));
+  
+  // Все остальные GET-запросы (не /api, не /uploads) → index.html (SPA)
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      res.sendFile(path.join(frontendDistPath, 'index.html'));
+    }
+  });
+} else {
+  console.warn(`⚠️ Frontend dist not found at: ${frontendDistPath}`);
+}
+// =====================================================
 // Error handler (must be last)
 app.use(errorHandler);
 

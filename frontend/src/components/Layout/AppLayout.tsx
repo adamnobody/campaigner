@@ -5,8 +5,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
+import { useProjectScope } from '@/hooks/useProjectScope';
 
 export const AppLayout: React.FC = () => {
+  useProjectScope();
   const motionMode = usePreferencesStore((state) => state.motionMode);
   const location = useLocation();
   const pageTransitionMs = motionMode === 'reduced' ? 0 : 220;

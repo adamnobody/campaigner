@@ -2,6 +2,7 @@
   "name": "campaigner",
   "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
   "workspaces": [
     "shared",
     "backend",
@@ -28,10 +29,16 @@
     "perf:baseline": "node scripts/perf/baseline.mjs",
     "perf:compare": "node scripts/perf/compare.mjs",
     "db:seed-demo": "node scripts/db/seed-demo.mjs",
-    "db:explain-hot": "node scripts/db/explain-hot.mjs"
+    "db:explain-hot": "node scripts/db/explain-hot.mjs",
+    "electron:dev": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder",
+    "electron:quick": "electron ."
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "concurrently": "^9.2.1",
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1",
     "kill-port": "^2.0.1",
     "typescript": "^5.4.5"
   },
@@ -41,5 +48,34 @@
     "picocolors": "^1.1.1",
     "remark-gfm": "^4.0.1",
     "tiktoken": "^1.0.22"
+  },
+  "build": {
+    "appId": "com.campaigner.app",
+    "productName": "Campaigner",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "backend/dist/**/*",
+      "backend/node_modules/**/*",
+      "backend/package.json",
+      "frontend/dist/**/*",
+      "shared/dist/**/*",
+      "shared/node_modules/**/*",
+      "shared/package.json",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "electron/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "Campaigner"
+    }
   }
 }
