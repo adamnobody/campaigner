@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Note, CreateNote, UpdateNote, Pagination } from '@campaigner/shared';
 import { notesApi } from '@/api/notes';
+import { getErrorMessage } from '@/utils/error';
 
 interface NoteListParams extends Partial<Pagination> {
   noteType?: string;
@@ -22,6 +23,7 @@ interface NoteState {
   setTags: (id: number, tagIds: number[]) => Promise<void>;
   setCurrentNote: (note: Note | null) => void;
   clearError: () => void;
+  reset: () => void;
 }
 
 export const useNoteStore = create<NoteState>((set) => ({
@@ -40,8 +42,8 @@ export const useNoteStore = create<NoteState>((set) => ({
         total: res.data.data.total,
         loading: false,
       });
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch notes'), loading: false });
     }
   },
 
@@ -50,8 +52,8 @@ export const useNoteStore = create<NoteState>((set) => ({
     try {
       const res = await notesApi.getById(id);
       set({ currentNote: res.data.data, loading: false });
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch note'), loading: false });
     }
   },
 
@@ -66,9 +68,9 @@ export const useNoteStore = create<NoteState>((set) => ({
         loading: false,
       }));
       return note;
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false });
-      throw err;
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create note'), loading: false });
+      throw error;
     }
   },
 
@@ -81,9 +83,9 @@ export const useNoteStore = create<NoteState>((set) => ({
         notes: state.notes.map(n => n.id === id ? updated : n),
         currentNote: state.currentNote?.id === id ? updated : state.currentNote,
       }));
-    } catch (err) {
-      set({ error: (err as Error).message });
-      throw err;
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update note') });
+      throw error;
     }
   },
 
@@ -96,9 +98,9 @@ export const useNoteStore = create<NoteState>((set) => ({
         total: state.total - 1,
         currentNote: state.currentNote?.id === id ? null : state.currentNote,
       }));
-    } catch (err) {
-      set({ error: (err as Error).message });
-      throw err;
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete note') });
+      throw error;
     }
   },
 
@@ -112,11 +114,15 @@ export const useNoteStore = create<NoteState>((set) => ({
         notes: state.notes.map(n => n.id === id ? updated : n),
         currentNote: state.currentNote?.id === id ? updated : state.currentNote,
       }));
-    } catch (err) {
-      set({ error: (err as Error).message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update tags') });
     }
   },
 
   setCurrentNote: (note) => set({ currentNote: note }),
   clearError: () => set({ error: null }),
+
+  reset: () => set({
+    notes: [], currentNote: null, total: 0, loading: false, error: null,
+  }),
 }));

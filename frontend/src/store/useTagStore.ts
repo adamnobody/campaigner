@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Tag, CreateTag } from '@campaigner/shared';
 import { tagsApi } from '@/api/tags';
+import { getErrorMessage } from '@/utils/error';
 
 interface TagState {
   tags: Tag[];
@@ -31,9 +32,9 @@ export const useTagStore = create<TagState>((set, get) => ({
         loading: false,
         initialized: true,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message || 'Failed to fetch tags',
+        error: getErrorMessage(error, 'Failed to fetch tags'),
         loading: false,
         initialized: true,
       });
@@ -57,8 +58,8 @@ export const useTagStore = create<TagState>((set, get) => ({
       });
 
       return created;
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to create tag' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create tag') });
       throw error;
     }
   },
@@ -70,8 +71,8 @@ export const useTagStore = create<TagState>((set, get) => ({
       set((state) => ({
         tags: state.tags.filter((tag) => tag.id !== id),
       }));
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to delete tag' });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete tag') });
       throw error;
     }
   },

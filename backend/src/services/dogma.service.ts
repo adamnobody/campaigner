@@ -129,25 +129,40 @@ export class DogmaService {
       ORDER BY sort_order ASC, created_at DESC
     `;
 
-    const baseRows = db.prepare(query).all(...queryParams) as DogmaRow[];
-    const rows = branchId
-      ? BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'dogma'))
-      : baseRows;
-    const total = rows.length;
     const limit = params?.limit;
     const offset = params?.offset ?? 0;
-    const pagedRows =
-      limit === undefined
-        ? rows
-        : rows.slice(offset, offset + limit);
+
+    let rows: DogmaRow[];
+    let total: number;
+
+    if (branchId) {
+      const baseRows = db.prepare(query).all(...queryParams) as DogmaRow[];
+      const overlaid = BranchOverlayService.applyListOverlay(
+        baseRows,
+        BranchOverlayService.getOverrides(branchId, 'dogma'),
+      );
+      total = overlaid.length;
+      rows = limit === undefined ? overlaid : overlaid.slice(offset, offset + limit);
+    } else {
+      const countRow = db.prepare(
+        `SELECT COUNT(*) as count FROM dogmas ${whereClause}`
+      ).get(...queryParams) as { count: number };
+      total = countRow.count;
+
+      let pagedQuery = query;
+      if (limit !== undefined) {
+        pagedQuery += ` LIMIT ${limit} OFFSET ${offset}`;
+      }
+      rows = db.prepare(pagedQuery).all(...queryParams) as DogmaRow[];
+    }
 
     const tagsMap = loadTagsBatch(
       projectId,
       'dogma',
-      pagedRows.map((r) => r.id)
+      rows.map((r) => r.id)
     );
 
-    const items = pagedRows.map((row) => {
+    const items = rows.map((row) => {
       const dogma = mapRow(row);
       dogma.tags = tagsMap.get(row.id) || [];
       return dogma;

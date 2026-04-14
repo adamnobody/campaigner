@@ -1,260 +1,312 @@
-import { promises as fs } from 'node:fs';
+/**
+ * chunker.mjs — собирает исходники монорепо Campaigner в тематические .txt-чанки
+ * для обзора/LLM. Запуск из корня: node scripts/chunker.mjs
+ * Зависимости: только node:fs и node:path.
+ */
+import fs from 'node:fs/promises';
 import path from 'node:path';
-import { globby } from 'globby';
-import pc from 'picocolors';
-import { encoding_for_model, get_encoding } from 'tiktoken';
 
-function parseArgs(argv) {
-  const out = {};
-  for (const raw of argv) {
-    if (!raw.startsWith('--')) continue;
-    const clean = raw.slice(2);
-    const eq = clean.indexOf('=');
-    if (eq === -1) {
-      out[clean] = true;
-      continue;
-    }
-    const k = clean.slice(0, eq);
-    const v = clean.slice(eq + 1);
-    out[k] = v;
-  }
-  return out;
+const ROOT = process.cwd();
+const OUT_DIR = path.join(ROOT, 'chunks');
+
+/** Каталоги при обходе не открываем (имя директории на текущем уровне). */
+const EXCLUDED_DIR_NAMES = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'uploads',
+  'public',
+  'scripts',
+  'chunks',
+]);
+
+const SKIP_EXTENSIONS = new Set([
+  '.json',
+  '.css',
+  '.html',
+  '.bat',
+  '.md',
+]);
+
+const BINARY_LIKE_EXTENSIONS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.ico',
+  '.bmp',
+  '.svg',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.pdf',
+  '.zip',
+  '.sqlite',
+  '.lock',
+]);
+
+const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+
+/** Имя выходного файла без пути. */
+const CHUNK_OUTPUT = {
+  shared: 'chunk_shared.txt',
+  backend_db: 'chunk_backend_db.txt',
+  backend_services: 'chunk_backend_services.txt',
+  backend_api: 'chunk_backend_api.txt',
+  backend_utils: 'chunk_backend_utils.txt',
+  frontend_store: 'chunk_frontend_store.txt',
+  frontend_api: 'chunk_frontend_api.txt',
+  frontend_hooks: 'chunk_frontend_hooks.txt',
+  frontend_theme: 'chunk_frontend_theme.txt',
+  frontend_components_ui: 'chunk_frontend_components_ui.txt',
+  frontend_pages_entities: 'chunk_frontend_pages_entities.txt',
+  frontend_pages_visualization: 'chunk_frontend_pages_visualization.txt',
+  frontend_pages_content: 'chunk_frontend_pages_content.txt',
+  frontend_pages_system: 'chunk_frontend_pages_system.txt',
+  frontend_entry: 'chunk_frontend_entry.txt',
+  uncategorized: 'chunk_uncategorized.txt',
+};
+
+function toPosix(rel) {
+  return rel.split(path.sep).join('/');
 }
 
-const args = parseArgs(process.argv.slice(2));
-
-const root = path.resolve(String(args.root ?? '.'));
-const model = String(args.model ?? 'cl100k_base');
-const target = Number(args.target ?? 25000);
-const buffer = Number(args.buffer ?? Math.floor(target * 0.2));
-const maxChunk = target - buffer;
-const outDir = path.resolve(root, String(args.outDir ?? 'chunks'));
-const includeFromArgs = String(args.include ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-const excludeFromArgs = String(args.exclude ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-if (!Number.isFinite(target) || target <= 0) {
-  throw new Error(`Invalid --target: ${args.target}`);
-}
-if (!Number.isFinite(buffer) || buffer < 0) {
-  throw new Error(`Invalid --buffer: ${args.buffer}`);
-}
-if (maxChunk <= 0) {
-  throw new Error(`Invalid chunk settings: target=${target}, buffer=${buffer}, maxChunk=${maxChunk}`);
+function isSourceFile(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (!SOURCE_EXTENSIONS.has(ext)) return false;
+  if (SKIP_EXTENSIONS.has(ext) || BINARY_LIKE_EXTENSIONS.has(ext)) return false;
+  const base = path.basename(filePath);
+  if (base === 'LICENSE' || base === 'license') return false;
+  return true;
 }
 
-const include = [
-  '**/*.ts',
-  '**/*.tsx',
-  '**/*.js',
-  '**/*.json',
-  '**/*.md',
-  ...includeFromArgs,
-];
-
-const exclude = [
-  '**/node_modules/**',
-  '**/.git/**',
-  '**/.next/**',
-  '**/dist/**',
-  '**/build/**',
-  '**/*.map',
-  '**/*.lock',
-  '**/package.json',
-  '**/package-lock.json',
-  '**/data/**/*.sqlite',
-  '**/data/uploads/**',
-  ...excludeFromArgs,
-];
-
-let enc;
-try {
-  enc = model === 'cl100k_base' ? get_encoding(model) : encoding_for_model(model);
-} catch {
-  enc = get_encoding('cl100k_base');
-}
-
-function countTokens(text) {
+/**
+ * @param {string} dir
+ * @param {string} root
+ * @param {string[]} out
+ */
+async function walkCollect(dir, root, out) {
+  let entries;
   try {
-    return enc.encode(text).length;
+    entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
-    return Math.ceil(text.length / 3.5);
+    return;
+  }
+  for (const ent of entries) {
+    const full = path.join(dir, ent.name);
+    if (ent.isDirectory()) {
+      if (EXCLUDED_DIR_NAMES.has(ent.name)) continue;
+      await walkCollect(full, root, out);
+    } else if (ent.isFile()) {
+      if (!isSourceFile(full)) continue;
+      out.push(full);
+    }
   }
 }
 
-function niceRel(p) {
-  return path.relative(root, p) || path.basename(p);
+/**
+ * @param {string} posixRel путь относительно корня репозитория, с /
+ * @returns {keyof typeof CHUNK_OUTPUT | null}
+ */
+function assignChunk(posixRel) {
+  // --- shared ---
+  if (posixRel.startsWith('shared/src/')) return 'shared';
+
+  // --- backend (порядок важен: db и services раньше общих правил) ---
+  if (posixRel.startsWith('backend/src/db/')) return 'backend_db';
+  if (posixRel.startsWith('backend/src/services/')) return 'backend_services';
+  if (posixRel.startsWith('backend/src/controllers/')) return 'backend_api';
+  if (posixRel.startsWith('backend/src/routes/')) return 'backend_api';
+  if (posixRel.startsWith('backend/src/middleware/')) return 'backend_api';
+  if (posixRel === 'backend/src/index.ts') return 'backend_api';
+  if (posixRel.startsWith('backend/src/utils/')) return 'backend_utils';
+
+  // --- frontend: не pages ---
+  if (posixRel.startsWith('frontend/src/store/')) return 'frontend_store';
+  if (posixRel.startsWith('frontend/src/api/')) return 'frontend_api';
+  if (posixRel.startsWith('frontend/src/hooks/')) return 'frontend_hooks';
+  if (posixRel.startsWith('frontend/src/theme/')) return 'frontend_theme';
+
+  const compPrefixes = [
+    'frontend/src/components/ui/',
+    'frontend/src/components/detail/',
+    'frontend/src/components/forms/',
+    'frontend/src/components/Layout/',
+    'frontend/src/components/onboarding/',
+    'frontend/src/components/settings/',
+  ];
+  if (compPrefixes.some((p) => posixRel.startsWith(p))) return 'frontend_components_ui';
+
+  // --- frontend: pages (порядок: узкие/визуализация → контент → система → сущности) ---
+  if (posixRel.startsWith('frontend/src/pages/')) {
+    const base = path.posix.basename(posixRel);
+
+    // Визуализация
+    if (base === 'CharacterGraphPage.tsx') return 'frontend_pages_visualization';
+    if (posixRel.startsWith('frontend/src/pages/character-graph/')) return 'frontend_pages_visualization';
+    if (base === 'TimelinePage.tsx') return 'frontend_pages_visualization';
+    if (base === 'MapPage.tsx') return 'frontend_pages_visualization';
+    if (posixRel.startsWith('frontend/src/pages/map/')) return 'frontend_pages_visualization';
+    if (base === 'WikiGraphPage.tsx') return 'frontend_pages_visualization';
+
+    // Контент (заметки, вики)
+    if (/^Note.*\.tsx$/i.test(base)) return 'frontend_pages_content';
+    if (posixRel.startsWith('frontend/src/pages/note-editor/')) return 'frontend_pages_content';
+    if (/^Wiki.*\.tsx$/i.test(base)) return 'frontend_pages_content';
+    if (posixRel.startsWith('frontend/src/pages/wiki/')) return 'frontend_pages_content';
+
+    // Системные
+    if (base === 'HomePage.tsx') return 'frontend_pages_system';
+    if (posixRel.startsWith('frontend/src/pages/home/')) return 'frontend_pages_system';
+    if (base === 'ProjectSettingsPage.tsx') return 'frontend_pages_system';
+    if (base === 'AppearanceSettingsPage.tsx') return 'frontend_pages_system';
+    if (posixRel.startsWith('frontend/src/pages/appearance/')) return 'frontend_pages_system';
+
+    // Сущности
+    if (base !== 'CharacterGraphPage.tsx' && /^Character.*\.tsx$/i.test(base)) {
+      return 'frontend_pages_entities';
+    }
+    if (posixRel.startsWith('frontend/src/pages/character/')) return 'frontend_pages_entities';
+    if (/^Faction.*\.tsx$/i.test(base)) return 'frontend_pages_entities';
+    if (posixRel.startsWith('frontend/src/pages/faction/')) return 'frontend_pages_entities';
+    if (/^Dynast.*\.tsx$/i.test(base)) return 'frontend_pages_entities';
+    if (posixRel.startsWith('frontend/src/pages/dynasty/')) return 'frontend_pages_entities';
+    if (/^Dogma.*\.tsx$/i.test(base)) return 'frontend_pages_entities';
+    if (posixRel.startsWith('frontend/src/pages/dogma/')) return 'frontend_pages_entities';
+
+    // Остальное под pages — без категории (если появятся новые файлы)
+    return 'uncategorized';
+  }
+
+  // Точка входа + utils
+  if (posixRel === 'frontend/src/App.tsx' || posixRel === 'frontend/src/main.tsx') {
+    return 'frontend_entry';
+  }
+  if (posixRel.startsWith('frontend/src/utils/')) return 'frontend_entry';
+
+  return 'uncategorized';
 }
 
-function estimateStepChars(text, totalTokens) {
-  const approxCharsPerToken = Math.max(3, Math.round(text.length / Math.max(totalTokens, 1)));
-  return Math.max(1, approxCharsPerToken * Math.floor(maxChunk * 0.9));
-}
-
-function alignEndToLineBreak(text, start, desiredEnd) {
-  if (desiredEnd >= text.length) return text.length;
-  const minEnd = Math.max(start + 1, Math.floor(desiredEnd * 0.8));
-  const maxEnd = Math.min(text.length, Math.floor(desiredEnd * 1.2));
-
-  const forward = text.indexOf('\n', desiredEnd);
-  if (forward !== -1 && forward <= maxEnd) return forward + 1;
-
-  const back = text.lastIndexOf('\n', desiredEnd);
-  if (back !== -1 && back >= minEnd) return back + 1;
-
-  return desiredEnd;
-}
-
-(async () => {
-  console.log(pc.cyan(`Root: ${root}`));
-  console.log(pc.cyan(`OutDir: ${outDir}`));
-
-  const files = await globby(include, {
-    cwd: root,
-    absolute: true,
-    ignore: exclude,
+/**
+ * @param {string} chunkKey
+ * @param {string[]} filesSorted posix paths
+ */
+function renderChunkBody(filesSorted, contentsByRel) {
+  const tocLines = ['=== TABLE OF CONTENTS ==='];
+  filesSorted.forEach((rel, i) => {
+    tocLines.push(`${i + 1}. ${rel}`);
   });
+  tocLines.push('========================', '');
 
-  files.sort();
+  const parts = [tocLines.join('\n')];
+  for (const rel of filesSorted) {
+    const text = contentsByRel.get(rel);
+    parts.push(`=== FILE: ${rel} ===`, text ?? '', '');
+  }
+  return parts.join('\n');
+}
 
-  const manifest = {
-    model,
-    target,
-    buffer,
-    maxChunk,
-    totalTokens: 0,
-    generatedAt: new Date().toISOString(),
-    warnings: [],
-    files: [],
-    chunks: [],
-  };
+function padCell(s, width) {
+  const str = String(s);
+  return str.length >= width ? str : str + ' '.repeat(width - str.length);
+}
 
-  const chunks = [];
-  let current = { id: 1, files: [], tokens: 0 };
-  const fileTextByRel = new Map();
+async function main() {
+  const allFiles = [];
+  await walkCollect(ROOT, ROOT, allFiles);
+  allFiles.sort((a, b) => a.localeCompare(b));
 
-  for (const file of files) {
-    const rel = niceRel(file);
-    let text = '';
+  /** @type {Map<string, string[]>} */
+  const byChunk = new Map();
+  for (const key of Object.keys(CHUNK_OUTPUT)) {
+    byChunk.set(key, []);
+  }
+
+  /** @type {Map<string, string>} */
+  const contentsByRel = new Map();
+
+  for (const abs of allFiles) {
+    const rel = toPosix(path.relative(ROOT, abs));
+    let text;
     try {
-      text = await fs.readFile(file, 'utf8');
-    } catch (err) {
-      manifest.warnings.push({
-        path: rel,
-        reason: 'read_error',
-        message: err instanceof Error ? err.message : String(err),
-      });
+      text = await fs.readFile(abs, 'utf8');
+    } catch {
       continue;
     }
-
-    fileTextByRel.set(rel, text);
-    const tokens = countTokens(text);
-
-    manifest.files.push({ path: rel, tokens });
-
-    if (tokens > maxChunk) {
-      let start = 0;
-      let part = 1;
-      const step = estimateStepChars(text, tokens);
-
-      while (start < text.length) {
-        const desiredEnd = start + step;
-        const end = alignEndToLineBreak(text, start, desiredEnd);
-        const slice = text.slice(start, end);
-        const t = countTokens(slice);
-
-        if (current.tokens + t > maxChunk && current.files.length) {
-          chunks.push(current);
-          current = { id: current.id + 1, files: [], tokens: 0 };
-        }
-
-        current.files.push({
-          path: `${rel}#part${part}`,
-          tokens: t,
-          size: slice.length,
-          virtual: true,
-          start,
-          end,
-        });
-        current.tokens += t;
-
-        part += 1;
-        start = end;
-      }
-
-      continue;
-    }
-
-    if (current.tokens + tokens > maxChunk && current.files.length) {
-      chunks.push(current);
-      current = { id: current.id + 1, files: [], tokens: 0 };
-    }
-
-    current.files.push({ path: rel, tokens });
-    current.tokens += tokens;
+    contentsByRel.set(rel, text);
+    const chunk = assignChunk(rel);
+    byChunk.get(chunk).push(rel);
   }
 
-  if (current.files.length) {
-    chunks.push(current);
+  for (const list of byChunk.values()) {
+    list.sort((a, b) => a.localeCompare(b));
   }
 
-  manifest.totalTokens = manifest.files.reduce((sum, f) => sum + f.tokens, 0);
-  manifest.chunks = chunks.map((c) => ({
-    id: c.id,
-    tokens: c.tokens,
-    files: c.files,
-  }));
-
-  await fs.mkdir(outDir, { recursive: true });
-
-  for (const c of chunks) {
-    const fp = path.join(outDir, `chunk_${String(c.id).padStart(2, '0')}.txt`);
-    const parts = [];
-
-    for (const f of c.files) {
-      const p = f.virtual ? f.path.split('#part')[0] : f.path;
-      const fullText = fileTextByRel.get(p);
-      if (typeof fullText !== 'string') {
-        manifest.warnings.push({
-          path: p,
-          reason: 'missing_file_cache',
-          message: 'File text was not cached; skipped while writing chunk',
-        });
-        continue;
+  await fs.mkdir(OUT_DIR, { recursive: true });
+  try {
+    const existing = await fs.readdir(OUT_DIR);
+    for (const name of existing) {
+      if (name.endsWith('.txt')) {
+        await fs.unlink(path.join(OUT_DIR, name));
       }
-      let text = fullText;
-
-      if (f.virtual) {
-        const from = Number.isFinite(f.start) ? f.start : 0;
-        const to = Number.isFinite(f.end) ? f.end : text.length;
-        text = text.slice(from, to);
-      }
-
-      parts.push(`\n\n/* ==== ${f.path} (${f.tokens} tok) ==== */\n\n${text}`);
     }
-
-    await fs.writeFile(fp, parts.join('\n'), 'utf8');
+  } catch (e) {
+    if (e && e.code !== 'ENOENT') throw e;
   }
 
-  await fs.writeFile(
-    path.join(outDir, 'manifest.json'),
-    JSON.stringify(manifest, null, 2),
-    'utf8'
+  /** @type {{ key: string, name: string, files: number, bytes: number }[]} */
+  const stats = [];
+
+  for (const [chunkKey, files] of byChunk) {
+    if (!files.length) continue;
+    const outName = CHUNK_OUTPUT[chunkKey];
+    if (!outName) continue;
+
+    const body = renderChunkBody(files, contentsByRel);
+    const outPath = path.join(OUT_DIR, outName);
+    await fs.writeFile(outPath, body, 'utf8');
+    const bytes = Buffer.byteLength(body, 'utf8');
+    stats.push({
+      key: chunkKey,
+      name: outName,
+      files: files.length,
+      bytes,
+    });
+  }
+
+  stats.sort((a, b) => a.name.localeCompare(b.name));
+
+  const nameW = Math.max(
+    36,
+    ...stats.map((s) => s.name.length),
+    'TOTAL (sum of chunks)'.length
   );
+  const filesW = 6;
+  const bytesW = 12;
 
-  console.log(pc.green(`Files: ${manifest.files.length}`));
-  console.log(pc.green(`Total tokens (approx): ${manifest.totalTokens}`));
+  console.log('');
+  console.log(`${padCell('chunk', nameW)} ${padCell('files', filesW)} ${padCell('bytes', bytesW)}`);
+  console.log(`${'-'.repeat(nameW)} ${'-'.repeat(filesW)} ${'-'.repeat(bytesW)}`);
+  let totalFiles = 0;
+  let totalBytes = 0;
+  for (const s of stats) {
+    console.log(
+      `${padCell(s.name, nameW)} ${padCell(s.files, filesW)} ${padCell(s.bytes, bytesW)}`
+    );
+    totalFiles += s.files;
+    totalBytes += s.bytes;
+  }
+  console.log(`${'-'.repeat(nameW)} ${'-'.repeat(filesW)} ${'-'.repeat(bytesW)}`);
   console.log(
-    pc.green(`Chunks: ${manifest.chunks.length}, target ${target}, maxChunk ${maxChunk}`)
+    `${padCell('TOTAL (sum of chunks)', nameW)} ${padCell(totalFiles, filesW)} ${padCell(totalBytes, bytesW)}`
   );
-  if (manifest.warnings.length) {
-    console.log(pc.yellow(`Warnings: ${manifest.warnings.length}`));
-  }
-})().finally(() => {
-  if (enc && typeof enc.free === 'function') enc.free();
+  console.log(`\nOutput: ${OUT_DIR}`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
 });

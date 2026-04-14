@@ -18,6 +18,7 @@ interface BranchState {
   fetchBranches: (projectId: number) => Promise<void>;
   setActiveBranchId: (branchId: number | null) => void;
   clearError: () => void;
+  reset: () => void;
 }
 
 export const useBranchStore = create<BranchState>((set) => ({
@@ -69,4 +70,13 @@ export const useBranchStore = create<BranchState>((set) => ({
     });
   },
   clearError: () => set({ error: null }),
+  reset: () =>
+    set({
+      branches: [],
+      activeProjectId: null,
+      activeBranchId: null,
+      loading: false,
+      initialized: false,
+      error: null,
+    }),
 }));

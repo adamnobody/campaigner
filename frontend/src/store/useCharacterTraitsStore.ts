@@ -16,6 +16,7 @@ interface CharacterTraitsState {
   createTrait: (data: CreateCharacterTrait) => Promise<CharacterTrait>;
   deleteTrait: (id: number) => Promise<void>;
   clearError: () => void;
+  reset: () => void;
 }
 
 export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) => ({
@@ -95,4 +96,11 @@ export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) =
   },
 
   clearError: () => set({ error: null }),
+  reset: () =>
+    set({
+      traits: [],
+      assignedTraitIds: new Set<number>(),
+      loading: false,
+      error: null,
+    }),
 }));

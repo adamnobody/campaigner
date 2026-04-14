@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Project, CreateProject, UpdateProject } from '@campaigner/shared';
 import { projectsApi } from '@/api/projects';
+import { getErrorMessage } from '@/utils/error';
 
 interface ProjectState {
   projects: Project[];
@@ -18,7 +19,7 @@ interface ProjectState {
   clearError: () => void;
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>((set) => ({
   projects: [],
   currentProject: null,
   loading: false,
@@ -29,8 +30,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const res = await projectsApi.getAll();
       set({ projects: res.data.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch projects'), loading: false });
     }
   },
 
@@ -39,8 +40,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const res = await projectsApi.getById(id);
       set({ currentProject: res.data.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch project'), loading: false });
     }
   },
 
@@ -54,8 +55,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         loading: false,
       }));
       return project;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create project'), loading: false });
       throw error;
     }
   },
@@ -69,8 +70,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: state.projects.map(p => p.id === id ? updated : p),
         currentProject: state.currentProject?.id === id ? updated : state.currentProject,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update project') });
       throw error;
     }
   },
@@ -83,8 +84,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: state.projects.filter(p => p.id !== id),
         currentProject: state.currentProject?.id === id ? null : state.currentProject,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete project') });
       throw error;
     }
   },
@@ -98,8 +99,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         currentProject: state.currentProject?.id === id ? updated : state.currentProject,
         projects: state.projects.map(p => p.id === id ? updated : p),
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to upload map') });
       throw error;
     }
   },

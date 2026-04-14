@@ -21,6 +21,7 @@ interface MapState {
   deleteMarker: (markerId: number) => Promise<void>;
   setCurrentMap: (map: Map | null) => void;
   clearMapState: () => void;
+  reset: () => void;
 }
 
 export const useMapStore = create<MapState>((set) => ({
@@ -148,6 +149,16 @@ export const useMapStore = create<MapState>((set) => ({
   },
 
   clearMapState: () => {
+    set({
+      currentMap: null,
+      markers: [],
+      mapTree: [],
+      loading: false,
+      error: null,
+    });
+  },
+
+  reset: () => {
     set({
       currentMap: null,
       markers: [],

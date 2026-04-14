@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Dogma, CreateDogma, UpdateDogma } from '@campaigner/shared';
 import { dogmasApi } from '@/api/dogmas';
+import { getErrorMessage } from '@/utils/error';
 
 interface DogmaState {
   dogmas: Dogma[];
@@ -30,7 +31,7 @@ interface DogmaState {
   reset: () => void;
 }
 
-export const useDogmaStore = create<DogmaState>((set, get) => ({
+export const useDogmaStore = create<DogmaState>((set) => ({
   dogmas: [],
   total: 0,
   currentDogma: null,
@@ -57,8 +58,8 @@ export const useDogmaStore = create<DogmaState>((set, get) => ({
         loading: false,
         loadingMore: false,
       }));
-    } catch (error: any) {
-      set({ error: error.message, loading: false, loadingMore: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch dogmas'), loading: false, loadingMore: false });
     }
   },
 
@@ -67,8 +68,8 @@ export const useDogmaStore = create<DogmaState>((set, get) => ({
     try {
       const res = await dogmasApi.getById(id);
       set({ currentDogma: res.data.data, loading: false });
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to fetch dogma'), loading: false });
     }
   },
 
@@ -83,8 +84,8 @@ export const useDogmaStore = create<DogmaState>((set, get) => ({
         loading: false,
       }));
       return dogma;
-    } catch (error: any) {
-      set({ error: error.message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to create dogma'), loading: false });
       throw error;
     }
   },
@@ -98,8 +99,8 @@ export const useDogmaStore = create<DogmaState>((set, get) => ({
         dogmas: state.dogmas.map(d => d.id === id ? updated : d),
         currentDogma: state.currentDogma?.id === id ? updated : state.currentDogma,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update dogma') });
       throw error;
     }
   },
@@ -113,8 +114,8 @@ export const useDogmaStore = create<DogmaState>((set, get) => ({
         total: state.total - 1,
         currentDogma: state.currentDogma?.id === id ? null : state.currentDogma,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to delete dogma') });
       throw error;
     }
   },
@@ -125,8 +126,8 @@ export const useDogmaStore = create<DogmaState>((set, get) => ({
       const res = await dogmasApi.reorder(projectId, orderedIds);
       const { items, total } = res.data.data;
       set({ dogmas: items, total });
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to reorder dogmas') });
       throw error;
     }
   },
@@ -141,8 +142,8 @@ export const useDogmaStore = create<DogmaState>((set, get) => ({
         dogmas: state.dogmas.map(d => d.id === id ? updated : d),
         currentDogma: state.currentDogma?.id === id ? updated : state.currentDogma,
       }));
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Failed to update dogma tags') });
     }
   },
 
