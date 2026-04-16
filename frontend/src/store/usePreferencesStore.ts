@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { createDebouncedStateStorage } from './debouncedStorage';
+import {
+  INTERFACE_STYLE_PROFILES,
+  getRecommendedPaletteForStyle,
+  type InterfaceStyleId,
+} from '@/theme/interfaceStyles';
 
 export type ThemePreset = string;
 
@@ -9,8 +14,10 @@ export type FontMode = 'serif' | 'sans' | 'custom';
 export type UiDensity = 'compact' | 'comfortable' | 'spacious';
 export type MotionMode = 'full' | 'reduced';
 export type PatternMode = 'none' | 'dots' | 'grid' | 'diagonal' | 'custom';
+export type InterfaceStyle = InterfaceStyleId;
 
 export interface CustomThemeSnapshot {
+  interfaceStyle: InterfaceStyle;
   themePreset: ThemePreset;
   surfaceMode: SurfaceMode;
   fontMode: FontMode;
@@ -42,6 +49,8 @@ export interface SavedCustomTheme {
 }
 
 export interface PreferencesState {
+  interfaceStyle: InterfaceStyle;
+  autoApplyRecommendedPalette: boolean;
   themePreset: ThemePreset;
   surfaceMode: SurfaceMode;
   fontMode: FontMode;
@@ -90,6 +99,9 @@ export interface PreferencesState {
   setCardPatternOpacity: (value: number) => void;
   setCardPatternSize: (value: number) => void;
   setCardPatternUrl: (value: string) => void;
+  setInterfaceStyle: (value: InterfaceStyle) => void;
+  setAutoApplyRecommendedPalette: (value: boolean) => void;
+  applyInterfaceStyle: (value: InterfaceStyle, options?: { useRecommendedPalette?: boolean }) => void;
   saveCurrentAsCustomTheme: (name: string) => void;
   applyCustomTheme: (id: string) => void;
   deleteCustomTheme: (id: string) => void;
@@ -98,9 +110,11 @@ export interface PreferencesState {
 }
 
 const defaultPreferences = {
+  interfaceStyle: 'dark-fantasy' as InterfaceStyle,
+  autoApplyRecommendedPalette: true,
   themePreset: 'obsidian-gold' as ThemePreset,
   surfaceMode: 'glass' as SurfaceMode,
-  fontMode: 'serif' as FontMode,
+  fontMode: 'custom' as FontMode,
   uiDensity: 'comfortable' as UiDensity,
   motionMode: 'full' as MotionMode,
   transparency: 0.72,
@@ -109,9 +123,9 @@ const defaultPreferences = {
 
   homeBackgroundImage: '',
   homeBackgroundOpacity: 0.42,
-  customBodyFontFamily: '"Inter", "Roboto", sans-serif',
+  customBodyFontFamily: '"Cormorant Garamond", "Crimson Text", serif',
   customHeadingFontFamily: '"Cinzel", serif',
-  customFontCssUrl: '',
+  customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap',
   panelPatternMode: 'none' as PatternMode,
   panelPatternOpacity: 0.12,
   panelPatternSize: 28,
@@ -125,6 +139,7 @@ const defaultPreferences = {
 };
 
 const pickSnapshot = (state: PreferencesState): CustomThemeSnapshot => ({
+  interfaceStyle: state.interfaceStyle,
   themePreset: state.themePreset,
   surfaceMode: state.surfaceMode,
   fontMode: state.fontMode,
@@ -153,6 +168,8 @@ export const usePreferencesStore = create<PreferencesState>()(
     (set, get) => ({
       ...defaultPreferences,
 
+      setInterfaceStyle: (value) => set({ interfaceStyle: value, selectedCustomThemeId: null }),
+      setAutoApplyRecommendedPalette: (value) => set({ autoApplyRecommendedPalette: value }),
       setThemePreset: (value) => set({ themePreset: value, selectedCustomThemeId: null }),
       setSurfaceMode: (value) => set({ surfaceMode: value, selectedCustomThemeId: null }),
       setFontMode: (value) => set({ fontMode: value, selectedCustomThemeId: null }),
@@ -176,6 +193,17 @@ export const usePreferencesStore = create<PreferencesState>()(
       setCardPatternOpacity: (value) => set({ cardPatternOpacity: value, selectedCustomThemeId: null }),
       setCardPatternSize: (value) => set({ cardPatternSize: value, selectedCustomThemeId: null }),
       setCardPatternUrl: (value) => set({ cardPatternUrl: value, selectedCustomThemeId: null }),
+      applyInterfaceStyle: (value, options) => {
+        const profile = INTERFACE_STYLE_PROFILES[value];
+        if (!profile) return;
+        const recommendedPalette = getRecommendedPaletteForStyle(value);
+        set({
+          interfaceStyle: value,
+          ...(options?.useRecommendedPalette ? { themePreset: recommendedPalette } : {}),
+          ...profile.defaults,
+          selectedCustomThemeId: null,
+        });
+      },
 
       saveCurrentAsCustomTheme: (name) => {
         const trimmed = name.trim();
@@ -200,7 +228,10 @@ export const usePreferencesStore = create<PreferencesState>()(
         const found = state.customThemes.find((t) => t.id === id);
         if (!found) return;
         set({
+          ...defaultPreferences,
+          autoApplyRecommendedPalette: state.autoApplyRecommendedPalette,
           ...found.settings,
+          interfaceStyle: found.settings.interfaceStyle ?? defaultPreferences.interfaceStyle,
           selectedCustomThemeId: found.id,
         });
       },
@@ -220,6 +251,8 @@ export const usePreferencesStore = create<PreferencesState>()(
       name: 'campaigner-preferences',
       storage: createJSONStorage(() => createDebouncedStateStorage(220)),
       partialize: (state) => ({
+        interfaceStyle: state.interfaceStyle,
+        autoApplyRecommendedPalette: state.autoApplyRecommendedPalette,
         themePreset: state.themePreset,
         surfaceMode: state.surfaceMode,
         fontMode: state.fontMode,

@@ -37,7 +37,10 @@ export const createAppTheme = (preferences: Pick<
       ? '"Crimson Text", serif'
       : '"Inter", "Roboto", sans-serif';
 
-  const uiFont = '"Inter", "Roboto", sans-serif';
+  const uiFont =
+    preferences.fontMode === 'custom'
+      ? preferences.customBodyFontFamily || '"Inter", "Roboto", sans-serif'
+      : '"Inter", "Roboto", sans-serif';
   const headingFont =
     preferences.fontMode === 'custom'
       ? preferences.customHeadingFontFamily || '"Cinzel", serif'
@@ -57,6 +60,11 @@ export const createAppTheme = (preferences: Pick<
   const paperBackground = `rgba(${preset.panelBaseRgb}, ${panelOpacity})`;
   const softBackground = alpha(preset.textPrimary, 0.03);
   const borderColor = `rgba(${preset.borderRgb}, 0.18)`;
+  const accentMainSoft = alpha(preset.accentMain, 0.78);
+  const accentStrongSoft = alpha(preset.accentStrong, 0.72);
+  const successSoft = alpha(preset.success, 0.86);
+  const warningSoft = alpha(preset.warning, 0.86);
+  const errorSoft = alpha(preset.error, 0.86);
 
   const buildPatternStyle = (
     mode: PreferencesState['panelPatternMode'],
@@ -132,19 +140,19 @@ export const createAppTheme = (preferences: Pick<
     palette: {
       mode: 'dark',
       primary: {
-        main: preset.accentMain,
+        main: accentMainSoft,
       },
       secondary: {
-        main: preset.accentStrong,
+        main: accentStrongSoft,
       },
       success: {
-        main: preset.success,
+        main: successSoft,
       },
       warning: {
-        main: preset.warning,
+        main: warningSoft,
       },
       error: {
-        main: preset.error,
+        main: errorSoft,
       },
       background: {
         default: preset.background,
@@ -222,7 +230,7 @@ export const createAppTheme = (preferences: Pick<
             height: 10,
           },
           '::-webkit-scrollbar-thumb': {
-            background: alpha(preset.accentMain, 0.28),
+            background: alpha(accentMainSoft, 0.34),
             borderRadius: 999,
           },
           '::-webkit-scrollbar-track': {
@@ -291,21 +299,21 @@ export const createAppTheme = (preferences: Pick<
             transition: transitionDuration ? `all ${transitionDuration}ms ease` : 'none',
           },
           contained: {
-            background: `linear-gradient(180deg, ${preset.accentMain}, ${preset.accentStrong})`,
-            color: '#111',
-            boxShadow: `0 8px 20px ${alpha(preset.accentMain, 0.22)}`,
+            background: `linear-gradient(180deg, ${accentMainSoft}, ${accentStrongSoft})`,
+            color: preset.textPrimary,
+            boxShadow: `0 6px 16px ${alpha(accentMainSoft, 0.18)}`,
             '&:hover': {
-              background: `linear-gradient(180deg, ${preset.accentStrong}, ${preset.accentMain})`,
-              boxShadow: `0 10px 24px ${alpha(preset.accentMain, 0.28)}`,
+              background: `linear-gradient(180deg, ${accentStrongSoft}, ${accentMainSoft})`,
+              boxShadow: `0 8px 20px ${alpha(accentMainSoft, 0.22)}`,
             },
           },
           outlined: {
-            borderColor: alpha(preset.accentMain, 0.32),
+            borderColor: alpha(accentMainSoft, 0.3),
             color: preset.textPrimary,
             backgroundColor: alpha(preset.textPrimary, 0.02),
             '&:hover': {
-              borderColor: alpha(preset.accentMain, 0.5),
-              backgroundColor: alpha(preset.accentMain, 0.08),
+              borderColor: alpha(accentMainSoft, 0.42),
+              backgroundColor: alpha(accentMainSoft, 0.07),
             },
           },
         },
@@ -316,7 +324,7 @@ export const createAppTheme = (preferences: Pick<
             color: preset.textSecondary,
             transition: transitionDuration ? `all ${transitionDuration}ms ease` : 'none',
             '&:hover': {
-              backgroundColor: alpha(preset.accentMain, 0.1),
+              backgroundColor: alpha(accentMainSoft, 0.08),
               color: preset.textPrimary,
             },
           },
@@ -326,12 +334,12 @@ export const createAppTheme = (preferences: Pick<
         styleOverrides: {
           root: {
             backgroundColor: alpha(preset.textPrimary, 0.06),
-            border: `1px solid ${alpha(preset.accentMain, 0.14)}`,
+            border: `1px solid ${alpha(accentMainSoft, 0.14)}`,
             color: preset.textSecondary,
             transition: transitionDuration ? `all ${transitionDuration}ms ease` : 'none',
           },
           filled: {
-            backgroundColor: alpha(preset.accentMain, 0.14),
+            backgroundColor: alpha(accentMainSoft, 0.13),
             color: preset.textPrimary,
           },
         },
@@ -351,11 +359,11 @@ export const createAppTheme = (preferences: Pick<
               borderColor: alpha(preset.textPrimary, 0.12),
             },
             '&:hover fieldset': {
-              borderColor: alpha(preset.accentMain, 0.24),
+              borderColor: alpha(accentMainSoft, 0.24),
             },
             '&.Mui-focused fieldset': {
-              borderColor: preset.accentMain,
-              boxShadow: `0 0 0 3px ${alpha(preset.accentMain, 0.12)}`,
+              borderColor: accentMainSoft,
+              boxShadow: `0 0 0 3px ${alpha(accentMainSoft, 0.1)}`,
             },
           },
           input: {

@@ -215,14 +215,32 @@ export const HomePage: React.FC = () => {
               <Box
                 sx={{
                   mt: 1.5,
-                  width: 120,
+                  width: '100%',
                   height: 3,
                   background: `linear-gradient(90deg, 
-                    ${theme.palette.primary.main} 0%, 
+                    ${theme.palette.primary.main} 0%,
+                    ${alpha(theme.palette.secondary.main, 0.95)} 45%,
+                    ${alpha(theme.palette.primary.main, 0.85)} 75%,
                     transparent 100%
                   )`,
                   borderRadius: 2,
-                  boxShadow: `0 0 10px ${theme.palette.primary.main}`,
+                  backgroundSize: '220% 100%',
+                  boxShadow: `0 0 10px ${alpha(theme.palette.primary.main, 0.95)}`,
+                  animation: 'campaignerLineShimmer 4.8s ease-in-out infinite',
+                  '@keyframes campaignerLineShimmer': {
+                    '0%': {
+                      backgroundPosition: '0% 50%',
+                      boxShadow: `0 0 8px ${alpha(theme.palette.primary.main, 0.75)}`,
+                    },
+                    '50%': {
+                      backgroundPosition: '100% 50%',
+                      boxShadow: `0 0 14px ${alpha(theme.palette.secondary.main, 0.7)}`,
+                    },
+                    '100%': {
+                      backgroundPosition: '0% 50%',
+                      boxShadow: `0 0 8px ${alpha(theme.palette.primary.main, 0.75)}`,
+                    },
+                  },
                 }}
               />
             </Box>

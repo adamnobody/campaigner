@@ -294,6 +294,7 @@ campaigner
 │  └─ vite.config.ts
 ├─ LICENSE
 ├─ package.json
+├─ README.md
 ├─ scripts
 │  ├─ chunker.mjs
 │  ├─ db
