@@ -89,6 +89,9 @@ campaigner
 │  └─ uploads
 │     └─ factions
 │        └─ faction-1774159645120-b70l7n.png
+├─ electron
+│  ├─ icon.ico
+│  └─ main.js
 ├─ frontend
 │  ├─ index.html
 │  ├─ package.json
@@ -185,7 +188,8 @@ campaigner
 │  │  ├─ hooks
 │  │  │  ├─ useDebounce.ts
 │  │  │  ├─ useHistory.ts
-│  │  │  └─ useHotkeys.ts
+│  │  │  ├─ useHotkeys.ts
+│  │  │  └─ useProjectScope.ts
 │  │  ├─ main.tsx
 │  │  ├─ pages
 │  │  │  ├─ appearance
