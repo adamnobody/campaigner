@@ -93,6 +93,11 @@ import {
   characterTraitSchema,
   createCharacterTraitBodySchema,
 } from '../schemas/character-trait.schema.js';
+import {
+  ambitionSchema,
+  createAmbitionBodySchema,
+  updateAmbitionBodySchema,
+} from '../schemas/ambition.schema.js';
 
 // ==================== Project ====================
 export type Project = z.infer<typeof projectSchema>;
@@ -112,6 +117,9 @@ export type UpdateRelationship = z.input<typeof updateRelationshipSchema>;
 // ==================== Character traits ====================
 export type CharacterTrait = z.infer<typeof characterTraitSchema>;
 export type CreateCharacterTrait = z.input<typeof createCharacterTraitBodySchema>;
+export type Ambition = z.infer<typeof ambitionSchema>;
+export type CreateAmbition = z.input<typeof createAmbitionBodySchema>;
+export type UpdateAmbition = z.input<typeof updateAmbitionBodySchema>;
 
 // ==================== Note ====================
 export type Note = z.infer<typeof noteSchema>;

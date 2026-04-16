@@ -177,3 +177,42 @@ export async function smokeCharacterRelationships(ctx) {
   assertStatus(updateRelRes, 200, 'update relationship');
   logOk('Relationship updated');
 }
+
+export async function smokeCharacterTraitsExclusions(ctx) {
+  logStep('Character Traits Exclusions');
+
+  const catalogRes = await api(`/character-traits?projectId=${ctx.projectId}`);
+  assertStatus(catalogRes, 200, 'get character traits catalog');
+  const catalog = getEntityList(catalogRes, 'get character traits catalog');
+
+  const kindness = catalog.find((item) => item.name === 'Доброта');
+  const anger = catalog.find((item) => item.name === 'Злость');
+  if (!kindness || !anger) {
+    throw new Error('character traits exclusions: required predefined traits not found');
+  }
+
+  const updateRes = await api(`/character-traits/${kindness.id}/exclusions`, {
+    method: 'PATCH',
+    body: JSON.stringify({ excludedIds: [anger.id] }),
+  });
+  assertStatus(updateRes, 200, 'update exclusions for predefined trait');
+  logOk('Predefined trait exclusions updated');
+
+  const assignKindnessRes = await api('/character-traits/assign', {
+    method: 'POST',
+    body: JSON.stringify({ characterId: ctx.characterId, traitId: kindness.id }),
+  });
+  assertStatus(assignKindnessRes, 204, 'assign kindness trait');
+  logOk('Assigned first trait');
+
+  const assignAngerRes = await api('/character-traits/assign', {
+    method: 'POST',
+    body: JSON.stringify({ characterId: ctx.characterId, traitId: anger.id }),
+  });
+  if (assignAngerRes.status !== 400) {
+    throw new Error(
+      `expected assignment conflict for excluded trait, got status ${assignAngerRes.status}: ${JSON.stringify(assignAngerRes.data, null, 2)}`
+    );
+  }
+  logOk('Excluded trait assignment is blocked');
+}

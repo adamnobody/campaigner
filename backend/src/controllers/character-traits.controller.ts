@@ -34,6 +34,13 @@ export class CharacterTraitsController {
     return created(res, trait);
   });
 
+  static updateExclusions = asyncHandler(async (req: Request, res: Response) => {
+    const id = parseId(req.params.id, 'trait id');
+    const excludedIds = (req.body?.excludedIds ?? []) as number[];
+    const trait = CharacterTraitService.setExclusions(id, excludedIds);
+    return ok(res, trait);
+  });
+
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'trait id');
     CharacterTraitService.delete(id);

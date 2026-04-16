@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Button, alpha, useTheme, Tooltip, IconButton } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import BlockIcon from '@mui/icons-material/Block';
+import { ExclusionOverlay } from '@/components/ui/ExclusionOverlay';
 
 export interface TraitFlipCardProps {
   id: number;
@@ -11,6 +13,9 @@ export interface TraitFlipCardProps {
   isCustom: boolean;
   onToggleAttach: () => void;
   onDelete?: () => void;
+  onConfigureExclusions?: () => void;
+  isBlocked?: boolean;
+  blockedTooltip?: string;
   /** When true, attach/detach buttons are disabled (e.g. new character not saved). */
   attachActionsDisabled?: boolean;
 }
@@ -24,7 +29,10 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
   isAttached,
   isCustom,
   onDelete,
+  onConfigureExclusions,
   onToggleAttach,
+  isBlocked = false,
+  blockedTooltip,
   attachActionsDisabled = false,
 }) => {
   const theme = useTheme();
@@ -36,6 +44,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
   }, [imageSrc]);
 
   const handleCardAreaClick = () => {
+    if (isBlocked) return;
     setFlipped((v) => !v);
   };
 
@@ -240,27 +249,51 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
             minHeight: 0,
           }}
         >
-          {isCustom && onDelete && (
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
+          {(onConfigureExclusions || (isCustom && onDelete)) && (
+            <Box
               sx={{
                 position: 'absolute',
                 top: 8,
                 right: 8,
                 zIndex: 3,
-                color: 'rgba(255,255,255,0.7)',
-                '&:hover': {
-                  color: 'rgba(255,100,100,0.9)',
-                  bgcolor: 'rgba(255,255,255,0.08)',
-                },
+                display: 'flex',
+                gap: 0.5,
               }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
+              {onConfigureExclusions && (
+                <Tooltip title="Настроить исключения">
+                  <IconButton
+                    size="small"
+                    onClick={() => onConfigureExclusions()}
+                    sx={{
+                      color: imageFailed ? 'text.secondary' : 'rgba(255,255,255,0.8)',
+                      '&:hover': {
+                        color: imageFailed ? 'text.primary' : '#fff',
+                        bgcolor: 'rgba(255,255,255,0.08)',
+                      },
+                    }}
+                  >
+                    <BlockIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {isCustom && onDelete && (
+                <IconButton
+                  size="small"
+                  onClick={() => onDelete()}
+                  sx={{
+                    color: 'rgba(255,255,255,0.7)',
+                    '&:hover': {
+                      color: 'rgba(255,100,100,0.9)',
+                      bgcolor: 'rgba(255,255,255,0.08)',
+                    },
+                  }}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
           )}
           <Typography
             variant="subtitle1"
@@ -269,7 +302,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
               mb: 1,
               flexShrink: 0,
               color: imageFailed ? 'text.primary' : '#fff',
-              pr: isCustom && onDelete ? 4 : 0,
+              pr: (onConfigureExclusions && isCustom && onDelete) ? 8 : (onConfigureExclusions || (isCustom && onDelete)) ? 4 : 0,
             }}
           >
             {name}
@@ -307,7 +340,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
                     fullWidth
                     size="small"
                     variant="outlined"
-                    disabled={attachActionsDisabled}
+                    disabled={attachActionsDisabled || isBlocked}
                     onClick={handleToggleClick}
                     sx={
                       imageFailed
@@ -337,7 +370,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
                     size="small"
                     variant="contained"
                     color="primary"
-                    disabled={attachActionsDisabled}
+                    disabled={attachActionsDisabled || isBlocked}
                     onClick={handleToggleClick}
                   >
                     Прикрепить
@@ -348,6 +381,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
           </Box>
         </Box>
       </Box>
+      {isBlocked && blockedTooltip ? <ExclusionOverlay tooltip={blockedTooltip} /> : null}
     </Box>
   );
 

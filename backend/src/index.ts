@@ -23,6 +23,7 @@ import wikiRoutes from './routes/wiki.routes.js';
 import dynastyRoutes from './routes/dynasty.routes.js';
 import branchRoutes from './routes/branch.routes.js';
 import characterTraitRoutes from './routes/character-traits.routes.js';
+import ambitionRoutes from './routes/ambition.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,8 +61,10 @@ const mapsDir = path.resolve(uploadsDir, 'maps');
 const charactersDir = path.resolve(uploadsDir, 'characters');
 const factionsDir = path.resolve(uploadsDir, 'factions');
 const dynastiesDir = path.resolve(uploadsDir, 'dynasties');
+const traitsDir = path.resolve(uploadsDir, 'traits');
+const ambitionsDir = path.resolve(uploadsDir, 'ambitions');
 
-[dataDir, uploadsDir, mapsDir, charactersDir, factionsDir, dynastiesDir].forEach(dir => {
+[dataDir, uploadsDir, mapsDir, charactersDir, factionsDir, dynastiesDir, traitsDir, ambitionsDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -98,6 +101,7 @@ app.use('/api/factions', factionRoutes);
 app.use('/api/dynasties', dynastyRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/character-traits', characterTraitRoutes);
+app.use('/api', ambitionRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

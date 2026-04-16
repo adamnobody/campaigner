@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Autocomplete,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -10,6 +12,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import BlockIcon from '@mui/icons-material/Block';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import { DndButton } from '@/components/ui/DndButton';
@@ -36,11 +39,13 @@ const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const ACCEPT_HINT = 'image/jpeg,image/png,image/webp';
 
 export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onClose, projectId }) => {
+  const traits = useCharacterTraitsStore((s) => s.traits);
   const createTrait = useCharacterTraitsStore((s) => s.createTrait);
   const showSnackbar = useUIStore((s) => s.showSnackbar);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [excludedIds, setExcludedIds] = useState<number[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,6 +64,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
     if (!open) {
       setName('');
       setDescription('');
+      setExcludedIds([]);
       setFile(null);
       setSubmitting(false);
     }
@@ -100,6 +106,18 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
     onClose();
   };
 
+  const availableTraitOptions = useMemo(
+    () =>
+      traits
+        .filter((trait) => trait.projectId === projectId)
+        .map((trait) => ({ id: trait.id, name: trait.name })),
+    [traits, projectId]
+  );
+  const selectedTraitOptions = useMemo(() => {
+    const selected = new Set(excludedIds);
+    return availableTraitOptions.filter((option) => selected.has(option.id));
+  }, [availableTraitOptions, excludedIds]);
+
   const handleCreate = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -120,6 +138,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
         name: name.trim(),
         description: description.trim(),
         imagePath,
+        excludedIds,
       });
 
       showSnackbar('Черта создана', 'success');
@@ -157,6 +176,30 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
           margin="normal"
           inputProps={{ maxLength: 200 }}
         />
+        <Box sx={{ mt: 2 }}>
+          <Autocomplete
+            multiple
+            options={availableTraitOptions}
+            value={selectedTraitOptions}
+            getOptionLabel={(option) => option.name}
+            onChange={(_, value) => setExcludedIds(value.map((item) => item.id))}
+            renderInput={(params) => (
+              <TextField {...params} label="Исключает черты:" placeholder="Выберите черты" />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  icon={<BlockIcon sx={{ fontSize: 16 }} />}
+                  label={option.name}
+                  size="small"
+                  {...getTagProps({ index })}
+                  key={option.id}
+                />
+              ))
+            }
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+          />
+        </Box>
 
         <Box sx={{ mt: 2 }}>
           <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} disabled={submitting}>

@@ -11,3 +11,4 @@ export * from './wiki.schema.js';
 export * from './branch.schema.js';
 export * from './policy.schema.js';
 export * from './character-trait.schema.js';
+export * from './ambition.schema.js';

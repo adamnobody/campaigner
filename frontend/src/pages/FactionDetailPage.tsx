@@ -31,6 +31,7 @@ import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
 import { FactionRankDialog, FactionMemberDialog, FactionRelationDialog } from '@/pages/faction/FactionDialogs';
+import { FactionAmbitionsTab } from '@/pages/faction/FactionAmbitionsTab';
 import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -582,6 +583,7 @@ export const FactionDetailPage: React.FC = () => {
         tabs={[
           { value: 'overview', label: 'Обзор', icon: <EditIcon fontSize="small" /> },
           { value: 'structure', label: 'Структура', icon: <PeopleIcon fontSize="small" /> },
+          { value: 'ambitions', label: 'Амбиции', icon: <TrackChangesIcon fontSize="small" /> },
           { value: 'politics', label: 'Политика', icon: <TrackChangesIcon fontSize="small" /> },
           { value: 'assets', label: 'Активы', icon: <StarIcon fontSize="small" /> },
         ]}
@@ -764,6 +766,10 @@ export const FactionDetailPage: React.FC = () => {
             </Section>
           )}
         </Box>
+      )}
+
+      {activeTab === 'ambitions' && (
+        <FactionAmbitionsTab projectId={pid} factionId={isNew ? null : fid} />
       )}
 
       {activeTab === 'politics' && (

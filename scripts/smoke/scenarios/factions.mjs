@@ -260,3 +260,98 @@ export async function smokeFactionRelations(ctx) {
 
   logOk('Faction graph works');
 }
+
+export async function smokeFactionAmbitions(ctx) {
+  logStep('Faction Ambitions');
+
+  const catalogRes = await api(`/ambitions?projectId=${ctx.projectId}`);
+  assertStatus(catalogRes, 200, 'get ambitions catalog');
+
+  const catalog = getEntityList(catalogRes, 'get ambitions catalog');
+  if (catalog.length < 25) {
+    throw new Error(`ambitions catalog: expected at least 25 entries, got ${catalog.length}`);
+  }
+  logOk(`Ambitions catalog loaded: ${catalog.length}`);
+
+  const isolation = catalog.find((item) => item.name === 'Изоляционизм');
+  const tradeDominance = catalog.find((item) => item.name === 'Торговая доминация');
+  if (!isolation || !tradeDominance) {
+    throw new Error('ambitions exclusions: required predefined ambitions not found');
+  }
+
+  const updateExclusionsRes = await api(`/ambitions/${isolation.id}/exclusions`, {
+    method: 'PATCH',
+    body: JSON.stringify({ excludedIds: [tradeDominance.id] }),
+  });
+  assertStatus(updateExclusionsRes, 200, 'update exclusions for predefined ambition');
+  logOk('Predefined ambition exclusions updated');
+
+  const assignIsolationRes = await api(`/factions/${ctx.factionId}/ambitions`, {
+    method: 'POST',
+    body: JSON.stringify({ ambitionId: isolation.id }),
+  });
+  assertStatus(assignIsolationRes, 204, 'assign isolation ambition');
+  logOk('Assigned first ambition');
+
+  const assignTradeRes = await api(`/factions/${ctx.factionId}/ambitions`, {
+    method: 'POST',
+    body: JSON.stringify({ ambitionId: tradeDominance.id }),
+  });
+  if (assignTradeRes.status !== 400) {
+    throw new Error(
+      `expected assignment conflict for excluded ambition, got status ${assignTradeRes.status}: ${JSON.stringify(assignTradeRes.data, null, 2)}`
+    );
+  }
+  logOk('Excluded ambition assignment is blocked');
+
+  const unassignIsolationRes = await api(`/factions/${ctx.factionId}/ambitions/${isolation.id}`, {
+    method: 'DELETE',
+  });
+  assertStatus(unassignIsolationRes, 204, 'detach isolation ambition');
+  logOk('Detached first ambition after conflict check');
+
+  const createRes = await api('/ambitions', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: ctx.projectId,
+      name: `Smoke Ambition ${Date.now()}`,
+      description: 'Custom ambition created by smoke test',
+      iconPath: '/ambitions/industrializatsiya.svg',
+    }),
+  });
+  assertStatus(createRes, 201, 'create custom ambition');
+
+  const customAmbitionId = getEntityId(createRes);
+  if (!customAmbitionId) {
+    throw new Error(`create custom ambition: missing id ${JSON.stringify(createRes.data, null, 2)}`);
+  }
+  ctx.customAmbitionId = customAmbitionId;
+  logOk(`Custom ambition created: #${customAmbitionId}`);
+
+  const attachRes = await api(`/factions/${ctx.factionId}/ambitions`, {
+    method: 'POST',
+    body: JSON.stringify({ ambitionId: customAmbitionId }),
+  });
+  assertStatus(attachRes, 204, 'attach ambition to faction');
+  logOk('Ambition attached to faction');
+
+  const factionAmbitionsRes = await api(`/factions/${ctx.factionId}/ambitions`);
+  assertStatus(factionAmbitionsRes, 200, 'list faction ambitions');
+
+  const factionAmbitions = getEntityList(factionAmbitionsRes, 'list faction ambitions');
+  if (!factionAmbitions.some((ambition) => ambition.id === customAmbitionId)) {
+    throw new Error(`list faction ambitions: custom ambition #${customAmbitionId} not found`);
+  }
+  logOk('Faction ambitions list works');
+
+  const detachRes = await api(`/factions/${ctx.factionId}/ambitions/${customAmbitionId}`, {
+    method: 'DELETE',
+  });
+  assertStatus(detachRes, 204, 'detach ambition from faction');
+  logOk('Ambition detached from faction');
+
+  const deleteRes = await api(`/ambitions/${customAmbitionId}`, { method: 'DELETE' });
+  assertStatus(deleteRes, 204, 'delete custom ambition');
+  ctx.customAmbitionId = null;
+  logOk('Custom ambition deleted');
+}

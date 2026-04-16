@@ -238,6 +238,48 @@ export function createTables(db: Database.Database): void {
   `);
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS ambitions_catalog (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      icon_path TEXT DEFAULT '',
+      is_custom INTEGER NOT NULL DEFAULT 0,
+      project_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      CHECK (
+        (is_custom = 0 AND project_id IS NULL) OR
+        (is_custom = 1 AND project_id IS NOT NULL)
+      )
+    );
+  `);
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_ambitions_catalog_builtin_name
+    ON ambitions_catalog(name)
+    WHERE is_custom = 0;
+  `);
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_ambitions_catalog_custom_project_name
+    ON ambitions_catalog(project_id, name)
+    WHERE is_custom = 1;
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS faction_ambitions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      faction_id INTEGER NOT NULL,
+      ambition_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE,
+      FOREIGN KEY (ambition_id) REFERENCES ambitions_catalog(id) ON DELETE CASCADE,
+      UNIQUE(faction_id, ambition_id)
+    );
+  `);
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS faction_ranks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       faction_id INTEGER NOT NULL,
@@ -491,6 +533,30 @@ export function createTables(db: Database.Database): void {
       UNIQUE(character_id, trait_id)
     );
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS character_trait_exclusions (
+      trait_id INTEGER NOT NULL,
+      excluded_trait_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (trait_id, excluded_trait_id),
+      FOREIGN KEY (trait_id) REFERENCES character_traits(id) ON DELETE CASCADE,
+      FOREIGN KEY (excluded_trait_id) REFERENCES character_traits(id) ON DELETE CASCADE,
+      CHECK (trait_id != excluded_trait_id)
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ambition_exclusions (
+      ambition_id INTEGER NOT NULL,
+      excluded_ambition_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (ambition_id, excluded_ambition_id),
+      FOREIGN KEY (ambition_id) REFERENCES ambitions_catalog(id) ON DELETE CASCADE,
+      FOREIGN KEY (excluded_ambition_id) REFERENCES ambitions_catalog(id) ON DELETE CASCADE,
+      CHECK (ambition_id != excluded_ambition_id)
+    );
+  `);
 }
 
 export function createIndexes(db: Database.Database): void {
@@ -535,6 +601,10 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_factions_status ON factions(project_id, status);
     CREATE INDEX IF NOT EXISTS idx_factions_parent ON factions(parent_faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_policies_faction ON faction_policies(faction_id);
+    CREATE INDEX IF NOT EXISTS idx_ambitions_catalog_project ON ambitions_catalog(project_id);
+    CREATE INDEX IF NOT EXISTS idx_ambitions_catalog_custom ON ambitions_catalog(is_custom, project_id);
+    CREATE INDEX IF NOT EXISTS idx_faction_ambitions_faction ON faction_ambitions(faction_id);
+    CREATE INDEX IF NOT EXISTS idx_faction_ambitions_ambition ON faction_ambitions(ambition_id);
     CREATE INDEX IF NOT EXISTS idx_faction_ranks_faction ON faction_ranks(faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_ranks_level ON faction_ranks(faction_id, level);
     CREATE INDEX IF NOT EXISTS idx_faction_members_faction ON faction_members(faction_id);
@@ -561,5 +631,9 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_character_traits_predefined ON character_traits(project_id, is_predefined);
     CREATE INDEX IF NOT EXISTS idx_trait_assignments_character ON character_trait_assignments(character_id);
     CREATE INDEX IF NOT EXISTS idx_trait_assignments_trait ON character_trait_assignments(trait_id);
+    CREATE INDEX IF NOT EXISTS idx_trait_exclusions_trait ON character_trait_exclusions(trait_id);
+    CREATE INDEX IF NOT EXISTS idx_trait_exclusions_excluded ON character_trait_exclusions(excluded_trait_id);
+    CREATE INDEX IF NOT EXISTS idx_ambition_exclusions_ambition ON ambition_exclusions(ambition_id);
+    CREATE INDEX IF NOT EXISTS idx_ambition_exclusions_excluded ON ambition_exclusions(excluded_ambition_id);
   `);
 }

@@ -214,6 +214,9 @@ export const createAppTheme = (preferences: Pick<
     components: {
       MuiCssBaseline: {
         styleOverrides: {
+          html: {
+            scrollBehavior: 'smooth',
+          },
           body: {
             backgroundColor: preset.background,
             backgroundImage: `
