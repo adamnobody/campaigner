@@ -5,16 +5,23 @@ export const factionEntityTypeSchema = z.enum(['state', 'faction']);
 export const createFactionSchema = z.object({
   projectId: z.number().int().positive(),
   name: z.string().min(1).max(200),
-  type: factionEntityTypeSchema.default('faction'),
-  customType: z.string().max(200).optional(),
-  stateType: z.string().max(50).optional(),
-  customStateType: z.string().max(200).optional(),
+  kind: factionEntityTypeSchema.default('faction'),
+  type: z.string().max(50).nullable().optional(),
   motto: z.string().max(500).optional(),
   description: z.string().max(10000).optional(),
   history: z.string().max(10000).optional(),
   goals: z.string().max(5000).optional(),
   headquarters: z.string().max(500).optional(),
   territory: z.string().max(2000).optional(),
+  treasury: z.number().int().nullable().optional(),
+  population: z.number().int().nullable().optional(),
+  armySize: z.number().int().nullable().optional(),
+  navySize: z.number().int().nullable().optional(),
+  territoryKm2: z.number().int().nullable().optional(),
+  annualIncome: z.number().int().nullable().optional(),
+  annualExpenses: z.number().int().nullable().optional(),
+  membersCount: z.number().int().nullable().optional(),
+  influence: z.number().int().min(0).max(100).nullable().optional(),
   status: z.string().max(50).default('active'),
   color: z.string().max(50).optional(),
   secondaryColor: z.string().max(50).optional(),
@@ -70,40 +77,38 @@ export const updateFactionRelationSchema = z.object({
   isBidirectional: z.boolean().optional(),
 });
 
-export const factionAssetSchema = z.object({
+export const customMetricSchema = z.object({
   id: z.number().int().positive(),
-  factionId: z.number().int().positive(),
-  name: z.string().trim().min(1).max(200),
-  value: z.string().max(1000).default(''),
+  name: z.string().trim().min(1).max(100),
+  value: z.number(),
+  unit: z.string().max(20).nullable().optional().default(null),
   sortOrder: z.number().int().default(0),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
-export const createFactionAssetSchema = z.object({
-  factionId: z.number().int().positive(),
-  name: z.string().trim().min(1).max(200),
-  value: z.string().trim().max(1000).optional(),
-  sortOrder: z.number().int().optional(),
+export const replaceFactionCustomMetricsSchema = z.object({
+  metrics: z.array(
+    z.object({
+      id: z.number().int().positive().optional(),
+      name: z.string().trim().min(1).max(100),
+      value: z.number(),
+      unit: z.string().max(20).nullable().optional(),
+      sortOrder: z.number().int().optional(),
+    })
+  ),
 });
 
-export const updateFactionAssetSchema = z.object({
-  name: z.string().trim().min(1).max(200).optional(),
-  value: z.string().trim().max(1000).optional(),
-  sortOrder: z.number().int().optional(),
-});
-
-/** Full permutation of asset ids for a faction; must match DB exactly (no dupes/extras/missing). */
-export const reorderFactionAssetsSchema = z.object({
-  orderedIds: z.array(z.number().int().positive()),
+export const compareFactionsSchema = z.object({
+  factionIds: z.array(z.number().int().positive()).min(1),
+  metricKeys: z.array(z.string().min(1)).min(1),
 });
 
 export const factionGraphNodeSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),
-  type: factionEntityTypeSchema,
-  customType: z.string().optional().default(''),
-  stateType: z.string().optional().default(''),
+  kind: factionEntityTypeSchema,
+  type: z.string().nullable().optional().default(null),
   status: z.string(),
   color: z.string().optional().default(''),
   imagePath: z.string().optional().default(''),

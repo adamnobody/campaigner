@@ -16,6 +16,7 @@ import type {
   ExportWikiLinkRow,
   ExportDogmaRow,
   ExportFactionRow,
+  ExportFactionCustomMetricRow,
   ExportFactionRankRow,
   ExportFactionMemberRow,
   ExportFactionRelationRow,
@@ -141,15 +142,34 @@ export function exportProject(id: number): ImportedProjectPayload & {
   `).all(id) as ExportDogmaRow[];
 
   const factions = db.prepare(`
-    SELECT id, name, type, custom_type as customType, state_type as stateType,
-           custom_state_type as customStateType, motto, description, history,
-           goals, headquarters, territory, status, color,
+    SELECT id, name, kind, type, motto, description, history,
+           goals, headquarters, territory, treasury, population, army_size as armySize, navy_size as navySize,
+           territory_km2 as territoryKm2, annual_income as annualIncome, annual_expenses as annualExpenses,
+           members_count as membersCount, influence, status, color,
            secondary_color as secondaryColor, image_path as imagePath,
            banner_path as bannerPath, founded_date as foundedDate,
            disbanded_date as disbandedDate, parent_faction_id as parentFactionId,
            sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
     FROM factions WHERE project_id = ?
   `).all(id) as ExportFactionRow[];
+
+  const factionCustomMetrics = db.prepare(`
+    SELECT id, faction_id as factionId, name, value, unit, sort_order as sortOrder,
+           created_at as createdAt, updated_at as updatedAt
+    FROM faction_custom_metrics
+    WHERE faction_id IN (SELECT id FROM factions WHERE project_id = ?)
+    ORDER BY sortOrder ASC, id ASC
+  `).all(id) as ExportFactionCustomMetricRow[];
+  const customMetricMap = new Map<number, ExportFactionCustomMetricRow[]>();
+  for (const metric of factionCustomMetrics) {
+    const list = customMetricMap.get(metric.factionId) || [];
+    list.push(metric);
+    customMetricMap.set(metric.factionId, list);
+  }
+  const factionsWithMetrics = factions.map((faction) => ({
+    ...faction,
+    customMetrics: customMetricMap.get(faction.id) || [],
+  }));
 
   const factionRanks = db.prepare(`
     SELECT fr.id, fr.faction_id as factionId, fr.name, fr.level, fr.description,
@@ -244,7 +264,8 @@ export function exportProject(id: number): ImportedProjectPayload & {
     tagAssociations,
     wikiLinks,
     dogmas,
-    factions,
+    factions: factionsWithMetrics,
+    factionCustomMetrics,
     factionRanks,
     factionMembers,
     factionRelations,

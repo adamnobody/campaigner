@@ -54,10 +54,9 @@ import {
   updateFactionMemberSchema,
   createFactionRelationSchema,
   updateFactionRelationSchema,
-  factionAssetSchema,
-  createFactionAssetSchema,
-  updateFactionAssetSchema,
-  reorderFactionAssetsSchema,
+  customMetricSchema,
+  replaceFactionCustomMetricsSchema,
+  compareFactionsSchema,
   factionGraphNodeSchema,
   factionGraphSchema,
 } from '../schemas/faction.schema.js';
@@ -161,10 +160,9 @@ export type UpdateFactionMember = z.input<typeof updateFactionMemberSchema>;
 
 export type CreateFactionRelation = z.input<typeof createFactionRelationSchema>;
 export type UpdateFactionRelation = z.input<typeof updateFactionRelationSchema>;
-export type FactionAsset = z.infer<typeof factionAssetSchema>;
-export type CreateFactionAsset = Omit<z.input<typeof createFactionAssetSchema>, 'factionId'>;
-export type UpdateFactionAsset = z.input<typeof updateFactionAssetSchema>;
-export type ReorderFactionAssets = z.input<typeof reorderFactionAssetsSchema>;
+export type CustomMetric = z.infer<typeof customMetricSchema>;
+export type ReplaceFactionCustomMetrics = z.input<typeof replaceFactionCustomMetricsSchema>;
+export type CompareFactionsInput = z.input<typeof compareFactionsSchema>;
 export type FactionGraphNode = z.infer<typeof factionGraphNodeSchema>;
 export type FactionGraph = z.infer<typeof factionGraphSchema>;
 
@@ -402,16 +400,24 @@ export interface ImportedProjectPayload {
   factions?: Array<{
     id: number;
     name: string;
-    type: 'state' | 'faction';
-    customType: string;
-    stateType: string;
-    customStateType: string;
+    kind: 'state' | 'faction';
+    type: string | null;
     motto: string;
     description: string;
     history: string;
     goals: string;
     headquarters: string;
     territory: string;
+    treasury?: number | null;
+    population?: number | null;
+    armySize?: number | null;
+    navySize?: number | null;
+    territoryKm2?: number | null;
+    annualIncome?: number | null;
+    annualExpenses?: number | null;
+    membersCount?: number | null;
+    influence?: number | null;
+    customMetrics?: CustomMetric[];
     status: string;
     color: string;
     secondaryColor: string;
@@ -513,16 +519,23 @@ export interface Faction {
   id: number;
   projectId: number;
   name: string;
-  type: 'state' | 'faction';
-  customType?: string;
-  stateType?: string;
-  customStateType?: string;
+  kind: 'state' | 'faction';
+  type?: string | null;
   motto?: string;
   description?: string;
   history?: string;
   goals?: string;
   headquarters?: string;
   territory?: string;
+  treasury?: number | null;
+  population?: number | null;
+  armySize?: number | null;
+  navySize?: number | null;
+  territoryKm2?: number | null;
+  annualIncome?: number | null;
+  annualExpenses?: number | null;
+  membersCount?: number | null;
+  influence?: number | null;
   status: string;
   color?: string;
   secondaryColor?: string;
@@ -536,7 +549,7 @@ export interface Faction {
   updatedAt: string;
   // Joined
   tags?: any[];
-  assets?: FactionAsset[];
+  customMetrics?: CustomMetric[];
   ranks?: FactionRank[];
   members?: FactionMember[];
   memberCount?: number;
@@ -586,6 +599,16 @@ export interface FactionRelation {
   // Joined
   sourceFactionName?: string;
   targetFactionName?: string;
+}
+
+export interface FactionCompareResult {
+  factions: Array<{ id: number; name: string; kind: 'state' | 'faction' }>;
+  metrics: Array<{
+    key: string;
+    label: string;
+    unit: string | null;
+    values: Array<{ factionId: number; value: number | null }>;
+  }>;
 }
 
 // ==================== DYNASTY ====================

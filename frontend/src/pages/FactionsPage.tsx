@@ -29,7 +29,16 @@ import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
-import { FACTION_STATUS_LABELS, FACTION_STATUS_ICONS, FACTION_STATUSES, STATE_TYPE_LABELS } from '@campaigner/shared';
+import {
+  FACTION_KIND_ICONS,
+  FACTION_STATUS_LABELS,
+  FACTION_STATUS_ICONS,
+  FACTION_STATUSES,
+  FACTION_TYPE_ICONS,
+  FACTION_TYPE_LABELS,
+  STATE_TYPE_ICONS,
+  STATE_TYPE_LABELS,
+} from '@campaigner/shared';
 import type { Faction } from '@campaigner/shared';
 
 const PAGE_SIZE = 40;
@@ -86,7 +95,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
     async (append = false) => {
       const offset = append ? useFactionStore.getState().factions.length : 0;
       await fetchFactions(pid, {
-        type: entityType,
+        kind: entityType,
         status: filterStatus || undefined,
         search: debouncedSearch || undefined,
         limit: PAGE_SIZE,
@@ -99,7 +108,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   );
 
   useEffect(() => {
-    fetchFactions(pid, { type: entityType, limit: 1, offset: 0 }).then(() => {
+    fetchFactions(pid, { kind: entityType, limit: 1, offset: 0 }).then(() => {
       setTotalUnfiltered(useFactionStore.getState().total);
     });
   }, [entityType, fetchFactions, pid]);
@@ -158,8 +167,10 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
 
   const getSubtitle = (entity: Faction): string => {
     const parts: string[] = [];
-    if (entity.type === 'state' && entity.stateType) {
-      parts.push(STATE_TYPE_LABELS[entity.stateType] || entity.customStateType || entity.stateType);
+    if (entity.type) {
+      const labels = entity.kind === 'state' ? STATE_TYPE_LABELS : FACTION_TYPE_LABELS;
+      const icons = entity.kind === 'state' ? STATE_TYPE_ICONS : FACTION_TYPE_ICONS;
+      parts.push(`${icons[entity.type] || ''} ${labels[entity.type] || entity.type}`.trim());
     }
     if (entity.motto) parts.push(`«${entity.motto}»`);
     if (entity.headquarters) parts.push(`📍 ${entity.headquarters}`);
@@ -315,7 +326,9 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                         }}
                         variant="rounded"
                       >
-                        {entity.type === 'state' ? '🏰' : '👥'}
+                        {(entity.type
+                          ? (entity.kind === 'state' ? STATE_TYPE_ICONS[entity.type] : FACTION_TYPE_ICONS[entity.type])
+                          : FACTION_KIND_ICONS[entity.kind]) || '🏴'}
                       </Avatar>
 
                       <Box sx={{ minWidth: 0, flexGrow: 1 }}>

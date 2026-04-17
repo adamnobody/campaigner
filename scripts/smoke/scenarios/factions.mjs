@@ -8,7 +8,8 @@ export async function smokeFactions(ctx) {
     body: JSON.stringify({
       projectId: ctx.projectId,
       name: `Smoke Faction ${Date.now()}`,
-      type: 'faction',
+      kind: 'faction',
+      type: 'guild',
       motto: 'Smoke and steel',
       description: 'Faction created by smoke test',
       status: 'active',
@@ -43,8 +44,92 @@ export async function smokeFactions(ctx) {
   if (!loadedFaction || loadedFaction.id !== factionId) {
     throw new Error(`get faction by id: wrong response ${JSON.stringify(getRes.data, null, 2)}`);
   }
+  if (loadedFaction.kind !== 'faction' || loadedFaction.type !== 'guild') {
+    throw new Error(`faction semantic type mismatch: ${JSON.stringify(loadedFaction, null, 2)}`);
+  }
 
   logOk('Faction getById works');
+
+  const updateFactionMetricsRes = await api(`/factions/${factionId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      treasury: 120000,
+      membersCount: 360,
+      influence: 78,
+      annualIncome: 45000,
+      annualExpenses: 30000,
+    }),
+  });
+  assertStatus(updateFactionMetricsRes, 200, 'update faction base metrics');
+
+  const factionWithMetricsRes = await api(`/factions/${factionId}`);
+  assertStatus(factionWithMetricsRes, 200, 'read faction base metrics');
+  const factionWithMetrics = factionWithMetricsRes.data?.data;
+  if (
+    factionWithMetrics?.treasury !== 120000
+    || factionWithMetrics?.membersCount !== 360
+    || factionWithMetrics?.influence !== 78
+  ) {
+    throw new Error(`faction base metrics mismatch: ${JSON.stringify(factionWithMetrics, null, 2)}`);
+  }
+  logOk('Faction base metrics persisted');
+
+  const invalidFactionMetricRes = await api(`/factions/${factionId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      armySize: 5000,
+    }),
+  });
+  if (invalidFactionMetricRes.status !== 400) {
+    throw new Error(`expected 400 for invalid faction metric, got ${invalidFactionMetricRes.status}`);
+  }
+  logOk('Invalid metric for kind=faction is rejected');
+
+  const invalidInfluenceRes = await api(`/factions/${factionId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      influence: 150,
+    }),
+  });
+  if (invalidInfluenceRes.status !== 400) {
+    throw new Error(`expected 400 for influence > 100, got ${invalidInfluenceRes.status}`);
+  }
+  logOk('Influence range validation works');
+
+  const addCustomMetricsRes = await api(`/factions/${factionId}/custom-metrics`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      metrics: [
+        { name: 'Количество драконов', value: 3, unit: 'шт.' },
+        { name: 'Рудники', value: 12, unit: 'ед.' },
+        { name: 'Караваны', value: 18, unit: null },
+      ],
+    }),
+  });
+  assertStatus(addCustomMetricsRes, 200, 'replace custom metrics with three items');
+
+  const factionWithCustomMetricsRes = await api(`/factions/${factionId}`);
+  assertStatus(factionWithCustomMetricsRes, 200, 'read custom metrics');
+  const customMetrics = factionWithCustomMetricsRes.data?.data?.customMetrics || [];
+  if (customMetrics.length !== 3) {
+    throw new Error(`expected 3 custom metrics, got ${customMetrics.length}`);
+  }
+  logOk('Custom metrics persisted');
+
+  const replaceCustomMetricsRes = await api(`/factions/${factionId}/custom-metrics`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      metrics: [{ name: 'Артефакты', value: 42, unit: 'шт.' }],
+    }),
+  });
+  assertStatus(replaceCustomMetricsRes, 200, 'replace custom metrics with one item');
+  const factionAfterReplaceCustomRes = await api(`/factions/${factionId}`);
+  assertStatus(factionAfterReplaceCustomRes, 200, 'read custom metrics after replace');
+  const replacedCustomMetrics = factionAfterReplaceCustomRes.data?.data?.customMetrics || [];
+  if (replacedCustomMetrics.length !== 1 || replacedCustomMetrics[0]?.name !== 'Артефакты') {
+    throw new Error(`replace custom metrics failed: ${JSON.stringify(replacedCustomMetrics, null, 2)}`);
+  }
+  logOk('Custom metrics replace-all works');
 
   const updateRes = await api(`/factions/${factionId}`, {
     method: 'PUT',
@@ -57,6 +142,92 @@ export async function smokeFactions(ctx) {
 
   assertStatus(updateRes, 200, 'update faction');
   logOk('Faction updated');
+
+  const createStateOneRes = await api('/factions', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: ctx.projectId,
+      name: `Smoke State One ${Date.now()}`,
+      kind: 'state',
+      type: 'empire',
+      treasury: 700000,
+      population: 1000000,
+      armySize: 70000,
+      navySize: 5000,
+      territoryKm2: 200000,
+      annualIncome: 900000,
+      annualExpenses: 680000,
+    }),
+  });
+  assertStatus(createStateOneRes, 201, 'create first state with metrics');
+  const stateOneId = getEntityId(createStateOneRes);
+  if (!stateOneId) throw new Error('missing first state id');
+
+  const stateNullForeignMetricRes = await api(`/factions/${stateOneId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      membersCount: null,
+    }),
+  });
+  assertStatus(stateNullForeignMetricRes, 200, 'state accepts null foreign metric');
+  logOk('Foreign metric with null value is ignored for state');
+
+  const stateInvalidForeignMetricRes = await api(`/factions/${stateOneId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      membersCount: 42,
+    }),
+  });
+  if (stateInvalidForeignMetricRes.status !== 400) {
+    throw new Error(`expected 400 for state membersCount=42, got ${stateInvalidForeignMetricRes.status}`);
+  }
+  logOk('Foreign metric with non-null value is rejected for state');
+
+  const createStateTwoRes = await api('/factions', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: ctx.projectId,
+      name: `Smoke State Two ${Date.now()}`,
+      kind: 'state',
+      type: 'kingdom',
+      treasury: 350000,
+      population: 500000,
+      armySize: 30000,
+      navySize: 2500,
+      territoryKm2: 120000,
+      annualIncome: 500000,
+      annualExpenses: 450000,
+    }),
+  });
+  assertStatus(createStateTwoRes, 201, 'create second state with metrics');
+  const stateTwoId = getEntityId(createStateTwoRes);
+  if (!stateTwoId) throw new Error('missing second state id');
+
+  const compareStatesRes = await api('/factions/compare', {
+    method: 'POST',
+    body: JSON.stringify({
+      factionIds: [stateOneId, stateTwoId],
+      metricKeys: ['treasury', 'population', 'army_size'],
+    }),
+  });
+  assertStatus(compareStatesRes, 200, 'compare factions metrics');
+  const comparePayload = compareStatesRes.data?.data;
+  if (!Array.isArray(comparePayload?.factions) || !Array.isArray(comparePayload?.metrics) || comparePayload.metrics.length !== 3) {
+    throw new Error(`compare payload invalid: ${JSON.stringify(compareStatesRes.data, null, 2)}`);
+  }
+  logOk('Factions compare endpoint works');
+
+  const invalidCompareMetricRes = await api('/factions/compare', {
+    method: 'POST',
+    body: JSON.stringify({
+      factionIds: [stateOneId, stateTwoId],
+      metricKeys: ['invalid_metric'],
+    }),
+  });
+  if (invalidCompareMetricRes.status !== 400) {
+    throw new Error(`expected 400 for invalid metric key, got ${invalidCompareMetricRes.status}`);
+  }
+  logOk('Invalid compare metric key is rejected');
 
   if (ctx.tagId) {
     const setTagsRes = await api(`/factions/${factionId}/tags`, {
@@ -175,7 +346,8 @@ export async function smokeFactionRelations(ctx) {
     body: JSON.stringify({
       projectId: ctx.projectId,
       name: `Smoke Faction Secondary ${Date.now()}`,
-      type: 'faction',
+      kind: 'faction',
+      type: 'order',
       motto: 'Second faction',
       description: 'Secondary faction for relation testing',
       status: 'active',
@@ -364,7 +536,8 @@ export async function smokeCharacterFactionAffiliations(ctx) {
     body: JSON.stringify({
       projectId: ctx.projectId,
       name: `Smoke State ${Date.now()}`,
-      type: 'state',
+      kind: 'state',
+      type: 'empire',
       status: 'active',
     }),
   });
@@ -381,7 +554,8 @@ export async function smokeCharacterFactionAffiliations(ctx) {
     body: JSON.stringify({
       projectId: ctx.projectId,
       name: `Smoke Character Faction ${Date.now()}`,
-      type: 'faction',
+      kind: 'faction',
+      type: 'guild',
       status: 'active',
     }),
   });
@@ -413,6 +587,82 @@ export async function smokeCharacterFactionAffiliations(ctx) {
     throw new Error(`character factionIds mismatch: ${JSON.stringify(factionIds)}`);
   }
   logOk('Character linked to one state and multiple factions');
+
+  const getExtraFactionMembersRes = await api(`/factions/${extraFactionId}/members`);
+  assertStatus(getExtraFactionMembersRes, 200, 'list extra faction members after character update');
+  const extraMembersAfterCharacterUpdate = getEntityList(
+    getExtraFactionMembersRes,
+    'list extra faction members after character update'
+  );
+  const extraSyncedMember = extraMembersAfterCharacterUpdate.find((member) => member.characterId === ctx.characterId);
+  if (!extraSyncedMember) {
+    throw new Error('character→faction sync failed: member not created in faction_members');
+  }
+  if (extraSyncedMember.role !== 'Член фракции') {
+    throw new Error(
+      `character→faction sync failed: expected default role "Член фракции", got "${extraSyncedMember.role}"`
+    );
+  }
+  logOk('Character → faction sync creates member with default role');
+
+  const removeAffiliationRes = await api(`/characters/${ctx.characterId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      factionIds: [ctx.factionId],
+    }),
+  });
+  assertStatus(removeAffiliationRes, 200, 'remove character affiliation');
+
+  const getExtraFactionMembersAfterRemovalRes = await api(`/factions/${extraFactionId}/members`);
+  assertStatus(getExtraFactionMembersAfterRemovalRes, 200, 'list extra faction members after affiliation removal');
+  const extraMembersAfterRemoval = getEntityList(
+    getExtraFactionMembersAfterRemovalRes,
+    'list extra faction members after affiliation removal'
+  );
+  if (extraMembersAfterRemoval.some((member) => member.characterId === ctx.characterId)) {
+    throw new Error('character→faction sync failed: removed affiliation still exists in faction_members');
+  }
+  logOk('Character → faction sync removes member on affiliation delete');
+
+  const addMemberFromFactionRes = await api(`/factions/${extraFactionId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({
+      characterId: ctx.characterId,
+      role: 'Смотритель рубежей',
+    }),
+  });
+  assertStatus(addMemberFromFactionRes, 201, 'add member from faction page');
+  const extraFactionMemberId = getEntityId(addMemberFromFactionRes);
+  if (!extraFactionMemberId) {
+    throw new Error(`add member from faction page: missing id ${JSON.stringify(addMemberFromFactionRes.data, null, 2)}`);
+  }
+
+  const getCharacterAfterFactionAddRes = await api(`/characters/${ctx.characterId}`);
+  assertStatus(getCharacterAfterFactionAddRes, 200, 'get character after faction member add');
+  const characterAfterFactionAdd = getCharacterAfterFactionAddRes.data?.data;
+  const factionIdsAfterFactionAdd = Array.isArray(characterAfterFactionAdd?.factionIds)
+    ? characterAfterFactionAdd.factionIds
+    : [];
+  if (!factionIdsAfterFactionAdd.includes(extraFactionId)) {
+    throw new Error('faction→character sync failed: faction link missing after member add');
+  }
+  logOk('Faction → character sync adds factionId');
+
+  const removeMemberFromFactionRes = await api(`/factions/${extraFactionId}/members/${extraFactionMemberId}`, {
+    method: 'DELETE',
+  });
+  assertStatus(removeMemberFromFactionRes, 200, 'remove member from faction page');
+
+  const getCharacterAfterFactionRemoveRes = await api(`/characters/${ctx.characterId}`);
+  assertStatus(getCharacterAfterFactionRemoveRes, 200, 'get character after faction member remove');
+  const characterAfterFactionRemove = getCharacterAfterFactionRemoveRes.data?.data;
+  const factionIdsAfterFactionRemove = Array.isArray(characterAfterFactionRemove?.factionIds)
+    ? characterAfterFactionRemove.factionIds
+    : [];
+  if (factionIdsAfterFactionRemove.includes(extraFactionId)) {
+    throw new Error('faction→character sync failed: faction link still exists after member delete');
+  }
+  logOk('Faction → character sync removes factionId');
 
   const invalidStateRes = await api(`/characters/${ctx.characterId}`, {
     method: 'PUT',

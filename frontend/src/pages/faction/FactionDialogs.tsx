@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { DndButton } from '@/components/ui/DndButton';
 import {
-  FACTION_TYPE_ICONS,
+  FACTION_KIND_ICONS,
   FACTION_RELATION_TYPES, FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
 } from '@campaigner/shared';
 import type { FactionRank, FactionMember } from '@campaigner/shared';
@@ -127,7 +127,7 @@ export interface FactionRelationDialogProps {
   form: FactionRelationForm;
   onFormChange: React.Dispatch<React.SetStateAction<FactionRelationForm>>;
   onSubmit: () => void;
-  otherFactions: Array<{ id: number; name: string; type: string }>;
+  otherFactions: Array<{ id: number; name: string; kind: 'state' | 'faction' }>;
 }
 
 export const FactionRelationDialog: React.FC<FactionRelationDialogProps> = ({
@@ -139,7 +139,7 @@ export const FactionRelationDialog: React.FC<FactionRelationDialogProps> = ({
         <FormControl fullWidth margin="normal">
           <InputLabel>Сущность *</InputLabel>
           <Select value={form.targetFactionId} label="Сущность *" onChange={e => onFormChange(p => ({ ...p, targetFactionId: e.target.value }))}>
-            {otherFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
+            {otherFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_KIND_ICONS[f.kind] || '🏴'} {f.name}</MenuItem>)}
           </Select>
         </FormControl>
         <FormControl fullWidth margin="normal">

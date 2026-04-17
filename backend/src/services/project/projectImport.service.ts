@@ -51,7 +51,7 @@ export function importProject(data: ImportedProjectPayload): Project {
     const timelineEventIdMap = new Map<number, number>();
     const dogmaIdMap = new Map<number, number>();
     const factionIdMap = new Map<number, number>();
-    const importedFactionTypeMap = new Map<number, 'state' | 'faction'>();
+    const importedFactionKindMap = new Map<number, 'state' | 'faction'>();
     const factionRankIdMap = new Map<number, number>();
     const dynastyIdMap = new Map<number, number>();
 
@@ -268,21 +268,23 @@ export function importProject(data: ImportedProjectPayload): Project {
 
     if (data.factions?.length) {
       for (const faction of data.factions) {
-        const normalizedType = faction.type === 'state' ? 'state' : 'faction';
+        const rawKind = (faction as unknown as { kind?: string }).kind;
+        const rawType = (faction as unknown as { type?: string | null }).type;
+        const legacyKind = rawKind ?? (rawType === 'state' ? 'state' : 'faction');
+        const normalizedKind = legacyKind === 'state' ? 'state' : 'faction';
+        const semanticType = rawKind ? rawType ?? null : null;
         const result = db.prepare(`
           INSERT INTO factions (
-            project_id, name, type, custom_type, state_type, custom_state_type,
-            motto, description, history, goals, headquarters, territory, status,
+            project_id, name, kind, type, motto, description, history, goals, headquarters, territory, status,
+            treasury, population, army_size, navy_size, territory_km2, annual_income, annual_expenses, members_count, influence,
             color, secondary_color, image_path, banner_path, founded_date, disbanded_date,
             parent_faction_id, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId,
           faction.name,
-          normalizedType,
-          faction.customType || '',
-          faction.stateType || '',
-          faction.customStateType || '',
+          normalizedKind,
+          semanticType,
           faction.motto || '',
           faction.description || '',
           faction.history || '',
@@ -290,16 +292,45 @@ export function importProject(data: ImportedProjectPayload): Project {
           faction.headquarters || '',
           faction.territory || '',
           faction.status || 'active',
+          faction.treasury ?? null,
+          faction.population ?? null,
+          faction.armySize ?? null,
+          faction.navySize ?? null,
+          faction.territoryKm2 ?? null,
+          faction.annualIncome ?? null,
+          faction.annualExpenses ?? null,
+          faction.membersCount ?? null,
+          faction.influence ?? null,
           faction.color || '',
           faction.secondaryColor || '',
           faction.imagePath || null,
           faction.bannerPath || null,
           faction.foundedDate || '',
           faction.disbandedDate || '',
+          null,
           faction.sortOrder ?? 0
         );
         factionIdMap.set(faction.id, result.lastInsertRowid as number);
-        importedFactionTypeMap.set(faction.id, normalizedType);
+        importedFactionKindMap.set(faction.id, normalizedKind);
+      }
+
+      const insertCustomMetric = db.prepare(`
+        INSERT INTO faction_custom_metrics (faction_id, name, value, unit, sort_order, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      `);
+      for (const faction of data.factions) {
+        const newFactionId = factionIdMap.get(faction.id);
+        if (!newFactionId) continue;
+        const customMetrics = faction.customMetrics || [];
+        customMetrics.forEach((metric, index) => {
+          insertCustomMetric.run(
+            newFactionId,
+            metric.name,
+            metric.value,
+            metric.unit ?? null,
+            metric.sortOrder ?? index
+          );
+        });
       }
 
       for (const faction of data.factions) {
@@ -308,6 +339,18 @@ export function importProject(data: ImportedProjectPayload): Project {
         const newParentFactionId = factionIdMap.get(faction.parentFactionId);
         if (!newFactionId || !newParentFactionId) continue;
         db.prepare('UPDATE factions SET parent_faction_id = ? WHERE id = ?').run(newParentFactionId, newFactionId);
+      }
+    }
+
+    if (data.factionCustomMetrics?.length) {
+      const insertLegacyCustomMetric = db.prepare(`
+        INSERT OR IGNORE INTO faction_custom_metrics (faction_id, name, value, unit, sort_order, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      `);
+      for (const metric of data.factionCustomMetrics) {
+        const newFactionId = factionIdMap.get(metric.factionId);
+        if (!newFactionId) continue;
+        insertLegacyCustomMetric.run(newFactionId, metric.name, metric.value, metric.unit ?? null, metric.sortOrder ?? 0);
       }
     }
 
@@ -327,13 +370,13 @@ export function importProject(data: ImportedProjectPayload): Project {
         if (!newCharacterId) continue;
 
         if (character.stateId) {
-          const sourceStateType = importedFactionTypeMap.get(character.stateId);
-          const newStateId = sourceStateType === 'state' ? (factionIdMap.get(character.stateId) || null) : null;
+          const sourceStateKind = importedFactionKindMap.get(character.stateId);
+          const newStateId = sourceStateKind === 'state' ? (factionIdMap.get(character.stateId) || null) : null;
           updateCharacterState.run(newStateId, newCharacterId);
         }
 
         for (const sourceFactionId of character.factionIds || []) {
-          if (importedFactionTypeMap.get(sourceFactionId) !== 'faction') {
+          if (importedFactionKindMap.get(sourceFactionId) !== 'faction') {
             continue;
           }
           const newFactionId = factionIdMap.get(sourceFactionId);

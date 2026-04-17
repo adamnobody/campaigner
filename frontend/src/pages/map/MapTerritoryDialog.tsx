@@ -69,7 +69,7 @@ export const MapTerritoryDialog: React.FC<Props> = ({
             <Box display="flex" alignItems="center" gap={1}>
               <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: option.color }} />
               <Typography>{option.name}</Typography>
-              <Chip label={option.type} size="small" variant="outlined"
+              <Chip label={option.kind === 'state' ? 'Государство' : 'Фракция'} size="small" variant="outlined"
                 sx={{ ml: 'auto', fontSize: '0.7rem', height: 20 }} />
             </Box>
           </li>

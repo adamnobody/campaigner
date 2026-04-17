@@ -138,46 +138,133 @@ export const DOGMA_STATUS_LABELS: Record<string, string> = {
 
 // ==================== Фракции ====================
 
-export const FACTION_TYPES = [
-  'state', 'faction',
-] as const;
+export const FACTION_KINDS = ['state', 'faction'] as const;
 
-export const FACTION_TYPE_LABELS: Record<string, string> = {
+export const FACTION_KIND_LABELS: Record<string, string> = {
   state: 'Государство',
   faction: 'Фракция',
 };
 
-export const FACTION_TYPE_ICONS: Record<string, string> = {
+export const FACTION_KIND_ICONS: Record<string, string> = {
   state: '🏛️',
   faction: '👥',
 };
 
+export const FACTION_TYPES = [
+  'guild',
+  'order',
+  'cult',
+  'trade_house',
+  'company',
+  'military',
+  'academy',
+  'tribe',
+  'criminal',
+  'other',
+] as const;
+
+export const FACTION_TYPE_LABELS: Record<string, string> = {
+  guild: 'Гильдия',
+  order: 'Орден',
+  cult: 'Культ',
+  trade_house: 'Торговый дом',
+  company: 'Компания',
+  military: 'Армия / Военный орден',
+  academy: 'Академия / Школа',
+  tribe: 'Племя / Клан',
+  criminal: 'Преступная организация',
+  other: 'Другое',
+};
+
+export const FACTION_TYPE_ICONS: Record<string, string> = {
+  guild: '⚒️',
+  order: '🛡️',
+  cult: '🕯️',
+  trade_house: '💰',
+  company: '🏢',
+  military: '⚔️',
+  academy: '📚',
+  tribe: '🏕️',
+  criminal: '🗡️',
+  other: '🏴',
+};
+
 export const STATE_TYPES = [
-  'barony', 'county', 'viscounty', 'duchy', 'principality',
-  'kingdom', 'empire', 'republic', 'theocracy', 'tribal_union',
-  'city_state', 'confederation', 'khanate', 'sultanate',
-  'shogunate', 'free_city', 'other',
+  'empire',
+  'kingdom',
+  'republic',
+  'federation',
+  'principality',
+  'theocracy',
+  'city_state',
+  'tribal_union',
+  'other',
 ] as const;
 
 export const STATE_TYPE_LABELS: Record<string, string> = {
-  barony: 'Баронство',
-  county: 'Графство',
-  viscounty: 'Виконтство',
-  duchy: 'Герцогство',
-  principality: 'Княжество',
-  kingdom: 'Королевство',
   empire: 'Империя',
+  kingdom: 'Королевство',
   republic: 'Республика',
+  federation: 'Федерация',
+  principality: 'Княжество',
   theocracy: 'Теократия',
-  tribal_union: 'Племенной союз',
   city_state: 'Город-государство',
-  confederation: 'Конфедерация',
-  khanate: 'Ханство',
-  sultanate: 'Султанат',
-  shogunate: 'Сёгунат',
-  free_city: 'Вольный город',
+  tribal_union: 'Племенной союз',
   other: 'Другое',
 };
+
+export const STATE_TYPE_ICONS: Record<string, string> = {
+  empire: '👑',
+  kingdom: '🏰',
+  republic: '🏛️',
+  federation: '🗺️',
+  principality: '⚜️',
+  theocracy: '✝️',
+  city_state: '🏙️',
+  tribal_union: '🛖',
+  other: '🏴',
+};
+
+export type MetricKey =
+  | 'treasury'
+  | 'population'
+  | 'army_size'
+  | 'navy_size'
+  | 'territory_km2'
+  | 'annual_income'
+  | 'annual_expenses'
+  | 'members_count'
+  | 'influence';
+
+export interface MetricMeta {
+  key: MetricKey;
+  label: string;
+  unit: string | null;
+  min?: number;
+  max?: number;
+}
+
+export const STATE_METRICS: MetricMeta[] = [
+  { key: 'treasury', label: 'Казна', unit: null },
+  { key: 'population', label: 'Население', unit: 'чел.' },
+  { key: 'army_size', label: 'Армия', unit: 'чел.' },
+  { key: 'navy_size', label: 'Флот', unit: 'чел.' },
+  { key: 'territory_km2', label: 'Территория', unit: 'кв. км' },
+  { key: 'annual_income', label: 'Доход в год', unit: null },
+  { key: 'annual_expenses', label: 'Расход в год', unit: null },
+];
+
+export const FACTION_METRICS: MetricMeta[] = [
+  { key: 'treasury', label: 'Казна', unit: null },
+  { key: 'members_count', label: 'Численность', unit: 'чел.' },
+  { key: 'influence', label: 'Влияние', unit: null, min: 0, max: 100 },
+  { key: 'annual_income', label: 'Доход в год', unit: null },
+  { key: 'annual_expenses', label: 'Расход в год', unit: null },
+];
+
+export function getMetricsForKind(kind: 'state' | 'faction'): MetricMeta[] {
+  return kind === 'state' ? STATE_METRICS : FACTION_METRICS;
+}
 
 export const FACTION_STATUSES = [
   'active', 'disbanded', 'secret', 'exiled', 'destroyed',

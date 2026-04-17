@@ -485,7 +485,7 @@ export const MapPage: React.FC = () => {
               onClose={closePanel}
               onNavigateToFaction={(factionId) => {
                 const target = factionsMap.get(factionId);
-                const basePath = target?.type === 'state' ? 'states' : 'factions';
+                const basePath = target?.kind === 'state' ? 'states' : 'factions';
                 navigate(`/project/${pid}/${basePath}/${factionId}`);
               }}
               onEditTerritory={handleEditTerritory}

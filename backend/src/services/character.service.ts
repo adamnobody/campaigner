@@ -80,10 +80,50 @@ type FactionType = 'state' | 'faction';
 interface FactionValidationRow {
   id: number;
   project_id: number;
-  type: FactionType;
+  kind: FactionType;
 }
 
 export class CharacterService {
+  private static readonly DEFAULT_MEMBER_ROLE = 'Член фракции';
+
+  private static getLowestRankIdForFaction(db: ReturnType<typeof getDb>, factionId: number): number | null {
+    const row = db.prepare(`
+      SELECT id
+      FROM faction_ranks
+      WHERE faction_id = ?
+      ORDER BY level ASC, id ASC
+      LIMIT 1
+    `).get(factionId) as { id: number } | undefined;
+    return row?.id ?? null;
+  }
+
+  private static ensureFactionMemberLink(
+    db: ReturnType<typeof getDb>,
+    factionId: number,
+    characterId: number
+  ): void {
+    const existing = db.prepare(`
+      SELECT id
+      FROM faction_members
+      WHERE faction_id = ? AND character_id = ?
+    `).get(factionId, characterId) as { id: number } | undefined;
+    if (existing) {
+      return;
+    }
+
+    db.prepare(`
+      INSERT OR IGNORE INTO faction_members (
+        faction_id, character_id, rank_id, role, joined_date, left_date, is_active, notes
+      )
+      VALUES (?, ?, ?, ?, '', '', 1, '')
+    `).run(
+      factionId,
+      characterId,
+      this.getLowestRankIdForFaction(db, factionId),
+      this.DEFAULT_MEMBER_ROLE
+    );
+  }
+
   private static getFactionIdsByCharacterIds(characterIds: number[]): Map<number, number[]> {
     const map = new Map<number, number[]>();
     if (characterIds.length === 0) {
@@ -120,7 +160,7 @@ export class CharacterService {
     expectedType: FactionType
   ): void {
     const faction = db
-      .prepare('SELECT id, project_id, type FROM factions WHERE id = ?')
+      .prepare('SELECT id, project_id, kind FROM factions WHERE id = ?')
       .get(factionId) as FactionValidationRow | undefined;
 
     if (!faction) {
@@ -129,7 +169,7 @@ export class CharacterService {
     if (faction.project_id !== projectId) {
       throw new BadRequestError(`Faction with id ${factionId} belongs to another project`);
     }
-    if (faction.type !== expectedType) {
+    if (faction.kind !== expectedType) {
       if (expectedType === 'state') {
         throw new BadRequestError(`Faction with id ${factionId} is not a state`);
       }
@@ -169,13 +209,36 @@ export class CharacterService {
     }
 
     if (normalizedFactionIds) {
-      db.prepare('DELETE FROM character_factions WHERE character_id = ?').run(characterId);
-      const insertMembership = db.prepare(`
-        INSERT OR IGNORE INTO character_factions (character_id, faction_id)
-        VALUES (?, ?)
-      `);
-      for (const factionId of normalizedFactionIds) {
-        insertMembership.run(characterId, factionId);
+      const existingRows = db.prepare(`
+        SELECT faction_id as factionId
+        FROM character_factions
+        WHERE character_id = ?
+      `).all(characterId) as Array<{ factionId: number }>;
+      const existingFactionIds = new Set(existingRows.map((row) => row.factionId));
+      const nextFactionIds = new Set(normalizedFactionIds);
+
+      for (const factionId of existingFactionIds) {
+        if (nextFactionIds.has(factionId)) {
+          continue;
+        }
+        db.prepare(`
+          DELETE FROM character_factions
+          WHERE character_id = ? AND faction_id = ?
+        `).run(characterId, factionId);
+        db.prepare(`
+          DELETE FROM faction_members
+          WHERE character_id = ? AND faction_id = ?
+        `).run(characterId, factionId);
+      }
+
+      for (const factionId of nextFactionIds) {
+        if (!existingFactionIds.has(factionId)) {
+          db.prepare(`
+            INSERT OR IGNORE INTO character_factions (character_id, faction_id)
+            VALUES (?, ?)
+          `).run(characterId, factionId);
+        }
+        this.ensureFactionMemberLink(db, factionId, characterId);
       }
     }
   }

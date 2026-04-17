@@ -1,5 +1,5 @@
 export interface FactionFilters {
-  type?: 'state' | 'faction';
+  kind?: 'state' | 'faction';
   status?: string;
   search?: string;
   limit?: number;
@@ -20,16 +20,23 @@ export interface FactionRow {
   id: number;
   project_id: number;
   name: string;
-  type: string;
-  custom_type: string | null;
-  state_type: string | null;
-  custom_state_type: string | null;
+  kind: string;
+  type: string | null;
   motto: string | null;
   description: string | null;
   history: string | null;
   goals: string | null;
   headquarters: string | null;
   territory: string | null;
+  treasury: number | null;
+  population: number | null;
+  army_size: number | null;
+  navy_size: number | null;
+  territory_km2: number | null;
+  annual_income: number | null;
+  annual_expenses: number | null;
+  members_count: number | null;
+  influence: number | null;
   status: string;
   color: string | null;
   secondary_color: string | null;
@@ -95,11 +102,12 @@ export interface RelationRow {
   target_faction_name?: string | null;
 }
 
-export interface AssetRow {
+export interface CustomMetricRow {
   id: number;
   faction_id: number;
   name: string;
-  value: string | null;
+  value: number;
+  unit: string | null;
   sort_order: number | null;
   created_at: string;
   updated_at: string;
@@ -108,16 +116,23 @@ export interface AssetRow {
 export interface FactionCreateData {
   projectId: number;
   name: string;
-  type?: 'state' | 'faction';
-  customType?: string;
-  stateType?: string;
-  customStateType?: string;
+  kind?: 'state' | 'faction';
+  type?: string | null;
   motto?: string;
   description?: string;
   history?: string;
   goals?: string;
   headquarters?: string;
   territory?: string;
+  treasury?: number | null;
+  population?: number | null;
+  armySize?: number | null;
+  navySize?: number | null;
+  territoryKm2?: number | null;
+  annualIncome?: number | null;
+  annualExpenses?: number | null;
+  membersCount?: number | null;
+  influence?: number | null;
   status?: string;
   color?: string;
   secondaryColor?: string;
@@ -180,15 +195,19 @@ export interface RelationUpdateData {
   isBidirectional?: boolean;
 }
 
-export interface AssetCreateData {
-  factionId: number;
+export interface CustomMetricInput {
   name: string;
-  value?: string;
+  value: number;
+  unit?: string | null;
   sortOrder?: number;
 }
 
-export interface AssetUpdateData {
-  name?: string;
-  value?: string;
-  sortOrder?: number;
+export interface CompareFactionResult {
+  factions: Array<{ id: number; name: string; kind: 'state' | 'faction' }>;
+  metrics: Array<{
+    key: string;
+    label: string;
+    unit: string | null;
+    values: Array<{ factionId: number; value: number | null }>;
+  }>;
 }

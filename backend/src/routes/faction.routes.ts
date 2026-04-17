@@ -12,9 +12,8 @@ import {
   updateFactionMemberSchema,
   createFactionRelationSchema,
   updateFactionRelationSchema,
-  createFactionAssetSchema,
-  updateFactionAssetSchema,
-  reorderFactionAssetsSchema,
+  replaceFactionCustomMetricsSchema,
+  compareFactionsSchema,
   createFactionPolicyBodySchema,
   updateFactionPolicySchema,
   factionEntityTypeSchema,
@@ -42,11 +41,6 @@ const relationParamsSchema = z.object({
   relationId: z.coerce.number().int().positive(),
 });
 
-const assetParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
-  assetId: z.coerce.number().int().positive(),
-});
-
 const factionPolicyParamsSchema = z.object({
   id: z.coerce.number().int().positive(),
   policyId: z.coerce.number().int().positive(),
@@ -54,6 +48,7 @@ const factionPolicyParamsSchema = z.object({
 
 const getAllQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  kind: factionEntityTypeSchema.optional(),
   type: factionEntityTypeSchema.optional(),
   status: z.string().optional(),
   search: z.string().optional(),
@@ -231,51 +226,19 @@ router.delete(
   FactionController.removeMember
 );
 
-// ==================== ASSETS ====================
-
-router.get(
-  '/:id/assets',
-  validateRequest({ params: idParamsSchema }),
-  FactionController.getAssets
+router.put(
+  '/:id/custom-metrics',
+  validateRequest({
+    params: idParamsSchema,
+    body: replaceFactionCustomMetricsSchema,
+  }),
+  FactionController.replaceCustomMetrics
 );
 
 router.post(
-  '/:id/assets',
-  validateRequest({
-    params: idParamsSchema,
-    body: createFactionAssetSchema.omit({ factionId: true }),
-  }),
-  FactionController.createAsset
-);
-
-router.put(
-  '/:id/assets/reorder',
-  validateRequest({
-    params: idParamsSchema,
-    body: reorderFactionAssetsSchema,
-  }),
-  FactionController.reorderAssets
-);
-
-router.put(
-  '/:id/assets/:assetId',
-  validateRequest({
-    params: assetParamsSchema,
-    body: updateFactionAssetSchema,
-  }),
-  FactionController.updateAsset
-);
-
-router.delete(
-  '/:id/assets/:assetId',
-  validateRequest({ params: assetParamsSchema }),
-  FactionController.deleteAsset
-);
-
-router.post(
-  '/:id/assets/bootstrap-defaults',
-  validateRequest({ params: idParamsSchema }),
-  FactionController.bootstrapDefaultAssets
+  '/compare',
+  validateRequest({ body: compareFactionsSchema }),
+  FactionController.compare
 );
 
 // ==================== RELATIONS ====================

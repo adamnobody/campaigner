@@ -4,7 +4,7 @@ import {
   Avatar, IconButton, Chip,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, ListItemAvatar,
-  Grid, Tooltip,
+  Grid,
   Dialog, DialogTitle, DialogContent, DialogActions,
   alpha, useTheme,
 } from '@mui/material';
@@ -18,8 +18,6 @@ import PeopleIcon from '@mui/icons-material/People';
 import StarIcon from '@mui/icons-material/Star';
 import LinkIcon from '@mui/icons-material/Link';
 import PersonIcon from '@mui/icons-material/Person';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import { useParams, useNavigate } from 'react-router-dom';
 import { factionsApi } from '@/api/factions';
@@ -32,19 +30,27 @@ import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
 import { FactionRankDialog, FactionMemberDialog, FactionRelationDialog } from '@/pages/faction/FactionDialogs';
 import { FactionAmbitionsTab } from '@/pages/faction/FactionAmbitionsTab';
+import { MetricInput } from '@/pages/faction/MetricInput';
+import { CustomMetricsEditor } from '@/pages/faction/CustomMetricsEditor';
+import { FactionCompareDialog } from '@/pages/faction/FactionCompareDialog';
 import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
-  FACTION_TYPE_LABELS, FACTION_TYPE_ICONS,
+  FACTION_KIND_LABELS,
+  FACTION_KIND_ICONS,
+  FACTION_TYPES,
+  FACTION_TYPE_LABELS,
+  FACTION_TYPE_ICONS,
   FACTION_STATUSES, FACTION_STATUS_LABELS, FACTION_STATUS_ICONS,
-  STATE_TYPES, STATE_TYPE_LABELS,
+  STATE_TYPES, STATE_TYPE_LABELS, STATE_TYPE_ICONS,
   FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
   POLICY_TYPES,
   POLICY_STATUSES,
+  getMetricsForKind,
 } from '@campaigner/shared';
-import type { FactionRank, FactionMember, FactionAsset, FactionPolicy, PolicyType, PolicyStatus } from '@campaigner/shared';
+import type { FactionRank, FactionMember, FactionPolicy, PolicyType, PolicyStatus, ReplaceFactionCustomMetrics } from '@campaigner/shared';
 import { shallow } from 'zustand/shallow';
 
 // ==================== Types ====================
@@ -52,15 +58,21 @@ import { shallow } from 'zustand/shallow';
 interface FactionForm {
   name: string;
   type: string;
-  customType: string;
-  stateType: string;
-  customStateType: string;
   motto: string;
   description: string;
   history: string;
   goals: string;
   headquarters: string;
   territory: string;
+  treasury: string;
+  population: string;
+  armySize: string;
+  navySize: string;
+  territoryKm2: string;
+  annualIncome: string;
+  annualExpenses: string;
+  membersCount: string;
+  influence: string;
   status: string;
   color: string;
   secondaryColor: string;
@@ -71,8 +83,10 @@ interface FactionForm {
 }
 
 const EMPTY_FORM: FactionForm = {
-  name: '', type: 'faction', customType: '', stateType: '', customStateType: '',
+  name: '', type: '',
   motto: '', description: '', history: '', goals: '',
+  treasury: '', population: '', armySize: '', navySize: '', territoryKm2: '',
+  annualIncome: '', annualExpenses: '', membersCount: '', influence: '',
   headquarters: '', territory: '', status: 'active',
   color: '#4e8a6e', secondaryColor: '#2a2a4a', foundedDate: '', disbandedDate: '',
   parentFactionId: '', tagsStr: '',
@@ -113,7 +127,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const fid = factionId && !isNew ? parseInt(factionId, 10) : 0;
   const navigate = useNavigate();
   const theme = useTheme();
-  const listBasePath = entityType === 'state' ? 'states' : 'factions';
+  const normalizedEntityType: 'state' | 'faction' = entityType === 'state' ? 'state' : 'faction';
+  const listBasePath = normalizedEntityType === 'state' ? 'states' : 'factions';
 
   const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
     showSnackbar: state.showSnackbar,
@@ -126,7 +141,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     uploadImage, uploadBanner, setTags,
     createRank, updateRank, deleteRank,
     addMember, removeMember,
-    createAsset, updateAsset, deleteAsset, reorderAssets, bootstrapDefaultAssets,
+    replaceCustomMetrics, compareFactions,
     fetchRelations, createRelation, deleteRelation,
     setCurrentFaction,
   } = useFactionStore((state) => ({
@@ -147,11 +162,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     deleteRank: state.deleteRank,
     addMember: state.addMember,
     removeMember: state.removeMember,
-    createAsset: state.createAsset,
-    updateAsset: state.updateAsset,
-    deleteAsset: state.deleteAsset,
-    reorderAssets: state.reorderAssets,
-    bootstrapDefaultAssets: state.bootstrapDefaultAssets,
+    replaceCustomMetrics: state.replaceCustomMetrics,
+    compareFactions: state.compareFactions,
     fetchRelations: state.fetchRelations,
     createRelation: state.createRelation,
     deleteRelation: state.deleteRelation,
@@ -183,10 +195,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const [relationDialogOpen, setRelationDialogOpen] = useState(false);
   const [relationForm, setRelationForm] = useState({ targetFactionId: '', relationType: 'neutral', customLabel: '', description: '' });
 
-  const [assetDialogOpen, setAssetDialogOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<FactionAsset | null>(null);
-  const [assetForm, setAssetForm] = useState({ name: '', value: '' });
-  const [isReordering, setIsReordering] = useState(false);
+  const [customMetrics, setCustomMetrics] = useState<ReplaceFactionCustomMetrics['metrics']>([]);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
 
   const [factionPolicies, setFactionPolicies] = useState<FactionPolicy[]>([]);
   const [policiesLoading, setPoliciesLoading] = useState(false);
@@ -201,8 +211,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const [policyTitleSearch, setPolicyTitleSearch] = useState('');
   const [policyTypeFilter, setPolicyTypeFilter] = useState<'all' | PolicyType>('all');
   const [policyStatusFilter, setPolicyStatusFilter] = useState<'all' | PolicyStatus>('all');
-  const resolvedEntityType: 'state' | 'faction' =
-    isNew ? entityType : currentFaction?.type === 'state' ? 'state' : 'faction';
+  const resolvedEntityType: 'state' | 'faction' = isNew ? normalizedEntityType : (currentFaction?.kind ?? normalizedEntityType);
   const entityLabel = resolvedEntityType === 'state' ? 'государство' : 'фракция';
   const entityLabelCapitalized = resolvedEntityType === 'state' ? 'Государство' : 'Фракция';
 
@@ -217,9 +226,10 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
 
   useEffect(() => {
     if (isNew) {
-      setForm({ ...EMPTY_FORM, type: entityType });
+      setForm(EMPTY_FORM);
       setCurrentFaction(null);
       setTagsInput('');
+      setCustomMetrics([]);
       return;
     }
     fetchFaction(parseInt(factionId!)).catch(() => showSnackbar('Ошибка загрузки', 'error'));
@@ -251,23 +261,55 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;
     setForm({
-      name: currentFaction.name || '', type: currentFaction.type || 'faction',
-      customType: currentFaction.customType || '', stateType: currentFaction.stateType || '',
-      customStateType: currentFaction.customStateType || '', motto: currentFaction.motto || '',
+      name: currentFaction.name || '', type: currentFaction.type || '',
+      motto: currentFaction.motto || '',
       description: currentFaction.description || '', history: currentFaction.history || '',
       goals: currentFaction.goals || '', headquarters: currentFaction.headquarters || '',
+      treasury: currentFaction.treasury == null ? '' : String(currentFaction.treasury),
+      population: currentFaction.population == null ? '' : String(currentFaction.population),
+      armySize: currentFaction.armySize == null ? '' : String(currentFaction.armySize),
+      navySize: currentFaction.navySize == null ? '' : String(currentFaction.navySize),
+      territoryKm2: currentFaction.territoryKm2 == null ? '' : String(currentFaction.territoryKm2),
+      annualIncome: currentFaction.annualIncome == null ? '' : String(currentFaction.annualIncome),
+      annualExpenses: currentFaction.annualExpenses == null ? '' : String(currentFaction.annualExpenses),
+      membersCount: currentFaction.membersCount == null ? '' : String(currentFaction.membersCount),
+      influence: currentFaction.influence == null ? '' : String(currentFaction.influence),
       territory: currentFaction.territory || '', status: currentFaction.status || 'active',
       color: currentFaction.color || '#4e8a6e', secondaryColor: currentFaction.secondaryColor || '#2a2a4a',
       foundedDate: currentFaction.foundedDate || '', disbandedDate: currentFaction.disbandedDate || '',
       parentFactionId: currentFaction.parentFactionId ? String(currentFaction.parentFactionId) : '',
       tagsStr: (currentFaction.tags || []).map((t: any) => t.name).join(', '),
     });
+    setCustomMetrics(
+      (currentFaction.customMetrics || []).map((metric, index) => ({
+        id: metric.id,
+        name: metric.name,
+        value: metric.value,
+        unit: metric.unit ?? null,
+        sortOrder: metric.sortOrder ?? index,
+      }))
+    );
     setTagsInput('');
   }, [currentFaction, factionId, isNew]);
 
   // ==================== Helpers ====================
 
   const handleChange = (field: keyof FactionForm, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const metricKeyToField = (key: string): keyof FactionForm => {
+    if (key === 'army_size') return 'armySize';
+    if (key === 'navy_size') return 'navySize';
+    if (key === 'territory_km2') return 'territoryKm2';
+    if (key === 'annual_income') return 'annualIncome';
+    if (key === 'annual_expenses') return 'annualExpenses';
+    if (key === 'members_count') return 'membersCount';
+    return key as keyof FactionForm;
+  };
+  const readMetricValue = (key: string): number | null => {
+    const raw = form[metricKeyToField(key)];
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
 
   const mergeTagValues = (a: string, b: string): string => {
     const all = [...a.split(','), ...b.split(',')].map(s => s.trim()).filter(Boolean);
@@ -284,17 +326,17 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const allTagNames = useMemo(() => tags.map(t => t.name), [tags]);
   const relationFactions = useMemo(() => factions.filter((f) => f.id !== fid), [factions, fid]);
   const parentFactions = useMemo(
-    () => relationFactions.filter((f) => f.type === resolvedEntityType),
+    () => relationFactions.filter((f) => f.kind === resolvedEntityType),
     [relationFactions, resolvedEntityType]
   );
+  const semanticTypeOptions = useMemo(
+    () => (resolvedEntityType === 'state' ? [...STATE_TYPES] : [...FACTION_TYPES]),
+    [resolvedEntityType]
+  );
+  const metricMeta = useMemo(() => getMetricsForKind(resolvedEntityType), [resolvedEntityType]);
   const allCharacters = useMemo(() => characters || [], [characters]);
   const currentRanks: FactionRank[] = currentFaction?.ranks || [];
   const currentMembers: FactionMember[] = currentFaction?.members || [];
-  const currentAssets: FactionAsset[] = currentFaction?.assets || [];
-  const sortedAssets = useMemo(
-    () => [...currentAssets].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)),
-    [currentAssets]
-  );
   const factionRelations = useMemo(() => fid ? relations.filter(r => r.sourceFactionId === fid || r.targetFactionId === fid) : [], [relations, fid]);
   const previewTagsStr = mergeTagValues(form.tagsStr, tagsInput);
 
@@ -308,7 +350,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   }), [factionRelations, fid]);
   const resolveEntityPath = (targetId: number) => {
     const target = factions.find((item) => item.id === targetId);
-    const base = target?.type === 'state' ? 'states' : 'factions';
+    const base = target?.kind === 'state' ? 'states' : 'factions';
     return `/project/${pid}/${base}/${targetId}`;
   };
 
@@ -332,29 +374,63 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     if (!form.name.trim()) { showSnackbar('Введите название', 'error'); return; }
     setSaving(true);
     try {
+      const toNullableInt = (raw: string): number | null => {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+        return Number(trimmed);
+      };
+      const metricFieldValues = {
+        treasury: toNullableInt(form.treasury),
+        population: toNullableInt(form.population),
+        armySize: toNullableInt(form.armySize),
+        navySize: toNullableInt(form.navySize),
+        territoryKm2: toNullableInt(form.territoryKm2),
+        annualIncome: toNullableInt(form.annualIncome),
+        annualExpenses: toNullableInt(form.annualExpenses),
+        membersCount: toNullableInt(form.membersCount),
+        influence: toNullableInt(form.influence),
+      } as const;
+      const allMetricFields = Object.keys(metricFieldValues) as Array<keyof typeof metricFieldValues>;
+      const allowedMetricFields = new Set(
+        getMetricsForKind(resolvedEntityType).map((metric) => metricKeyToField(metric.key))
+      );
+      const filteredMetricsPayload = allMetricFields.reduce<Record<string, number | null>>((acc, field) => {
+        if (allowedMetricFields.has(field)) {
+          acc[field] = metricFieldValues[field];
+        }
+        return acc;
+      }, {});
       const payload = {
         name: form.name.trim(),
-        type: resolvedEntityType,
-        customType: '',
-        stateType: resolvedEntityType === 'state' ? form.stateType : '',
-        customStateType:
-          resolvedEntityType === 'state' && form.stateType === 'other' ? form.customStateType.trim() : '',
+        kind: resolvedEntityType,
+        type: form.type || null,
         motto: form.motto.trim(), description: form.description.trim(),
         history: form.history.trim(), goals: form.goals.trim(),
         headquarters: form.headquarters.trim(), territory: form.territory.trim(),
+        ...filteredMetricsPayload,
         status: form.status, color: form.color.trim(), secondaryColor: form.secondaryColor.trim(),
         foundedDate: form.foundedDate.trim(), disbandedDate: form.disbandedDate.trim(),
         parentFactionId: form.parentFactionId ? parseInt(form.parentFactionId) : null,
       };
+      const preparedCustomMetrics = customMetrics
+        .filter((metric) => metric.name.trim())
+        .map((metric, index) => ({
+          name: metric.name.trim(),
+          value: Number(metric.value),
+          unit: metric.unit?.trim() || null,
+          sortOrder: index,
+        }));
       const finalTags = mergeTagValues(form.tagsStr, tagsInput);
       if (isNew) {
         const created = await createFaction({ ...payload, projectId: pid });
+        await replaceCustomMetrics(created.id, { metrics: preparedCustomMetrics });
         if (finalTags.trim()) await saveTagsForFaction(created.id, finalTags);
         setTagsInput('');
         showSnackbar(`${entityLabelCapitalized} создано!`, 'success');
         navigate(`/project/${pid}/${listBasePath}/${created.id}`, { replace: true });
       } else {
         await updateFaction(fid, payload);
+        await replaceCustomMetrics(fid, { metrics: preparedCustomMetrics });
         await saveTagsForFaction(fid, finalTags);
         setTagsInput('');
         showSnackbar('Сохранено!', 'success');
@@ -436,58 +512,6 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     });
   };
 
-  // Assets
-  const openAssetDialog = (asset?: FactionAsset) => {
-    if (asset) {
-      setEditingAsset(asset);
-      setAssetForm({ name: asset.name, value: asset.value || '' });
-    } else {
-      setEditingAsset(null);
-      setAssetForm({ name: '', value: '' });
-    }
-    setAssetDialogOpen(true);
-  };
-
-  const handleSaveAsset = async () => {
-    if (!assetForm.name.trim()) return;
-    try {
-      if (editingAsset) {
-        await updateAsset(fid, editingAsset.id, { name: assetForm.name.trim(), value: assetForm.value });
-        showSnackbar('Актив обновлён', 'success');
-      } else {
-        await createAsset(fid, { name: assetForm.name.trim(), value: assetForm.value, sortOrder: currentAssets.length });
-        showSnackbar('Актив добавлен', 'success');
-      }
-      setAssetDialogOpen(false);
-    } catch (err: any) {
-      showSnackbar(err.message || 'Ошибка', 'error');
-    }
-  };
-
-  const handleDeleteAsset = (asset: FactionAsset) => {
-    showConfirmDialog('Удалить актив', `Удалить "${asset.name}"?`, async () => {
-      try {
-        await deleteAsset(fid, asset.id);
-        showSnackbar('Актив удалён', 'success');
-      } catch {
-        showSnackbar('Ошибка', 'error');
-      }
-    });
-  };
-
-  const handleBootstrapDefaultAssets = async () => {
-    try {
-      const result = await bootstrapDefaultAssets(fid);
-      if (result.created.length > 0) {
-        showSnackbar(`Добавлено базовых активов: ${result.created.length}`, 'success');
-      } else {
-        showSnackbar('Базовые активы уже добавлены', 'success');
-      }
-    } catch (err: any) {
-      showSnackbar(err.message || 'Ошибка', 'error');
-    }
-  };
-
   const openPolicyDialog = (policy?: FactionPolicy) => {
     if (policy) {
       setEditingPolicy(policy);
@@ -551,24 +575,6 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     setPolicyStatusFilter('all');
   };
 
-  const handleMoveAsset = async (index: number, direction: 'up' | 'down') => {
-    const target = direction === 'up' ? index - 1 : index + 1;
-    if (target < 0 || target >= sortedAssets.length) return;
-    const orderedIds = sortedAssets.map((a) => a.id);
-    const t = orderedIds[index];
-    orderedIds[index] = orderedIds[target];
-    orderedIds[target] = t;
-    setIsReordering(true);
-    try {
-      await reorderAssets(fid, { orderedIds });
-      showSnackbar('Порядок активов обновлён', 'success');
-    } catch (err: any) {
-      showSnackbar(err.message || 'Ошибка', 'error');
-    } finally {
-      setIsReordering(false);
-    }
-  };
-
   if (loading && !isNew && !currentFaction) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography></Box>;
   }
@@ -588,7 +594,12 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
             <Avatar src={currentFaction.imagePath} sx={{ width: 120, height: 120, borderRadius: 3 }} variant="rounded" />
           ) : (
             <Avatar sx={{ width: 120, height: 120, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, fontSize: '3rem' }} variant="rounded">
-              {FACTION_TYPE_ICONS[form.type] || '🏴'}
+              {(
+                (form.type
+                  ? (resolvedEntityType === 'state' ? STATE_TYPE_ICONS[form.type] : FACTION_TYPE_ICONS[form.type])
+                  : null) ||
+                FACTION_KIND_ICONS[resolvedEntityType]
+              ) || '🏴'}
             </Avatar>
           )
         }
@@ -612,7 +623,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           { value: 'structure', label: 'Структура', icon: <PeopleIcon fontSize="small" /> },
           { value: 'ambitions', label: 'Амбиции', icon: <TrackChangesIcon fontSize="small" /> },
           { value: 'politics', label: 'Политика', icon: <TrackChangesIcon fontSize="small" /> },
-          { value: 'assets', label: 'Активы', icon: <StarIcon fontSize="small" /> },
+          { value: 'metrics', label: 'Показатели', icon: <StarIcon fontSize="small" /> },
         ]}
       />
 
@@ -636,11 +647,18 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
 
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <InfoRow
-                  label="Тип"
-                  value={`${FACTION_TYPE_ICONS[resolvedEntityType] || ''} ${FACTION_TYPE_LABELS[resolvedEntityType] || resolvedEntityType}`}
+                  label="Сущность"
+                  value={`${FACTION_KIND_ICONS[resolvedEntityType] || ''} ${FACTION_KIND_LABELS[resolvedEntityType] || resolvedEntityType}`}
                 />
-                {resolvedEntityType === 'state' && form.stateType && (
-                  <InfoRow label="Строй" value={STATE_TYPE_LABELS[form.stateType] || form.customStateType || form.stateType} />
+                {form.type && (
+                  <InfoRow
+                    label="Тип"
+                    value={
+                      resolvedEntityType === 'state'
+                        ? `${STATE_TYPE_ICONS[form.type] || ''} ${STATE_TYPE_LABELS[form.type] || form.type}`.trim()
+                        : `${FACTION_TYPE_ICONS[form.type] || ''} ${FACTION_TYPE_LABELS[form.type] || form.type}`.trim()
+                    }
+                  />
                 )}
                 {form.status && <InfoRow label="Статус" value={`${FACTION_STATUS_ICONS[form.status] || ''} ${FACTION_STATUS_LABELS[form.status] || form.status}`} />}
                 {form.headquarters && <InfoRow label="Столица" value={form.headquarters} />}
@@ -665,18 +683,20 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}><TextField fullWidth label="Название *" value={form.name} onChange={e => handleChange('name', e.target.value)} /></Grid>
                 <Grid item xs={12} sm={6}><TextField fullWidth label="Девиз" value={form.motto} onChange={e => handleChange('motto', e.target.value)} placeholder="напр. Зима близко" /></Grid>
-                {resolvedEntityType === 'state' && (
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth><InputLabel>Государственный строй</InputLabel>
-                      <Select value={form.stateType} label="Государственный строй" onChange={e => handleChange('stateType', e.target.value)}>
-                        {STATE_TYPES.map(st => <MenuItem key={st} value={st}>{STATE_TYPE_LABELS[st]}</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                )}
-                {resolvedEntityType === 'state' && form.stateType === 'other' && (
-                  <Grid item xs={12} sm={6}><TextField fullWidth label="Тип государства" value={form.customStateType} onChange={e => handleChange('customStateType', e.target.value)} /></Grid>
-                )}
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth><InputLabel>Тип</InputLabel>
+                    <Select value={form.type} label="Тип" onChange={e => handleChange('type', e.target.value)}>
+                      <MenuItem value="">Не указан</MenuItem>
+                      {semanticTypeOptions.map((typeKey) => (
+                        <MenuItem key={typeKey} value={typeKey}>
+                          {resolvedEntityType === 'state'
+                            ? `${STATE_TYPE_ICONS[typeKey] || ''} ${STATE_TYPE_LABELS[typeKey] || typeKey}`.trim()
+                            : `${FACTION_TYPE_ICONS[typeKey] || ''} ${FACTION_TYPE_LABELS[typeKey] || typeKey}`.trim()}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth><InputLabel>Статус</InputLabel>
                     <Select value={form.status} label="Статус" onChange={e => handleChange('status', e.target.value)}>
@@ -703,7 +723,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                       onChange={e => handleChange('parentFactionId', e.target.value)}
                     >
                       <MenuItem value="">Нет</MenuItem>
-                      {parentFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
+                      {parentFactions.map((f) => (
+                        <MenuItem key={f.id} value={String(f.id)}>
+                          {FACTION_KIND_ICONS[f.kind] || '🏴'} {f.name}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -989,64 +1013,36 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         </Box>
       )}
 
-      {activeTab === 'assets' && (
+      {activeTab === 'metrics' && (
         <Box>
-          {/* SECTION: Assets */}
           {!isNew && (
-            <Section title="Активы" icon={<StarIcon />} badge={currentAssets.length} defaultOpen={true}
+            <Section title="Показатели" icon={<StarIcon />} defaultOpen={true}
               action={
-                <Box display="flex" gap={1}>
-                  <DndButton variant="outlined" size="small" onClick={handleBootstrapDefaultAssets} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
-                    Добавить базовые активы
-                  </DndButton>
-                  <DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => openAssetDialog()} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
-                    Добавить
-                  </DndButton>
-                </Box>
-              }>
-              {currentAssets.length === 0 ? (
-                <EmptyState icon={<StarIcon />} title="Нет активов" description="Добавьте активы фракции (например, Казна, Земли)" actionLabel="Добавить актив" onAction={() => openAssetDialog()} />
-              ) : (
-                <List disablePadding>
-                  {sortedAssets.map((asset, index) => (
-                    <ListItem key={asset.id}
-                      secondaryAction={
-                        <Box display="flex" gap={0.5} alignItems="center">
-                          <Tooltip title="Вверх">
-                            <span>
-                              <IconButton
-                                size="small"
-                                disabled={isReordering || index === 0}
-                                onClick={() => handleMoveAsset(index, 'up')}
-                              >
-                                <KeyboardArrowUpIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <Tooltip title="Вниз">
-                            <span>
-                              <IconButton
-                                size="small"
-                                disabled={isReordering || index === sortedAssets.length - 1}
-                                onClick={() => handleMoveAsset(index, 'down')}
-                              >
-                                <KeyboardArrowDownIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
-                          <IconButton size="small" onClick={() => openAssetDialog(asset)} disabled={isReordering}><EditIcon fontSize="small" sx={{ color: theme.palette.text.secondary }} /></IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteAsset(asset)} disabled={isReordering}><DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} /></IconButton>
-                        </Box>
-                      }
-                      sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.5), borderRadius: 1.5, mb: 1, border: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-                      <ListItemText
-                        primary={<Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{asset.name}</Typography>}
-                        secondary={<Typography variant="body2" sx={{ color: 'text.secondary' }}>{asset.value || '—'}</Typography>}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
+                <DndButton variant="outlined" size="small" onClick={() => setCompareDialogOpen(true)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
+                  Сравнить с другими
+                </DndButton>
+              }
+            >
+              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>Базовые</Typography>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                {metricMeta.map((metric) => (
+                  <Grid item xs={12} sm={6} md={4} key={metric.key}>
+                    <MetricInput
+                      label={metric.label}
+                      unit={metric.unit}
+                      min={metric.min}
+                      max={metric.max}
+                      value={readMetricValue(metric.key)}
+                      onChange={(value) => {
+                        handleChange(metricKeyToField(metric.key), value == null ? '' : String(value));
+                      }}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+
+              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>Кастомные</Typography>
+              <CustomMetricsEditor metrics={customMetrics} onChange={setCustomMetrics} />
             </Section>
           )}
         </Box>
@@ -1068,31 +1064,14 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         form={relationForm} onFormChange={setRelationForm} onSubmit={handleAddRelation}
         otherFactions={relationFactions}
       />
-      <Dialog open={assetDialogOpen} onClose={() => setAssetDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editingAsset ? 'Редактировать актив' : 'Новый актив'}</DialogTitle>
-        <DialogContent sx={{ display: 'grid', gap: 2, pt: 2 }}>
-          <TextField
-            autoFocus
-            fullWidth
-            label="Название *"
-            value={assetForm.name}
-            onChange={(e) => setAssetForm((prev) => ({ ...prev, name: e.target.value }))}
-          />
-          <TextField
-            fullWidth
-            label="Значение"
-            value={assetForm.value}
-            onChange={(e) => setAssetForm((prev) => ({ ...prev, value: e.target.value }))}
-            placeholder="например: 25000 золотых"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAssetDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={handleSaveAsset} disabled={!assetForm.name.trim()}>
-            {editingAsset ? 'Сохранить' : 'Добавить'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FactionCompareDialog
+        open={compareDialogOpen}
+        kind={resolvedEntityType}
+        currentFactionId={fid}
+        factions={factions}
+        onClose={() => setCompareDialogOpen(false)}
+        onCompare={(factionIds, metricKeys) => compareFactions({ factionIds, metricKeys })}
+      />
 
       <Dialog open={policyDialogOpen} onClose={() => setPolicyDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{editingPolicy ? 'Редактировать политику' : 'Новая политика'}</DialogTitle>

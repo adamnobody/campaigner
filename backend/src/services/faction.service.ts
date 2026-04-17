@@ -1,6 +1,7 @@
 import { getDb } from '../db/connection.js';
 import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
 import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
+import { FACTION_METRICS, STATE_METRICS } from '@campaigner/shared';
 import type {
   FactionFilters,
   TagRow,
@@ -10,7 +11,6 @@ import type {
   RankRow,
   MemberRow,
   RelationRow,
-  AssetRow,
   FactionCreateData,
   FactionUpdateData,
   RankCreateData,
@@ -19,27 +19,120 @@ import type {
   MemberUpdateData,
   RelationCreateData,
   RelationUpdateData,
-  AssetCreateData,
-  AssetUpdateData,
+  CustomMetricInput,
+  CustomMetricRow,
+  CompareFactionResult,
 } from './faction/faction.types.js';
 import {
   FACTION_UPDATE_MAP,
   RANK_UPDATE_MAP,
   MEMBER_UPDATE_MAP,
   RELATION_UPDATE_MAP,
-  ASSET_UPDATE_MAP,
   toFaction,
   toRank,
   toMember,
   toRelation,
-  toAsset,
+  toCustomMetric,
   MEMBER_SELECT,
   RELATION_SELECT,
 } from './faction/faction.mappers.js';
 
 export class FactionService {
-  private static normalizeAssetName(name: string): string {
-    return name.trim().toLowerCase();
+  private static readonly DEFAULT_MEMBER_ROLE = 'Член фракции';
+  private static readonly METRIC_LABELS = new Map(
+    [...STATE_METRICS, ...FACTION_METRICS].map((metric) => [metric.key, metric.label] as const)
+  );
+
+  private static metricKeyToColumn(key: string): string | null {
+    const map: Record<string, string> = {
+      treasury: 'treasury',
+      population: 'population',
+      army_size: 'army_size',
+      navy_size: 'navy_size',
+      territory_km2: 'territory_km2',
+      annual_income: 'annual_income',
+      annual_expenses: 'annual_expenses',
+      members_count: 'members_count',
+      influence: 'influence',
+    };
+    return map[key] ?? null;
+  }
+
+  private static validateMetricsByKind(kind: 'state' | 'faction', data: FactionUpdateData): void {
+    const keys = [
+      'treasury',
+      'population',
+      'armySize',
+      'navySize',
+      'territoryKm2',
+      'annualIncome',
+      'annualExpenses',
+      'membersCount',
+      'influence',
+    ] as const;
+    const allowed = kind === 'state'
+      ? new Set(['treasury', 'population', 'armySize', 'navySize', 'territoryKm2', 'annualIncome', 'annualExpenses'])
+      : new Set(['treasury', 'membersCount', 'influence', 'annualIncome', 'annualExpenses']);
+
+    for (const key of keys) {
+      const value = data[key];
+      if (value !== undefined && value !== null && !allowed.has(key)) {
+        throw new BadRequestError(`Metric "${key}" is not allowed for kind "${kind}"`);
+      }
+    }
+  }
+
+  private static getLowestRankIdForFaction(db: ReturnType<typeof getDb>, factionId: number): number | null {
+    const row = db.prepare(`
+      SELECT id
+      FROM faction_ranks
+      WHERE faction_id = ?
+      ORDER BY level ASC, id ASC
+      LIMIT 1
+    `).get(factionId) as { id: number } | undefined;
+    return row?.id ?? null;
+  }
+
+  private static ensureCharacterFactionLink(
+    db: ReturnType<typeof getDb>,
+    characterId: number,
+    factionId: number
+  ): void {
+    db.prepare(`
+      INSERT OR IGNORE INTO character_factions (character_id, faction_id)
+      VALUES (?, ?)
+    `).run(characterId, factionId);
+  }
+
+  private static ensureFactionMemberLink(
+    db: ReturnType<typeof getDb>,
+    factionId: number,
+    characterId: number,
+    options?: { rankId?: number | null; role?: string; joinedDate?: string; leftDate?: string; isActive?: boolean; notes?: string }
+  ): void {
+    const existing = db.prepare(`
+      SELECT id
+      FROM faction_members
+      WHERE faction_id = ? AND character_id = ?
+    `).get(factionId, characterId) as { id: number } | undefined;
+    if (existing) {
+      return;
+    }
+
+    const fallbackRankId = this.getLowestRankIdForFaction(db, factionId);
+    db.prepare(`
+      INSERT OR IGNORE INTO faction_members (faction_id, character_id, rank_id, role, joined_date, left_date, is_active, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      factionId,
+      characterId,
+      options?.rankId ?? fallbackRankId,
+      options?.role?.trim() || this.DEFAULT_MEMBER_ROLE,
+      options?.joinedDate || '',
+      options?.leftDate || '',
+      options?.isActive === false ? 0 : 1,
+      options?.notes || ''
+    );
   }
 
   // ==================== FACTIONS CRUD ====================
@@ -49,9 +142,9 @@ export class FactionService {
     const conditions = ['f.project_id = ?'];
     const params: Array<number | string> = [projectId];
 
-    if (filters.type) {
-      conditions.push('f.type = ?');
-      params.push(filters.type);
+    if (filters.kind) {
+      conditions.push('f.kind = ?');
+      params.push(filters.kind);
     }
 
     if (filters.status) {
@@ -137,9 +230,9 @@ export class FactionService {
       SELECT id, name FROM factions WHERE parent_faction_id = ? ORDER BY name
     `).all(id) as ChildFactionRow[];
 
-    const assetRows = db.prepare(`
-      SELECT * FROM faction_assets WHERE faction_id = ? ORDER BY sort_order ASC, id ASC
-    `).all(id) as AssetRow[];
+    const customMetricRows = db.prepare(`
+      SELECT * FROM faction_custom_metrics WHERE faction_id = ? ORDER BY sort_order ASC, id ASC
+    `).all(id) as CustomMetricRow[];
 
     return {
       ...faction,
@@ -149,7 +242,7 @@ export class FactionService {
       tags,
       ranks: rankRows.map(toRank),
       members: memberRows.map(toMember),
-      assets: assetRows.map(toAsset),
+      customMetrics: customMetricRows.map(toCustomMetric),
       memberCount: memberRows.filter((member) => !!member.is_active).length,
       childFactions: childRows,
     };
@@ -157,29 +250,31 @@ export class FactionService {
 
   static create(data: FactionCreateData) {
     const db = getDb();
+    const kind = data.kind || 'faction';
+    this.validateMetricsByKind(kind, data);
 
     const result = db.prepare(`
       INSERT INTO factions (
-        project_id, name, type, custom_type, state_type, custom_state_type,
-        motto, description, history, goals, headquarters, territory,
+        project_id, name, kind, type, motto, description, history, goals, headquarters, territory,
+        treasury, population, army_size, navy_size, territory_km2, annual_income, annual_expenses, members_count, influence,
         status, color, secondary_color, founded_date, disbanded_date,
         parent_faction_id, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      data.projectId, data.name, data.type || 'faction',
-      data.customType || '', data.stateType || '', data.customStateType || '',
-      data.motto || '', data.description || '', data.history || '',
+      data.projectId, data.name, kind, data.type ?? null, data.motto || '', data.description || '', data.history || '',
       data.goals || '', data.headquarters || '', data.territory || '',
+      data.treasury ?? null, data.population ?? null, data.armySize ?? null, data.navySize ?? null, data.territoryKm2 ?? null,
+      data.annualIncome ?? null, data.annualExpenses ?? null, data.membersCount ?? null, data.influence ?? null,
       data.status || 'active', data.color || '', data.secondaryColor || '',
-      data.foundedDate || '', data.disbandedDate || '',
-      data.parentFactionId || null, data.sortOrder || 0
+      data.foundedDate || '', data.disbandedDate || '', data.parentFactionId || null, data.sortOrder || 0
     );
 
     return this.getById(result.lastInsertRowid as number);
   }
 
   static update(id: number, data: FactionUpdateData) {
-    this.getById(id);
+    const faction = this.getById(id);
+    this.validateMetricsByKind((data.kind as 'state' | 'faction' | undefined) ?? faction.kind, data);
     buildUpdateQuery('factions', FACTION_UPDATE_MAP, data as Record<string, unknown>, id);
     return this.getById(id);
   }
@@ -244,16 +339,26 @@ export class FactionService {
 
   static addMember(data: MemberCreateData) {
     const db = getDb();
-    const result = db.prepare(`
-      INSERT INTO faction_members (faction_id, character_id, rank_id, role, joined_date, left_date, is_active, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      data.factionId, data.characterId, data.rankId || null,
-      data.role || '', data.joinedDate || '', data.leftDate || '',
-      data.isActive !== false ? 1 : 0, data.notes || ''
-    );
+    this.ensureFactionMemberLink(db, data.factionId, data.characterId, {
+      rankId: data.rankId ?? null,
+      role: data.role,
+      joinedDate: data.joinedDate,
+      leftDate: data.leftDate,
+      isActive: data.isActive,
+      notes: data.notes,
+    });
+    this.ensureCharacterFactionLink(db, data.characterId, data.factionId);
 
-    const row = db.prepare(`${MEMBER_SELECT} WHERE fm.id = ?`).get(result.lastInsertRowid as number) as MemberRow;
+    const memberRow = db.prepare(`
+      SELECT id
+      FROM faction_members
+      WHERE faction_id = ? AND character_id = ?
+    `).get(data.factionId, data.characterId) as { id: number } | undefined;
+    if (!memberRow) {
+      throw new BadRequestError('Failed to create faction member');
+    }
+
+    const row = db.prepare(`${MEMBER_SELECT} WHERE fm.id = ?`).get(memberRow.id) as MemberRow;
     return toMember(row);
   }
 
@@ -268,7 +373,18 @@ export class FactionService {
   static removeMember(id: number) {
     ensureEntityExists('faction_members', id, 'Faction member');
     const db = getDb();
+    const memberRow = db.prepare(`
+      SELECT faction_id as factionId, character_id as characterId
+      FROM faction_members
+      WHERE id = ?
+    `).get(id) as { factionId: number; characterId: number } | undefined;
     db.prepare('DELETE FROM faction_members WHERE id = ?').run(id);
+    if (memberRow) {
+      db.prepare(`
+        DELETE FROM character_factions
+        WHERE character_id = ? AND faction_id = ?
+      `).run(memberRow.characterId, memberRow.factionId);
+    }
   }
 
   // ==================== RELATIONS ====================
@@ -279,113 +395,112 @@ export class FactionService {
     return rows.map(toRelation);
   }
 
-  // ==================== ASSETS ====================
-
-  static getAssets(factionId: number) {
+  static replaceCustomMetrics(factionId: number, metrics: CustomMetricInput[]) {
     ensureEntityExists('factions', factionId, 'Faction');
     const db = getDb();
-    const rows = db.prepare(`
-      SELECT * FROM faction_assets WHERE faction_id = ? ORDER BY sort_order ASC, id ASC
-    `).all(factionId) as AssetRow[];
-    return rows.map(toAsset);
-  }
+    const names = new Set<string>();
 
-  static createAsset(data: AssetCreateData) {
-    ensureEntityExists('factions', data.factionId, 'Faction');
-    const db = getDb();
-    const name = data.name.trim();
-    const value = (data.value ?? '').trim();
-    const result = db.prepare(`
-      INSERT INTO faction_assets (faction_id, name, value, sort_order)
-      VALUES (?, ?, ?, ?)
-    `).run(data.factionId, name, value, data.sortOrder ?? 0);
-    const row = db.prepare('SELECT * FROM faction_assets WHERE id = ?').get(result.lastInsertRowid as number) as AssetRow;
-    return toAsset(row);
-  }
-
-  static updateAsset(id: number, data: AssetUpdateData) {
-    ensureEntityExists('faction_assets', id, 'Faction asset');
-    const normalizedData: AssetUpdateData = {
-      ...data,
-      ...(typeof data.name === 'string' ? { name: data.name.trim() } : {}),
-      ...(typeof data.value === 'string' ? { value: data.value.trim() } : {}),
-    };
-    buildUpdateQuery('faction_assets', ASSET_UPDATE_MAP, normalizedData as Record<string, unknown>, id);
-    const db = getDb();
-    const row = db.prepare('SELECT * FROM faction_assets WHERE id = ?').get(id) as AssetRow;
-    return toAsset(row);
-  }
-
-  static deleteAsset(id: number) {
-    ensureEntityExists('faction_assets', id, 'Faction asset');
-    const db = getDb();
-    db.prepare('DELETE FROM faction_assets WHERE id = ?').run(id);
-  }
-
-  static reorderAssets(factionId: number, orderedIds: number[]) {
-    ensureEntityExists('factions', factionId, 'Faction');
-    const existing = this.getAssets(factionId);
-    const dbIdsSorted = [...existing.map((a) => a.id)].sort((a, b) => a - b);
-
-    if (orderedIds.length !== dbIdsSorted.length) {
-      throw new BadRequestError('orderedIds must list every asset id for this faction exactly once');
-    }
-    if (new Set(orderedIds).size !== orderedIds.length) {
-      throw new BadRequestError('orderedIds must not contain duplicates');
-    }
-    const inputSorted = [...orderedIds].sort((a, b) => a - b);
-    for (let i = 0; i < dbIdsSorted.length; i++) {
-      if (dbIdsSorted[i] !== inputSorted[i]) {
-        throw new BadRequestError('orderedIds must match the current asset ids for this faction');
+    for (const metric of metrics) {
+      const name = metric.name.trim();
+      if (!name) {
+        throw new BadRequestError('Custom metric name is required');
       }
+      const normalizedName = name.toLowerCase();
+      if (names.has(normalizedName)) {
+        throw new BadRequestError(`Duplicate custom metric name "${name}"`);
+      }
+      names.add(normalizedName);
     }
 
-    if (orderedIds.length === 0) {
-      return existing;
-    }
-
-    const db = getDb();
     const run = db.transaction(() => {
-      orderedIds.forEach((assetId, index) => {
-        const result = db.prepare(`
-          UPDATE faction_assets SET sort_order = ?, updated_at = datetime('now')
-          WHERE id = ? AND faction_id = ?
-        `).run(index, assetId, factionId);
-        if (result.changes !== 1) {
-          throw new BadRequestError('Invalid asset id for this faction');
-        }
-      });
+      db.prepare('DELETE FROM faction_custom_metrics WHERE faction_id = ?').run(factionId);
+      for (let i = 0; i < metrics.length; i++) {
+        const metric = metrics[i];
+        db.prepare(`
+          INSERT INTO faction_custom_metrics (faction_id, name, value, unit, sort_order, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        `).run(
+          factionId,
+          metric.name.trim(),
+          metric.value,
+          metric.unit?.trim() || null,
+          metric.sortOrder ?? i
+        );
+      }
     });
     run();
-    return this.getAssets(factionId);
+    return this.getById(factionId).customMetrics ?? [];
   }
 
-  static bootstrapDefaultAssets(factionId: number) {
-    const defaults = ['Казна', 'Земельные активы', 'Военный ресурс', 'Торговый ресурс'] as const;
-    const existing = this.getAssets(factionId);
-    const existingNormalized = new Set(existing.map((asset) => this.normalizeAssetName(asset.name)));
-
-    const created = [];
-    const skipped: string[] = [];
-
-    for (const defaultName of defaults) {
-      const normalized = this.normalizeAssetName(defaultName);
-      if (existingNormalized.has(normalized)) {
-        skipped.push(defaultName);
-        continue;
-      }
-
-      const createdAsset = this.createAsset({
-        factionId,
-        name: defaultName,
-        value: '',
-        sortOrder: existing.length + created.length,
-      });
-      created.push(createdAsset);
-      existingNormalized.add(normalized);
+  static compare(factionIds: number[], metricKeys: string[]): CompareFactionResult {
+    const db = getDb();
+    const uniqueFactionIds = Array.from(new Set(factionIds));
+    const uniqueMetricKeys = Array.from(new Set(metricKeys.map((key) => key.trim()).filter(Boolean)));
+    if (!uniqueFactionIds.length || !uniqueMetricKeys.length) {
+      throw new BadRequestError('factionIds and metricKeys must not be empty');
     }
 
-    return { created, skipped };
+    const placeholders = uniqueFactionIds.map(() => '?').join(', ');
+    const factions = db.prepare(`
+      SELECT id, name, kind FROM factions WHERE id IN (${placeholders})
+    `).all(...uniqueFactionIds) as Array<{ id: number; name: string; kind: 'state' | 'faction' }>;
+    if (factions.length !== uniqueFactionIds.length) {
+      throw new BadRequestError('One or more factions do not exist');
+    }
+    const factionsById = new Map(factions.map((faction) => [faction.id, faction]));
+
+    const customNames = uniqueMetricKeys
+      .filter((key) => key.startsWith('custom:'))
+      .map((key) => key.slice('custom:'.length).trim())
+      .filter(Boolean);
+    const customMetricRows = customNames.length
+      ? db.prepare(`
+        SELECT faction_id as factionId, name, value, unit
+        FROM faction_custom_metrics
+        WHERE faction_id IN (${placeholders}) AND name IN (${customNames.map(() => '?').join(', ')})
+      `).all(...uniqueFactionIds, ...customNames) as Array<{ factionId: number; name: string; value: number; unit: string | null }>
+      : [];
+    const customMetricValueMap = new Map<string, { value: number; unit: string | null }>();
+    for (const row of customMetricRows) {
+      customMetricValueMap.set(`${row.factionId}:${row.name}`, { value: row.value, unit: row.unit });
+    }
+
+    const metrics = uniqueMetricKeys.map((key) => {
+      if (key.startsWith('custom:')) {
+        const customName = key.slice('custom:'.length).trim();
+        if (!customName) {
+          throw new BadRequestError(`Invalid metric key "${key}"`);
+        }
+        const values = uniqueFactionIds.map((factionId) => {
+          const row = customMetricValueMap.get(`${factionId}:${customName}`);
+          return { factionId, value: row ? row.value : null };
+        });
+        const firstWithUnit = uniqueFactionIds
+          .map((factionId) => customMetricValueMap.get(`${factionId}:${customName}`))
+          .find(Boolean);
+        return { key, label: customName, unit: firstWithUnit?.unit ?? null, values };
+      }
+
+      const column = this.metricKeyToColumn(key);
+      if (!column) {
+        throw new BadRequestError(`Invalid metric key "${key}"`);
+      }
+      const applicableKinds = new Set<'state' | 'faction'>(['state', 'faction']);
+      if (['population', 'army_size', 'navy_size', 'territory_km2'].includes(key)) applicableKinds.delete('faction');
+      if (['members_count', 'influence'].includes(key)) applicableKinds.delete('state');
+      const values = uniqueFactionIds.map((factionId) => {
+        const faction = factionsById.get(factionId);
+        if (!faction || !applicableKinds.has(faction.kind)) {
+          return { factionId, value: null };
+        }
+        const row = db.prepare(`SELECT ${column} as value FROM factions WHERE id = ?`).get(factionId) as { value: number | null };
+        return { factionId, value: row?.value ?? null };
+      });
+      const meta = [...STATE_METRICS, ...FACTION_METRICS].find((metric) => metric.key === key);
+      return { key, label: meta?.label || this.METRIC_LABELS.get(key as any) || key, unit: meta?.unit ?? null, values };
+    });
+
+    return { factions, metrics };
   }
 
   static createRelation(data: RelationCreateData) {
@@ -426,12 +541,12 @@ export class FactionService {
     const db = getDb();
 
     const factions = db.prepare(`
-      SELECT id, name, type, custom_type, state_type, status, color, image_path,
+      SELECT id, name, kind, type, status, color, image_path,
         (SELECT COUNT(*) FROM faction_members fm WHERE fm.faction_id = factions.id AND fm.is_active = 1) as member_count
       FROM factions WHERE project_id = ?
     `).all(projectId) as Array<{
-      id: number; name: string; type: string; custom_type: string | null;
-      state_type: string | null; status: string; color: string | null;
+      id: number; name: string; kind: 'state' | 'faction'; type: string | null;
+      status: string; color: string | null;
       image_path: string | null; member_count: number;
     }>;
 
@@ -439,8 +554,7 @@ export class FactionService {
 
     return {
       nodes: factions.map((f) => ({
-        id: f.id, name: f.name, type: f.type,
-        customType: f.custom_type || '', stateType: f.state_type || '',
+        id: f.id, name: f.name, kind: f.kind, type: f.type ?? null,
         status: f.status, color: f.color || '',
         imagePath: f.image_path || '', memberCount: f.member_count,
       })),
