@@ -92,7 +92,7 @@ export const MapTerritoryPanel: React.FC<Props> = ({
             </Box>
           ) : (
             <Typography variant="body2" sx={{ color: 'text.disabled', mt: 0.5, fontStyle: 'italic' }}>
-              Не привязана к фракции
+              Не привязана к государству/фракции
             </Typography>
           )}
         </Box>

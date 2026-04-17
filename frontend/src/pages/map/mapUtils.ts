@@ -124,7 +124,7 @@ export const parseNotes = (data: any): NoteOption[] => {
 
 export const parseFactions = (data: any): FactionOption[] => {
   const list = Array.isArray(data) ? data : [];
-  return list.map((f: any) => ({ id: f.id, name: f.name, color: f.color || '#4ECDC4', type: f.type || 'other' }));
+  return list.map((f: any) => ({ id: f.id, name: f.name, color: f.color || '#4ECDC4', type: f.type || 'faction' }));
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 

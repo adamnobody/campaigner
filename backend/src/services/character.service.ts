@@ -9,7 +9,7 @@ import {
   CharacterGraph,
   Pagination,
 } from '@campaigner/shared';
-import { NotFoundError } from '../middleware/errorHandler.js';
+import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
 import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
 
@@ -18,6 +18,7 @@ type CharacterStatus = Character['status'];
 interface CharacterRow {
   id: number;
   projectId: number;
+  stateId: number | null;
   name: string;
   title: string;
   race: string;
@@ -61,17 +62,124 @@ const CHARACTER_UPDATE_MAP: Record<string, string> = {
   backstory: 'backstory',
   notes: 'notes',
   imagePath: 'image_path',
+  stateId: 'state_id',
 };
 
 function mapRow(row: CharacterRow): Character {
   return {
     ...row,
     tags: [],
+    factionIds: [],
     level: row.level ?? null,
+    stateId: row.stateId ?? null,
   };
 }
 
+type FactionType = 'state' | 'faction';
+
+interface FactionValidationRow {
+  id: number;
+  project_id: number;
+  type: FactionType;
+}
+
 export class CharacterService {
+  private static getFactionIdsByCharacterIds(characterIds: number[]): Map<number, number[]> {
+    const map = new Map<number, number[]>();
+    if (characterIds.length === 0) {
+      return map;
+    }
+
+    const db = getDb();
+    const placeholders = characterIds.map(() => '?').join(', ');
+    const rows = db
+      .prepare(
+        `
+        SELECT character_id as characterId, faction_id as factionId
+        FROM character_factions
+        WHERE character_id IN (${placeholders})
+        ORDER BY character_id ASC, faction_id ASC
+      `
+      )
+      .all(...characterIds) as Array<{ characterId: number; factionId: number }>;
+
+    for (const row of rows) {
+      if (!map.has(row.characterId)) {
+        map.set(row.characterId, []);
+      }
+      map.get(row.characterId)!.push(row.factionId);
+    }
+
+    return map;
+  }
+
+  private static validateFactionType(
+    db: ReturnType<typeof getDb>,
+    factionId: number,
+    projectId: number,
+    expectedType: FactionType
+  ): void {
+    const faction = db
+      .prepare('SELECT id, project_id, type FROM factions WHERE id = ?')
+      .get(factionId) as FactionValidationRow | undefined;
+
+    if (!faction) {
+      throw new BadRequestError(`Faction with id ${factionId} not found`);
+    }
+    if (faction.project_id !== projectId) {
+      throw new BadRequestError(`Faction with id ${factionId} belongs to another project`);
+    }
+    if (faction.type !== expectedType) {
+      if (expectedType === 'state') {
+        throw new BadRequestError(`Faction with id ${factionId} is not a state`);
+      }
+      throw new BadRequestError(`Faction with id ${factionId} is not a faction`);
+    }
+  }
+
+  private static syncCharacterAffiliations(
+    db: ReturnType<typeof getDb>,
+    characterId: number,
+    projectId: number,
+    stateId: number | null | undefined,
+    factionIds: number[] | undefined
+  ): void {
+    const shouldUpdateState = stateId !== undefined;
+    const normalizedStateId = typeof stateId === 'number' ? stateId : null;
+    const normalizedFactionIds = Array.isArray(factionIds)
+      ? Array.from(new Set(factionIds.filter((id) => Number.isInteger(id) && id > 0)))
+      : undefined;
+
+    if (shouldUpdateState && normalizedStateId !== null) {
+      this.validateFactionType(db, normalizedStateId, projectId, 'state');
+    }
+
+    if (normalizedFactionIds) {
+      for (const factionId of normalizedFactionIds) {
+        this.validateFactionType(db, factionId, projectId, 'faction');
+      }
+    }
+
+    if (shouldUpdateState) {
+      db.prepare(`
+        UPDATE characters
+        SET state_id = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(normalizedStateId, characterId);
+    }
+
+    if (normalizedFactionIds) {
+      db.prepare('DELETE FROM character_factions WHERE character_id = ?').run(characterId);
+      const insertMembership = db.prepare(`
+        INSERT OR IGNORE INTO character_factions (character_id, faction_id)
+        VALUES (?, ?)
+      `);
+      for (const factionId of normalizedFactionIds) {
+        insertMembership.run(characterId, factionId);
+      }
+    }
+  }
+
   static getAll(
     projectId: number,
     pagination?: Pagination
@@ -115,7 +223,7 @@ export class CharacterService {
 
     const rows = db.prepare(`
       SELECT id, project_id as projectId, name, title, race, character_class as characterClass,
-             level, status, bio, appearance, personality, backstory, notes,
+             level, status, bio, appearance, personality, backstory, notes, state_id as stateId,
              image_path as imagePath, created_at as createdAt, updated_at as updatedAt
       FROM characters
       ${whereClause}
@@ -125,10 +233,12 @@ export class CharacterService {
 
     const ids = rows.map((row) => row.id);
     const tagsMap = loadTagsBatch(projectId, 'character', ids);
+    const factionIdsMap = this.getFactionIdsByCharacterIds(ids);
 
     const items = rows.map((row) => {
       const character = mapRow(row);
       character.tags = tagsMap.get(row.id) || [];
+      character.factionIds = factionIdsMap.get(row.id) || [];
       return character;
     });
 
@@ -140,7 +250,7 @@ export class CharacterService {
 
     const row = db.prepare(`
       SELECT id, project_id as projectId, name, title, race, character_class as characterClass,
-             level, status, bio, appearance, personality, backstory, notes,
+             level, status, bio, appearance, personality, backstory, notes, state_id as stateId,
              image_path as imagePath, created_at as createdAt, updated_at as updatedAt
       FROM characters
       WHERE id = ?
@@ -152,39 +262,54 @@ export class CharacterService {
 
     const character = mapRow(row);
     character.tags = TagService.getTagsForEntity(row.projectId, 'character', id);
+    character.factionIds = this.getFactionIdsByCharacterIds([id]).get(id) || [];
     return character;
   }
 
   static create(data: CreateCharacter): Character {
     const db = getDb();
+    const run = db.transaction(() => {
+      const result = db.prepare(`
+        INSERT INTO characters (
+          project_id, name, title, race, character_class, level, status,
+          bio, appearance, personality, backstory, notes, state_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        data.projectId,
+        data.name,
+        data.title || '',
+        data.race || '',
+        data.characterClass || '',
+        data.level || null,
+        data.status || 'alive',
+        data.bio || '',
+        data.appearance || '',
+        data.personality || '',
+        data.backstory || '',
+        data.notes || '',
+        data.stateId ?? null
+      );
 
-    const result = db.prepare(`
-      INSERT INTO characters (
-        project_id, name, title, race, character_class, level, status,
-        bio, appearance, personality, backstory, notes
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      data.projectId,
-      data.name,
-      data.title || '',
-      data.race || '',
-      data.characterClass || '',
-      data.level || null,
-      data.status || 'alive',
-      data.bio || '',
-      data.appearance || '',
-      data.personality || '',
-      data.backstory || '',
-      data.notes || ''
-    );
+      const characterId = result.lastInsertRowid as number;
+      this.syncCharacterAffiliations(db, characterId, data.projectId, data.stateId, data.factionIds);
+      return characterId;
+    });
 
-    return this.getById(result.lastInsertRowid as number);
+    return this.getById(run());
   }
 
   static update(id: number, data: UpdateCharacter): Character {
-    this.getById(id);
-    buildUpdateQuery('characters', CHARACTER_UPDATE_MAP, data as Record<string, unknown>, id);
+    const current = this.getById(id);
+    const { factionIds, ...characterData } = data;
+
+    const db = getDb();
+    const run = db.transaction(() => {
+      buildUpdateQuery('characters', CHARACTER_UPDATE_MAP, characterData as Record<string, unknown>, id);
+      this.syncCharacterAffiliations(db, id, current.projectId, data.stateId, factionIds);
+    });
+    run();
+
     return this.getById(id);
   }
 

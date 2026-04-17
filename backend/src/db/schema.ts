@@ -29,6 +29,7 @@ export function createTables(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS characters (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
+      state_id INTEGER,
       name TEXT NOT NULL,
       title TEXT DEFAULT '',
       race TEXT DEFAULT '',
@@ -43,7 +44,19 @@ export function createTables(db: Database.Database): void {
       image_path TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (state_id) REFERENCES factions(id) ON DELETE SET NULL
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS character_factions (
+      character_id INTEGER NOT NULL,
+      faction_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (character_id, faction_id),
+      FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE
     );
   `);
 
@@ -196,7 +209,7 @@ export function createTables(db: Database.Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      type TEXT NOT NULL DEFAULT 'other',
+      type TEXT NOT NULL DEFAULT 'faction' CHECK(type IN ('state', 'faction')),
       custom_type TEXT DEFAULT '',
       state_type TEXT DEFAULT '',
       custom_state_type TEXT DEFAULT '',
@@ -564,6 +577,9 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
     CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(project_id, name);
     CREATE INDEX IF NOT EXISTS idx_characters_status ON characters(project_id, status);
+    CREATE INDEX IF NOT EXISTS idx_characters_state ON characters(state_id);
+    CREATE INDEX IF NOT EXISTS idx_character_factions_character ON character_factions(character_id);
+    CREATE INDEX IF NOT EXISTS idx_character_factions_faction ON character_factions(faction_id);
     CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
     CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
     CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(project_id, note_type);

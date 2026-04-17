@@ -15,9 +15,13 @@ export class FactionController {
 
     const limit = Number(req.query.limit);
     const offset = Number(req.query.offset);
+    const typeFilter =
+      req.query.type === 'state' || req.query.type === 'faction'
+        ? req.query.type
+        : undefined;
 
     const filters = {
-      type: typeof req.query.type === 'string' ? req.query.type : undefined,
+      type: typeFilter as 'state' | 'faction' | undefined,
       status: typeof req.query.status === 'string' ? req.query.status : undefined,
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       limit: Number.isFinite(limit) ? limit : 50,

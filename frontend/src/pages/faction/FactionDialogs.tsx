@@ -137,8 +137,8 @@ export const FactionRelationDialog: React.FC<FactionRelationDialogProps> = ({
       <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить связь</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="normal">
-          <InputLabel>Фракция *</InputLabel>
-          <Select value={form.targetFactionId} label="Фракция *" onChange={e => onFormChange(p => ({ ...p, targetFactionId: e.target.value }))}>
+          <InputLabel>Сущность *</InputLabel>
+          <Select value={form.targetFactionId} label="Сущность *" onChange={e => onFormChange(p => ({ ...p, targetFactionId: e.target.value }))}>
             {otherFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
           </Select>
         </FormControl>

@@ -483,7 +483,11 @@ export const MapPage: React.FC = () => {
               selectedTerritory={selectedTerritory}
               faction={selectedTerritory.factionId ? factionsMap.get(selectedTerritory.factionId) : null}
               onClose={closePanel}
-              onNavigateToFaction={(factionId) => navigate(`/project/${pid}/factions/${factionId}`)}
+              onNavigateToFaction={(factionId) => {
+                const target = factionsMap.get(factionId);
+                const basePath = target?.type === 'state' ? 'states' : 'factions';
+                navigate(`/project/${pid}/${basePath}/${factionId}`);
+              }}
               onEditTerritory={handleEditTerritory}
               onDeleteTerritory={handleDeleteTerritory}
               onStartEditingPoints={startEditingPoints}

@@ -43,11 +43,18 @@ export const onboardingSteps: OnboardingStep[] = [
     description: 'Раздел для героев, связей и карточек персонажей.',
   },
   {
+    id: 'sidebar-states',
+    route: 'states',
+    selector: '[data-tour="sidebar-states"]',
+    title: 'Государства',
+    description: 'Список государств мира: отдельные сущности с собственными амбициями и структурой.',
+  },
+  {
     id: 'sidebar-factions',
     route: 'factions',
     selector: '[data-tour="sidebar-factions"]',
     title: 'Фракции',
-    description: 'Организации, ранги, участники и отношения между фракциями вашего мира.',
+    description: 'Внутренние группировки, организации, ранги, участники и связи.',
   },
   {
     id: 'sidebar-notes',

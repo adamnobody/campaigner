@@ -19,6 +19,7 @@ import { smokeSearch } from './scenarios/search.mjs';
 import {
   smokeFactions,
   smokeFactionAmbitions,
+  smokeCharacterFactionAffiliations,
   smokeFactionRanks,
   smokeFactionMembers,
   smokeFactionRelations,
@@ -49,6 +50,7 @@ async function main() {
     await smokeDogmaReorder(ctx);
     await smokeSearch(ctx);
     await smokeFactions(ctx);
+    await smokeCharacterFactionAffiliations(ctx);
     await smokeFactionAmbitions(ctx);
     await smokeFactionRanks(ctx);
     await smokeFactionMembers(ctx);

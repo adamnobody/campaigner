@@ -208,14 +208,16 @@ export class SearchService {
         faction.motto ||
         faction.description?.substring(0, 80) ||
         faction.status;
+      const isState = faction.type === 'state';
+      const basePath = isState ? 'states' : 'factions';
 
       results.push({
         type: 'faction',
         id: faction.id,
         title: faction.name,
         subtitle,
-        icon: '🏛️',
-        url: `/project/${projectId}/factions/${faction.id}`,
+        icon: isState ? '🏰' : '👥',
+        url: `/project/${projectId}/${basePath}/${faction.id}`,
       });
     }
 

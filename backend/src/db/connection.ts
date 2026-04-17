@@ -8,6 +8,7 @@ import { migrateTagAssociationsForDynasty } from './migrations/002_tag_associati
 import { migrateDynastyMembersGraph } from './migrations/003_dynasty_members_graph.js';
 import { migrateFactionAmbitions } from './migrations/005_faction_ambitions.js';
 import { migrateTraitAndAmbitionExclusions } from './migrations/006_trait_and_ambition_exclusions.js';
+import { migrateFactionTypesAndCharacterAffiliations } from './migrations/007_faction_types_and_character_affiliations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +41,7 @@ export function initializeDatabase(): void {
   migrateDynastyMembersGraph(database);
   migrateFactionAmbitions(database);
   migrateTraitAndAmbitionExclusions(database);
+  migrateFactionTypesAndCharacterAffiliations(database);
   createIndexes(database);
 
   console.log('✅ Database initialized successfully');

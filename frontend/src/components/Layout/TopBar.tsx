@@ -24,6 +24,7 @@ import { getErrorMessage } from '@/utils/error';
 const PAGE_LABELS: Record<string, string> = {
   map: 'Карта',
   characters: 'Персонажи',
+  states: 'Государства',
   factions: 'Фракции',
   dynasties: 'Династии',
   notes: 'Заметки',
@@ -94,7 +95,7 @@ export const TopBar: React.FC = () => {
 
         if (section === 'characters' && currentCharacter && String(currentCharacter.id) === entityId) {
           entityName = currentCharacter.name || entityId;
-        } else if (section === 'factions' && currentFaction && String(currentFaction.id) === entityId) {
+        } else if ((section === 'factions' || section === 'states') && currentFaction && String(currentFaction.id) === entityId) {
           entityName = currentFaction.name || entityId;
         } else if (section === 'dynasties' && currentDynasty && String(currentDynasty.id) === entityId) {
           entityName = currentDynasty.name || entityId;

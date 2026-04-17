@@ -11,6 +11,8 @@ export interface ExportCharacterRow {
   personality: string;
   backstory: string;
   notes: string;
+  stateId?: number | null;
+  factionIds?: number[];
   imagePath: string | null;
   createdAt: string;
   updatedAt: string;
@@ -142,7 +144,7 @@ export interface ExportDogmaRow {
 export interface ExportFactionRow {
   id: number;
   name: string;
-  type: string;
+  type: 'state' | 'faction';
   customType: string;
   stateType: string;
   customStateType: string;

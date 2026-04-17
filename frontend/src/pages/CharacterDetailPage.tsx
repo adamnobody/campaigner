@@ -3,7 +3,7 @@ import {
   Box, Typography, TextField, Button,
   Avatar, IconButton, Chip, Dialog,
   DialogTitle, DialogContent, DialogActions,
-  Select, MenuItem, FormControl, InputLabel,
+  Select, MenuItem, FormControl, InputLabel, Autocomplete,
   List, ListItem, ListItemText, ListItemAvatar,
   Grid, alpha, useTheme,
 } from '@mui/material';
@@ -22,6 +22,7 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CharacterTraitsTab } from '@/pages/character/CharacterTraitsTab';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { factionsApi } from '@/api/factions';
 import { useUIStore } from '@/store/useUIStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
@@ -83,11 +84,13 @@ const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
 interface CharacterForm {
   name: string; title: string; bio: string; appearance: string;
   personality: string; backstory: string; notes: string; tagsStr: string;
+  stateId: string;
+  factionIds: number[];
 }
 
 const EMPTY_FORM: CharacterForm = {
   name: '', title: '', bio: '', appearance: '',
-  personality: '', backstory: '', notes: '', tagsStr: '',
+  personality: '', backstory: '', notes: '', tagsStr: '', stateId: '', factionIds: [],
 };
 
 // ==================== Helpers ====================
@@ -149,6 +152,8 @@ export const CharacterDetailPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [stateOptions, setStateOptions] = useState<Array<{ id: number; name: string }>>([]);
+  const [factionOptions, setFactionOptions] = useState<Array<{ id: number; name: string }>>([]);
 
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [relForm, setRelForm] = useState<{ targetId: string; type: RelationshipType; description: string }>({
@@ -161,6 +166,12 @@ export const CharacterDetailPage: React.FC = () => {
     fetchTags(pid).catch(() => {});
     fetchCharacters(pid, { limit: 200 }).catch(() => {});
     fetchRelationships(pid).catch(() => {});
+    factionsApi.getAll(pid, { type: 'state', limit: 500 }).then((res) => {
+      setStateOptions((res.data.data || []).map((item) => ({ id: item.id, name: item.name })));
+    }).catch(() => {});
+    factionsApi.getAll(pid, { type: 'faction', limit: 500 }).then((res) => {
+      setFactionOptions((res.data.data || []).map((item) => ({ id: item.id, name: item.name })));
+    }).catch(() => {});
   }, [pid]);
 
   useEffect(() => {
@@ -176,6 +187,8 @@ export const CharacterDetailPage: React.FC = () => {
       personality: currentCharacter.personality || '', backstory: currentCharacter.backstory || '',
       notes: currentCharacter.notes || '',
       tagsStr: (currentCharacter.tags || []).map((t: any) => t.name).join(', '),
+      stateId: currentCharacter.stateId ? String(currentCharacter.stateId) : '',
+      factionIds: currentCharacter.factionIds || [],
     });
     setTagsInput('');
   }, [currentCharacter, characterId, isNew]);
@@ -229,6 +242,8 @@ export const CharacterDetailPage: React.FC = () => {
         name: form.name.trim(), title: form.title.trim(), bio: form.bio.trim(),
         appearance: form.appearance.trim(),
         backstory: form.backstory.trim(), notes: form.notes.trim(),
+        stateId: form.stateId ? parseInt(form.stateId, 10) : null,
+        factionIds: form.factionIds,
       };
       const finalTags = mergeTagValues(form.tagsStr, tagsInput);
       if (isNew) {
@@ -374,6 +389,32 @@ export const CharacterDetailPage: React.FC = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField fullWidth label="Краткое описание" value={form.bio} onChange={e => handleChange('bio', e.target.value)} multiline rows={3} placeholder="Кто этот персонаж..." />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Государство</InputLabel>
+                    <Select
+                      value={form.stateId}
+                      label="Государство"
+                      onChange={e => setForm(prev => ({ ...prev, stateId: e.target.value }))}
+                    >
+                      <MenuItem value="">Не указано</MenuItem>
+                      {stateOptions.map((item) => (
+                        <MenuItem key={item.id} value={String(item.id)}>{item.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Autocomplete
+                    multiple
+                    options={factionOptions}
+                    getOptionLabel={(option) => option.name}
+                    value={factionOptions.filter((option) => form.factionIds.includes(option.id))}
+                    onChange={(_, value) => setForm(prev => ({ ...prev, factionIds: value.map((item) => item.id) }))}
+                    renderInput={(params) => <TextField {...params} label="Фракции" placeholder="Выберите фракции" />}
+                    disableCloseOnSelect
+                  />
                 </Grid>
                 <Grid item xs={12}>
                   <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />

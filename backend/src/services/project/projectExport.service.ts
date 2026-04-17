@@ -34,9 +34,24 @@ export function exportProject(id: number): ImportedProjectPayload & {
   const characters = db.prepare(`
     SELECT id, name, title, race, character_class as characterClass,
            level, status, bio, appearance, personality, backstory, notes,
-           image_path as imagePath, created_at as createdAt, updated_at as updatedAt
+           state_id as stateId, image_path as imagePath, created_at as createdAt, updated_at as updatedAt
     FROM characters WHERE project_id = ?
   `).all(id) as ExportCharacterRow[];
+
+  const characterFactions = db.prepare(`
+    SELECT cf.character_id as characterId, cf.faction_id as factionId
+    FROM character_factions cf
+    JOIN characters c ON c.id = cf.character_id
+    WHERE c.project_id = ?
+  `).all(id) as Array<{ characterId: number; factionId: number }>;
+
+  const factionIdsByCharacterId = new Map<number, number[]>();
+  for (const row of characterFactions) {
+    if (!factionIdsByCharacterId.has(row.characterId)) {
+      factionIdsByCharacterId.set(row.characterId, []);
+    }
+    factionIdsByCharacterId.get(row.characterId)!.push(row.factionId);
+  }
 
   const relationships = db.prepare(`
     SELECT id, source_character_id as sourceCharacterId,
@@ -204,6 +219,7 @@ export function exportProject(id: number): ImportedProjectPayload & {
 
   const charactersWithImages = characters.map((character) => ({
     ...character,
+    factionIds: factionIdsByCharacterId.get(character.id) || [],
     imageBase64: readFileAsBase64(character.imagePath),
   }));
 

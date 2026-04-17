@@ -16,6 +16,8 @@ export const characterSchema = z.object({
   personality: z.string().max(10000).optional().default(''),
   backstory: z.string().max(50000).optional().default(''),
   notes: z.string().max(50000).optional().default(''),
+  stateId: idSchema.nullable().optional().default(null),
+  factionIds: z.array(idSchema).optional().default([]),
   imagePath: z.string().optional().nullable(),
   tags: z.array(tagSchema).max(LIMITS.MAX_TAGS_PER_ENTITY).optional().default([]),
   createdAt: z.string().datetime(),

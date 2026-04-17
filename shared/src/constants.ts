@@ -139,36 +139,17 @@ export const DOGMA_STATUS_LABELS: Record<string, string> = {
 // ==================== Фракции ====================
 
 export const FACTION_TYPES = [
-  'guild', 'order', 'state', 'cult', 'trade_house',
-  'company', 'military', 'academy', 'tribe', 'criminal', 'other',
+  'state', 'faction',
 ] as const;
 
 export const FACTION_TYPE_LABELS: Record<string, string> = {
-  guild: 'Гильдия',
-  order: 'Орден',
   state: 'Государство',
-  cult: 'Культ',
-  trade_house: 'Торговый дом',
-  company: 'Компания',
-  military: 'Армия / Военный орден',
-  academy: 'Академия / Школа',
-  tribe: 'Племя / Клан',
-  criminal: 'Преступная организация',
-  other: 'Другое',
+  faction: 'Фракция',
 };
 
 export const FACTION_TYPE_ICONS: Record<string, string> = {
-  guild: '⚒️',
-  order: '🛡️',
   state: '🏛️',
-  cult: '🕯️',
-  trade_house: '💰',
-  company: '🏢',
-  military: '⚔️',
-  academy: '📚',
-  tribe: '🏕️',
-  criminal: '🗡️',
-  other: '🏴',
+  faction: '👥',
 };
 
 export const STATE_TYPES = [

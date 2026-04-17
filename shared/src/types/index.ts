@@ -281,6 +281,8 @@ export interface ImportedProjectPayload {
     personality: string;
     backstory: string;
     notes: string;
+    stateId?: number | null;
+    factionIds?: number[];
     imagePath: string | null;
     createdAt: string;
     updatedAt: string;
@@ -400,7 +402,7 @@ export interface ImportedProjectPayload {
   factions?: Array<{
     id: number;
     name: string;
-    type: string;
+    type: 'state' | 'faction';
     customType: string;
     stateType: string;
     customStateType: string;
@@ -511,7 +513,7 @@ export interface Faction {
   id: number;
   projectId: number;
   name: string;
-  type: string;
+  type: 'state' | 'faction';
   customType?: string;
   stateType?: string;
   customStateType?: string;

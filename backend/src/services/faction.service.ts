@@ -166,7 +166,7 @@ export class FactionService {
         parent_faction_id, sort_order
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      data.projectId, data.name, data.type || 'other',
+      data.projectId, data.name, data.type || 'faction',
       data.customType || '', data.stateType || '', data.customStateType || '',
       data.motto || '', data.description || '', data.history || '',
       data.goals || '', data.headquarters || '', data.territory || '',

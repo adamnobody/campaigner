@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
+export const factionEntityTypeSchema = z.enum(['state', 'faction']);
+
 export const createFactionSchema = z.object({
   projectId: z.number().int().positive(),
   name: z.string().min(1).max(200),
-  type: z.string().min(1).max(50),
+  type: factionEntityTypeSchema.default('faction'),
   customType: z.string().max(200).optional(),
   stateType: z.string().max(50).optional(),
   customStateType: z.string().max(200).optional(),
@@ -99,7 +101,7 @@ export const reorderFactionAssetsSchema = z.object({
 export const factionGraphNodeSchema = z.object({
   id: z.number().int().positive(),
   name: z.string(),
-  type: z.string(),
+  type: factionEntityTypeSchema,
   customType: z.string().optional().default(''),
   stateType: z.string().optional().default(''),
   status: z.string(),

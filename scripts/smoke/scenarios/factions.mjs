@@ -8,7 +8,7 @@ export async function smokeFactions(ctx) {
     body: JSON.stringify({
       projectId: ctx.projectId,
       name: `Smoke Faction ${Date.now()}`,
-      type: 'guild',
+      type: 'faction',
       motto: 'Smoke and steel',
       description: 'Faction created by smoke test',
       status: 'active',
@@ -175,7 +175,7 @@ export async function smokeFactionRelations(ctx) {
     body: JSON.stringify({
       projectId: ctx.projectId,
       name: `Smoke Faction Secondary ${Date.now()}`,
-      type: 'order',
+      type: 'faction',
       motto: 'Second faction',
       description: 'Secondary faction for relation testing',
       status: 'active',
@@ -354,4 +354,76 @@ export async function smokeFactionAmbitions(ctx) {
   assertStatus(deleteRes, 204, 'delete custom ambition');
   ctx.customAmbitionId = null;
   logOk('Custom ambition deleted');
+}
+
+export async function smokeCharacterFactionAffiliations(ctx) {
+  logStep('Character ↔ State/Factions affiliations');
+
+  const createStateRes = await api('/factions', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: ctx.projectId,
+      name: `Smoke State ${Date.now()}`,
+      type: 'state',
+      status: 'active',
+    }),
+  });
+  assertStatus(createStateRes, 201, 'create state');
+  const stateId = getEntityId(createStateRes);
+  if (!stateId) {
+    throw new Error(`create state: missing id ${JSON.stringify(createStateRes.data, null, 2)}`);
+  }
+  ctx.stateId = stateId;
+  logOk(`State created: #${stateId}`);
+
+  const createFactionRes = await api('/factions', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: ctx.projectId,
+      name: `Smoke Character Faction ${Date.now()}`,
+      type: 'faction',
+      status: 'active',
+    }),
+  });
+  assertStatus(createFactionRes, 201, 'create extra faction');
+  const extraFactionId = getEntityId(createFactionRes);
+  if (!extraFactionId) {
+    throw new Error(`create extra faction: missing id ${JSON.stringify(createFactionRes.data, null, 2)}`);
+  }
+  ctx.extraFactionId = extraFactionId;
+  logOk(`Extra faction created: #${extraFactionId}`);
+
+  const setAffiliationsRes = await api(`/characters/${ctx.characterId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      stateId,
+      factionIds: [ctx.factionId, extraFactionId],
+    }),
+  });
+  assertStatus(setAffiliationsRes, 200, 'set character affiliations');
+
+  const getCharacterRes = await api(`/characters/${ctx.characterId}`);
+  assertStatus(getCharacterRes, 200, 'get character with affiliations');
+  const loadedCharacter = getCharacterRes.data?.data;
+  const factionIds = Array.isArray(loadedCharacter?.factionIds) ? loadedCharacter.factionIds : [];
+  if (loadedCharacter?.stateId !== stateId) {
+    throw new Error(`character state mismatch: expected ${stateId}, got ${loadedCharacter?.stateId}`);
+  }
+  if (!factionIds.includes(ctx.factionId) || !factionIds.includes(extraFactionId)) {
+    throw new Error(`character factionIds mismatch: ${JSON.stringify(factionIds)}`);
+  }
+  logOk('Character linked to one state and multiple factions');
+
+  const invalidStateRes = await api(`/characters/${ctx.characterId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      stateId: ctx.factionId,
+    }),
+  });
+  if (invalidStateRes.status !== 400) {
+    throw new Error(
+      `expected 400 for invalid state assignment, got ${invalidStateRes.status}: ${JSON.stringify(invalidStateRes.data, null, 2)}`
+    );
+  }
+  logOk('State type validation works');
 }

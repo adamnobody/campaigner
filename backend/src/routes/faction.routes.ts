@@ -17,6 +17,7 @@ import {
   reorderFactionAssetsSchema,
   createFactionPolicyBodySchema,
   updateFactionPolicySchema,
+  factionEntityTypeSchema,
 } from '@campaigner/shared';
 import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas.js';
 
@@ -53,7 +54,7 @@ const factionPolicyParamsSchema = z.object({
 
 const getAllQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
-  type: z.string().optional(),
+  type: factionEntityTypeSchema.optional(),
   status: z.string().optional(),
   search: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),

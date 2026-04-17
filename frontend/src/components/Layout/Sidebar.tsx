@@ -24,9 +24,11 @@ import { shallow } from 'zustand/shallow';
 import GavelIcon from '@mui/icons-material/Gavel';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import CastleIcon from '@mui/icons-material/Castle';
 const projectMenuItems = [
   { label: 'Карта', icon: <MapIcon />, path: 'map' },
   { label: 'Персонажи', icon: <PeopleIcon />, path: 'characters' },
+  { label: 'Государства', icon: <CastleIcon />, path: 'states' },
   { label: 'Фракции', icon: <GroupsIcon />, path: 'factions' },
   { label: 'Заметки', icon: <DescriptionIcon />, path: 'notes' },
   { label: 'Вики', icon: <MenuBookIcon />, path: 'wiki' },
@@ -195,6 +197,8 @@ export const Sidebar: React.FC = () => {
                   data-tour={
                     item.path === 'characters'
                       ? 'sidebar-characters'
+                      : item.path === 'states'
+                      ? 'sidebar-states'
                       : item.path === 'factions'
                       ? 'sidebar-factions'
                       : item.path === 'notes'

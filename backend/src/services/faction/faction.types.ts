@@ -1,5 +1,5 @@
 export interface FactionFilters {
-  type?: string;
+  type?: 'state' | 'faction';
   status?: string;
   search?: string;
   limit?: number;
@@ -108,7 +108,7 @@ export interface AssetRow {
 export interface FactionCreateData {
   projectId: number;
   name: string;
-  type?: string;
+  type?: 'state' | 'faction';
   customType?: string;
   stateType?: string;
   customStateType?: string;

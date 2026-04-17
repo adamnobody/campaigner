@@ -37,7 +37,7 @@ import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
-  FACTION_TYPES, FACTION_TYPE_LABELS, FACTION_TYPE_ICONS,
+  FACTION_TYPE_LABELS, FACTION_TYPE_ICONS,
   FACTION_STATUSES, FACTION_STATUS_LABELS, FACTION_STATUS_ICONS,
   STATE_TYPES, STATE_TYPE_LABELS,
   FACTION_RELATION_LABELS, FACTION_RELATION_COLORS,
@@ -71,7 +71,7 @@ interface FactionForm {
 }
 
 const EMPTY_FORM: FactionForm = {
-  name: '', type: 'other', customType: '', stateType: '', customStateType: '',
+  name: '', type: 'faction', customType: '', stateType: '', customStateType: '',
   motto: '', description: '', history: '', goals: '',
   headquarters: '', territory: '', status: 'active',
   color: '#4e8a6e', secondaryColor: '#2a2a4a', foundedDate: '', disbandedDate: '',
@@ -102,13 +102,18 @@ const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) =
 
 // ==================== Component ====================
 
-export const FactionDetailPage: React.FC = () => {
+interface FactionDetailPageProps {
+  entityType?: 'state' | 'faction';
+}
+
+export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType = 'faction' }) => {
   const { projectId, factionId } = useParams<{ projectId: string; factionId: string }>();
   const pid = parseInt(projectId!);
   const isNew = !factionId || factionId === 'new';
   const fid = factionId && !isNew ? parseInt(factionId, 10) : 0;
   const navigate = useNavigate();
   const theme = useTheme();
+  const listBasePath = entityType === 'state' ? 'states' : 'factions';
 
   const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
     showSnackbar: state.showSnackbar,
@@ -196,6 +201,10 @@ export const FactionDetailPage: React.FC = () => {
   const [policyTitleSearch, setPolicyTitleSearch] = useState('');
   const [policyTypeFilter, setPolicyTypeFilter] = useState<'all' | PolicyType>('all');
   const [policyStatusFilter, setPolicyStatusFilter] = useState<'all' | PolicyStatus>('all');
+  const resolvedEntityType: 'state' | 'faction' =
+    isNew ? entityType : currentFaction?.type === 'state' ? 'state' : 'faction';
+  const entityLabel = resolvedEntityType === 'state' ? 'государство' : 'фракция';
+  const entityLabelCapitalized = resolvedEntityType === 'state' ? 'Государство' : 'Фракция';
 
   // ==================== Load ====================
 
@@ -207,9 +216,14 @@ export const FactionDetailPage: React.FC = () => {
   }, [pid]);
 
   useEffect(() => {
-    if (isNew) { setForm(EMPTY_FORM); setCurrentFaction(null); setTagsInput(''); return; }
+    if (isNew) {
+      setForm({ ...EMPTY_FORM, type: entityType });
+      setCurrentFaction(null);
+      setTagsInput('');
+      return;
+    }
     fetchFaction(parseInt(factionId!)).catch(() => showSnackbar('Ошибка загрузки', 'error'));
-  }, [factionId, isNew]);
+  }, [entityType, factionId, isNew]);
 
   useEffect(() => {
     if (isNew || !fid) {
@@ -237,7 +251,7 @@ export const FactionDetailPage: React.FC = () => {
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;
     setForm({
-      name: currentFaction.name || '', type: currentFaction.type || 'other',
+      name: currentFaction.name || '', type: currentFaction.type || 'faction',
       customType: currentFaction.customType || '', stateType: currentFaction.stateType || '',
       customStateType: currentFaction.customStateType || '', motto: currentFaction.motto || '',
       description: currentFaction.description || '', history: currentFaction.history || '',
@@ -268,7 +282,11 @@ export const FactionDetailPage: React.FC = () => {
   };
 
   const allTagNames = useMemo(() => tags.map(t => t.name), [tags]);
-  const otherFactions = useMemo(() => factions.filter(f => f.id !== fid), [factions, fid]);
+  const relationFactions = useMemo(() => factions.filter((f) => f.id !== fid), [factions, fid]);
+  const parentFactions = useMemo(
+    () => relationFactions.filter((f) => f.type === resolvedEntityType),
+    [relationFactions, resolvedEntityType]
+  );
   const allCharacters = useMemo(() => characters || [], [characters]);
   const currentRanks: FactionRank[] = currentFaction?.ranks || [];
   const currentMembers: FactionMember[] = currentFaction?.members || [];
@@ -288,6 +306,11 @@ export const FactionDetailPage: React.FC = () => {
       otherId: isOut ? rel.targetFactionId : rel.sourceFactionId,
     };
   }), [factionRelations, fid]);
+  const resolveEntityPath = (targetId: number) => {
+    const target = factions.find((item) => item.id === targetId);
+    const base = target?.type === 'state' ? 'states' : 'factions';
+    return `/project/${pid}/${base}/${targetId}`;
+  };
 
   const sortedFactionPolicies = useMemo(
     () => [...factionPolicies].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)),
@@ -310,10 +333,12 @@ export const FactionDetailPage: React.FC = () => {
     setSaving(true);
     try {
       const payload = {
-        name: form.name.trim(), type: form.type,
-        customType: form.type === 'other' ? form.customType.trim() : '',
-        stateType: form.type === 'state' ? form.stateType : '',
-        customStateType: form.type === 'state' && form.stateType === 'other' ? form.customStateType.trim() : '',
+        name: form.name.trim(),
+        type: resolvedEntityType,
+        customType: '',
+        stateType: resolvedEntityType === 'state' ? form.stateType : '',
+        customStateType:
+          resolvedEntityType === 'state' && form.stateType === 'other' ? form.customStateType.trim() : '',
         motto: form.motto.trim(), description: form.description.trim(),
         history: form.history.trim(), goals: form.goals.trim(),
         headquarters: form.headquarters.trim(), territory: form.territory.trim(),
@@ -326,8 +351,8 @@ export const FactionDetailPage: React.FC = () => {
         const created = await createFaction({ ...payload, projectId: pid });
         if (finalTags.trim()) await saveTagsForFaction(created.id, finalTags);
         setTagsInput('');
-        showSnackbar('Фракция создана!', 'success');
-        navigate(`/project/${pid}/factions/${created.id}`, { replace: true });
+        showSnackbar(`${entityLabelCapitalized} создано!`, 'success');
+        navigate(`/project/${pid}/${listBasePath}/${created.id}`, { replace: true });
       } else {
         await updateFaction(fid, payload);
         await saveTagsForFaction(fid, finalTags);
@@ -340,8 +365,8 @@ export const FactionDetailPage: React.FC = () => {
 
   const handleDelete = () => {
     if (isNew) return;
-    showConfirmDialog('Удалить фракцию', `Удалить "${form.name}"?`, async () => {
-      try { await deleteFaction(fid); showSnackbar('Удалена', 'success'); navigate(`/project/${pid}/factions`); }
+    showConfirmDialog(`Удалить ${entityLabel}`, `Удалить "${form.name}"?`, async () => {
+      try { await deleteFaction(fid); showSnackbar('Удалена', 'success'); navigate(`/project/${pid}/${listBasePath}`); }
       catch { showSnackbar('Ошибка', 'error'); }
     });
   };
@@ -550,8 +575,10 @@ export const FactionDetailPage: React.FC = () => {
   return (
     <Box>
       <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(`/project/${pid}/factions`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
-        <Typography variant="body2" color="text.secondary">К списку фракций</Typography>
+        <IconButton onClick={() => navigate(`/project/${pid}/${listBasePath}`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <Typography variant="body2" color="text.secondary">
+          {resolvedEntityType === 'state' ? 'К списку государств' : 'К списку фракций'}
+        </Typography>
       </Box>
 
       <EntityHeroLayout
@@ -565,7 +592,7 @@ export const FactionDetailPage: React.FC = () => {
             </Avatar>
           )
         }
-        title={isNew ? 'Новая фракция' : form.name || 'Фракция'}
+        title={isNew ? `Нов${resolvedEntityType === 'state' ? 'ое государство' : 'ая фракция'}` : form.name || entityLabelCapitalized}
         subtitle={form.motto ? `«${form.motto}»` : undefined}
         actionButtons={
           <>
@@ -608,8 +635,13 @@ export const FactionDetailPage: React.FC = () => {
               )}
 
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {form.type && <InfoRow label="Тип" value={`${FACTION_TYPE_ICONS[form.type] || ''} ${FACTION_TYPE_LABELS[form.type] || form.customType || form.type}`} />}
-                {form.type === 'state' && form.stateType && <InfoRow label="Строй" value={STATE_TYPE_LABELS[form.stateType] || form.customStateType || form.stateType} />}
+                <InfoRow
+                  label="Тип"
+                  value={`${FACTION_TYPE_ICONS[resolvedEntityType] || ''} ${FACTION_TYPE_LABELS[resolvedEntityType] || resolvedEntityType}`}
+                />
+                {resolvedEntityType === 'state' && form.stateType && (
+                  <InfoRow label="Строй" value={STATE_TYPE_LABELS[form.stateType] || form.customStateType || form.stateType} />
+                )}
                 {form.status && <InfoRow label="Статус" value={`${FACTION_STATUS_ICONS[form.status] || ''} ${FACTION_STATUS_LABELS[form.status] || form.status}`} />}
                 {form.headquarters && <InfoRow label="Столица" value={form.headquarters} />}
                 {form.territory && <InfoRow label="Территория" value={form.territory} />}
@@ -633,17 +665,7 @@ export const FactionDetailPage: React.FC = () => {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}><TextField fullWidth label="Название *" value={form.name} onChange={e => handleChange('name', e.target.value)} /></Grid>
                 <Grid item xs={12} sm={6}><TextField fullWidth label="Девиз" value={form.motto} onChange={e => handleChange('motto', e.target.value)} placeholder="напр. Зима близко" /></Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth><InputLabel>Тип</InputLabel>
-                    <Select value={form.type} label="Тип" onChange={e => handleChange('type', e.target.value)}>
-                      {FACTION_TYPES.map(t => <MenuItem key={t} value={t}>{FACTION_TYPE_ICONS[t]} {FACTION_TYPE_LABELS[t]}</MenuItem>)}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                {form.type === 'other' && (
-                  <Grid item xs={12} sm={6}><TextField fullWidth label="Укажите тип" value={form.customType} onChange={e => handleChange('customType', e.target.value)} /></Grid>
-                )}
-                {form.type === 'state' && (
+                {resolvedEntityType === 'state' && (
                   <Grid item xs={12} sm={6}>
                     <FormControl fullWidth><InputLabel>Государственный строй</InputLabel>
                       <Select value={form.stateType} label="Государственный строй" onChange={e => handleChange('stateType', e.target.value)}>
@@ -652,7 +674,7 @@ export const FactionDetailPage: React.FC = () => {
                     </FormControl>
                   </Grid>
                 )}
-                {form.type === 'state' && form.stateType === 'other' && (
+                {resolvedEntityType === 'state' && form.stateType === 'other' && (
                   <Grid item xs={12} sm={6}><TextField fullWidth label="Тип государства" value={form.customStateType} onChange={e => handleChange('customStateType', e.target.value)} /></Grid>
                 )}
                 <Grid item xs={12} sm={6}>
@@ -662,15 +684,26 @@ export const FactionDetailPage: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6}><TextField fullWidth label="Штаб-квартира / Столица" value={form.headquarters} onChange={e => handleChange('headquarters', e.target.value)} /></Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label={resolvedEntityType === 'state' ? 'Столица' : 'Штаб-квартира'}
+                    value={form.headquarters}
+                    onChange={e => handleChange('headquarters', e.target.value)}
+                  />
+                </Grid>
                 <Grid item xs={12} sm={6}><TextField fullWidth label="Территория" value={form.territory} onChange={e => handleChange('territory', e.target.value)} /></Grid>
                 <Grid item xs={12} sm={6}><TextField fullWidth label="Дата основания" value={form.foundedDate} onChange={e => handleChange('foundedDate', e.target.value)} /></Grid>
                 <Grid item xs={12} sm={6}><TextField fullWidth label="Дата роспуска" value={form.disbandedDate} onChange={e => handleChange('disbandedDate', e.target.value)} /></Grid>
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth><InputLabel>Родительская фракция</InputLabel>
-                    <Select value={form.parentFactionId} label="Родительская фракция" onChange={e => handleChange('parentFactionId', e.target.value)}>
+                  <FormControl fullWidth><InputLabel>{resolvedEntityType === 'state' ? 'Вышестоящее государство' : 'Родительская фракция'}</InputLabel>
+                    <Select
+                      value={form.parentFactionId}
+                      label={resolvedEntityType === 'state' ? 'Вышестоящее государство' : 'Родительская фракция'}
+                      onChange={e => handleChange('parentFactionId', e.target.value)}
+                    >
                       <MenuItem value="">Нет</MenuItem>
-                      {otherFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
+                      {parentFactions.map(f => <MenuItem key={f.id} value={String(f.id)}>{FACTION_TYPE_ICONS[f.type] || '🏴'} {f.name}</MenuItem>)}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -919,7 +952,7 @@ export const FactionDetailPage: React.FC = () => {
 
           {/* SECTION: Relations */}
           {!isNew && (
-            <Section title="Связи с фракциями" icon={<LinkIcon />} badge={relationsForDisplay.length} defaultOpen={true}
+            <Section title="Связи" icon={<LinkIcon />} badge={relationsForDisplay.length} defaultOpen={true}
               action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openRelationDialog} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
               {relationsForDisplay.length === 0 ? (
                 <EmptyState icon={<LinkIcon />} title="Нет связей" description="Установите отношения с другими фракциями" actionLabel="Добавить связь" onAction={openRelationDialog} />
@@ -932,7 +965,7 @@ export const FactionDetailPage: React.FC = () => {
                           <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
                         </IconButton>
                       }
-                      onClick={() => navigate(`/project/${pid}/factions/${rel.otherId}`)}
+                      onClick={() => navigate(resolveEntityPath(rel.otherId))}
                       sx={{
                         backgroundColor: `${FACTION_RELATION_COLORS[rel.relationType] || alpha(theme.palette.primary.main, 0.2)}20`,
                         borderRadius: 1.5, mb: 1, cursor: 'pointer', border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
@@ -1033,7 +1066,7 @@ export const FactionDetailPage: React.FC = () => {
       <FactionRelationDialog
         open={relationDialogOpen} onClose={() => setRelationDialogOpen(false)}
         form={relationForm} onFormChange={setRelationForm} onSubmit={handleAddRelation}
-        otherFactions={otherFactions}
+        otherFactions={relationFactions}
       />
       <Dialog open={assetDialogOpen} onClose={() => setAssetDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{editingAsset ? 'Редактировать актив' : 'Новый актив'}</DialogTitle>
