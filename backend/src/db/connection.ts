@@ -6,6 +6,11 @@ import { createTables, createIndexes } from './schema.js';
 import { migrateFactionPolicies } from './migrations/004_faction_policies.js';
 import { migrateTagAssociationsForDynasty } from './migrations/002_tag_associations_dynasty.js';
 import { migrateDynastyMembersGraph } from './migrations/003_dynasty_members_graph.js';
+import { migrateFactionAmbitions } from './migrations/005_faction_ambitions.js';
+import { migrateTraitAndAmbitionExclusions } from './migrations/006_trait_and_ambition_exclusions.js';
+import { migrateFactionTypesAndCharacterAffiliations } from './migrations/007_faction_types_and_character_affiliations.js';
+import { migrateFactionKindAndMembershipSync } from './migrations/008_faction_kind_and_membership_sync.js';
+import { migrateFactionMetrics } from './migrations/009_faction_metrics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +41,11 @@ export function initializeDatabase(): void {
   migrateFactionPolicies(database);
   migrateTagAssociationsForDynasty(database);
   migrateDynastyMembersGraph(database);
+  migrateFactionAmbitions(database);
+  migrateTraitAndAmbitionExclusions(database);
+  migrateFactionTypesAndCharacterAffiliations(database);
+  migrateFactionKindAndMembershipSync(database);
+  migrateFactionMetrics(database);
   createIndexes(database);
 
   console.log('✅ Database initialized successfully');

@@ -85,14 +85,14 @@ export const MapTerritoryPanel: React.FC<Props> = ({
                   {faction.name}
                 </Typography>
                 <Typography variant="caption" sx={{ color: `rgba(${hexToRgb(faction.color)}, 0.6)` }}>
-                  {faction.type}
+                  {faction.kind === 'state' ? 'Государство' : 'Фракция'}
                 </Typography>
               </Box>
               <OpenInNewIcon sx={{ fontSize: 16, color: `rgba(${hexToRgb(faction.color)}, 0.5)` }} />
             </Box>
           ) : (
             <Typography variant="body2" sx={{ color: 'text.disabled', mt: 0.5, fontStyle: 'italic' }}>
-              Не привязана к фракции
+              Не привязана к государству/фракции
             </Typography>
           )}
         </Box>

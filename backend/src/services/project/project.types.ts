@@ -11,6 +11,8 @@ export interface ExportCharacterRow {
   personality: string;
   backstory: string;
   notes: string;
+  stateId?: number | null;
+  factionIds?: number[];
   imagePath: string | null;
   createdAt: string;
   updatedAt: string;
@@ -142,16 +144,29 @@ export interface ExportDogmaRow {
 export interface ExportFactionRow {
   id: number;
   name: string;
-  type: string;
-  customType: string;
-  stateType: string;
-  customStateType: string;
+  kind: 'state' | 'faction';
+  type: string | null;
   motto: string;
   description: string;
   history: string;
   goals: string;
   headquarters: string;
   territory: string;
+  treasury?: number | null;
+  population?: number | null;
+  armySize?: number | null;
+  navySize?: number | null;
+  territoryKm2?: number | null;
+  annualIncome?: number | null;
+  annualExpenses?: number | null;
+  membersCount?: number | null;
+  influence?: number | null;
+  customMetrics?: Array<{
+    name: string;
+    value: number;
+    unit?: string | null;
+    sortOrder?: number;
+  }>;
   status: string;
   color: string;
   secondaryColor: string;
@@ -160,6 +175,17 @@ export interface ExportFactionRow {
   foundedDate: string;
   disbandedDate: string;
   parentFactionId: number | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExportFactionCustomMetricRow {
+  id: number;
+  factionId: number;
+  name: string;
+  value: number;
+  unit: string | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -274,6 +300,7 @@ export interface ImportedProjectPayload {
   wikiLinks?: ExportWikiLinkRow[];
   dogmas?: ExportDogmaRow[];
   factions?: ExportFactionRow[];
+  factionCustomMetrics?: ExportFactionCustomMetricRow[];
   factionRanks?: ExportFactionRankRow[];
   factionMembers?: ExportFactionMemberRow[];
   factionRelations?: ExportFactionRelationRow[];

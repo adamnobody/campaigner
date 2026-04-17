@@ -17,5 +17,8 @@ export const characterTraitsApi = {
   create: (data: CreateCharacterTrait) =>
     apiClient.post<ApiResponse<CharacterTrait>>('/character-traits', data),
 
+  updateExclusions: (id: number, excludedIds: number[]) =>
+    apiClient.patch<ApiResponse<CharacterTrait>>(`/character-traits/${id}/exclusions`, { excludedIds }),
+
   delete: (id: number) => apiClient.delete<VoidResponse>(`/character-traits/${id}`),
 };

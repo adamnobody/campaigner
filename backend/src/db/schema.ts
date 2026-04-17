@@ -29,6 +29,7 @@ export function createTables(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS characters (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
+      state_id INTEGER,
       name TEXT NOT NULL,
       title TEXT DEFAULT '',
       race TEXT DEFAULT '',
@@ -43,7 +44,19 @@ export function createTables(db: Database.Database): void {
       image_path TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (state_id) REFERENCES factions(id) ON DELETE SET NULL
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS character_factions (
+      character_id INTEGER NOT NULL,
+      faction_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (character_id, faction_id),
+      FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE
     );
   `);
 
@@ -196,7 +209,8 @@ export function createTables(db: Database.Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      type TEXT NOT NULL DEFAULT 'other',
+      kind TEXT NOT NULL DEFAULT 'faction' CHECK(kind IN ('state', 'faction')),
+      type TEXT,
       custom_type TEXT DEFAULT '',
       state_type TEXT DEFAULT '',
       custom_state_type TEXT DEFAULT '',
@@ -206,6 +220,15 @@ export function createTables(db: Database.Database): void {
       goals TEXT DEFAULT '',
       headquarters TEXT DEFAULT '',
       territory TEXT DEFAULT '',
+      treasury INTEGER,
+      population INTEGER,
+      army_size INTEGER,
+      navy_size INTEGER,
+      territory_km2 INTEGER,
+      annual_income INTEGER,
+      annual_expenses INTEGER,
+      members_count INTEGER,
+      influence INTEGER CHECK (influence IS NULL OR (influence >= 0 AND influence <= 100)),
       status TEXT DEFAULT 'active' CHECK(status IN ('active','disbanded','secret','exiled','destroyed')),
       color TEXT DEFAULT '',
       secondary_color TEXT DEFAULT '',
@@ -234,6 +257,48 @@ export function createTables(db: Database.Database): void {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ambitions_catalog (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      icon_path TEXT DEFAULT '',
+      is_custom INTEGER NOT NULL DEFAULT 0,
+      project_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      CHECK (
+        (is_custom = 0 AND project_id IS NULL) OR
+        (is_custom = 1 AND project_id IS NOT NULL)
+      )
+    );
+  `);
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_ambitions_catalog_builtin_name
+    ON ambitions_catalog(name)
+    WHERE is_custom = 0;
+  `);
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_ambitions_catalog_custom_project_name
+    ON ambitions_catalog(project_id, name)
+    WHERE is_custom = 1;
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS faction_ambitions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      faction_id INTEGER NOT NULL,
+      ambition_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE,
+      FOREIGN KEY (ambition_id) REFERENCES ambitions_catalog(id) ON DELETE CASCADE,
+      UNIQUE(faction_id, ambition_id)
     );
   `);
 
@@ -288,15 +353,17 @@ export function createTables(db: Database.Database): void {
   `);
 
   db.exec(`
-    CREATE TABLE IF NOT EXISTS faction_assets (
+    CREATE TABLE IF NOT EXISTS faction_custom_metrics (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       faction_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      value TEXT DEFAULT '',
-      sort_order INTEGER DEFAULT 0,
+      value REAL NOT NULL,
+      unit TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE
+      FOREIGN KEY (faction_id) REFERENCES factions(id) ON DELETE CASCADE,
+      UNIQUE(faction_id, name)
     );
   `);
 
@@ -491,6 +558,30 @@ export function createTables(db: Database.Database): void {
       UNIQUE(character_id, trait_id)
     );
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS character_trait_exclusions (
+      trait_id INTEGER NOT NULL,
+      excluded_trait_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (trait_id, excluded_trait_id),
+      FOREIGN KEY (trait_id) REFERENCES character_traits(id) ON DELETE CASCADE,
+      FOREIGN KEY (excluded_trait_id) REFERENCES character_traits(id) ON DELETE CASCADE,
+      CHECK (trait_id != excluded_trait_id)
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ambition_exclusions (
+      ambition_id INTEGER NOT NULL,
+      excluded_ambition_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (ambition_id, excluded_ambition_id),
+      FOREIGN KEY (ambition_id) REFERENCES ambitions_catalog(id) ON DELETE CASCADE,
+      FOREIGN KEY (excluded_ambition_id) REFERENCES ambitions_catalog(id) ON DELETE CASCADE,
+      CHECK (ambition_id != excluded_ambition_id)
+    );
+  `);
 }
 
 export function createIndexes(db: Database.Database): void {
@@ -498,6 +589,9 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
     CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(project_id, name);
     CREATE INDEX IF NOT EXISTS idx_characters_status ON characters(project_id, status);
+    CREATE INDEX IF NOT EXISTS idx_characters_state ON characters(state_id);
+    CREATE INDEX IF NOT EXISTS idx_character_factions_character ON character_factions(character_id);
+    CREATE INDEX IF NOT EXISTS idx_character_factions_faction ON character_factions(faction_id);
     CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
     CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder_id);
     CREATE INDEX IF NOT EXISTS idx_notes_type ON notes(project_id, note_type);
@@ -531,10 +625,15 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_dogmas_importance ON dogmas(project_id, importance);
     CREATE INDEX IF NOT EXISTS idx_dogmas_status ON dogmas(project_id, status);
     CREATE INDEX IF NOT EXISTS idx_factions_project ON factions(project_id);
+    CREATE INDEX IF NOT EXISTS idx_factions_kind ON factions(project_id, kind);
     CREATE INDEX IF NOT EXISTS idx_factions_type ON factions(project_id, type);
     CREATE INDEX IF NOT EXISTS idx_factions_status ON factions(project_id, status);
     CREATE INDEX IF NOT EXISTS idx_factions_parent ON factions(parent_faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_policies_faction ON faction_policies(faction_id);
+    CREATE INDEX IF NOT EXISTS idx_ambitions_catalog_project ON ambitions_catalog(project_id);
+    CREATE INDEX IF NOT EXISTS idx_ambitions_catalog_custom ON ambitions_catalog(is_custom, project_id);
+    CREATE INDEX IF NOT EXISTS idx_faction_ambitions_faction ON faction_ambitions(faction_id);
+    CREATE INDEX IF NOT EXISTS idx_faction_ambitions_ambition ON faction_ambitions(ambition_id);
     CREATE INDEX IF NOT EXISTS idx_faction_ranks_faction ON faction_ranks(faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_ranks_level ON faction_ranks(faction_id, level);
     CREATE INDEX IF NOT EXISTS idx_faction_members_faction ON faction_members(faction_id);
@@ -543,6 +642,7 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_faction_relations_project ON faction_relations(project_id);
     CREATE INDEX IF NOT EXISTS idx_faction_relations_source ON faction_relations(source_faction_id);
     CREATE INDEX IF NOT EXISTS idx_faction_relations_target ON faction_relations(target_faction_id);
+    CREATE INDEX IF NOT EXISTS idx_faction_custom_metrics_faction_id ON faction_custom_metrics(faction_id);
     CREATE INDEX IF NOT EXISTS idx_dynasties_project ON dynasties(project_id);
     CREATE INDEX IF NOT EXISTS idx_dynasties_status ON dynasties(project_id, status);
     CREATE INDEX IF NOT EXISTS idx_dynasty_members_dynasty ON dynasty_members(dynasty_id);
@@ -561,5 +661,9 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_character_traits_predefined ON character_traits(project_id, is_predefined);
     CREATE INDEX IF NOT EXISTS idx_trait_assignments_character ON character_trait_assignments(character_id);
     CREATE INDEX IF NOT EXISTS idx_trait_assignments_trait ON character_trait_assignments(trait_id);
+    CREATE INDEX IF NOT EXISTS idx_trait_exclusions_trait ON character_trait_exclusions(trait_id);
+    CREATE INDEX IF NOT EXISTS idx_trait_exclusions_excluded ON character_trait_exclusions(excluded_trait_id);
+    CREATE INDEX IF NOT EXISTS idx_ambition_exclusions_ambition ON ambition_exclusions(ambition_id);
+    CREATE INDEX IF NOT EXISTS idx_ambition_exclusions_excluded ON ambition_exclusions(excluded_ambition_id);
   `);
 }

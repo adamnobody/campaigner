@@ -51,8 +51,8 @@ interface DogmaSearchRow {
 interface FactionSearchRow {
   id: number;
   name: string;
-  type: string;
-  custom_type: string;
+  kind: 'state' | 'faction';
+  type: string | null;
   motto: string;
   description: string;
   status: string;
@@ -197,7 +197,7 @@ export class SearchService {
     }
 
     const factions = db.prepare(`
-      SELECT id, name, type, custom_type, motto, description, status
+      SELECT id, name, kind, type, motto, description, status
       FROM factions
       WHERE project_id = ? AND (name LIKE ? OR motto LIKE ? OR description LIKE ? OR headquarters LIKE ?)
       LIMIT ?
@@ -208,14 +208,16 @@ export class SearchService {
         faction.motto ||
         faction.description?.substring(0, 80) ||
         faction.status;
+      const isState = faction.kind === 'state';
+      const basePath = isState ? 'states' : 'factions';
 
       results.push({
         type: 'faction',
         id: faction.id,
         title: faction.name,
         subtitle,
-        icon: '🏛️',
-        url: `/project/${projectId}/factions/${faction.id}`,
+        icon: isState ? '🏰' : '👥',
+        url: `/project/${projectId}/${basePath}/${faction.id}`,
       });
     }
 

@@ -13,10 +13,10 @@ import type {
   UpdateFactionMember,
   CreateFactionRelation,
   UpdateFactionRelation,
-  FactionAsset,
-  CreateFactionAsset,
-  UpdateFactionAsset,
-  ReorderFactionAssets,
+  CustomMetric,
+  ReplaceFactionCustomMetrics,
+  CompareFactionsInput,
+  FactionCompareResult,
 } from '@campaigner/shared';
 import type { FactionsListParams } from '@/api/types';
 import { getErrorMessage } from '@/utils/error';
@@ -50,12 +50,8 @@ interface FactionState {
   updateMember: (factionId: number, memberId: number, data: UpdateFactionMember) => Promise<FactionMember>;
   removeMember: (factionId: number, memberId: number) => Promise<void>;
 
-  // Assets
-  createAsset: (factionId: number, data: CreateFactionAsset) => Promise<FactionAsset>;
-  updateAsset: (factionId: number, assetId: number, data: UpdateFactionAsset) => Promise<FactionAsset>;
-  deleteAsset: (factionId: number, assetId: number) => Promise<void>;
-  reorderAssets: (factionId: number, data: ReorderFactionAssets) => Promise<FactionAsset[]>;
-  bootstrapDefaultAssets: (factionId: number) => Promise<{ created: FactionAsset[]; skipped: string[] }>;
+  replaceCustomMetrics: (factionId: number, data: ReplaceFactionCustomMetrics) => Promise<CustomMetric[]>;
+  compareFactions: (data: CompareFactionsInput) => Promise<FactionCompareResult>;
 
   // Relations
   fetchRelations: (projectId: number) => Promise<void>;
@@ -316,90 +312,30 @@ export const useFactionStore = create<FactionState>((set, get) => ({
     }
   },
 
-  // Assets
-  createAsset: async (factionId, data) => {
+  replaceCustomMetrics: async (factionId, data) => {
     set({ error: null });
     try {
-      const res = await factionsApi.createAsset(factionId, data);
-      const asset = res.data.data;
-      const fRes = await factionsApi.getById(factionId);
-      const refreshed = fRes.data.data;
-      set(state => ({
-        currentFaction: refreshed,
-        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
+      const res = await factionsApi.replaceCustomMetrics(factionId, data);
+      const metrics = res.data.data || [];
+      set((state) => ({
+        currentFaction: state.currentFaction?.id === factionId
+          ? { ...state.currentFaction, customMetrics: metrics }
+          : state.currentFaction,
       }));
-      return asset;
+      return metrics;
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error, 'Failed to create faction asset') });
+      set({ error: getErrorMessage(error, 'Failed to replace custom metrics') });
       throw error;
     }
   },
 
-  updateAsset: async (factionId, assetId, data) => {
+  compareFactions: async (data) => {
     set({ error: null });
     try {
-      const res = await factionsApi.updateAsset(factionId, assetId, data);
-      const asset = res.data.data;
-      const fRes = await factionsApi.getById(factionId);
-      const refreshed = fRes.data.data;
-      set(state => ({
-        currentFaction: refreshed,
-        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
-      }));
-      return asset;
+      const res = await factionsApi.compare(data);
+      return res.data.data;
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error, 'Failed to update faction asset') });
-      throw error;
-    }
-  },
-
-  deleteAsset: async (factionId, assetId) => {
-    set({ error: null });
-    try {
-      await factionsApi.deleteAsset(factionId, assetId);
-      const fRes = await factionsApi.getById(factionId);
-      const refreshed = fRes.data.data;
-      set(state => ({
-        currentFaction: refreshed,
-        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
-      }));
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, 'Failed to delete faction asset') });
-      throw error;
-    }
-  },
-
-  reorderAssets: async (factionId, data) => {
-    set({ error: null });
-    try {
-      await factionsApi.reorderAssets(factionId, data);
-      const fRes = await factionsApi.getById(factionId);
-      const refreshed = fRes.data.data;
-      set(state => ({
-        currentFaction: refreshed,
-        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
-      }));
-      return refreshed.assets || [];
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, 'Failed to reorder faction assets') });
-      throw error;
-    }
-  },
-
-  bootstrapDefaultAssets: async (factionId) => {
-    set({ error: null });
-    try {
-      const res = await factionsApi.bootstrapDefaultAssets(factionId);
-      const result = res.data.data;
-      const fRes = await factionsApi.getById(factionId);
-      const refreshed = fRes.data.data;
-      set(state => ({
-        currentFaction: refreshed,
-        factions: state.factions.map(f => f.id === factionId ? refreshed : f),
-      }));
-      return result;
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, 'Failed to bootstrap faction assets') });
+      set({ error: getErrorMessage(error, 'Failed to compare factions') });
       throw error;
     }
   },

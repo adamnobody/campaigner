@@ -15,9 +15,14 @@ export class FactionController {
 
     const limit = Number(req.query.limit);
     const offset = Number(req.query.offset);
+    const kindRaw = req.query.kind ?? req.query.type;
+    const kindFilter =
+      kindRaw === 'state' || kindRaw === 'faction'
+        ? kindRaw
+        : undefined;
 
     const filters = {
-      type: typeof req.query.type === 'string' ? req.query.type : undefined,
+      kind: kindFilter as 'state' | 'faction' | undefined,
       status: typeof req.query.status === 'string' ? req.query.status : undefined,
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       limit: Number.isFinite(limit) ? limit : 50,
@@ -184,42 +189,15 @@ export class FactionController {
     return ok(res, relations);
   });
 
-  // ==================== ASSETS ====================
-
-  static getAssets = asyncHandler(async (req: Request, res: Response) => {
+  static replaceCustomMetrics = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
-    const assets = FactionService.getAssets(factionId);
-    return ok(res, assets);
+    const metrics = FactionService.replaceCustomMetrics(factionId, req.body.metrics || []);
+    return ok(res, metrics);
   });
 
-  static createAsset = asyncHandler(async (req: Request, res: Response) => {
-    const factionId = parseId(req.params.id, 'faction id');
-    const asset = FactionService.createAsset({ ...req.body, factionId });
-    return created(res, asset);
-  });
-
-  static updateAsset = asyncHandler(async (req: Request, res: Response) => {
-    const assetId = parseId(req.params.assetId, 'asset id');
-    const asset = FactionService.updateAsset(assetId, req.body);
-    return ok(res, asset);
-  });
-
-  static deleteAsset = asyncHandler(async (req: Request, res: Response) => {
-    const assetId = parseId(req.params.assetId, 'asset id');
-    FactionService.deleteAsset(assetId);
-    return ok(res, undefined, 'Asset deleted');
-  });
-
-  static bootstrapDefaultAssets = asyncHandler(async (req: Request, res: Response) => {
-    const factionId = parseId(req.params.id, 'faction id');
-    return ok(res, FactionService.bootstrapDefaultAssets(factionId));
-  });
-
-  static reorderAssets = asyncHandler(async (req: Request, res: Response) => {
-    const factionId = parseId(req.params.id, 'faction id');
-    const orderedIds = req.body?.orderedIds as number[];
-    const assets = FactionService.reorderAssets(factionId, orderedIds);
-    return ok(res, assets);
+  static compare = asyncHandler(async (req: Request, res: Response) => {
+    const result = FactionService.compare(req.body.factionIds || [], req.body.metricKeys || []);
+    return ok(res, result);
   });
 
   static createRelation = asyncHandler(async (req: Request, res: Response) => {

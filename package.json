@@ -46,6 +46,7 @@
     "framer-motion": "^12.38.0",
     "globby": "^16.1.1",
     "picocolors": "^1.1.1",
+    "recharts": "^3.8.1",
     "remark-gfm": "^4.0.1",
     "tiktoken": "^1.0.22"
   },
@@ -57,19 +58,75 @@
     },
     "files": [
       "electron/**/*",
-      "backend/dist/**/*",
-      "backend/node_modules/**/*",
-      "backend/package.json",
-      "frontend/dist/**/*",
-      "shared/dist/**/*",
-      "shared/node_modules/**/*",
-      "shared/package.json",
-      "node_modules/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/dist",
+        "to": "backend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "shared/dist",
+        "to": "shared/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "shared/package.json",
+        "to": "shared/package.json"
+      },
+      {
+        "from": "backend/package.json",
+        "to": "backend/package.json"
+      },
+      {
+        "from": "frontend/dist",
+        "to": "frontend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules",
+        "to": "node_modules",
+        "filter": [
+          "**/*",
+          "!electron/**",
+          "!electron-builder/**",
+          "!@electron/**",
+          "!@electron/rebuild/**",
+          "!electron-winstaller/**",
+          "!electron-publish/**",
+          "!app-builder-bin/**",
+          "!app-builder-lib/**",
+          "!7zip-bin/**",
+          "!vite/**",
+          "!@esbuild/**",
+          "!esbuild/**",
+          "!typescript/**",
+          "!@types/**",
+          "!concurrently/**",
+          "!kill-port/**",
+          "!dmg-builder/**",
+          "!builder-util/**",
+          "!builder-util-runtime/**",
+          "!@vitejs/**",
+          "!tsx/**",
+          "!@rollup/**",
+          "!rollup/**",
+          "!postcss/**",
+          "!autoprefixer/**"
+        ]
+      }
     ],
     "win": {
       "target": "nsis",
-      "icon": "electron/icon.ico"
+      "icon": "electron/icon.ico",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": true,

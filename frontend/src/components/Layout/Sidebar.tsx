@@ -24,9 +24,11 @@ import { shallow } from 'zustand/shallow';
 import GavelIcon from '@mui/icons-material/Gavel';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import CastleIcon from '@mui/icons-material/Castle';
 const projectMenuItems = [
   { label: 'Карта', icon: <MapIcon />, path: 'map' },
   { label: 'Персонажи', icon: <PeopleIcon />, path: 'characters' },
+  { label: 'Государства', icon: <CastleIcon />, path: 'states' },
   { label: 'Фракции', icon: <GroupsIcon />, path: 'factions' },
   { label: 'Заметки', icon: <DescriptionIcon />, path: 'notes' },
   { label: 'Вики', icon: <MenuBookIcon />, path: 'wiki' },
@@ -40,9 +42,11 @@ export const Sidebar: React.FC = () => {
     sidebarOpen: state.sidebarOpen,
     sidebarWidth: state.sidebarWidth,
   }), shallow);
-  const { currentProject, fetchProject } = useProjectStore((state) => ({
+  const { projects, currentProject, fetchProject, fetchProjects } = useProjectStore((state) => ({
+    projects: state.projects,
     currentProject: state.currentProject,
     fetchProject: state.fetchProject,
+    fetchProjects: state.fetchProjects,
   }), shallow);
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,6 +60,12 @@ export const Sidebar: React.FC = () => {
       fetchProject(parseInt(projectId, 10));
     }
   }, [projectId, currentProject, fetchProject]);
+
+  useEffect(() => {
+    if (isAppearancePage && projects.length === 0) {
+      fetchProjects();
+    }
+  }, [isAppearancePage, projects.length, fetchProjects]);
 
   return (
     <Drawer
@@ -108,6 +118,54 @@ export const Sidebar: React.FC = () => {
 
       <Divider />
 
+      {isAppearancePage && (
+        <>
+          <Box sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Быстрый переход к проектам
+            </Typography>
+          </Box>
+
+          <List>
+            {projects.map((project) => {
+              const isActiveProject = location.pathname.startsWith(`/project/${project.id}/`);
+              return (
+                <ListItemButton
+                  key={project.id}
+                  selected={isActiveProject}
+                  onClick={() => navigate(`/project/${project.id}/map`)}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(201, 169, 89, 0.1)',
+                      borderRight: '3px solid',
+                      borderRightColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: isActiveProject ? 'primary.main' : 'text.secondary' }}>
+                    <AccountTreeIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={project.name}
+                    primaryTypographyProps={{ noWrap: true }}
+                  />
+                </ListItemButton>
+              );
+            })}
+          </List>
+
+          {projects.length === 0 && (
+            <Box sx={{ p: 2, pt: 0 }}>
+              <Typography variant="body2" color="text.secondary">
+                Проекты не найдены
+              </Typography>
+            </Box>
+          )}
+
+          <Divider />
+        </>
+      )}
+
       {isProjectPage && currentProject ? (
         <>
           <Box sx={{ p: 2 }}>
@@ -139,6 +197,8 @@ export const Sidebar: React.FC = () => {
                   data-tour={
                     item.path === 'characters'
                       ? 'sidebar-characters'
+                      : item.path === 'states'
+                      ? 'sidebar-states'
                       : item.path === 'factions'
                       ? 'sidebar-factions'
                       : item.path === 'notes'

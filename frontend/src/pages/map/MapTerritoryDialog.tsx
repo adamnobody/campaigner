@@ -62,20 +62,20 @@ export const MapTerritoryDialog: React.FC<Props> = ({
           }));
         }}
         renderInput={params => (
-          <TextField {...params} label="Принадлежность (фракция)" margin="normal" placeholder="Выберите фракцию..." />
+          <TextField {...params} label="Принадлежность (государство/фракция)" margin="normal" placeholder="Выберите сущность..." />
         )}
         renderOption={(props, option) => (
           <li {...props}>
             <Box display="flex" alignItems="center" gap={1}>
               <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: option.color }} />
               <Typography>{option.name}</Typography>
-              <Chip label={option.type} size="small" variant="outlined"
+              <Chip label={option.kind === 'state' ? 'Государство' : 'Фракция'} size="small" variant="outlined"
                 sx={{ ml: 'auto', fontSize: '0.7rem', height: 20 }} />
             </Box>
           </li>
         )}
         isOptionEqualToValue={(a, b) => a.id === b.id}
-        noOptionsText="Нет фракций" clearText="Очистить" sx={{ mt: 1 }}
+        noOptionsText="Нет доступных сущностей" clearText="Очистить" sx={{ mt: 1 }}
       />
 
       <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mt: 2, mb: 1 }}>Цвет заливки</Typography>

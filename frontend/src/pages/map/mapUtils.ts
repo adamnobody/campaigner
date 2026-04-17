@@ -70,7 +70,13 @@ export interface MapData {
   parentMarkerId: number | null; name: string; imagePath: string | null;
 }
 export interface NoteOption { id: number; title: string; noteType: string; }
-export interface FactionOption { id: number; name: string; color: string; type: string; }
+export interface FactionOption {
+  id: number;
+  name: string;
+  color: string;
+  kind: 'state' | 'faction';
+  type: string | null;
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const extractData = (res: any): any => res.data?.data || res.data;
@@ -124,7 +130,13 @@ export const parseNotes = (data: any): NoteOption[] => {
 
 export const parseFactions = (data: any): FactionOption[] => {
   const list = Array.isArray(data) ? data : [];
-  return list.map((f: any) => ({ id: f.id, name: f.name, color: f.color || '#4ECDC4', type: f.type || 'other' }));
+  return list.map((f: any) => ({
+    id: f.id,
+    name: f.name,
+    color: f.color || '#4ECDC4',
+    kind: f.kind || 'faction',
+    type: f.type ?? null,
+  }));
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 

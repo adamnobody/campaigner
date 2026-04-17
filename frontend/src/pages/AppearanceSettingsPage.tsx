@@ -6,10 +6,12 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   FormControl,
+  FormControlLabel,
   InputLabel,
   Select,
   MenuItem,
   FormLabel,
+  Switch,
   Divider,
   Button,
   Chip,
@@ -56,6 +58,12 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { AppearanceLivePreview } from '@/pages/appearance/AppearanceLivePreview';
 import { FONT_PRESET_OPTIONS } from '@/pages/appearance/fontPresets';
 import { useDebouncedDraft } from '@/pages/appearance/useDebouncedDraft';
+import {
+  INTERFACE_STYLE_ORDER,
+  INTERFACE_STYLE_PROFILES,
+  getPaletteCompatibility,
+  getStyleForPalette,
+} from '@/theme/interfaceStyles';
 
 export const AppearanceSettingsPage: React.FC = () => {
   const theme = useTheme();
@@ -65,6 +73,8 @@ export const AppearanceSettingsPage: React.FC = () => {
   const [selectedFontPresetId, setSelectedFontPresetId] = useState('default-inter-cinzel');
 
   const {
+    interfaceStyle,
+    autoApplyRecommendedPalette,
     themePreset,
     surfaceMode,
     fontMode,
@@ -110,11 +120,15 @@ export const AppearanceSettingsPage: React.FC = () => {
     setCardPatternOpacity,
     setCardPatternSize,
     setCardPatternUrl,
+    setAutoApplyRecommendedPalette,
+    applyInterfaceStyle,
     saveCurrentAsCustomTheme,
     applyCustomTheme,
     deleteCustomTheme,
     resetAppearance,
   } = usePreferencesStore((state) => ({
+    interfaceStyle: state.interfaceStyle,
+    autoApplyRecommendedPalette: state.autoApplyRecommendedPalette,
     themePreset: state.themePreset,
     surfaceMode: state.surfaceMode,
     fontMode: state.fontMode,
@@ -160,6 +174,8 @@ export const AppearanceSettingsPage: React.FC = () => {
     setCardPatternOpacity: state.setCardPatternOpacity,
     setCardPatternSize: state.setCardPatternSize,
     setCardPatternUrl: state.setCardPatternUrl,
+    setAutoApplyRecommendedPalette: state.setAutoApplyRecommendedPalette,
+    applyInterfaceStyle: state.applyInterfaceStyle,
     saveCurrentAsCustomTheme: state.saveCurrentAsCustomTheme,
     applyCustomTheme: state.applyCustomTheme,
     deleteCustomTheme: state.deleteCustomTheme,
@@ -167,6 +183,13 @@ export const AppearanceSettingsPage: React.FC = () => {
   }), shallow);
 
   const currentPreset = THEME_PRESETS[themePreset] || THEME_PRESETS['obsidian-gold'];
+  const currentStyleProfile = INTERFACE_STYLE_PROFILES[interfaceStyle];
+  const currentPaletteCompatibility = getPaletteCompatibility(interfaceStyle, themePreset);
+  const compatibilityColor: Record<'ideal' | 'good' | 'experimental', 'success' | 'info' | 'warning'> = {
+    ideal: 'success',
+    good: 'info',
+    experimental: 'warning',
+  };
 
   const commitCustomFontCssUrl = useCallback((value: string) => {
     setCustomFontCssUrl(value);
@@ -479,7 +502,128 @@ export const AppearanceSettingsPage: React.FC = () => {
           >
             {/* LEFT COLUMN */}
             <Stack spacing={3} sx={{ minWidth: 0 }}>
-              
+
+              <GlassCard sx={{ p: 3 }}>
+                <SectionHeader
+                  icon={<AutoAwesomeIcon sx={{ fontSize: '1.2rem' }} />}
+                  title="Тип интерфейса"
+                  subtitle="12 направлений: от Dark Fantasy до Scholar"
+                />
+
+                <Box
+                  sx={{
+                    mb: 2,
+                    p: 1.5,
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.35)}`,
+                    backgroundColor: alpha(theme.palette.background.paper, 0.45),
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Chip size="small" label={`Активный стиль: ${currentStyleProfile.label}`} color="primary" />
+                  <Chip
+                    size="small"
+                    label={`Палитра: ${currentPaletteCompatibility.label}`}
+                    color={compatibilityColor[currentPaletteCompatibility.level]}
+                    variant={currentPaletteCompatibility.level === 'ideal' ? 'filled' : 'outlined'}
+                  />
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem' }}>
+                    {currentPaletteCompatibility.hint}
+                  </Typography>
+                  <FormControlLabel
+                    sx={{ ml: 'auto' }}
+                    control={
+                      <Switch
+                        size="small"
+                        checked={autoApplyRecommendedPalette}
+                        onChange={(event) => setAutoApplyRecommendedPalette(event.target.checked)}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+                        Автоприменять рекомендуемую палитру
+                      </Typography>
+                    }
+                  />
+                </Box>
+
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                    gap: 1.5,
+                  }}
+                >
+                  {INTERFACE_STYLE_ORDER.map((styleId) => {
+                    const profile = INTERFACE_STYLE_PROFILES[styleId];
+                    const selected = styleId === interfaceStyle;
+                    const compatibility = getPaletteCompatibility(styleId, themePreset);
+                    const recommendedPaletteName = THEME_PRESETS[profile.recommendedPalettes[0]]?.label || profile.recommendedPalettes[0];
+
+                    return (
+                      <Box
+                        key={styleId}
+                        onClick={() => applyInterfaceStyle(styleId, { useRecommendedPalette: autoApplyRecommendedPalette })}
+                        sx={{
+                          borderRadius: 2,
+                          p: 1.5,
+                          cursor: 'pointer',
+                          border: `1px solid ${
+                            selected
+                              ? alpha(theme.palette.primary.main, 0.7)
+                              : alpha(theme.palette.divider, 0.35)
+                          }`,
+                          backgroundColor: selected
+                            ? alpha(theme.palette.primary.main, 0.12)
+                            : alpha(theme.palette.background.paper, 0.35),
+                          transition: 'all 0.25s ease',
+                          '&:hover': {
+                            borderColor: alpha(theme.palette.primary.main, 0.6),
+                            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                            transform: 'translateY(-2px)',
+                          },
+                        }}
+                      >
+                        <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} mb={0.75}>
+                          <Typography sx={{ fontWeight: 800, fontSize: '0.86rem' }}>{profile.label}</Typography>
+                          <Chip
+                            size="small"
+                            label={compatibility.label}
+                            color={compatibilityColor[compatibility.level]}
+                            variant={compatibility.level === 'ideal' ? 'filled' : 'outlined'}
+                          />
+                        </Box>
+
+                        <Typography sx={{ color: 'text.secondary', fontSize: '0.76rem', lineHeight: 1.45, mb: 0.75 }}>
+                          {profile.shortDescription}
+                        </Typography>
+                        <Typography sx={{ color: 'text.secondary', fontSize: '0.72rem', lineHeight: 1.45, mb: 1 }}>
+                          {profile.spotlight}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                          <Typography sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
+                            Рекомендовано: {recommendedPaletteName}
+                          </Typography>
+                          <Button
+                            size="small"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              applyInterfaceStyle(styleId);
+                            }}
+                          >
+                            Только стиль
+                          </Button>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </GlassCard>
+
               {/* COLOR THEMES SECTION */}
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
@@ -508,7 +652,10 @@ export const AppearanceSettingsPage: React.FC = () => {
                         placement="top"
                       >
                         <Box
-                          onClick={() => setThemePreset(preset.id)}
+                          onClick={() => {
+                            applyInterfaceStyle(getStyleForPalette(preset.id));
+                            setThemePreset(preset.id);
+                          }}
                           onMouseEnter={() => setHoveredPreset(preset.id)}
                           onMouseLeave={() => setHoveredPreset(null)}
                           sx={{
@@ -1384,6 +1531,9 @@ export const AppearanceSettingsPage: React.FC = () => {
 
                 <Stack spacing={1.5}>
                   {[
+                    { label: 'Тип интерфейса', value: currentStyleProfile.label, color: theme.palette.secondary.main },
+                    { label: 'Автопалитра', value: autoApplyRecommendedPalette ? 'Вкл' : 'Выкл', color: theme.palette.info.main },
+                    { label: 'Совм. палитры', value: currentPaletteCompatibility.label, color: theme.palette.info.main },
                     { label: 'Пресет', value: currentPreset.label, color: theme.palette.primary.main },
                     { label: 'Поверхность', value: surfaceMode === 'glass' ? '🪟 Стекло' : '🧱 Плотный', color: theme.palette.info.main },
                     { label: 'Шрифт', value: fontMode === 'serif' ? 'Serif' : 'Sans-Serif', color: theme.palette.text.primary },

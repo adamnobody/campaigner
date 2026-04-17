@@ -32,6 +32,7 @@ export type DogmaListParams = {
 };
 
 export type FactionsListParams = {
+  kind?: string;
   type?: string;
   status?: string;
   search?: string;

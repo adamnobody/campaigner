@@ -1,18 +1,25 @@
-import type { FactionRow, RankRow, MemberRow, RelationRow, AssetRow } from './faction.types.js';
+import type { FactionRow, RankRow, MemberRow, RelationRow, CustomMetricRow } from './faction.types.js';
 
 export const FACTION_UPDATE_MAP: Record<string, string> = {
   projectId: 'project_id',
   name: 'name',
+  kind: 'kind',
   type: 'type',
-  customType: 'custom_type',
-  stateType: 'state_type',
-  customStateType: 'custom_state_type',
   motto: 'motto',
   description: 'description',
   history: 'history',
   goals: 'goals',
   headquarters: 'headquarters',
   territory: 'territory',
+  treasury: 'treasury',
+  population: 'population',
+  armySize: 'army_size',
+  navySize: 'navy_size',
+  territoryKm2: 'territory_km2',
+  annualIncome: 'annual_income',
+  annualExpenses: 'annual_expenses',
+  membersCount: 'members_count',
+  influence: 'influence',
   status: 'status',
   color: 'color',
   secondaryColor: 'secondary_color',
@@ -48,27 +55,28 @@ export const RELATION_UPDATE_MAP: Record<string, string> = {
   isBidirectional: 'is_bidirectional',
 };
 
-export const ASSET_UPDATE_MAP: Record<string, string> = {
-  name: 'name',
-  value: 'value',
-  sortOrder: 'sort_order',
-};
-
 export function toFaction(row: FactionRow) {
   return {
     id: row.id,
     projectId: row.project_id,
     name: row.name,
-    type: row.type,
-    customType: row.custom_type || '',
-    stateType: row.state_type || '',
-    customStateType: row.custom_state_type || '',
+    kind: row.kind as 'state' | 'faction',
+    type: row.type ?? null,
     motto: row.motto || '',
     description: row.description || '',
     history: row.history || '',
     goals: row.goals || '',
     headquarters: row.headquarters || '',
     territory: row.territory || '',
+    treasury: row.treasury ?? null,
+    population: row.population ?? null,
+    armySize: row.army_size ?? null,
+    navySize: row.navy_size ?? null,
+    territoryKm2: row.territory_km2 ?? null,
+    annualIncome: row.annual_income ?? null,
+    annualExpenses: row.annual_expenses ?? null,
+    membersCount: row.members_count ?? null,
+    influence: row.influence ?? null,
     status: row.status,
     color: row.color || '',
     secondaryColor: row.secondary_color || '',
@@ -131,12 +139,13 @@ export function toRelation(row: RelationRow) {
   };
 }
 
-export function toAsset(row: AssetRow) {
+export function toCustomMetric(row: CustomMetricRow) {
   return {
     id: row.id,
     factionId: row.faction_id,
     name: row.name,
-    value: row.value || '',
+    value: row.value,
+    unit: row.unit ?? null,
     sortOrder: row.sort_order || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

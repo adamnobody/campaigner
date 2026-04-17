@@ -56,6 +56,9 @@ const App: React.FC = () => {
               <Route path="wiki" element={<ErrorBoundary><WikiPage /></ErrorBoundary>} />
               <Route path="timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
               <Route path="dogmas" element={<ErrorBoundary><DogmasPage /></ErrorBoundary>} />
+              <Route path="states" element={<ErrorBoundary><FactionsPage entityType="state" /></ErrorBoundary>} />
+              <Route path="states/new" element={<ErrorBoundary><FactionDetailPage entityType="state" /></ErrorBoundary>} />
+              <Route path="states/:factionId" element={<ErrorBoundary><FactionDetailPage entityType="state" /></ErrorBoundary>} />
               <Route path="factions" element={<ErrorBoundary><FactionsPage /></ErrorBoundary>} />
               <Route path="factions/new" element={<ErrorBoundary><FactionDetailPage /></ErrorBoundary>} />
               <Route path="factions/:factionId" element={<ErrorBoundary><FactionDetailPage /></ErrorBoundary>} />

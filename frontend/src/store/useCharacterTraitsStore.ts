@@ -14,6 +14,7 @@ interface CharacterTraitsState {
   clearAssigned: () => void;
   toggleAssign: (characterId: number, traitId: number) => Promise<void>;
   createTrait: (data: CreateCharacterTrait) => Promise<CharacterTrait>;
+  updateExclusions: (id: number, excludedIds: number[]) => Promise<CharacterTrait>;
   deleteTrait: (id: number) => Promise<void>;
   clearError: () => void;
   reset: () => void;
@@ -82,8 +83,36 @@ export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) =
     const res = await characterTraitsApi.create(data);
     const trait = res.data.data;
     if (!trait) throw new Error('No trait in response');
-    set((state) => ({ traits: [...state.traits, trait] }));
+    set((state) => {
+      const next = [...state.traits, trait];
+      return { traits: applyMirroredExclusions(next, trait.id, trait.exclusions ?? []) };
+    });
     return trait;
+  },
+
+  updateExclusions: async (id, excludedIds) => {
+    const previous = get().traits;
+    const optimistic = applyMirroredExclusions(previous, id, excludedIds);
+    set({ traits: optimistic, error: null });
+    try {
+      const res = await characterTraitsApi.updateExclusions(id, excludedIds);
+      const updated = res.data.data;
+      if (!updated) throw new Error('No trait in response');
+      set((state) => ({
+        traits: applyMirroredExclusions(
+          state.traits.map((trait) => (trait.id === id ? updated : trait)),
+          id,
+          updated.exclusions ?? []
+        ),
+      }));
+      return updated;
+    } catch (error: unknown) {
+      set({
+        traits: previous,
+        error: getErrorMessage(error, 'Не удалось обновить исключения черты'),
+      });
+      throw error;
+    }
   },
 
   deleteTrait: async (id) => {
@@ -104,3 +133,25 @@ export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) =
       error: null,
     }),
 }));
+
+function applyMirroredExclusions(
+  traits: CharacterTrait[],
+  traitId: number,
+  excludedIds: number[]
+): CharacterTrait[] {
+  const normalized = Array.from(new Set(excludedIds));
+  return traits.map((trait) => {
+    if (trait.id === traitId) {
+      return { ...trait, exclusions: normalized };
+    }
+    const hasMirror = normalized.includes(trait.id);
+    const current = trait.exclusions ?? [];
+    if (hasMirror && !current.includes(traitId)) {
+      return { ...trait, exclusions: [...current, traitId].sort((a, b) => a - b) };
+    }
+    if (!hasMirror && current.includes(traitId)) {
+      return { ...trait, exclusions: current.filter((id) => id !== traitId) };
+    }
+    return trait;
+  });
+}

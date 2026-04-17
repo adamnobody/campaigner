@@ -19,6 +19,13 @@ const traitUpload = createDiskUpload({
   filenamePrefix: 'trait',
 });
 
+const ambitionUpload = createDiskUpload({
+  folder: 'ambitions',
+  maxFileSize: LIMITS.MAX_FILE_SIZE,
+  filenamePrefix: 'ambition',
+});
+
 export const uploadMapImage = mapUpload.single('mapImage');
 export const uploadCharacterImage = characterUpload.single('characterImage');
 export const uploadTraitImage = traitUpload.single('traitImage');
+export const uploadAmbitionImage = ambitionUpload.single('ambitionImage');

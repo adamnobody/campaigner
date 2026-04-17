@@ -6,7 +6,11 @@ import { cleanup } from './cleanup.mjs';
 import { smokeHealth } from './scenarios/health.mjs';
 import { smokeProjects } from './scenarios/projects.mjs';
 import { smokeTags } from './scenarios/tags.mjs';
-import { smokeCharacters, smokeCharacterRelationships } from './scenarios/characters.mjs';
+import {
+  smokeCharacters,
+  smokeCharacterRelationships,
+  smokeCharacterTraitsExclusions,
+} from './scenarios/characters.mjs';
 import { smokeNotes } from './scenarios/notes.mjs';
 import { smokeWiki } from './scenarios/wiki.mjs';
 import { smokeTimeline, smokeTimelineReorder } from './scenarios/timeline.mjs';
@@ -14,6 +18,8 @@ import { smokeDogmas, smokeDogmaReorder } from './scenarios/dogmas.mjs';
 import { smokeSearch } from './scenarios/search.mjs';
 import {
   smokeFactions,
+  smokeFactionAmbitions,
+  smokeCharacterFactionAffiliations,
   smokeFactionRanks,
   smokeFactionMembers,
   smokeFactionRelations,
@@ -34,6 +40,7 @@ async function main() {
     await smokeProjects(ctx);
     await smokeTags(ctx);
     await smokeCharacters(ctx);
+    await smokeCharacterTraitsExclusions(ctx);
     await smokeCharacterRelationships(ctx);
     await smokeNotes(ctx);
     await smokeWiki(ctx);
@@ -43,6 +50,8 @@ async function main() {
     await smokeDogmaReorder(ctx);
     await smokeSearch(ctx);
     await smokeFactions(ctx);
+    await smokeCharacterFactionAffiliations(ctx);
+    await smokeFactionAmbitions(ctx);
     await smokeFactionRanks(ctx);
     await smokeFactionMembers(ctx);
     await smokeFactionRelations(ctx);

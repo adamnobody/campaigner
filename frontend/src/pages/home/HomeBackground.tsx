@@ -111,11 +111,13 @@ const FloatingIcon: React.FC<{
 export interface HomeBackgroundProps {
   homeBackgroundImage: string | null;
   homeBackgroundOpacity: number;
+  parallaxLayerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export const HomeBackground: React.FC<HomeBackgroundProps> = ({
   homeBackgroundImage,
   homeBackgroundOpacity,
+  parallaxLayerRef,
 }) => {
   const theme = useTheme();
 
@@ -125,9 +127,13 @@ export const HomeBackground: React.FC<HomeBackgroundProps> = ({
       {homeBackgroundImage && (
         <Fade in={!!homeBackgroundImage} timeout={1000}>
           <Box
+            ref={parallaxLayerRef}
             sx={{
               position: 'fixed',
-              inset: 0,
+              top: -20,
+              left: -20,
+              width: 'calc(100% + 40px)',
+              height: 'calc(100% + 40px)',
               zIndex: 0,
               pointerEvents: 'none',
               backgroundImage: `url(${homeBackgroundImage})`,
@@ -135,8 +141,11 @@ export const HomeBackground: React.FC<HomeBackgroundProps> = ({
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
               opacity: homeBackgroundOpacity,
-              transform: 'scale(1.02)',
-              transition: 'opacity 1s ease',
+              transform: 'translate3d(0px, 0px, 0px)',
+              transition: 'opacity 1s ease, transform 200ms ease-out',
+              '@media (hover: none)': {
+                transform: 'translate3d(0px, 0px, 0px) !important',
+              },
             }}
           />
         </Fade>

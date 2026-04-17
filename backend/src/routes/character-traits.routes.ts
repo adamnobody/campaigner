@@ -6,6 +6,7 @@ import {
   createCharacterTraitBodySchema,
   assignTraitBodySchema,
   unassignTraitBodySchema,
+  updateTraitExclusionsBodySchema,
 } from '@campaigner/shared';
 
 const router = Router();
@@ -50,6 +51,15 @@ router.post(
   '/',
   validateRequest({ body: createCharacterTraitBodySchema }),
   CharacterTraitsController.create
+);
+
+router.patch(
+  '/:id/exclusions',
+  validateRequest({
+    params: idParamsSchema,
+    body: updateTraitExclusionsBodySchema,
+  }),
+  CharacterTraitsController.updateExclusions
 );
 
 router.delete(
