@@ -306,8 +306,6 @@ campaigner
 │  │  │  │  │  ├─ fontPresets.ts
 │  │  │  │  │  └─ useDebouncedDraft.ts
 │  │  │  │  └─ AppearanceSettingsPage.tsx
-│  │  │  ├─ character
-│  │  │  ├─ character-graph
 │  │  │  ├─ characters
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ CharacterTraitsTab.tsx
@@ -318,7 +316,6 @@ campaigner
 │  │  │  │  ├─ CharacterDetailPage.tsx
 │  │  │  │  ├─ CharacterGraphPage.tsx
 │  │  │  │  └─ CharactersPage.tsx
-│  │  │  ├─ dogma
 │  │  │  ├─ dogmas
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ DogmaFormDialog.tsx
@@ -332,8 +329,6 @@ campaigner
 │  │  │  │  │  └─ FamilyTree.tsx
 │  │  │  │  ├─ DynastiesPage.tsx
 │  │  │  │  └─ DynastyDetailPage.tsx
-│  │  │  ├─ dynasty
-│  │  │  ├─ faction
 │  │  │  ├─ factions
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ AmbitionFlipCard.tsx
@@ -352,7 +347,6 @@ campaigner
 │  │  │  │  │  ├─ HomeBackground.tsx
 │  │  │  │  │  └─ HomePrimitives.tsx
 │  │  │  │  └─ HomePage.tsx
-│  │  │  ├─ map
 │  │  │  ├─ maps
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ MapMarkerDialog.tsx
@@ -372,7 +366,6 @@ campaigner
 │  │  │  │  │  ├─ useMapTerritoryDrawing.ts
 │  │  │  │  │  └─ useMapViewport.ts
 │  │  │  │  └─ MapPage.tsx
-│  │  │  ├─ note-editor
 │  │  │  ├─ notes
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ CreateWikiLinkDialog.tsx
