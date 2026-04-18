@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection.js';
-import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
-import { ensureEntityExists } from '../utils/dbHelpers.js';
+import { getDb } from '../../db/connection.js';
+import { BadRequestError, NotFoundError } from '../../middleware/errorHandler.js';
+import { ensureEntityExists } from '../../utils/dbHelpers.js';
 import type { PoliticalScaleAssignment, PutPoliticalScaleAssignmentsBody } from '@campaigner/shared';
 
 type AssignmentRow = {

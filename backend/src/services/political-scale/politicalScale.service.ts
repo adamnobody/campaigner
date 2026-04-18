@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection.js';
-import { BadRequestError, ConflictError, NotFoundError } from '../middleware/errorHandler.js';
-import { ensureEntityExists } from '../utils/dbHelpers.js';
+import { getDb } from '../../db/connection.js';
+import { BadRequestError, ConflictError, NotFoundError } from '../../middleware/errorHandler.js';
+import { ensureEntityExists } from '../../utils/dbHelpers.js';
 import type { CreatePoliticalScale, PoliticalScale, UpdatePoliticalScale } from '@campaigner/shared';
 
 type PoliticalScaleRow = {

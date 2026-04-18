@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
-import { PoliticalScaleService } from '../services/politicalScale.service.js';
-import { PoliticalScaleAssignmentService } from '../services/politicalScaleAssignment.service.js';
+import {
+  PoliticalScaleService,
+  PoliticalScaleAssignmentService,
+} from '../services/political-scale/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { created, ok } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
