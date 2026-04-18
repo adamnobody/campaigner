@@ -25,6 +25,7 @@
     "smoke:frontend": "node scripts/smoke/frontend.mjs",
     "smoke:final": "npm run smoke && npm run smoke:frontend",
     "smoke:up": "node scripts/smoke-runner.mjs",
+    "tree": "node scripts/generate-tree.mjs",
     "backend:start:once": "cd backend && npx tsx src/index.ts",
     "perf:baseline": "node scripts/perf/baseline.mjs",
     "perf:compare": "node scripts/perf/compare.mjs",
