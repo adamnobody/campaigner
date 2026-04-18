@@ -285,7 +285,11 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
                         contentStyle={tooltipStyle}
                         labelStyle={tooltipLabelStyle}
                         itemStyle={tooltipItemStyle}
-                        formatter={(value: number | null) => (value == null ? '—' : fullNumberFormatter.format(value))}
+                        formatter={(value) =>
+                          value == null || typeof value !== 'number'
+                            ? '—'
+                            : fullNumberFormatter.format(value)
+                        }
                       />
                       <Bar dataKey="value" fill="#4e8a6e" />
                     </BarChart>

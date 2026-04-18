@@ -9,6 +9,8 @@ type FactionPolicyRow = {
   title: string;
   type: 'ambition' | 'policy';
   status: 'planned' | 'active' | 'archived';
+  category: 'economy' | 'military' | 'social' | 'religion' | 'foreign' | 'other';
+  enacted_date: string | null;
   description: string | null;
   sort_order: number | null;
   created_at: string;
@@ -19,6 +21,8 @@ const UPDATE_MAP: Record<string, string> = {
   title: 'title',
   type: 'type',
   status: 'status',
+  category: 'category',
+  enactedDate: 'enacted_date',
   description: 'description',
   sortOrder: 'sort_order',
 };
@@ -30,6 +34,8 @@ function toDto(row: FactionPolicyRow) {
     title: row.title,
     type: row.type,
     status: row.status,
+    category: row.category ?? 'other',
+    enactedDate: row.enacted_date,
     description: row.description || '',
     sortOrder: row.sort_order ?? 0,
     createdAt: row.created_at,
@@ -68,8 +74,8 @@ export class FactionPolicyService {
     const result = db
       .prepare(
         `
-      INSERT INTO faction_policies (faction_id, title, type, status, description, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO faction_policies (faction_id, title, type, status, category, enacted_date, description, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `
       )
       .run(
@@ -77,6 +83,8 @@ export class FactionPolicyService {
         data.title.trim(),
         data.type,
         data.status ?? 'active',
+        data.category ?? 'other',
+        data.enactedDate ?? null,
         data.description ?? '',
         data.sortOrder ?? 0
       );
