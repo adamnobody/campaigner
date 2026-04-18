@@ -121,8 +121,7 @@ export function useMapTerritoryCrud({
 
   const startEditingPoints = useCallback((territory: Territory) => {
     setEditingTerritoryPoints(territory);
-    setPanelOpen(false);
-  }, [setPanelOpen]);
+  }, []);
 
   const saveEditingPoints = useCallback(async () => {
     if (!editingTerritoryPoints) return;
