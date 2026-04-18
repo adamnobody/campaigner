@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { mapService } from '../services/map.service.js';
+import { mapService } from '../services/map/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
@@ -39,6 +39,12 @@ export class MapController {
     const projectId = parseId(req.params.projectId, 'project id');
     const maps = mapService.getMapTree(projectId);
     return ok(res, maps);
+  });
+
+  static getTerritorySummariesForProject = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.params.projectId, 'project id');
+    const rows = mapService.listTerritorySummariesForProject(projectId);
+    return ok(res, rows);
   });
 
   static createMap = asyncHandler(async (req: Request, res: Response) => {

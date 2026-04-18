@@ -58,6 +58,12 @@ router.get(
 );
 
 router.get(
+  '/projects/:projectId/territories/summary',
+  validateRequest({ params: projectIdParamsSchema }),
+  MapController.getTerritorySummariesForProject
+);
+
+router.get(
   '/maps/:mapId',
   validateRequest({ params: mapIdParamsSchema, query: branchQuerySchema }),
   MapController.getMapById

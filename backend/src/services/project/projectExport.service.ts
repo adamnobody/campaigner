@@ -1,5 +1,5 @@
 import { getDb } from '../../db/connection.js';
-import { ProjectService } from '../project.service.js';
+import { ProjectService } from './project.service.js';
 import { readFileAsBase64 } from './assetHelpers.js';
 import type {
   ImportedProjectPayload,

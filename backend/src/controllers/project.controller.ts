@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { ProjectService } from '../services/project.service.js';
+import { ProjectService } from '../services/project/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created, noContent } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';

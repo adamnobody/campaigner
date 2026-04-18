@@ -308,31 +308,40 @@ function checkBackend() {
 function checkFrontend() {
   section('Frontend');
 
-  // Check key page files
-const pages = [
-  'HomePage', 'MapPage', 'CharactersPage', 'CharacterDetailPage',
-  'CharacterGraphPage', 'NotesPage', 'NoteEditorPage', 'WikiPage',
-  'TimelinePage', 'ProjectSettingsPage', 'FactionsPage',
-  'FactionDetailPage', 'DogmasPage',
-];
+  // Check key page files (feature folders under pages/)
+  const pagePaths = [
+    'home/HomePage.tsx',
+    'maps/MapPage.tsx',
+    'characters/CharactersPage.tsx',
+    'characters/CharacterDetailPage.tsx',
+    'characters/CharacterGraphPage.tsx',
+    'notes/NotesPage.tsx',
+    'notes/NoteEditorPage.tsx',
+    'wiki/WikiPage.tsx',
+    'timeline/TimelinePage.tsx',
+    'project-settings/ProjectSettingsPage.tsx',
+    'factions/FactionsPage.tsx',
+    'factions/FactionDetailPage.tsx',
+    'dogmas/DogmasPage.tsx',
+  ];
 
   let missingPages = [];
-  for (const p of pages) {
-    if (!fileExists(`frontend/src/pages/${p}.tsx`)) {
+  for (const p of pagePaths) {
+    if (!fileExists(`frontend/src/pages/${p}`)) {
       missingPages.push(p);
     }
   }
   if (missingPages.length === 0) {
-    ok(`Все ${pages.length} страниц на месте`);
+    ok(`Все ${pagePaths.length} страниц на месте`);
   } else {
     fail(`Отсутствуют страницы: ${missingPages.join(', ')}`);
   }
 
   // Check components
   const components = [
-    'components/Layout/AppLayout.tsx',
-    'components/Layout/Sidebar.tsx',
-    'components/Layout/TopBar.tsx',
+    'components/layout/AppLayout.tsx',
+    'components/layout/Sidebar.tsx',
+    'components/layout/TopBar.tsx',
     'components/ui/ErrorBoundary.tsx',
     'components/ui/DndButton.tsx',
     'components/ui/LoadingScreen.tsx',

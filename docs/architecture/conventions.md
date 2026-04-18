@@ -52,38 +52,30 @@
   - `dogmas.ts`
   - и т.д.
 
-### 2.2. Compatibility layer
-- `frontend/src/api/axiosClient.ts` — **compatibility layer only** для legacy-кода.
-- Новый код не должен использовать `axiosClient.ts` как primary entrypoint.
-
-### 2.3. Rules
+### 2.2. Rules
 - Новый код **должен** импортировать API из canonical paths:
   - `@/api/client`
   - `@/api/maps`
   - `@/api/projects`
   - `@/api/notes`
   - и т.д.
-- Новый код **не должен**:
-  - импортировать доменные API через `@/api/axiosClient`
-  - добавлять новые domain re-exports в `axiosClient.ts`
-- Если legacy-файл уже редактируется, допускается **opportunistic migration**:
-  - по возможности заменить импорт с `axiosClient.ts` на canonical path
-- Не смешивать:
+- Новый код **не должен** плодить параллельные обёртки над HTTP, дублирующие `apiClient` и доменные клиенты.
+- Не смешивать в одном новом файле без необходимости:
   - transport logic
   - domain API
-  - compatibility re-exports
-  в одном новом файле без необходимости
 
-### 2.4. Good
+### 2.3. Good
 ```ts
 import { apiClient } from '@/api/client';
 import { mapsApi } from '@/api/maps';
 import { notesApi } from '@/api/notes';
 ```
 
-### 2.5. Bad
+### 2.4. Bad
 ```ts
-import { mapsApi, notesApi } from '@/api/axiosClient';
+// Пример: обход доменных клиентов и дублирование транспорта
+import axios from 'axios';
+await axios.get('/api/maps');
 ```
 
 ---
@@ -112,7 +104,7 @@ import { mapsApi, notesApi } from '@/api/axiosClient';
 - общих field wrappers
 - shared input/autocomplete/select controls
 
-#### `frontend/src/components/Layout/*`
+#### `frontend/src/components/layout/*`
 Использовать только для:
 - app shell
 - global navigation
@@ -252,15 +244,10 @@ Store используется для:
   - можно ли перевести часть использования на canonical path.
 
 ### 6.2. Example
-`frontend/src/api/axiosClient.ts`:
-- допустим как compatibility-only
-- недопустим как основной API entrypoint для нового кода
+Ранее существовал re-export `frontend/src/api/axiosClient.ts`; он удалён после миграции импортов на canonical paths.
 
 ### 6.3. Sunset rule
-Compatibility layer можно удалять, когда:
-- новые импорты через него больше не появляются,
-- оставшийся legacy usage мал и понятен,
-- миграция не создаёт несоразмерный churn.
+Compatibility layer удаляют, когда новые импорты через него больше не появляются и оставшийся legacy usage исчез или несоразмерно мал относительно churn миграции.
 
 ---
 
@@ -374,7 +361,7 @@ Backend остаётся в layer-based структуре:
 - использовать usage confirmation перед переносом компонентов
 
 ### DON'T
-- не импортировать новый код через `axiosClient.ts`
+- не плодить новые ad-hoc HTTP-клиенты вместо `@/api/client` и `@/api/<domain>`
 - не класть one-page-only компонент в global `components/*`
 - не выносить page-local ephemeral state в store без необходимости
 - не делать full rewrite структуры без явного ROI
@@ -394,7 +381,8 @@ import { notesApi } from '@/api/notes';
 
 ### Bad API usage
 ```ts
-import { mapsApi, notesApi } from '@/api/axiosClient';
+import axios from 'axios';
+await axios.get('/api/maps');
 ```
 
 ### Good placement

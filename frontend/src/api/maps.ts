@@ -7,6 +7,7 @@ import type {
   CreateMarker,
   UpdateMarker,
   MapTerritory,
+  MapTerritorySummary,
   CreateTerritory,
   UpdateTerritory,
 } from '@campaigner/shared';
@@ -22,6 +23,8 @@ export const mapApi = {
   getRootMap: (projectId: number) => apiClient.get<ApiResponse<Map | null>>(`/projects/${projectId}/maps/root`, { params: withBranch({}) }),
   getMapById: (mapId: number) => apiClient.get<ApiResponse<Map>>(`/maps/${mapId}`, { params: withBranch({}) }),
   getMapTree: (projectId: number) => apiClient.get<ApiResponse<Map[]>>(`/projects/${projectId}/maps/tree`, { params: withBranch({}) }),
+  getTerritorySummariesForProject: (projectId: number) =>
+    apiClient.get<ApiResponse<MapTerritorySummary[]>>(`/projects/${projectId}/territories/summary`),
   createMap: (data: CreateMap) => apiClient.post<ApiResponse<Map>>('/maps', withBranch({ ...data })),
   updateMap: (mapId: number, data: UpdateMap) => apiClient.put<ApiResponse<Map>>(`/maps/${mapId}`, withBranch({ ...data })),
   deleteMap: (mapId: number) => apiClient.delete<VoidResponse>(`/maps/${mapId}`),

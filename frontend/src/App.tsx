@@ -1,27 +1,27 @@
 import React, { Suspense, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AppLayout } from './components/Layout/AppLayout';
+import { AppLayout } from './components/layout/AppLayout';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { CircularProgress, Box } from '@mui/material';
 
-const HomePage = React.lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
-const MapPage = React.lazy(() => import('./pages/MapPage').then(m => ({ default: m.MapPage })));
-const CharactersPage = React.lazy(() => import('./pages/CharactersPage').then(m => ({ default: m.CharactersPage })));
-const CharacterDetailPage = React.lazy(() => import('./pages/CharacterDetailPage').then(m => ({ default: m.CharacterDetailPage })));
-const CharacterGraphPage = React.lazy(() => import('./pages/CharacterGraphPage').then(m => ({ default: m.CharacterGraphPage })));
-const NotesPage = React.lazy(() => import('./pages/NotesPage').then(m => ({ default: m.NotesPage })));
-const NoteEditorPage = React.lazy(() => import('./pages/NoteEditorPage').then(m => ({ default: m.NoteEditorPage })));
-const WikiPage = React.lazy(() => import('./pages/WikiPage').then(m => ({ default: m.WikiPage })));
-const TimelinePage = React.lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })));
-const ProjectSettingsPage = React.lazy(() => import('./pages/ProjectSettingsPage').then(m => ({ default: m.ProjectSettingsPage })));
-const WikiGraphPage = React.lazy(() => import('./pages/WikiGraphPage').then(m => ({ default: m.WikiGraphPage })));
-const AppearanceSettingsPage = React.lazy(() => import('./pages/AppearanceSettingsPage').then(m => ({ default: m.AppearanceSettingsPage })));
-const DogmasPage = React.lazy(() => import('./pages/DogmasPage').then(m => ({ default: m.DogmasPage })));
-const FactionsPage = React.lazy(() => import('./pages/FactionsPage').then(m => ({ default: m.FactionsPage })));
-const FactionDetailPage = React.lazy(() => import('./pages/FactionDetailPage').then(m => ({ default: m.FactionDetailPage })));
-const DynastiesPage = React.lazy(() => import('./pages/DynastiesPage').then(m => ({ default: m.DynastiesPage })));
-const DynastyDetailPage = React.lazy(() => import('./pages/DynastyDetailPage').then(m => ({ default: m.DynastyDetailPage })));
+const HomePage = React.lazy(() => import('./pages/home/HomePage').then(m => ({ default: m.HomePage })));
+const MapPage = React.lazy(() => import('./pages/maps/MapPage').then(m => ({ default: m.MapPage })));
+const CharactersPage = React.lazy(() => import('./pages/characters/CharactersPage').then(m => ({ default: m.CharactersPage })));
+const CharacterDetailPage = React.lazy(() => import('./pages/characters/CharacterDetailPage').then(m => ({ default: m.CharacterDetailPage })));
+const CharacterGraphPage = React.lazy(() => import('./pages/characters/CharacterGraphPage').then(m => ({ default: m.CharacterGraphPage })));
+const NotesPage = React.lazy(() => import('./pages/notes/NotesPage').then(m => ({ default: m.NotesPage })));
+const NoteEditorPage = React.lazy(() => import('./pages/notes/NoteEditorPage').then(m => ({ default: m.NoteEditorPage })));
+const WikiPage = React.lazy(() => import('./pages/wiki/WikiPage').then(m => ({ default: m.WikiPage })));
+const TimelinePage = React.lazy(() => import('./pages/timeline/TimelinePage').then(m => ({ default: m.TimelinePage })));
+const ProjectSettingsPage = React.lazy(() => import('./pages/project-settings/ProjectSettingsPage').then(m => ({ default: m.ProjectSettingsPage })));
+const WikiGraphPage = React.lazy(() => import('./pages/wiki/WikiGraphPage').then(m => ({ default: m.WikiGraphPage })));
+const AppearanceSettingsPage = React.lazy(() => import('./pages/appearance/AppearanceSettingsPage').then(m => ({ default: m.AppearanceSettingsPage })));
+const DogmasPage = React.lazy(() => import('./pages/dogmas/DogmasPage').then(m => ({ default: m.DogmasPage })));
+const FactionsPage = React.lazy(() => import('./pages/factions/FactionsPage').then(m => ({ default: m.FactionsPage })));
+const FactionDetailPage = React.lazy(() => import('./pages/factions/FactionDetailPage').then(m => ({ default: m.FactionDetailPage })));
+const DynastiesPage = React.lazy(() => import('./pages/dynasties/DynastiesPage').then(m => ({ default: m.DynastiesPage })));
+const DynastyDetailPage = React.lazy(() => import('./pages/dynasties/DynastyDetailPage').then(m => ({ default: m.DynastyDetailPage })));
 const PageLoader = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
     <CircularProgress />
