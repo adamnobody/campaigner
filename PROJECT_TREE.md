@@ -1,10 +1,47 @@
+# Project Tree
+
+Автогенерируется скриптом `npm run tree`. Не редактировать вручную.
 
 ```
 campaigner
+├─ .cursor
+│  ├─ skills
+│  │  ├─ code-quality
+│  │  │  ├─ api-layer-discipline.md
+│  │  │  ├─ consistent-error-handling.md
+│  │  │  ├─ no-dead-code.md
+│  │  │  ├─ safe-refactor-guard.md
+│  │  │  └─ zustand-store-hygiene.md
+│  │  ├─ process
+│  │  │  ├─ honest-uncertainty.md
+│  │  │  ├─ plan-before-patch.md
+│  │  │  ├─ scope-creep-blocker.md
+│  │  │  └─ structured-patch-report.md
+│  │  ├─ ui
+│  │  │  ├─ anti-dribbblization-guard.md
+│  │  │  ├─ consistency-enforcer.md
+│  │  │  ├─ design-system-respecter.md
+│  │  │  ├─ frontend-ux-critic.md
+│  │  │  ├─ intentional-aesthetics.md
+│  │  │  ├─ page-visual-auditor.md
+│  │  │  └─ theme-hardcode-cleaner.md
+│  │  ├─ ui-ux-pro-max
+│  │  │  ├─ scripts
+│  │  │  │  ├─ __pycache__
+│  │  │  │  │  ├─ core.cpython-314.pyc
+│  │  │  │  │  ├─ design_system.cpython-314.pyc
+│  │  │  │  │  └─ search.cpython-314.pyc
+│  │  │  │  ├─ core.py
+│  │  │  │  ├─ design_system.py
+│  │  │  │  └─ search.py
+│  │  │  └─ SKILL.md
+│  │  └─ workflows
+│  │     └─ ui-rollout-planner.md
+│  └─ debug-316f21.log
 ├─ backend
-│  ├─ package.json
 │  ├─ src
 │  │  ├─ controllers
+│  │  │  ├─ ambition.controller.ts
 │  │  │  ├─ branch.controller.ts
 │  │  │  ├─ character-traits.controller.ts
 │  │  │  ├─ character.controller.ts
@@ -13,21 +50,30 @@ campaigner
 │  │  │  ├─ faction.controller.ts
 │  │  │  ├─ map.controller.ts
 │  │  │  ├─ note.controller.ts
+│  │  │  ├─ political-scale.controller.ts
 │  │  │  ├─ project.controller.ts
 │  │  │  ├─ search.controller.ts
 │  │  │  ├─ tag.controller.ts
 │  │  │  ├─ timeline.controller.ts
 │  │  │  └─ wiki.controller.ts
 │  │  ├─ db
-│  │  │  ├─ connection.ts
-│  │  │  ├─ migrate.ts
 │  │  │  ├─ migrations
 │  │  │  │  ├─ 001_create_maps_table.ts
 │  │  │  │  ├─ 002_tag_associations_dynasty.ts
 │  │  │  │  ├─ 003_dynasty_members_graph.ts
-│  │  │  │  └─ 004_faction_policies.ts
+│  │  │  │  ├─ 004_faction_policies.ts
+│  │  │  │  ├─ 005_faction_ambitions.ts
+│  │  │  │  ├─ 006_trait_and_ambition_exclusions.ts
+│  │  │  │  ├─ 007_faction_types_and_character_affiliations.ts
+│  │  │  │  ├─ 008_faction_kind_and_membership_sync.ts
+│  │  │  │  ├─ 009_faction_metrics.ts
+│  │  │  │  ├─ 010_political_scales.ts
+│  │  │  │  └─ 011_state_relations.ts
+│  │  │  ├─ seeds
+│  │  │  │  └─ politicalScalesSeedData.ts
+│  │  │  ├─ connection.ts
+│  │  │  ├─ migrate.ts
 │  │  │  └─ schema.ts
-│  │  ├─ index.ts
 │  │  ├─ middleware
 │  │  │  ├─ createUpload.ts
 │  │  │  ├─ errorHandler.ts
@@ -35,6 +81,7 @@ campaigner
 │  │  │  ├─ upload.ts
 │  │  │  └─ validateRequest.ts
 │  │  ├─ routes
+│  │  │  ├─ ambition.routes.ts
 │  │  │  ├─ branch.routes.ts
 │  │  │  ├─ character-traits.routes.ts
 │  │  │  ├─ character.routes.ts
@@ -44,6 +91,7 @@ campaigner
 │  │  │  ├─ faction.routes.ts
 │  │  │  ├─ map.routes.ts
 │  │  │  ├─ note.routes.ts
+│  │  │  ├─ political-scale.routes.ts
 │  │  │  ├─ project.routes.ts
 │  │  │  ├─ search.routes.ts
 │  │  │  ├─ tag.routes.ts
@@ -51,51 +99,109 @@ campaigner
 │  │  │  ├─ upload.routes.ts
 │  │  │  └─ wiki.routes.ts
 │  │  ├─ services
+│  │  │  ├─ dynasty
+│  │  │  │  ├─ dynasty.mappers.ts
+│  │  │  │  ├─ dynasty.service.ts
+│  │  │  │  ├─ dynasty.types.ts
+│  │  │  │  └─ index.ts
+│  │  │  ├─ faction
+│  │  │  │  ├─ faction-policy.service.ts
+│  │  │  │  ├─ faction.mappers.ts
+│  │  │  │  ├─ faction.service.ts
+│  │  │  │  ├─ faction.types.ts
+│  │  │  │  └─ index.ts
+│  │  │  ├─ map
+│  │  │  │  ├─ index.ts
+│  │  │  │  ├─ map.service.ts
+│  │  │  │  └─ map.types.ts
+│  │  │  ├─ political-scale
+│  │  │  │  ├─ index.ts
+│  │  │  │  ├─ political-scale-assignment.service.ts
+│  │  │  │  └─ political-scale.service.ts
+│  │  │  ├─ project
+│  │  │  │  ├─ assetHelpers.ts
+│  │  │  │  ├─ demoProject.payload.ts
+│  │  │  │  ├─ index.ts
+│  │  │  │  ├─ project.service.ts
+│  │  │  │  ├─ project.types.ts
+│  │  │  │  ├─ projectExport.service.ts
+│  │  │  │  └─ projectImport.service.ts
+│  │  │  ├─ ambition.service.ts
 │  │  │  ├─ branch.service.ts
 │  │  │  ├─ branchOverlay.service.ts
 │  │  │  ├─ character-trait.service.ts
 │  │  │  ├─ character.service.ts
 │  │  │  ├─ dogma.service.ts
-│  │  │  ├─ dynasty
-│  │  │  │  ├─ dynasty.mappers.ts
-│  │  │  │  └─ dynasty.types.ts
-│  │  │  ├─ dynasty.service.ts
-│  │  │  ├─ faction
-│  │  │  │  ├─ faction.mappers.ts
-│  │  │  │  └─ faction.types.ts
-│  │  │  ├─ faction.service.ts
-│  │  │  ├─ factionPolicy.service.ts
-│  │  │  ├─ map
-│  │  │  │  └─ map.types.ts
-│  │  │  ├─ map.service.ts
 │  │  │  ├─ note.service.ts
-│  │  │  ├─ project
-│  │  │  │  ├─ assetHelpers.ts
-│  │  │  │  ├─ demoProject.payload.ts
-│  │  │  │  ├─ project.types.ts
-│  │  │  │  ├─ projectExport.service.ts
-│  │  │  │  └─ projectImport.service.ts
-│  │  │  ├─ project.service.ts
 │  │  │  ├─ search.service.ts
 │  │  │  ├─ tag.service.ts
 │  │  │  ├─ timeline.service.ts
 │  │  │  └─ wiki.service.ts
-│  │  └─ utils
-│  │     ├─ apiResponse.ts
-│  │     ├─ asyncHandler.ts
-│  │     ├─ dbHelpers.ts
-│  │     └─ parseId.ts
-│  ├─ tsconfig.json
-│  └─ uploads
-│     └─ factions
-│        └─ faction-1774159645120-b70l7n.png
+│  │  ├─ utils
+│  │  │  ├─ apiResponse.ts
+│  │  │  ├─ asyncHandler.ts
+│  │  │  ├─ dbHelpers.ts
+│  │  │  └─ parseId.ts
+│  │  └─ index.ts
+│  ├─ .env.example
+│  ├─ package.json
+│  └─ tsconfig.json
+├─ chunks
+│  ├─ chunk_backend_api.txt
+│  ├─ chunk_backend_db.txt
+│  ├─ chunk_backend_services.txt
+│  ├─ chunk_backend_utils.txt
+│  ├─ chunk_frontend_api.txt
+│  ├─ chunk_frontend_components_ui.txt
+│  ├─ chunk_frontend_entry.txt
+│  ├─ chunk_frontend_hooks.txt
+│  ├─ chunk_frontend_pages_content.txt
+│  ├─ chunk_frontend_pages_entities.txt
+│  ├─ chunk_frontend_pages_system.txt
+│  ├─ chunk_frontend_pages_visualization.txt
+│  ├─ chunk_frontend_store.txt
+│  ├─ chunk_frontend_theme.txt
+│  ├─ chunk_shared.txt
+│  └─ chunk_uncategorized.txt
+├─ docs
+│  ├─ architecture
+│  │  └─ conventions.md
+│  └─ performance-regression-checklist.md
 ├─ electron
 │  ├─ icon.ico
 │  └─ main.js
 ├─ frontend
-│  ├─ index.html
-│  ├─ package.json
 │  ├─ public
+│  │  ├─ ambitions
+│  │  │  ├─ demokratizatsiya.svg
+│  │  │  ├─ diplomaticheskaya-gegemoniya.svg
+│  │  │  ├─ ekologicheskaya-garmoniya.svg
+│  │  │  ├─ industrializatsiya.svg
+│  │  │  ├─ izolyatsionizm.svg
+│  │  │  ├─ kontrol-morskikh-putey.svg
+│  │  │  ├─ kontrol-torgovykh-marshrutov.svg
+│  │  │  ├─ kulturnaya-assimilyatsiya.svg
+│  │  │  ├─ magicheskoe-prevoskhodstvo.svg
+│  │  │  ├─ mest.svg
+│  │  │  ├─ nakoplenie-bogatstva.svg
+│  │  │  ├─ nauchnyy-progress.svg
+│  │  │  ├─ obedinenie-naroda.svg
+│  │  │  ├─ osvobozhdenie-poraboshchennykh.svg
+│  │  │  ├─ podderzhanie-mira.svg
+│  │  │  ├─ poraboshchenie-sosedey.svg
+│  │  │  ├─ razvitie-iskusstv.svg
+│  │  │  ├─ religioznaya-ekspansiya.svg
+│  │  │  ├─ religioznoe-obrashchenie-sosedey.svg
+│  │  │  ├─ restavratsiya-starogo-poryadka.svg
+│  │  │  ├─ sozdanie-koloniy.svg
+│  │  │  ├─ sverzhenie-soseda.svg
+│  │  │  ├─ tekhnologicheskiy-progress.svg
+│  │  │  ├─ territorialnaya-ekspansiya.svg
+│  │  │  ├─ torgovaya-dominatsiya.svg
+│  │  │  ├─ ustanovlenie-tiranii.svg
+│  │  │  ├─ voennoe-prevoskhodstvo.svg
+│  │  │  ├─ vyzhivanie.svg
+│  │  │  └─ zashchita-traditsiy.svg
 │  │  ├─ fonts
 │  │  │  ├─ my-local-font.css
 │  │  │  └─ README.md
@@ -137,7 +243,7 @@ campaigner
 │  │     └─ zlost.jpg
 │  ├─ src
 │  │  ├─ api
-│  │  │  ├─ axiosClient.ts
+│  │  │  ├─ ambitions.ts
 │  │  │  ├─ branches.ts
 │  │  │  ├─ characters.ts
 │  │  │  ├─ characterTraits.ts
@@ -147,19 +253,19 @@ campaigner
 │  │  │  ├─ factions.ts
 │  │  │  ├─ maps.ts
 │  │  │  ├─ notes.ts
+│  │  │  ├─ politicalScales.ts
 │  │  │  ├─ projects.ts
 │  │  │  ├─ search.ts
 │  │  │  ├─ tags.ts
 │  │  │  ├─ timeline.ts
 │  │  │  ├─ types.ts
 │  │  │  └─ wiki.ts
-│  │  ├─ App.tsx
 │  │  ├─ components
 │  │  │  ├─ detail
 │  │  │  │  └─ CollapsibleSection.tsx
 │  │  │  ├─ forms
 │  │  │  │  └─ TagAutocompleteField.tsx
-│  │  │  ├─ Layout
+│  │  │  ├─ layout
 │  │  │  │  ├─ AppLayout.tsx
 │  │  │  │  ├─ Sidebar.tsx
 │  │  │  │  └─ TopBar.tsx
@@ -173,10 +279,12 @@ campaigner
 │  │  │  └─ ui
 │  │  │     ├─ ConfirmDialog.tsx
 │  │  │     ├─ DndButton.tsx
+│  │  │     ├─ EditExclusionsDialog.tsx
 │  │  │     ├─ EmptyState.tsx
 │  │  │     ├─ EntityHeroLayout.tsx
 │  │  │     ├─ EntityTabs.tsx
 │  │  │     ├─ ErrorBoundary.tsx
+│  │  │     ├─ ExclusionOverlay.tsx
 │  │  │     ├─ FloatingOrb.tsx
 │  │  │     ├─ GlassCard.tsx
 │  │  │     ├─ GlobalSnackbar.tsx
@@ -190,80 +298,106 @@ campaigner
 │  │  │  ├─ useHistory.ts
 │  │  │  ├─ useHotkeys.ts
 │  │  │  └─ useProjectScope.ts
-│  │  ├─ main.tsx
 │  │  ├─ pages
 │  │  │  ├─ appearance
-│  │  │  │  ├─ AppearanceLivePreview.tsx
-│  │  │  │  ├─ AppearancePrimitives.tsx
-│  │  │  │  ├─ fontPresets.ts
-│  │  │  │  └─ useDebouncedDraft.ts
-│  │  │  ├─ AppearanceSettingsPage.tsx
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ AppearanceLivePreview.tsx
+│  │  │  │  │  ├─ AppearancePrimitives.tsx
+│  │  │  │  │  ├─ fontPresets.ts
+│  │  │  │  │  └─ useDebouncedDraft.ts
+│  │  │  │  └─ AppearanceSettingsPage.tsx
 │  │  │  ├─ character
-│  │  │  │  ├─ CharacterTraitsTab.tsx
-│  │  │  │  ├─ CreateTraitDialog.tsx
-│  │  │  │  └─ TraitFlipCard.tsx
 │  │  │  ├─ character-graph
-│  │  │  │  └─ graphConstants.ts
-│  │  │  ├─ CharacterDetailPage.tsx
-│  │  │  ├─ CharacterGraphPage.tsx
-│  │  │  ├─ CharactersPage.tsx
+│  │  │  ├─ characters
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ CharacterTraitsTab.tsx
+│  │  │  │  │  ├─ CreateTraitDialog.tsx
+│  │  │  │  │  └─ TraitFlipCard.tsx
+│  │  │  │  ├─ graph
+│  │  │  │  │  └─ graphConstants.ts
+│  │  │  │  ├─ CharacterDetailPage.tsx
+│  │  │  │  ├─ CharacterGraphPage.tsx
+│  │  │  │  └─ CharactersPage.tsx
 │  │  │  ├─ dogma
-│  │  │  │  ├─ DogmaFormDialog.tsx
-│  │  │  │  ├─ DogmaListItem.tsx
-│  │  │  │  └─ dogmaStyles.ts
-│  │  │  ├─ DogmasPage.tsx
-│  │  │  ├─ DynastiesPage.tsx
+│  │  │  ├─ dogmas
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ DogmaFormDialog.tsx
+│  │  │  │  │  ├─ DogmaListItem.tsx
+│  │  │  │  │  └─ dogmaStyles.ts
+│  │  │  │  └─ DogmasPage.tsx
+│  │  │  ├─ dynasties
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ DynastyDialogs.tsx
+│  │  │  │  │  ├─ DynastyEventsTimeline.tsx
+│  │  │  │  │  └─ FamilyTree.tsx
+│  │  │  │  ├─ DynastiesPage.tsx
+│  │  │  │  └─ DynastyDetailPage.tsx
 │  │  │  ├─ dynasty
-│  │  │  │  ├─ DynastyDialogs.tsx
-│  │  │  │  ├─ DynastyEventsTimeline.tsx
-│  │  │  │  └─ FamilyTree.tsx
-│  │  │  ├─ DynastyDetailPage.tsx
 │  │  │  ├─ faction
-│  │  │  │  └─ FactionDialogs.tsx
-│  │  │  ├─ FactionDetailPage.tsx
-│  │  │  ├─ FactionsPage.tsx
+│  │  │  ├─ factions
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ AmbitionFlipCard.tsx
+│  │  │  │  │  ├─ CreateAmbitionDialog.tsx
+│  │  │  │  │  ├─ CustomMetricsEditor.tsx
+│  │  │  │  │  ├─ FactionAmbitionsTab.tsx
+│  │  │  │  │  ├─ FactionCompareDialog.tsx
+│  │  │  │  │  ├─ FactionDialogs.tsx
+│  │  │  │  │  ├─ FactionPoliticalScalesSection.tsx
+│  │  │  │  │  └─ MetricInput.tsx
+│  │  │  │  ├─ FactionDetailPage.tsx
+│  │  │  │  └─ FactionsPage.tsx
 │  │  │  ├─ home
-│  │  │  │  ├─ CreateProjectDialog.tsx
-│  │  │  │  ├─ HomeBackground.tsx
-│  │  │  │  └─ HomePrimitives.tsx
-│  │  │  ├─ HomePage.tsx
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ CreateProjectDialog.tsx
+│  │  │  │  │  ├─ HomeBackground.tsx
+│  │  │  │  │  └─ HomePrimitives.tsx
+│  │  │  │  └─ HomePage.tsx
 │  │  │  ├─ map
-│  │  │  │  ├─ MapMarkerDialog.tsx
-│  │  │  │  ├─ MapMarkerOnMap.tsx
-│  │  │  │  ├─ MapMarkerPanel.tsx
-│  │  │  │  ├─ MapTerritoryDialog.tsx
-│  │  │  │  ├─ MapTerritoryPanel.tsx
-│  │  │  │  ├─ MapTerritorySvg.tsx
-│  │  │  │  ├─ MapToolbar.tsx
-│  │  │  │  ├─ mapUtils.ts
-│  │  │  │  ├─ useMapData.ts
-│  │  │  │  ├─ useMapInteractions.ts
-│  │  │  │  ├─ useMapMarkerCrud.ts
-│  │  │  │  ├─ useMapNavigation.ts
-│  │  │  │  ├─ useMapTerritoryCrud.ts
-│  │  │  │  ├─ useMapTerritoryDrawing.ts
-│  │  │  │  └─ useMapViewport.ts
-│  │  │  ├─ MapPage.tsx
+│  │  │  ├─ maps
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ MapMarkerDialog.tsx
+│  │  │  │  │  ├─ MapMarkerOnMap.tsx
+│  │  │  │  │  ├─ MapMarkerPanel.tsx
+│  │  │  │  │  ├─ MapTerritoryDialog.tsx
+│  │  │  │  │  ├─ MapTerritoryPanel.tsx
+│  │  │  │  │  ├─ MapTerritorySvg.tsx
+│  │  │  │  │  ├─ MapToolbar.tsx
+│  │  │  │  │  └─ mapUtils.ts
+│  │  │  │  ├─ hooks
+│  │  │  │  │  ├─ useMapData.ts
+│  │  │  │  │  ├─ useMapInteractions.ts
+│  │  │  │  │  ├─ useMapMarkerCrud.ts
+│  │  │  │  │  ├─ useMapNavigation.ts
+│  │  │  │  │  ├─ useMapTerritoryCrud.ts
+│  │  │  │  │  ├─ useMapTerritoryDrawing.ts
+│  │  │  │  │  └─ useMapViewport.ts
+│  │  │  │  └─ MapPage.tsx
 │  │  │  ├─ note-editor
-│  │  │  │  ├─ CreateWikiLinkDialog.tsx
-│  │  │  │  ├─ InsertWikiLinkDialog.tsx
-│  │  │  │  ├─ MarkdownPreview.tsx
-│  │  │  │  ├─ NoteEditorMarkdownToolbar.tsx
-│  │  │  │  ├─ NoteEditorWikiSidebar.tsx
-│  │  │  │  └─ ToolbarButton.tsx
-│  │  │  ├─ NoteEditorPage.tsx
-│  │  │  ├─ NotesPage.tsx
-│  │  │  ├─ ProjectSettingsPage.tsx
-│  │  │  ├─ TimelinePage.tsx
-│  │  │  ├─ wiki
-│  │  │  │  ├─ WikiArticleCard.tsx
-│  │  │  │  ├─ WikiDialogs.tsx
-│  │  │  │  └─ wikiPreviewText.ts
-│  │  │  ├─ WikiGraphPage.tsx
-│  │  │  └─ WikiPage.tsx
+│  │  │  ├─ notes
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ CreateWikiLinkDialog.tsx
+│  │  │  │  │  ├─ InsertWikiLinkDialog.tsx
+│  │  │  │  │  ├─ MarkdownPreview.tsx
+│  │  │  │  │  ├─ NoteEditorMarkdownToolbar.tsx
+│  │  │  │  │  ├─ NoteEditorWikiSidebar.tsx
+│  │  │  │  │  └─ ToolbarButton.tsx
+│  │  │  │  ├─ NoteEditorPage.tsx
+│  │  │  │  └─ NotesPage.tsx
+│  │  │  ├─ project-settings
+│  │  │  │  └─ ProjectSettingsPage.tsx
+│  │  │  ├─ timeline
+│  │  │  │  └─ TimelinePage.tsx
+│  │  │  └─ wiki
+│  │  │     ├─ components
+│  │  │     │  ├─ WikiArticleCard.tsx
+│  │  │     │  ├─ WikiDialogs.tsx
+│  │  │     │  └─ wikiPreviewText.ts
+│  │  │     ├─ WikiGraphPage.tsx
+│  │  │     └─ WikiPage.tsx
 │  │  ├─ store
 │  │  │  ├─ branchStorage.ts
 │  │  │  ├─ debouncedStorage.ts
+│  │  │  ├─ useAmbitionsStore.ts
 │  │  │  ├─ useBranchStore.ts
 │  │  │  ├─ useCharacterStore.ts
 │  │  │  ├─ useCharacterTraitsStore.ts
@@ -271,6 +405,7 @@ campaigner
 │  │  │  ├─ useDynastyStore.ts
 │  │  │  ├─ useFactionStore.ts
 │  │  │  ├─ useMapStore.ts
+│  │  │  ├─ useMapTerritoriesRefreshStore.ts
 │  │  │  ├─ useNoteStore.ts
 │  │  │  ├─ useOnboardingStore.ts
 │  │  │  ├─ usePreferencesStore.ts
@@ -284,57 +419,60 @@ campaigner
 │  │  │  ├─ AppThemeProvider.tsx
 │  │  │  ├─ componentOverrides.ts
 │  │  │  ├─ createAppTheme.ts
+│  │  │  ├─ interfaceStyles.ts
 │  │  │  ├─ muiTheme.ts
 │  │  │  ├─ presets.ts
 │  │  │  └─ tokens.ts
-│  │  └─ utils
-│  │     ├─ error.ts
-│  │     └─ uploadAssetUrl.ts
+│  │  ├─ utils
+│  │  │  ├─ error.ts
+│  │  │  ├─ exclusions.ts
+│  │  │  └─ uploadAssetUrl.ts
+│  │  ├─ App.tsx
+│  │  └─ main.tsx
+│  ├─ index.html
+│  ├─ package.json
 │  ├─ tsconfig.json
+│  ├─ tsconfig.tsbuildinfo
 │  └─ vite.config.ts
-├─ LICENSE
-├─ package.json
-├─ README.md
 ├─ scripts
-│  ├─ chunker.mjs
 │  ├─ db
 │  │  ├─ explain-hot.mjs
 │  │  └─ seed-demo.mjs
-│  ├─ doctor.mjs
 │  ├─ perf
+│  │  ├─ reports
+│  │  │  ├─ release-after.json
+│  │  │  └─ release-before.json
 │  │  ├─ baseline.mjs
-│  │  ├─ compare.mjs
-│  │  └─ reports
-│  │     ├─ release-after.json
-│  │     └─ release-before.json
+│  │  └─ compare.mjs
 │  ├─ smoke
+│  │  ├─ scenarios
+│  │  │  ├─ characters.mjs
+│  │  │  ├─ dogmas.mjs
+│  │  │  ├─ dynasties.mjs
+│  │  │  ├─ factions.mjs
+│  │  │  ├─ health.mjs
+│  │  │  ├─ maps.mjs
+│  │  │  ├─ notes.mjs
+│  │  │  ├─ perf.mjs
+│  │  │  ├─ project-transfer.mjs
+│  │  │  ├─ projects.mjs
+│  │  │  ├─ search.mjs
+│  │  │  ├─ tags.mjs
+│  │  │  ├─ timeline.mjs
+│  │  │  └─ wiki.mjs
 │  │  ├─ cleanup.mjs
 │  │  ├─ context.mjs
 │  │  ├─ frontend.mjs
 │  │  ├─ index.mjs
-│  │  ├─ lib.mjs
-│  │  └─ scenarios
-│  │     ├─ characters.mjs
-│  │     ├─ dogmas.mjs
-│  │     ├─ dynasties.mjs
-│  │     ├─ factions.mjs
-│  │     ├─ health.mjs
-│  │     ├─ maps.mjs
-│  │     ├─ notes.mjs
-│  │     ├─ perf.mjs
-│  │     ├─ project-transfer.mjs
-│  │     ├─ projects.mjs
-│  │     ├─ search.mjs
-│  │     ├─ tags.mjs
-│  │     ├─ timeline.mjs
-│  │     └─ wiki.mjs
+│  │  └─ lib.mjs
+│  ├─ chunker.mjs
+│  ├─ doctor.mjs
+│  ├─ generate-tree.mjs
 │  └─ smoke-runner.mjs
 ├─ shared
-│  ├─ package.json
 │  ├─ src
-│  │  ├─ constants.ts
-│  │  ├─ index.ts
 │  │  ├─ schemas
+│  │  │  ├─ ambition.schema.ts
 │  │  │  ├─ branch.schema.ts
 │  │  │  ├─ character-trait.schema.ts
 │  │  │  ├─ character.schema.ts
@@ -346,13 +484,24 @@ campaigner
 │  │  │  ├─ map.schema.ts
 │  │  │  ├─ note.schema.ts
 │  │  │  ├─ policy.schema.ts
+│  │  │  ├─ political-scale.schema.ts
 │  │  │  ├─ project.schema.ts
 │  │  │  ├─ timeline.schema.ts
 │  │  │  └─ wiki.schema.ts
-│  │  └─ types
-│  │     └─ index.ts
-│  └─ tsconfig.json
+│  │  ├─ types
+│  │  │  └─ index.ts
+│  │  ├─ constants.ts
+│  │  └─ index.ts
+│  ├─ package.json
+│  ├─ tsconfig.json
+│  └─ tsconfig.tsbuildinfo
+├─ .gitignore
+├─ AGENTS.md
+├─ LICENSE
+├─ package-lock.json
+├─ package.json
+├─ README.md
 ├─ start.bat
+├─ start.log
 └─ tsconfig.json
-
 ```
