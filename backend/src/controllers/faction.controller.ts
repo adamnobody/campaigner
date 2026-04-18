@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express';
-import { FactionService } from '../services/faction.service.js';
-import { FactionPolicyService } from '../services/factionPolicy.service.js';
+import { FactionService, FactionPolicyService } from '../services/faction/index.js';
 import { TagService } from '../services/tag.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';

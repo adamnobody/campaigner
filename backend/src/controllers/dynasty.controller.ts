@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { DynastyService } from '../services/dynasty.service.js';
+import { DynastyService } from '../services/dynasty/index.js';
 import { TagService } from '../services/tag.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';

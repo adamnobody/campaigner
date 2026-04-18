@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection.js';
-import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
-import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
+import { getDb } from '../../db/connection.js';
+import { BadRequestError, NotFoundError } from '../../middleware/errorHandler.js';
+import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../../utils/dbHelpers.js';
 import { FACTION_METRICS, STATE_METRICS } from '@campaigner/shared';
 import type {
   FactionFilters,
@@ -22,7 +22,7 @@ import type {
   CustomMetricInput,
   CustomMetricRow,
   CompareFactionResult,
-} from './faction/faction.types.js';
+} from './faction.types.js';
 import {
   FACTION_UPDATE_MAP,
   RANK_UPDATE_MAP,
@@ -35,7 +35,7 @@ import {
   toCustomMetric,
   MEMBER_SELECT,
   RELATION_SELECT,
-} from './faction/faction.mappers.js';
+} from './faction.mappers.js';
 
 export class FactionService {
   private static readonly DEFAULT_MEMBER_ROLE = 'Член фракции';

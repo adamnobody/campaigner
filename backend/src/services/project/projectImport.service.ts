@@ -1,7 +1,7 @@
 import { getDb } from '../../db/connection.js';
 import { ValidationError } from '../../middleware/errorHandler.js';
-import { MapService } from '../map.service.js';
-import { ProjectService } from '../project.service.js';
+import { MapService } from '../map/index.js';
+import { ProjectService } from './project.service.js';
 import { saveBase64ToFile } from './assetHelpers.js';
 import type { ImportedProjectPayload } from './project.types.js';
 import type { Project } from '@campaigner/shared';

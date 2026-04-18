@@ -1,6 +1,6 @@
-import { getDb } from '../db/connection.js';
-import { NotFoundError } from '../middleware/errorHandler.js';
-import { buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
+import { getDb } from '../../db/connection.js';
+import { NotFoundError } from '../../middleware/errorHandler.js';
+import { buildUpdateQuery, ensureEntityExists } from '../../utils/dbHelpers.js';
 import type {
   DynastyFilters,
   CountRow,
@@ -17,7 +17,7 @@ import type {
   DynastyFamilyLinkCreateData,
   DynastyEventCreateData,
   DynastyEventUpdateData,
-} from './dynasty/dynasty.types.js';
+} from './dynasty.types.js';
 import {
   DYNASTY_UPDATE_MAP,
   MEMBER_UPDATE_MAP,
@@ -26,7 +26,7 @@ import {
   mapDynastyMember,
   mapDynastyFamilyLink,
   mapDynastyEvent,
-} from './dynasty/dynasty.mappers.js';
+} from './dynasty.mappers.js';
 
 export class DynastyService {
   static getAll(projectId: number, params: DynastyFilters = {}) {

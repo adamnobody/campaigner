@@ -1,13 +1,13 @@
-import { getDb } from '../db/connection.js';
+import { getDb } from '../../db/connection.js';
 import { CreateProject, UpdateProject, Project } from '@campaigner/shared';
-import { NotFoundError } from '../middleware/errorHandler.js';
-import { MapService } from './map.service.js';
-import { CharacterTraitService } from './character-trait.service.js';
-import { buildUpdateQuery } from '../utils/dbHelpers.js';
-import { exportProject } from './project/projectExport.service.js';
-import { importProject } from './project/projectImport.service.js';
+import { NotFoundError } from '../../middleware/errorHandler.js';
+import { MapService } from '../map/index.js';
+import { CharacterTraitService } from '../character-trait.service.js';
+import { buildUpdateQuery } from '../../utils/dbHelpers.js';
+import { exportProject } from './projectExport.service.js';
+import { importProject } from './projectImport.service.js';
 import type { ImportedProjectPayload } from '@campaigner/shared';
-import { demoProjectPayload } from './project/demoProject.payload.js';
+import { demoProjectPayload } from './demoProject.payload.js';
 
 const PROJECT_UPDATE_MAP: Record<string, string> = {
   name: 'name',

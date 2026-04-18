@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { mapService } from '../services/map.service.js';
+import { mapService } from '../services/map/index.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
