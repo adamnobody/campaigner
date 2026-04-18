@@ -12,3 +12,4 @@ export * from './branch.schema.js';
 export * from './policy.schema.js';
 export * from './character-trait.schema.js';
 export * from './ambition.schema.js';
+export * from './political-scale.schema.js';

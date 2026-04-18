@@ -150,6 +150,30 @@ export const FACTION_KIND_ICONS: Record<string, string> = {
   faction: '👥',
 };
 
+/** Категории указов (faction_policies), UI: «Указы». */
+export const FACTION_DECREE_CATEGORY_LABELS: Record<string, string> = {
+  economy: 'Экономика',
+  military: 'Военное',
+  social: 'Социальное',
+  religion: 'Религия',
+  foreign: 'Внешняя политика',
+  other: 'Прочее',
+};
+
+export const STATE_POLITICAL_SCALE_GROUP_LABELS: Record<string, string> = {
+  power: 'Власть и устройство',
+  society: 'Общество',
+  economy: 'Экономика',
+  foreign: 'Внешняя политика',
+};
+
+export const FACTION_POLITICAL_SCALE_GROUP_LABELS: Record<string, string> = {
+  authority: 'Отношение к власти',
+  ideology: 'Идеология',
+  methods: 'Методы',
+  base: 'База',
+};
+
 export const FACTION_TYPES = [
   'guild',
   'order',
