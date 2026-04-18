@@ -40,6 +40,7 @@ export const MapPage: React.FC = () => {
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
   }), shallow);
+  const confirmDialogOpen = useUIStore((state) => state.confirmDialog.open);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -202,6 +203,34 @@ export const MapPage: React.FC = () => {
     showConfirmDialog,
   });
 
+  const handleStartEditingPointsFromPanel = useCallback(
+    (territory: Territory) => {
+      if (mode === 'draw_territory') {
+        const hasDraft = drawingPoints.length > 0 || drawingCompletedRings.length > 0;
+        if (!hasDraft) {
+          setMode('select');
+          startEditingPoints(territory);
+          return;
+        }
+        showConfirmDialog('Отменить рисование?', 'Отменить начатое рисование территории?', () => {
+          clearDrawingDraft();
+          setMode('select');
+          startEditingPoints(territory);
+        });
+        return;
+      }
+      startEditingPoints(territory);
+    },
+    [
+      mode,
+      drawingPoints.length,
+      drawingCompletedRings.length,
+      startEditingPoints,
+      clearDrawingDraft,
+      showConfirmDialog,
+    ],
+  );
+
   const handleDrawClosureHoverChange = useCallback((active: boolean) => {
     setDrawClosureHover(active);
   }, []);
@@ -250,6 +279,7 @@ export const MapPage: React.FC = () => {
     handleMarkerDragEnd,
     editingTerritoryPoints,
     setEditingTerritoryPoints,
+    cancelEditingPoints,
     panelOpen,
     setPanelOpen,
     panelType,
@@ -261,6 +291,29 @@ export const MapPage: React.FC = () => {
     setPendingNewTerritoryRings,
     showSnackbar,
   });
+
+  useEffect(() => {
+    if (!editingTerritoryPoints) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== 'Escape') return;
+      if (e.repeat) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
+        return;
+      }
+      if (territoryDialogOpen || dialogOpen || confirmDialogOpen) return;
+      e.preventDefault();
+      cancelEditingPoints();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    editingTerritoryPoints,
+    territoryDialogOpen,
+    dialogOpen,
+    confirmDialogOpen,
+    cancelEditingPoints,
+  ]);
 
   const notesMap = useMemo(() => {
     const m = new Map<number, NoteOption>();
@@ -455,23 +508,28 @@ export const MapPage: React.FC = () => {
         {editingTerritoryPoints && (
           <Box sx={{
             position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 30, display: 'flex', alignItems: 'center', gap: 1.5,
+            zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75,
             backgroundColor: (theme) => alpha(theme.palette.background.paper, 0.95), padding: '10px 20px',
             borderRadius: 2, border: (theme) => `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
             backdropFilter: 'blur(8px)', boxShadow: (theme) => `0 4px 20px ${alpha(theme.palette.common.black, 0.5)}`,
           }}>
-            <Typography variant="body2" sx={{ color: 'warning.main', mr: 1, whiteSpace: 'nowrap' }}>
-              ✏️ {editingTerritoryPoints.name} — {editingTerritoryPoints.rings.length} контура, {territoryTotalPointCount(editingTerritoryPoints)} точек
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ color: 'warning.main', mr: 1, whiteSpace: 'nowrap' }}>
+                ✏️ {editingTerritoryPoints.name} — {editingTerritoryPoints.rings.length} контура, {territoryTotalPointCount(editingTerritoryPoints)} точек
+              </Typography>
+              <Button size="small" variant="outlined" onClick={cancelEditingPoints}
+                sx={{ borderColor: (theme) => alpha(theme.palette.text.primary, 0.2), color: 'text.secondary',
+                  '&:hover': { borderColor: (theme) => alpha(theme.palette.text.primary, 0.4) } }}>
+                Отмена
+              </Button>
+              <DndButton size="small" variant="contained" onClick={saveEditingPoints}
+                sx={{ minWidth: 100 }}>
+                Сохранить
+              </DndButton>
+            </Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+              Esc — отмена
             </Typography>
-            <Button size="small" variant="outlined" onClick={cancelEditingPoints}
-              sx={{ borderColor: (theme) => alpha(theme.palette.text.primary, 0.2), color: 'text.secondary',
-                '&:hover': { borderColor: (theme) => alpha(theme.palette.text.primary, 0.4) } }}>
-              Отмена
-            </Button>
-            <DndButton size="small" variant="contained" onClick={saveEditingPoints}
-              sx={{ minWidth: 100 }}>
-              Сохранить
-            </DndButton>
           </Box>
         )}
 
@@ -519,7 +577,7 @@ export const MapPage: React.FC = () => {
               }}
               onEditTerritory={handleEditTerritory}
               onDeleteTerritory={handleDeleteTerritory}
-              onStartEditingPoints={startEditingPoints}
+              onStartEditingPoints={handleStartEditingPointsFromPanel}
             />
           </Box>
         )}

@@ -34,6 +34,7 @@ type UseMapInteractionsArgs = {
   handleMarkerDragEnd: () => Promise<void>;
   editingTerritoryPoints: Territory | null;
   setEditingTerritoryPoints: React.Dispatch<React.SetStateAction<Territory | null>>;
+  cancelEditingPoints: () => void;
   panelOpen: boolean;
   setPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
   panelType: 'marker' | 'territory';
@@ -74,6 +75,7 @@ export function useMapInteractions({
   handleMarkerDragEnd,
   editingTerritoryPoints,
   setEditingTerritoryPoints,
+  cancelEditingPoints,
   panelOpen,
   setPanelOpen,
   panelType,
@@ -83,6 +85,7 @@ export function useMapInteractions({
   selectedTerritory,
   setSelectedTerritory,
   setPendingNewTerritoryRings,
+  showSnackbar,
 }: UseMapInteractionsArgs) {
   const [draggingTerritoryPoint, setDraggingTerritoryPoint] = useState<TerritoryPointDragPayload | null>(null);
   const [drawPointerPercent, setDrawPointerPercent] = useState<{ x: number; y: number } | null>(null);
@@ -215,6 +218,11 @@ export function useMapInteractions({
   const handleTerritoryClick = useCallback((e: React.MouseEvent, territory: Territory) => {
     e.stopPropagation();
     if (mode !== 'select') return;
+    if (editingTerritoryPoints) {
+      if (territory.id === editingTerritoryPoints.id) return;
+      showSnackbar('Сначала завершите редактирование формы', 'warning');
+      return;
+    }
     if (e.shiftKey && imgRef.current) {
       const rect = imgRef.current.getBoundingClientRect();
       const px = ((e.clientX - rect.left) / rect.width) * 100;
@@ -226,7 +234,17 @@ export function useMapInteractions({
     setSelectedMarker(null);
     setPanelType('territory');
     setPanelOpen(true);
-  }, [imgRef, mode, openNewMarkerDialogAt, setPanelOpen, setPanelType, setSelectedMarker, setSelectedTerritory]);
+  }, [
+    editingTerritoryPoints,
+    imgRef,
+    mode,
+    openNewMarkerDialogAt,
+    setPanelOpen,
+    setPanelType,
+    setSelectedMarker,
+    setSelectedTerritory,
+    showSnackbar,
+  ]);
 
   const handleMapClick = useCallback((e: React.MouseEvent) => {
     if (isPanningRef.current || didDragRef.current || transitioning) return;
@@ -251,6 +269,19 @@ export function useMapInteractions({
       return;
     }
 
+    if (mode === 'select' && editingTerritoryPoints) {
+      if (!e.shiftKey) {
+        for (let i = territories.length - 1; i >= 0; i -= 1) {
+          if (isPointInTerritory(px, py, territories[i])) {
+            if (territories[i].id === editingTerritoryPoints.id) return;
+            showSnackbar('Сначала завершите редактирование формы', 'warning');
+            return;
+          }
+        }
+      }
+      return;
+    }
+
     if (!e.shiftKey) {
       for (let i = territories.length - 1; i >= 0; i -= 1) {
         if (isPointInTerritory(px, py, territories[i])) {
@@ -269,6 +300,7 @@ export function useMapInteractions({
     currentMap,
     didDragRef,
     drawingPoints,
+    editingTerritoryPoints,
     imgRef,
     isPanningRef,
     mode,
@@ -278,6 +310,7 @@ export function useMapInteractions({
     setPanelType,
     setSelectedMarker,
     setSelectedTerritory,
+    showSnackbar,
     territories,
     transitioning,
     zoomDisplay,
@@ -294,10 +327,17 @@ export function useMapInteractions({
     setMode('select');
   }, [clearDrawingDraft]);
 
-  const handleMapModeChange = useCallback((nextMode: MapMode) => {
-    setMode(nextMode);
-    clearDrawingDraft();
-  }, [clearDrawingDraft]);
+  const handleMapModeChange = useCallback(
+    (nextMode: MapMode) => {
+      if (nextMode === 'draw_territory' && editingTerritoryPoints) {
+        cancelEditingPoints();
+        showSnackbar('Редактирование формы отменено', 'info');
+      }
+      setMode(nextMode);
+      clearDrawingDraft();
+    },
+    [cancelEditingPoints, clearDrawingDraft, editingTerritoryPoints, setMode, showSnackbar],
+  );
 
   const closePanel = useCallback(() => {
     setPanelOpen(false);
