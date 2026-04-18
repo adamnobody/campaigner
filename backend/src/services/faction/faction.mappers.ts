@@ -27,6 +27,8 @@ export const FACTION_UPDATE_MAP: Record<string, string> = {
   disbandedDate: 'disbanded_date',
   parentFactionId: 'parent_faction_id',
   sortOrder: 'sort_order',
+  rulingDynastyId: 'ruling_dynasty_id',
+  rulerCharacterId: 'ruler_character_id',
 };
 
 export const RANK_UPDATE_MAP: Record<string, string> = {
@@ -85,6 +87,8 @@ export function toFaction(row: FactionRow) {
     foundedDate: row.founded_date || '',
     disbandedDate: row.disbanded_date || '',
     parentFactionId: row.parent_faction_id || null,
+    rulingDynastyId: row.ruling_dynasty_id ?? null,
+    rulerCharacterId: row.ruler_character_id ?? null,
     sortOrder: row.sort_order || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -332,6 +332,37 @@ export class MapService {
 
     getDb().prepare('DELETE FROM map_territories WHERE id = ?').run(territoryId);
   }
+
+  /** Все территории проекта с привязкой к фракции (для UI государства). */
+  listTerritorySummariesForProject(projectId: number): Array<{
+    id: number;
+    name: string;
+    mapId: number;
+    mapName: string;
+    factionId: number | null;
+    occupantName: string | null;
+    occupantKind: 'state' | 'faction' | null;
+  }> {
+    return getDb().prepare(`
+      SELECT mt.id, mt.name, mt.map_id as mapId, m.name as mapName,
+        mt.faction_id as factionId,
+        f.name as occupantName,
+        f.kind as occupantKind
+      FROM map_territories mt
+      JOIN maps m ON mt.map_id = m.id
+      LEFT JOIN factions f ON mt.faction_id = f.id
+      WHERE m.project_id = ?
+      ORDER BY m.name COLLATE NOCASE, mt.name COLLATE NOCASE
+    `).all(projectId) as Array<{
+      id: number;
+      name: string;
+      mapId: number;
+      mapName: string;
+      factionId: number | null;
+      occupantName: string | null;
+      occupantKind: 'state' | 'faction' | null;
+    }>;
+  }
 }
 
 export const mapService = new MapService();

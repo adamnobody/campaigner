@@ -27,6 +27,7 @@ import {
   createMarkerSchema,
   updateMarkerSchema,
   mapTerritorySchema,
+  mapTerritorySummarySchema,
   createTerritorySchema,
   updateTerritorySchema,
 } from '../schemas/map.schema.js';
@@ -143,6 +144,7 @@ export type MapMarker = z.infer<typeof mapMarkerSchema>;
 export type CreateMarker = z.input<typeof createMarkerSchema>;
 export type UpdateMarker = z.input<typeof updateMarkerSchema>;
 export type MapTerritory = z.infer<typeof mapTerritorySchema>;
+export type MapTerritorySummary = z.infer<typeof mapTerritorySummarySchema>;
 export type CreateTerritory = z.input<typeof createTerritorySchema>;
 export type UpdateTerritory = z.input<typeof updateTerritorySchema>;
 
@@ -547,6 +549,8 @@ export interface Faction {
   goals?: string;
   headquarters?: string;
   territory?: string;
+  rulingDynastyId?: number | null;
+  rulerCharacterId?: number | null;
   treasury?: number | null;
   population?: number | null;
   armySize?: number | null;
@@ -575,6 +579,9 @@ export interface Faction {
   memberCount?: number;
   parentFaction?: { id: number; name: string };
   childFactions?: { id: number; name: string }[];
+  rulingDynasty?: { id: number; name: string } | null;
+  ruler?: { id: number; name: string } | null;
+  territories?: Array<{ id: number; name: string }>;
 }
 
 export interface FactionRank {

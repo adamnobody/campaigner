@@ -2,36 +2,47 @@ import { z } from 'zod';
 
 export const factionEntityTypeSchema = z.enum(['state', 'faction']);
 
-export const createFactionSchema = z.object({
-  projectId: z.number().int().positive(),
-  name: z.string().min(1).max(200),
-  kind: factionEntityTypeSchema.default('faction'),
-  type: z.string().max(50).nullable().optional(),
-  motto: z.string().max(500).optional(),
-  description: z.string().max(10000).optional(),
-  history: z.string().max(10000).optional(),
-  goals: z.string().max(5000).optional(),
-  headquarters: z.string().max(500).optional(),
-  territory: z.string().max(2000).optional(),
-  treasury: z.number().int().nullable().optional(),
-  population: z.number().int().nullable().optional(),
-  armySize: z.number().int().nullable().optional(),
-  navySize: z.number().int().nullable().optional(),
-  territoryKm2: z.number().int().nullable().optional(),
-  annualIncome: z.number().int().nullable().optional(),
-  annualExpenses: z.number().int().nullable().optional(),
-  membersCount: z.number().int().nullable().optional(),
-  influence: z.number().int().min(0).max(100).nullable().optional(),
-  status: z.string().max(50).default('active'),
-  color: z.string().max(50).optional(),
-  secondaryColor: z.string().max(50).optional(),
-  foundedDate: z.string().max(100).optional(),
-  disbandedDate: z.string().max(100).optional(),
-  parentFactionId: z.number().int().positive().nullable().optional(),
-  sortOrder: z.number().int().default(0),
-});
+const factionStateRelationFields = {
+  rulingDynastyId: z.number().int().positive().nullable().optional(),
+  rulerCharacterId: z.number().int().positive().nullable().optional(),
+  /** Синхронизация `map_territories.faction_id` для государства; только при `kind: 'state'`. */
+  territoryIds: z.array(z.number().int().positive()).optional(),
+};
 
-export const updateFactionSchema = createFactionSchema.partial().omit({ projectId: true });
+const factionCreateBaseSchema = z
+  .object({
+    projectId: z.number().int().positive(),
+    name: z.string().min(1).max(200),
+    kind: factionEntityTypeSchema.default('faction'),
+    type: z.string().max(50).nullable().optional(),
+    motto: z.string().max(500).optional(),
+    description: z.string().max(10000).optional(),
+    history: z.string().max(10000).optional(),
+    goals: z.string().max(5000).optional(),
+    headquarters: z.string().max(500).optional(),
+    territory: z.string().max(2000).optional(),
+    treasury: z.number().int().nullable().optional(),
+    population: z.number().int().nullable().optional(),
+    armySize: z.number().int().nullable().optional(),
+    navySize: z.number().int().nullable().optional(),
+    territoryKm2: z.number().int().nullable().optional(),
+    annualIncome: z.number().int().nullable().optional(),
+    annualExpenses: z.number().int().nullable().optional(),
+    membersCount: z.number().int().nullable().optional(),
+    influence: z.number().int().min(0).max(100).nullable().optional(),
+    status: z.string().max(50).default('active'),
+    color: z.string().max(50).optional(),
+    secondaryColor: z.string().max(50).optional(),
+    foundedDate: z.string().max(100).optional(),
+    disbandedDate: z.string().max(100).optional(),
+    parentFactionId: z.number().int().positive().nullable().optional(),
+    sortOrder: z.number().int().default(0),
+  })
+  .extend(factionStateRelationFields);
+
+export const createFactionSchema = factionCreateBaseSchema;
+
+export const updateFactionSchema = factionCreateBaseSchema.partial().omit({ projectId: true });
 
 export const createFactionRankSchema = z.object({
   factionId: z.number().int().positive(),

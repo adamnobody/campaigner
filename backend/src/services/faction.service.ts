@@ -82,6 +82,85 @@ export class FactionService {
     }
   }
 
+  private static validateStateRelationsInput(
+    db: ReturnType<typeof getDb>,
+    projectId: number,
+    data: { rulingDynastyId?: number | null; rulerCharacterId?: number | null }
+  ): void {
+    if (data.rulingDynastyId != null) {
+      const row = db.prepare(`
+        SELECT id FROM dynasties WHERE id = ? AND project_id = ?
+      `).get(data.rulingDynastyId, projectId) as { id: number } | undefined;
+      if (!row) {
+        throw new BadRequestError('Dynasty not found in this project');
+      }
+    }
+    if (data.rulerCharacterId != null) {
+      const row = db.prepare(`
+        SELECT id FROM characters WHERE id = ? AND project_id = ?
+      `).get(data.rulerCharacterId, projectId) as { id: number } | undefined;
+      if (!row) {
+        throw new BadRequestError('Character not found in this project');
+      }
+    }
+  }
+
+  private static syncStateTerritories(
+    db: ReturnType<typeof getDb>,
+    projectId: number,
+    stateId: number,
+    territoryIds: number[]
+  ): void {
+    const ids = Array.from(new Set(territoryIds));
+    for (const tid of ids) {
+      const row = db.prepare(`
+        SELECT mt.id
+        FROM map_territories mt
+        JOIN maps m ON mt.map_id = m.id
+        WHERE mt.id = ? AND m.project_id = ?
+      `).get(tid, projectId) as { id: number } | undefined;
+      if (!row) {
+        throw new BadRequestError(`Territory ${tid} not found in this project`);
+      }
+    }
+
+    const previousRows = db.prepare(`
+      SELECT mt.id
+      FROM map_territories mt
+      JOIN maps m ON mt.map_id = m.id
+      WHERE m.project_id = ? AND mt.faction_id = ?
+    `).all(projectId, stateId) as Array<{ id: number }>;
+    const previous = new Set(previousRows.map((r) => r.id));
+    const next = new Set(ids);
+
+    for (const id of previous) {
+      if (!next.has(id)) {
+        db.prepare(`
+          UPDATE map_territories
+          SET faction_id = NULL, updated_at = datetime('now')
+          WHERE id = ?
+        `).run(id);
+      }
+    }
+    const fac = db.prepare(`
+      SELECT color, secondary_color FROM factions WHERE id = ?
+    `).get(stateId) as { color: string | null; secondary_color: string | null } | undefined;
+    const fillColor = (fac?.color ?? '').trim() || '#4ECDC4';
+    const borderColor = (fac?.secondary_color ?? '').trim() || fillColor;
+
+    for (const id of next) {
+      db.prepare(`
+        UPDATE map_territories
+        SET
+          faction_id = ?,
+          color = CASE WHEN COALESCE(faction_id, -1) != ? THEN ? ELSE color END,
+          border_color = CASE WHEN COALESCE(faction_id, -1) != ? THEN ? ELSE border_color END,
+          updated_at = datetime('now')
+        WHERE id = ?
+      `).run(stateId, stateId, fillColor, stateId, borderColor, id);
+    }
+  }
+
   private static getLowestRankIdForFaction(db: ReturnType<typeof getDb>, factionId: number): number | null {
     const row = db.prepare(`
       SELECT id
@@ -200,9 +279,13 @@ export class FactionService {
     const db = getDb();
 
     const row = db.prepare(`
-      SELECT f.*, pf.name as parent_faction_name
+      SELECT f.*, pf.name as parent_faction_name,
+        rd.name as ruling_dynasty_name,
+        rc.name as ruler_name
       FROM factions f
       LEFT JOIN factions pf ON f.parent_faction_id = pf.id
+      LEFT JOIN dynasties rd ON f.ruling_dynasty_id = rd.id
+      LEFT JOIN characters rc ON f.ruler_character_id = rc.id
       WHERE f.id = ?
     `).get(id) as FactionWithMetaRow | undefined;
 
@@ -234,11 +317,31 @@ export class FactionService {
       SELECT * FROM faction_custom_metrics WHERE faction_id = ? ORDER BY sort_order ASC, id ASC
     `).all(id) as CustomMetricRow[];
 
+    const territoryRows = db.prepare(`
+      SELECT mt.id, mt.name
+      FROM map_territories mt
+      JOIN maps m ON mt.map_id = m.id
+      WHERE m.project_id = ? AND mt.faction_id = ?
+      ORDER BY mt.name COLLATE NOCASE
+    `).all(row.project_id, id) as Array<{ id: number; name: string }>;
+
+    const rulingDynasty =
+      row.ruling_dynasty_id != null
+        ? { id: row.ruling_dynasty_id, name: (row.ruling_dynasty_name || '').trim() || '—' }
+        : null;
+    const ruler =
+      row.ruler_character_id != null
+        ? { id: row.ruler_character_id, name: (row.ruler_name || '').trim() || '—' }
+        : null;
+
     return {
       ...faction,
       parentFaction: row.parent_faction_id
         ? { id: row.parent_faction_id, name: row.parent_faction_name }
         : null,
+      rulingDynasty,
+      ruler,
+      territories: territoryRows,
       tags,
       ranks: rankRows.map(toRank),
       members: memberRows.map(toMember),
@@ -252,30 +355,80 @@ export class FactionService {
     const db = getDb();
     const kind = data.kind || 'faction';
     this.validateMetricsByKind(kind, data);
+    this.validateStateRelationsInput(db, data.projectId, data);
 
-    const result = db.prepare(`
-      INSERT INTO factions (
-        project_id, name, kind, type, motto, description, history, goals, headquarters, territory,
-        treasury, population, army_size, navy_size, territory_km2, annual_income, annual_expenses, members_count, influence,
-        status, color, secondary_color, founded_date, disbanded_date,
-        parent_faction_id, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      data.projectId, data.name, kind, data.type ?? null, data.motto || '', data.description || '', data.history || '',
-      data.goals || '', data.headquarters || '', data.territory || '',
-      data.treasury ?? null, data.population ?? null, data.armySize ?? null, data.navySize ?? null, data.territoryKm2 ?? null,
-      data.annualIncome ?? null, data.annualExpenses ?? null, data.membersCount ?? null, data.influence ?? null,
-      data.status || 'active', data.color || '', data.secondaryColor || '',
-      data.foundedDate || '', data.disbandedDate || '', data.parentFactionId || null, data.sortOrder || 0
-    );
+    const factionId = db.transaction((): number => {
+      const result = db.prepare(`
+        INSERT INTO factions (
+          project_id, name, kind, type, motto, description, history, goals, headquarters, territory,
+          treasury, population, army_size, navy_size, territory_km2, annual_income, annual_expenses, members_count, influence,
+          status, color, secondary_color, founded_date, disbanded_date,
+          parent_faction_id, ruling_dynasty_id, ruler_character_id, sort_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        data.projectId,
+        data.name,
+        kind,
+        data.type ?? null,
+        data.motto || '',
+        data.description || '',
+        data.history || '',
+        data.goals || '',
+        data.headquarters || '',
+        data.territory || '',
+        data.treasury ?? null,
+        data.population ?? null,
+        data.armySize ?? null,
+        data.navySize ?? null,
+        data.territoryKm2 ?? null,
+        data.annualIncome ?? null,
+        data.annualExpenses ?? null,
+        data.membersCount ?? null,
+        data.influence ?? null,
+        data.status || 'active',
+        data.color || '',
+        data.secondaryColor || '',
+        data.foundedDate || '',
+        data.disbandedDate || '',
+        data.parentFactionId || null,
+        data.rulingDynastyId ?? null,
+        data.rulerCharacterId ?? null,
+        data.sortOrder || 0
+      );
 
-    return this.getById(result.lastInsertRowid as number);
+      const newId = result.lastInsertRowid as number;
+
+      if (kind === 'state' && data.territoryIds !== undefined) {
+        this.syncStateTerritories(db, data.projectId, newId, data.territoryIds);
+      }
+
+      return newId;
+    })();
+
+    return this.getById(factionId);
   }
 
   static update(id: number, data: FactionUpdateData) {
-    const faction = this.getById(id);
-    this.validateMetricsByKind((data.kind as 'state' | 'faction' | undefined) ?? faction.kind, data);
-    buildUpdateQuery('factions', FACTION_UPDATE_MAP, data as Record<string, unknown>, id);
+    const current = this.getById(id);
+    const kind = (data.kind as 'state' | 'faction' | undefined) ?? current.kind;
+    this.validateMetricsByKind(kind, data);
+
+    const db = getDb();
+    this.validateStateRelationsInput(db, current.projectId, data);
+
+    const { territoryIds, ...rest } = data;
+    const sqlPayload: Record<string, unknown> = { ...rest };
+
+    db.transaction(() => {
+      if (Object.keys(sqlPayload).length > 0) {
+        buildUpdateQuery('factions', FACTION_UPDATE_MAP, sqlPayload, id);
+      }
+
+      if (kind === 'state' && territoryIds !== undefined) {
+        this.syncStateTerritories(db, current.projectId, id, territoryIds);
+      }
+    })();
+
     return this.getById(id);
   }
 

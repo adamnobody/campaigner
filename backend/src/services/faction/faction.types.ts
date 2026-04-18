@@ -45,6 +45,8 @@ export interface FactionRow {
   founded_date: string | null;
   disbanded_date: string | null;
   parent_faction_id: number | null;
+  ruling_dynasty_id: number | null;
+  ruler_character_id: number | null;
   sort_order: number | null;
   created_at: string;
   updated_at: string;
@@ -53,6 +55,8 @@ export interface FactionRow {
 export interface FactionWithMetaRow extends FactionRow {
   member_count: number;
   parent_faction_name: string | null;
+  ruling_dynasty_name?: string | null;
+  ruler_name?: string | null;
 }
 
 export interface ChildFactionRow {
@@ -140,6 +144,9 @@ export interface FactionCreateData {
   disbandedDate?: string;
   parentFactionId?: number | null;
   sortOrder?: number;
+  rulingDynastyId?: number | null;
+  rulerCharacterId?: number | null;
+  territoryIds?: number[];
 }
 
 export interface FactionUpdateData extends Partial<FactionCreateData> {}

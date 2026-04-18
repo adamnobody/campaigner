@@ -12,6 +12,7 @@ import { migrateFactionTypesAndCharacterAffiliations } from './migrations/007_fa
 import { migrateFactionKindAndMembershipSync } from './migrations/008_faction_kind_and_membership_sync.js';
 import { migrateFactionMetrics } from './migrations/009_faction_metrics.js';
 import { migratePoliticalScales } from './migrations/010_political_scales.js';
+import { migrateStateRelations } from './migrations/011_state_relations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +49,7 @@ export function initializeDatabase(): void {
   migrateFactionKindAndMembershipSync(database);
   migrateFactionMetrics(database);
   migratePoliticalScales(database);
+  migrateStateRelations(database);
   createIndexes(database);
 
   console.log('✅ Database initialized successfully');

@@ -119,3 +119,14 @@ export const updateTerritorySchema = z.preprocess(
   preprocessTerritoryUpdateBody,
   mapTerritorySchema.omit({ id: true, mapId: true, createdAt: true, updatedAt: true }).partial()
 );
+
+/** Сводка территории для выбора на странице государства (список по проекту). */
+export const mapTerritorySummarySchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  mapId: idSchema,
+  mapName: z.string(),
+  factionId: idSchema.nullable(),
+  occupantName: z.string().nullable(),
+  occupantKind: z.enum(['state', 'faction']).nullable().optional(),
+});

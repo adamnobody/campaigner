@@ -41,6 +41,12 @@ export class MapController {
     return ok(res, maps);
   });
 
+  static getTerritorySummariesForProject = asyncHandler(async (req: Request, res: Response) => {
+    const projectId = parseId(req.params.projectId, 'project id');
+    const rows = mapService.listTerritorySummariesForProject(projectId);
+    return ok(res, rows);
+  });
+
   static createMap = asyncHandler(async (req: Request, res: Response) => {
     const map = mapService.createMap(req.body);
     return created(res, map);

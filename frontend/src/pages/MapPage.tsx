@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useMapTerritoriesRefreshStore } from '@/store/useMapTerritoriesRefreshStore';
 import { Box, Typography, Button, alpha } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -10,6 +11,7 @@ import {
   sxMapContainer,
   extractData, normalizeMap,
   territoryTotalPointCount,
+  parseTerritories,
 } from './map/mapUtils';
 import type { MapMode, Marker, Territory, NoteOption, FactionOption } from './map/mapUtils';
 import { MapMarkerDialog } from './map/MapMarkerDialog';
@@ -61,6 +63,8 @@ export const MapPage: React.FC = () => {
   } = useMapTerritoryDrawing(mode, showSnackbar);
   const resetViewRef = useRef<() => void>(() => {});
 
+  const territoryRefreshVersion = useMapTerritoriesRefreshStore((s) => s.version);
+
   const {
     project,
     currentMap,
@@ -91,6 +95,18 @@ export const MapPage: React.FC = () => {
     },
     onInitialMapResolved: (map) => setMapBreadcrumbs([map]),
   });
+
+  useEffect(() => {
+    if (!currentMap?.id || territoryRefreshVersion === 0) return;
+    let cancelled = false;
+    mapApi.getTerritoriesByMapId(currentMap.id).then((res) => {
+      if (cancelled) return;
+      setTerritories(parseTerritories(extractData(res)));
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [territoryRefreshVersion, currentMap?.id, setTerritories]);
 
   const {
     zoomDisplay,

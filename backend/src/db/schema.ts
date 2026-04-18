@@ -237,6 +237,8 @@ export function createTables(db: Database.Database): void {
       founded_date TEXT DEFAULT '',
       disbanded_date TEXT DEFAULT '',
       parent_faction_id INTEGER,
+      ruling_dynasty_id INTEGER,
+      ruler_character_id INTEGER,
       sort_order INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
@@ -674,6 +676,8 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_factions_type ON factions(project_id, type);
     CREATE INDEX IF NOT EXISTS idx_factions_status ON factions(project_id, status);
     CREATE INDEX IF NOT EXISTS idx_factions_parent ON factions(parent_faction_id);
+    CREATE INDEX IF NOT EXISTS idx_factions_ruling_dynasty ON factions(ruling_dynasty_id);
+    CREATE INDEX IF NOT EXISTS idx_factions_ruler_character ON factions(ruler_character_id);
     CREATE INDEX IF NOT EXISTS idx_faction_policies_faction ON faction_policies(faction_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_political_scales_code_unique ON political_scales(code);
     CREATE INDEX IF NOT EXISTS idx_political_scales_entity_project ON political_scales(entity_type, project_id);
