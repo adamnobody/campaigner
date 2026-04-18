@@ -121,8 +121,7 @@ export function useMapTerritoryCrud({
 
   const startEditingPoints = useCallback((territory: Territory) => {
     setEditingTerritoryPoints(territory);
-    setPanelOpen(false);
-  }, [setPanelOpen]);
+  }, []);
 
   const saveEditingPoints = useCallback(async () => {
     if (!editingTerritoryPoints) return;
@@ -143,6 +142,21 @@ export function useMapTerritoryCrud({
     setEditingTerritoryPoints(null);
   }, []);
 
+  const insertVertexOnEdge = useCallback(
+    (ringIndex: number, edgeIndex: number, point: { x: number; y: number }) => {
+      setEditingTerritoryPoints(prev => {
+        if (!prev) return prev;
+        const ring = prev.rings[ringIndex];
+        if (!ring || ring.length < 2) return prev;
+        const newRing = [...ring];
+        newRing.splice(edgeIndex + 1, 0, point);
+        const newRings = prev.rings.map((r, ri) => (ri === ringIndex ? newRing : r));
+        return { ...prev, rings: newRings };
+      });
+    },
+    [],
+  );
+
   const deletePoint = useCallback((payload: TerritoryPointDragPayload) => {
     if (payload.mode === 'draw') {
       setDrawingPoints(prev => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== payload.pointIndex)));
@@ -150,12 +164,19 @@ export function useMapTerritoryCrud({
       setEditingTerritoryPoints(prev => {
         if (!prev) return prev;
         const ring = prev.rings[payload.ringIndex];
-        if (!ring || ring.length <= 3) return prev;
-        const newRings = prev.rings.map((r, ri) => (ri === payload.ringIndex ? r.filter((_, i) => i !== payload.pointIndex) : r));
+        if (!ring || ring.length <= 3) {
+          Promise.resolve().then(() =>
+            showSnackbar('Нельзя удалить: в контуре должно остаться минимум 3 вершины', 'warning'),
+          );
+          return prev;
+        }
+        const newRings = prev.rings.map((r, ri) =>
+          ri === payload.ringIndex ? r.filter((_, i) => i !== payload.pointIndex) : r,
+        );
         return { ...prev, rings: newRings };
       });
     }
-  }, [setDrawingPoints]);
+  }, [setDrawingPoints, showSnackbar]);
 
   const addPointOnEdge = useCallback((payload: TerritoryPointDragPayload) => {
     if (payload.mode === 'draw') {
@@ -228,6 +249,7 @@ export function useMapTerritoryCrud({
     startEditingPoints,
     saveEditingPoints,
     cancelEditingPoints,
+    insertVertexOnEdge,
     deletePoint,
     addPointOnEdge,
     handleEditTerritory,

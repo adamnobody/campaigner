@@ -1,6 +1,18 @@
 import type Database from 'better-sqlite3';
 
-const PREDEFINED_AMBITIONS = [
+/** Файл в `frontend/public/ambitions/`. По умолчанию — `<slug>.svg`. */
+type AmbitionSeed = {
+  slug: string;
+  name: string;
+  description: string;
+  iconFile?: string;
+};
+
+function builtinAmbitionIconPath(ambition: AmbitionSeed): string {
+  return `/ambitions/${ambition.iconFile ?? `${ambition.slug}.svg`}`;
+}
+
+const PREDEFINED_AMBITIONS: readonly AmbitionSeed[] = [
   {
     slug: 'torgovaya-dominatsiya',
     name: 'Торговая доминация',
@@ -45,6 +57,7 @@ const PREDEFINED_AMBITIONS = [
     slug: 'izolyatsionizm',
     name: 'Изоляционизм',
     description: 'Свести внешние контакты к минимуму и сосредоточиться на внутренних делах.',
+    iconFile: 'izolyatsionizm.jpg',
   },
   {
     slug: 'magicheskoe-prevoskhodstvo',
@@ -145,8 +158,9 @@ const PREDEFINED_AMBITIONS = [
     slug: 'industrializatsiya',
     name: 'Индустриализация',
     description: 'Перейти к массовому производству и инфраструктурному росту.',
+    iconFile: 'industrializatsiya.jpg',
   },
-] as const;
+];
 
 export function migrateFactionAmbitions(db: Database.Database): void {
   db.exec(`
@@ -197,6 +211,14 @@ export function migrateFactionAmbitions(db: Database.Database): void {
   `);
 
   for (const ambition of PREDEFINED_AMBITIONS) {
-    insert.run(ambition.name, ambition.description, `/ambitions/${ambition.slug}.svg`);
+    insert.run(ambition.name, ambition.description, builtinAmbitionIconPath(ambition));
+  }
+
+  // Старые БД уже содержат строки с INSERT OR IGNORE — обновляем icon_path под актуальные файлы в public/ambitions.
+  const syncBuiltinIcon = db.prepare(
+    `UPDATE ambitions_catalog SET icon_path = ? WHERE name = ? AND is_custom = 0`
+  );
+  for (const ambition of PREDEFINED_AMBITIONS) {
+    syncBuiltinIcon.run(builtinAmbitionIconPath(ambition), ambition.name);
   }
 }

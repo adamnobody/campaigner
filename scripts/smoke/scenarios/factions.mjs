@@ -488,7 +488,7 @@ export async function smokeFactionAmbitions(ctx) {
       projectId: ctx.projectId,
       name: `Smoke Ambition ${Date.now()}`,
       description: 'Custom ambition created by smoke test',
-      iconPath: '/ambitions/industrializatsiya.svg',
+      iconPath: '/ambitions/industrializatsiya.jpg',
     }),
   });
   assertStatus(createRes, 201, 'create custom ambition');

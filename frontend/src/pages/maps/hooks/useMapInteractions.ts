@@ -1,6 +1,13 @@
-import { useCallback, useRef, useState } from 'react';
-import { DRAG_THRESHOLD, isPointInTerritory } from '../components/mapUtils';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { findNearestEditableEdge, type EdgeInsertPhantom } from '@/utils/mapGeometry';
+import {
+  DRAG_THRESHOLD,
+  isPointInTerritory,
+  screenDistanceBetweenPercentPointsInPx,
+} from '../components/mapUtils';
 import type { MapData, MapMode, Marker, Territory, TerritoryPointDragPayload } from '../components/mapUtils';
+
+export type { EdgeInsertPhantom } from '@/utils/mapGeometry';
 
 type UseMapInteractionsArgs = {
   mode: MapMode;
@@ -18,6 +25,9 @@ type UseMapInteractionsArgs = {
   applyTransform: () => void;
   imgRef: React.RefObject<HTMLImageElement>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Array<{ x: number; y: number }>>>;
+  drawingPoints: Array<{ x: number; y: number }>;
+  zoomDisplay: number;
+  completeContour: () => void;
   clearDrawingDraft: () => void;
   buildRingsSnapshotForCreateDialog: () => Array<Array<{ x: number; y: number }>> | null;
   openNewMarkerDialogAt: (x: number, y: number) => void;
@@ -27,6 +37,7 @@ type UseMapInteractionsArgs = {
   handleMarkerDragEnd: () => Promise<void>;
   editingTerritoryPoints: Territory | null;
   setEditingTerritoryPoints: React.Dispatch<React.SetStateAction<Territory | null>>;
+  cancelEditingPoints: () => void;
   panelOpen: boolean;
   setPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
   panelType: 'marker' | 'territory';
@@ -55,6 +66,9 @@ export function useMapInteractions({
   applyTransform,
   imgRef,
   setDrawingPoints,
+  drawingPoints,
+  zoomDisplay,
+  completeContour,
   clearDrawingDraft,
   buildRingsSnapshotForCreateDialog,
   openNewMarkerDialogAt,
@@ -64,6 +78,7 @@ export function useMapInteractions({
   handleMarkerDragEnd,
   editingTerritoryPoints,
   setEditingTerritoryPoints,
+  cancelEditingPoints,
   panelOpen,
   setPanelOpen,
   panelType,
@@ -73,12 +88,29 @@ export function useMapInteractions({
   selectedTerritory,
   setSelectedTerritory,
   setPendingNewTerritoryRings,
+  showSnackbar,
 }: UseMapInteractionsArgs) {
   const [draggingTerritoryPoint, setDraggingTerritoryPoint] = useState<TerritoryPointDragPayload | null>(null);
+  const [drawPointerPercent, setDrawPointerPercent] = useState<{ x: number; y: number } | null>(null);
+  const [edgeInsertPhantom, setEdgeInsertPhantom] = useState<EdgeInsertPhantom | null>(null);
   const lastPointDragUpdateAtRef = useRef(0);
+  const lastPhantomAtRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    if (mode !== 'draw_territory' || drawingPoints.length === 0) {
+      setDrawPointerPercent(null);
+    }
+  }, [mode, drawingPoints.length]);
+
+  useEffect(() => {
+    if (!editingTerritoryPoints) setEdgeInsertPhantom(null);
+  }, [editingTerritoryPoints]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.shiftKey) {
+      e.preventDefault();
+    }
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
       isPanningRef.current = true;
       panStartRef.current = { x: e.clientX, y: e.clientY };
@@ -90,11 +122,13 @@ export function useMapInteractions({
   const handlePointDragStart = useCallback((e: React.MouseEvent, payload: TerritoryPointDragPayload) => {
     e.stopPropagation();
     e.preventDefault();
+    setEdgeInsertPhantom(null);
     setDraggingTerritoryPoint(payload);
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanningRef.current) {
+      setEdgeInsertPhantom(null);
       panRef.current = {
         x: panOriginRef.current.x + e.clientX - panStartRef.current.x,
         y: panOriginRef.current.y + e.clientY - panStartRef.current.y,
@@ -121,20 +155,72 @@ export function useMapInteractions({
           );
           return { ...prev, rings: newRings };
         });
-      } else if (draggingTerritoryPoint.mode === 'draw') {
-        setDrawingPoints(prev => {
-          const next = [...prev];
-          next[draggingTerritoryPoint.pointIndex] = { x: px, y: py };
-          return next;
-        });
       }
       return;
     }
 
-    handleMarkerDragMove(e, imgRef.current, DRAG_THRESHOLD);
-  }, [applyTransform, draggingTerritoryPoint, editingTerritoryPoints, handleMarkerDragMove, imgRef, isPanningRef, panOriginRef, panRef, panStartRef, setDrawingPoints, setEditingTerritoryPoints]);
+    if (mode === 'draw_territory' && drawingPoints.length > 0 && imgRef.current) {
+      const rect = imgRef.current.getBoundingClientRect();
+      const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+      setDrawPointerPercent({ x: px, y: py });
+      setEdgeInsertPhantom(null);
+    } else {
+      setDrawPointerPercent(null);
+    }
 
-  const handleMouseUp = useCallback(async () => {
+    if (mode === 'select' && editingTerritoryPoints && draggingTerritoryPoint === null && imgRef.current) {
+      const now = performance.now();
+      if (now - lastPhantomAtRef.current >= 16) {
+        lastPhantomAtRef.current = now;
+        const rect = imgRef.current.getBoundingClientRect();
+        const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+        const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+        const iw = imgRef.current.clientWidth;
+        const ih = imgRef.current.clientHeight;
+        const hit = findNearestEditableEdge(
+          { x: px, y: py },
+          editingTerritoryPoints.rings,
+          8,
+          8,
+          iw,
+          ih,
+          zoomDisplay,
+        );
+        setEdgeInsertPhantom(
+          hit
+            ? { ringIndex: hit.ringIndex, edgeIndex: hit.edgeIndex, projection: hit.projection }
+            : null,
+        );
+      }
+    } else {
+      setEdgeInsertPhantom(null);
+    }
+
+    handleMarkerDragMove(e, imgRef.current, DRAG_THRESHOLD);
+  }, [
+    applyTransform,
+    draggingTerritoryPoint,
+    drawingPoints.length,
+    editingTerritoryPoints,
+    handleMarkerDragMove,
+    imgRef,
+    isPanningRef,
+    mode,
+    panOriginRef,
+    panRef,
+    panStartRef,
+    setDrawingPoints,
+    setEditingTerritoryPoints,
+    zoomDisplay,
+  ]);
+
+  const handleMouseUp = useCallback(async (e?: React.MouseEvent) => {
+    if (e?.type === 'mouseleave') {
+      setDrawPointerPercent(null);
+      setEdgeInsertPhantom(null);
+    }
+
     if (draggingTerritoryPoint !== null) {
       setDraggingTerritoryPoint(null);
       return;
@@ -174,6 +260,11 @@ export function useMapInteractions({
   const handleTerritoryClick = useCallback((e: React.MouseEvent, territory: Territory) => {
     e.stopPropagation();
     if (mode !== 'select') return;
+    if (editingTerritoryPoints) {
+      if (territory.id === editingTerritoryPoints.id) return;
+      showSnackbar('Сначала завершите редактирование формы', 'warning');
+      return;
+    }
     if (e.shiftKey && imgRef.current) {
       const rect = imgRef.current.getBoundingClientRect();
       const px = ((e.clientX - rect.left) / rect.width) * 100;
@@ -185,7 +276,17 @@ export function useMapInteractions({
     setSelectedMarker(null);
     setPanelType('territory');
     setPanelOpen(true);
-  }, [imgRef, mode, openNewMarkerDialogAt, setPanelOpen, setPanelType, setSelectedMarker, setSelectedTerritory]);
+  }, [
+    editingTerritoryPoints,
+    imgRef,
+    mode,
+    openNewMarkerDialogAt,
+    setPanelOpen,
+    setPanelType,
+    setSelectedMarker,
+    setSelectedTerritory,
+    showSnackbar,
+  ]);
 
   const handleMapClick = useCallback((e: React.MouseEvent) => {
     if (isPanningRef.current || didDragRef.current || transitioning) return;
@@ -195,7 +296,31 @@ export function useMapInteractions({
     const py = ((e.clientY - rect.top) / rect.height) * 100;
 
     if (mode === 'draw_territory') {
+      const iw = imgRef.current.clientWidth;
+      const ih = imgRef.current.clientHeight;
+      if (
+        drawingPoints.length >= 3 &&
+        iw > 0 &&
+        ih > 0 &&
+        screenDistanceBetweenPercentPointsInPx(drawingPoints[0], { x: px, y: py }, iw, ih, zoomDisplay) < 10
+      ) {
+        completeContour();
+        return;
+      }
       setDrawingPoints(prev => [...prev, { x: px, y: py }]);
+      return;
+    }
+
+    if (mode === 'select' && editingTerritoryPoints) {
+      if (!e.shiftKey) {
+        for (let i = territories.length - 1; i >= 0; i -= 1) {
+          if (isPointInTerritory(px, py, territories[i])) {
+            if (territories[i].id === editingTerritoryPoints.id) return;
+            showSnackbar('Сначала завершите редактирование формы', 'warning');
+            return;
+          }
+        }
+      }
       return;
     }
 
@@ -212,7 +337,26 @@ export function useMapInteractions({
     }
 
     openNewMarkerDialogAt(px, py);
-  }, [currentMap, didDragRef, imgRef, isPanningRef, mode, openNewMarkerDialogAt, setDrawingPoints, setPanelOpen, setPanelType, setSelectedMarker, setSelectedTerritory, territories, transitioning]);
+  }, [
+    completeContour,
+    currentMap,
+    didDragRef,
+    drawingPoints,
+    editingTerritoryPoints,
+    imgRef,
+    isPanningRef,
+    mode,
+    openNewMarkerDialogAt,
+    setDrawingPoints,
+    setPanelOpen,
+    setPanelType,
+    setSelectedMarker,
+    setSelectedTerritory,
+    showSnackbar,
+    territories,
+    transitioning,
+    zoomDisplay,
+  ]);
 
   const finishDrawing = useCallback(() => {
     const rings = buildRingsSnapshotForCreateDialog();
@@ -225,10 +369,17 @@ export function useMapInteractions({
     setMode('select');
   }, [clearDrawingDraft]);
 
-  const handleMapModeChange = useCallback((nextMode: MapMode) => {
-    setMode(nextMode);
-    clearDrawingDraft();
-  }, [clearDrawingDraft]);
+  const handleMapModeChange = useCallback(
+    (nextMode: MapMode) => {
+      if (nextMode === 'draw_territory' && editingTerritoryPoints) {
+        cancelEditingPoints();
+        showSnackbar('Редактирование формы отменено', 'info');
+      }
+      setMode(nextMode);
+      clearDrawingDraft();
+    },
+    [cancelEditingPoints, clearDrawingDraft, editingTerritoryPoints, setMode, showSnackbar],
+  );
 
   const closePanel = useCallback(() => {
     setPanelOpen(false);
@@ -246,6 +397,8 @@ export function useMapInteractions({
 
   return {
     draggingTerritoryPoint,
+    drawPointerPercent,
+    edgeInsertPhantom,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,

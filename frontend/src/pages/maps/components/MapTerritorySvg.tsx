@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   TERRITORY_SVG_FILTER_MAX_POINTS,
   territoryLabelMetrics,
   getLargestRing,
   territoryTotalPointCount,
+  screenDistanceBetweenPercentPointsInPx,
 } from './mapUtils';
+import type { EdgeInsertPhantom } from '@/utils/mapGeometry';
 import type { MapMode, Marker, Territory, TerritoryPointDragPayload } from './mapUtils';
 
 type Props = {
@@ -14,18 +16,45 @@ type Props = {
   mode: MapMode;
   drawingCompletedRings: { x: number; y: number }[][];
   drawingPoints: { x: number; y: number }[];
+  /** Позиция курсора в процентах (0–100), для rubber-band в режиме рисования. */
+  drawPointerPercent: { x: number; y: number } | null;
+  onDrawClosureHoverChange?: (active: boolean) => void;
   editingTerritoryPoints: Territory | null;
+  /** Превью вставки вершины на ребро (режим редактирования формы). */
+  edgeInsertPhantom: EdgeInsertPhantom | null;
+  onPhantomVertexClick: () => void;
   selectedTerritory: Territory | null;
   draggingMarker: Marker | null;
   draggingTerritoryPoint: TerritoryPointDragPayload | null;
   onTerritoryClick: (e: React.MouseEvent<SVGElement>, territory: Territory) => void;
   onPointDragStart: (e: React.MouseEvent, payload: TerritoryPointDragPayload) => void;
   onDeletePoint: (payload: TerritoryPointDragPayload) => void;
-  onAddPointOnEdge: (payload: TerritoryPointDragPayload) => void;
 };
 
 const ringToSvg = (ring: { x: number; y: number }[], w: number, h: number) =>
   ring.map(p => ({ x: (p.x / 100) * w, y: (p.y / 100) * h }));
+
+/** SVG user units such that shape appears as `screenPx` on screen (parent has CSS scale(zoom)). */
+const screenPxToSvgLen = (screenPx: number, zoom: number) => screenPx / Math.max(zoom, 0.001);
+
+const DRAFT_TERRITORY_STROKE = '#4ECDC4';
+
+const SnapHighlightCircle: React.FC<{
+  cx: number;
+  cy: number;
+  r: number;
+  strokeW: number;
+}> = ({ cx, cy, r, strokeW }) => (
+  <circle
+    cx={cx}
+    cy={cy}
+    r={r}
+    fill="#FFD700"
+    stroke="#111"
+    strokeWidth={strokeW}
+    style={{ pointerEvents: 'none' }}
+  />
+);
 
 export const MapTerritorySvg: React.FC<Props> = ({
   imgRef,
@@ -34,19 +63,66 @@ export const MapTerritorySvg: React.FC<Props> = ({
   mode,
   drawingCompletedRings,
   drawingPoints,
+  drawPointerPercent,
+  onDrawClosureHoverChange,
   editingTerritoryPoints,
+  edgeInsertPhantom,
+  onPhantomVertexClick,
   selectedTerritory,
   draggingMarker,
   draggingTerritoryPoint,
   onTerritoryClick,
   onPointDragStart,
   onDeletePoint,
-  onAddPointOnEdge,
 }) => {
+  const [hoveredEditKey, setHoveredEditKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editingTerritoryPoints) setHoveredEditKey(null);
+  }, [editingTerritoryPoints]);
+
+  useEffect(() => {
+    if (mode !== 'draw_territory') {
+      onDrawClosureHoverChange?.(false);
+      return;
+    }
+    if (drawingPoints.length < 3 || !drawPointerPercent) {
+      onDrawClosureHoverChange?.(false);
+      return;
+    }
+    const el = imgRef.current;
+    if (!el) {
+      onDrawClosureHoverChange?.(false);
+      return;
+    }
+    const iw = el.clientWidth;
+    const ih = el.clientHeight;
+    if (iw <= 0 || ih <= 0) {
+      onDrawClosureHoverChange?.(false);
+      return;
+    }
+    const inZone =
+      screenDistanceBetweenPercentPointsInPx(
+        drawingPoints[0],
+        drawPointerPercent,
+        iw,
+        ih,
+        zoomDisplay,
+      ) < 10;
+    onDrawClosureHoverChange?.(inZone);
+  }, [mode, drawingPoints, drawPointerPercent, zoomDisplay, imgRef, onDrawClosureHoverChange]);
+
   if (!imgRef.current) return null;
   const w = imgRef.current.clientWidth;
   const h = imgRef.current.clientHeight;
   if (!w || !h) return null;
+
+  const z = zoomDisplay;
+  const rHit = screenPxToSvgLen(8, z);
+  const rVis = screenPxToSvgLen(4, z);
+  const rHi = screenPxToSvgLen(6, z);
+  const stroke1px = screenPxToSvgLen(1, z);
+
   const complexTerritories = territories.some((t) => territoryTotalPointCount(t) > TERRITORY_SVG_FILTER_MAX_POINTS);
   const reduceTerritoryEffects = Boolean(
     draggingMarker ||
@@ -115,8 +191,10 @@ export const MapTerritorySvg: React.FC<Props> = ({
   const straightPathD = (svgPts: { x: number; y: number }[]) =>
     svgPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 
-  const isDraggingDrawVertex = (i: number) =>
-    draggingTerritoryPoint?.mode === 'draw' && draggingTerritoryPoint.pointIndex === i;
+  const openPolylineD = (svgPts: { x: number; y: number }[]) =>
+    svgPts.length < 2
+      ? ''
+      : svgPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
   const isDraggingEditVertex = (ri: number, i: number) =>
     draggingTerritoryPoint?.mode === 'edit' &&
@@ -337,7 +415,7 @@ export const MapTerritorySvg: React.FC<Props> = ({
                 key={`done-${ri}`}
                 d={straightPathD(svgPts)}
                 fill="rgba(78, 205, 196, 0.12)"
-                stroke="#4ECDC4"
+                stroke={DRAFT_TERRITORY_STROKE}
                 strokeWidth={2}
                 strokeDasharray="8 4"
                 strokeLinejoin="round"
@@ -347,63 +425,72 @@ export const MapTerritorySvg: React.FC<Props> = ({
           })}
           {drawingPoints.length > 0 && (() => {
             const svgPts = ringToSvg(drawingPoints, w, h);
+            const openD = openPolylineD(svgPts);
+            const lastPt = svgPts[svgPts.length - 1];
+            const firstPt = svgPts[0];
+            const cursorSvg = drawPointerPercent
+              ? { x: (drawPointerPercent.x / 100) * w, y: (drawPointerPercent.y / 100) * h }
+              : null;
+            const inClosureZone =
+              drawingPoints.length >= 3 &&
+              drawPointerPercent !== null &&
+              screenDistanceBetweenPercentPointsInPx(
+                drawingPoints[0],
+                drawPointerPercent,
+                w,
+                h,
+                z,
+              ) < 10;
+            const rubberTarget = inClosureZone ? firstPt : cursorSvg;
+            const showRubber = rubberTarget !== null && (inClosureZone || drawPointerPercent !== null);
+            const rSnap = screenPxToSvgLen(6, z);
+
             return (
               <>
-                {svgPts.length >= 3 && (
+                {openD ? (
                   <path
-                    d={straightPathD(svgPts)}
-                    fill="rgba(78, 205, 196, 0.15)"
-                    stroke="#4ECDC4"
+                    d={openD}
+                    fill="none"
+                    stroke={DRAFT_TERRITORY_STROKE}
                     strokeWidth={2}
                     strokeDasharray="8 4"
                     strokeLinejoin="round"
                   />
-                )}
-                {svgPts.length === 2 && (
+                ) : null}
+                {showRubber && rubberTarget ? (
                   <line
-                    x1={svgPts[0].x} y1={svgPts[0].y}
-                    x2={svgPts[1].x} y2={svgPts[1].y}
-                    stroke="#4ECDC4" strokeWidth={2} strokeDasharray="8 4"
+                    x1={lastPt.x}
+                    y1={lastPt.y}
+                    x2={rubberTarget.x}
+                    y2={rubberTarget.y}
+                    stroke={DRAFT_TERRITORY_STROKE}
+                    strokeWidth={stroke1px}
+                    opacity={0.5}
+                    strokeLinecap="round"
                   />
-                )}
-                {svgPts.map((p, i) => (
-                  <g key={i}>
-                    <circle
-                      cx={p.x} cy={p.y} r={10}
-                      fill="transparent"
-                      style={{ cursor: 'grab', pointerEvents: 'auto' }}
-                      onMouseDown={e => onPointDragStart(e, { mode: 'draw', pointIndex: i })}
-                      onContextMenu={e => {
-                        e.preventDefault();
-                        if (drawingPoints.length > 1) onDeletePoint({ mode: 'draw', pointIndex: i });
-                      }}
-                      onDoubleClick={e => {
-                        e.stopPropagation();
-                        onAddPointOnEdge({ mode: 'draw', pointIndex: i });
-                      }}
-                    />
-                    <circle
-                      cx={p.x} cy={p.y}
-                      r={isDraggingDrawVertex(i) && !editingTerritoryPoints ? 4 : 3}
-                      fill={i === 0 ? '#FF6B6B' : '#4ECDC4'}
-                      stroke="#fff" strokeWidth={1.5}
-                      style={{ pointerEvents: 'none' }}
-                    />
-                  </g>
-                ))}
+                ) : null}
+                {inClosureZone ? (
+                  <SnapHighlightCircle
+                    cx={firstPt.x}
+                    cy={firstPt.y}
+                    r={rSnap}
+                    strokeW={stroke1px}
+                  />
+                ) : null}
               </>
             );
           })()}
         </>
       )}
 
-      {editingTerritoryPoints &&
-        editingTerritoryPoints.rings.map((ring, ri) => {
-          const svgPts = ringToSvg(ring, w, h);
-          const pathD = straightPathD(svgPts);
-          return (
-            <React.Fragment key={`edit-ring-${ri}`}>
+      {editingTerritoryPoints && (
+        <>
+          {editingTerritoryPoints.rings.map((ring, ri) => {
+            const svgPts = ringToSvg(ring, w, h);
+            const pathD = straightPathD(svgPts);
+            return (
               <path
+                key={`edit-path-${ri}`}
                 d={pathD}
                 fill={`rgba(${hexToRgbStr(editingTerritoryPoints.color)}, 0.2)`}
                 stroke="#FFD700"
@@ -411,34 +498,78 @@ export const MapTerritorySvg: React.FC<Props> = ({
                 strokeDasharray="6 3"
                 strokeLinejoin="round"
               />
-              {svgPts.map((p, i) => (
-                <g key={i}>
+            );
+          })}
+          {edgeInsertPhantom && (() => {
+            const [pSvg] = ringToSvg([edgeInsertPhantom.projection], w, h);
+            const rPhVis = screenPxToSvgLen(3.5, z);
+            return (
+              <g key="edge-phantom">
+                <circle
+                  cx={pSvg.x}
+                  cy={pSvg.y}
+                  r={rPhVis}
+                  fill="rgba(255,255,255,0.45)"
+                  stroke="#111"
+                  strokeWidth={stroke1px}
+                  strokeDasharray={`${3 / z} ${2 / z}`}
+                  opacity={0.65}
+                  style={{ pointerEvents: 'none' }}
+                />
+                <circle
+                  cx={pSvg.x}
+                  cy={pSvg.y}
+                  r={rHit}
+                  fill="transparent"
+                  style={{ cursor: 'copy', pointerEvents: 'auto' }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    onPhantomVertexClick();
+                  }}
+                  onContextMenu={e => e.preventDefault()}
+                />
+              </g>
+            );
+          })()}
+          {editingTerritoryPoints.rings.map((ring, ri) => {
+            const svgPts = ringToSvg(ring, w, h);
+            return svgPts.map((p, i) => {
+              const editKey = `${ri}-${i}`;
+              const editActive =
+                isDraggingEditVertex(ri, i) || hoveredEditKey === editKey;
+              const cursor =
+                draggingTerritoryPoint?.mode === 'edit' &&
+                draggingTerritoryPoint.ringIndex === ri &&
+                draggingTerritoryPoint.pointIndex === i
+                  ? 'grabbing'
+                  : 'grab';
+              return (
+                <g key={editKey}>
                   <circle
-                    cx={p.x} cy={p.y} r={10}
+                    cx={p.x} cy={p.y} r={rHit}
                     fill="transparent"
-                    style={{ cursor: 'grab', pointerEvents: 'auto' }}
+                    style={{ cursor, pointerEvents: 'auto' }}
                     onMouseDown={e => onPointDragStart(e, { mode: 'edit', ringIndex: ri, pointIndex: i })}
+                    onMouseEnter={() => setHoveredEditKey(editKey)}
+                    onMouseLeave={() => setHoveredEditKey(prev => (prev === editKey ? null : prev))}
                     onContextMenu={e => {
                       e.preventDefault();
-                      if (ring.length > 3) onDeletePoint({ mode: 'edit', ringIndex: ri, pointIndex: i });
-                    }}
-                    onDoubleClick={e => {
-                      e.stopPropagation();
-                      onAddPointOnEdge({ mode: 'edit', ringIndex: ri, pointIndex: i });
+                      onDeletePoint({ mode: 'edit', ringIndex: ri, pointIndex: i });
                     }}
                   />
                   <circle
                     cx={p.x} cy={p.y}
-                    r={isDraggingEditVertex(ri, i) ? 4 : 3}
-                    fill="#FFD700"
-                    stroke="#fff" strokeWidth={1.5}
+                    r={editActive ? rHi : rVis}
+                    fill={editActive ? '#FFD700' : '#fff'}
+                    stroke="#111" strokeWidth={stroke1px}
                     style={{ pointerEvents: 'none' }}
                   />
                 </g>
-              ))}
-            </React.Fragment>
-          );
-        })}
+              );
+            });
+          })}
+        </>
+      )}
     </svg>
   );
 };
