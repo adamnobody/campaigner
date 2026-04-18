@@ -24,6 +24,7 @@ import dynastyRoutes from './routes/dynasty.routes.js';
 import branchRoutes from './routes/branch.routes.js';
 import characterTraitRoutes from './routes/character-traits.routes.js';
 import ambitionRoutes from './routes/ambition.routes.js';
+import politicalScaleRoutes from './routes/political-scale.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,6 +103,7 @@ app.use('/api/dynasties', dynastyRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/character-traits', characterTraitRoutes);
 app.use('/api', ambitionRoutes);
+app.use('/api', politicalScaleRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

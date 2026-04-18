@@ -78,7 +78,17 @@ import {
   updateFactionPolicySchema,
   policyTypeSchema,
   policyStatusSchema,
+  factionPolicyCategorySchema,
 } from '../schemas/policy.schema.js';
+import {
+  politicalScaleSchema,
+  politicalScaleAssignmentSchema,
+  scaleZoneSchema,
+  createPoliticalScaleBodySchema,
+  updatePoliticalScaleBodySchema,
+  politicalScaleAssignmentUpsertRowSchema,
+  putPoliticalScaleAssignmentsBodySchema,
+} from '../schemas/political-scale.schema.js';
 import {
   createDynastySchema,
   updateDynastySchema,
@@ -196,6 +206,16 @@ export type CreateFactionPolicy = z.input<typeof createFactionPolicyBodySchema>;
 export type UpdateFactionPolicy = z.input<typeof updateFactionPolicySchema>;
 export type PolicyType = z.infer<typeof policyTypeSchema>;
 export type PolicyStatus = z.infer<typeof policyStatusSchema>;
+export type FactionPolicyCategory = z.infer<typeof factionPolicyCategorySchema>;
+
+// ==================== Political scales ====================
+export type PoliticalScale = z.infer<typeof politicalScaleSchema>;
+export type PoliticalScaleAssignment = z.infer<typeof politicalScaleAssignmentSchema>;
+export type ScaleZone = z.infer<typeof scaleZoneSchema>;
+export type CreatePoliticalScale = z.input<typeof createPoliticalScaleBodySchema>;
+export type UpdatePoliticalScale = z.input<typeof updatePoliticalScaleBodySchema>;
+export type PoliticalScaleAssignmentUpsertRow = z.infer<typeof politicalScaleAssignmentUpsertRowSchema>;
+export type PutPoliticalScaleAssignmentsBody = z.input<typeof putPoliticalScaleAssignmentsBodySchema>;
 
 // ==================== Common ====================
 // In backend responses `Tag` always includes `id` and `color` (color falls back to '#808080').

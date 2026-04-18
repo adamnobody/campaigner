@@ -33,6 +33,7 @@ import { FactionAmbitionsTab } from '@/pages/faction/FactionAmbitionsTab';
 import { MetricInput } from '@/pages/faction/MetricInput';
 import { CustomMetricsEditor } from '@/pages/faction/CustomMetricsEditor';
 import { FactionCompareDialog } from '@/pages/faction/FactionCompareDialog';
+import { FactionPoliticalScalesSection } from '@/pages/faction/FactionPoliticalScalesSection';
 import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -49,8 +50,17 @@ import {
   POLICY_TYPES,
   POLICY_STATUSES,
   getMetricsForKind,
+  FACTION_DECREE_CATEGORY_LABELS,
 } from '@campaigner/shared';
-import type { FactionRank, FactionMember, FactionPolicy, PolicyType, PolicyStatus, ReplaceFactionCustomMetrics } from '@campaigner/shared';
+import type {
+  FactionRank,
+  FactionMember,
+  FactionPolicy,
+  PolicyType,
+  PolicyStatus,
+  ReplaceFactionCustomMetrics,
+  FactionPolicyCategory,
+} from '@campaigner/shared';
 import { shallow } from 'zustand/shallow';
 
 // ==================== Types ====================
@@ -206,11 +216,14 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     title: '',
     type: 'policy' as PolicyType,
     status: 'active' as PolicyStatus,
+    category: 'other' as FactionPolicyCategory,
+    enactedDate: '',
     description: '',
   });
   const [policyTitleSearch, setPolicyTitleSearch] = useState('');
   const [policyTypeFilter, setPolicyTypeFilter] = useState<'all' | PolicyType>('all');
   const [policyStatusFilter, setPolicyStatusFilter] = useState<'all' | PolicyStatus>('all');
+  const [policyCategoryFilter, setPolicyCategoryFilter] = useState<'all' | FactionPolicyCategory>('all');
   const resolvedEntityType: 'state' | 'faction' = isNew ? normalizedEntityType : (currentFaction?.kind ?? normalizedEntityType);
   const entityLabel = resolvedEntityType === 'state' ? 'государство' : 'фракция';
   const entityLabelCapitalized = resolvedEntityType === 'state' ? 'Государство' : 'Фракция';
@@ -363,10 +376,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     return sortedFactionPolicies.filter((policy) => {
       if (policyTypeFilter !== 'all' && policy.type !== policyTypeFilter) return false;
       if (policyStatusFilter !== 'all' && policy.status !== policyStatusFilter) return false;
+      if (policyCategoryFilter !== 'all' && (policy.category ?? 'other') !== policyCategoryFilter) return false;
       if (q && !policy.title.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [sortedFactionPolicies, policyTypeFilter, policyStatusFilter, policyTitleSearch]);
+  }, [sortedFactionPolicies, policyTypeFilter, policyStatusFilter, policyCategoryFilter, policyTitleSearch]);
 
   // ==================== Actions ====================
 
@@ -519,11 +533,20 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         title: policy.title,
         type: policy.type,
         status: policy.status,
+        category: policy.category ?? 'other',
+        enactedDate: policy.enactedDate ?? '',
         description: policy.description || '',
       });
     } else {
       setEditingPolicy(null);
-      setPolicyForm({ title: '', type: 'policy', status: 'active', description: '' });
+      setPolicyForm({
+        title: '',
+        type: 'policy',
+        status: 'active',
+        category: 'other',
+        enactedDate: '',
+        description: '',
+      });
     }
     setPolicyDialogOpen(true);
   };
@@ -536,6 +559,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           title: policyForm.title.trim(),
           type: policyForm.type,
           status: policyForm.status,
+          category: policyForm.category,
+          enactedDate: policyForm.enactedDate.trim() || null,
           description: policyForm.description,
         });
         showSnackbar('Политика обновлена', 'success');
@@ -544,6 +569,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           title: policyForm.title.trim(),
           type: policyForm.type,
           status: policyForm.status,
+          category: policyForm.category,
+          enactedDate: policyForm.enactedDate.trim() || null,
           description: policyForm.description,
           sortOrder: factionPolicies.length,
         });
@@ -573,6 +600,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     setPolicyTitleSearch('');
     setPolicyTypeFilter('all');
     setPolicyStatusFilter('all');
+    setPolicyCategoryFilter('all');
   };
 
   if (loading && !isNew && !currentFaction) {
@@ -831,10 +859,14 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
 
       {activeTab === 'politics' && (
         <Box>
-          {/* SECTION: Faction policies */}
           {!isNew && (
+            <FactionPoliticalScalesSection projectId={pid} factionId={fid} entityType={resolvedEntityType} />
+          )}
+
+          {/* SECTION: Decrees (faction_policies) — только для фракций */}
+          {!isNew && resolvedEntityType === 'faction' && (
             <Section
-              title="Амбиции и политика"
+              title="Указы"
               icon={<TrackChangesIcon />}
               badge={sortedFactionPolicies.length}
               defaultOpen={true}
@@ -846,20 +878,20 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                   onClick={() => openPolicyDialog()}
                   sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}
                 >
-                  Добавить
+                  Добавить указ
                 </DndButton>
               }
             >
               {policiesLoading && sortedFactionPolicies.length === 0 ? (
                 <Typography sx={{ color: 'text.secondary', py: 2 }}>Загрузка…</Typography>
               ) : sortedFactionPolicies.length === 0 ? (
-                <EmptyState icon={<TrackChangesIcon />} title="Нет политик" description="Добавьте амбиции и политические линии фракции" actionLabel="Добавить политику" onAction={() => openPolicyDialog()} />
+                <EmptyState icon={<TrackChangesIcon />} title="Нет указов" description="Добавьте указы и политические линии фракции" actionLabel="Добавить указ" onAction={() => openPolicyDialog()} />
               ) : (
                 <>
                   <Box
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' },
+                      gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr 1fr' },
                       gap: 1.25,
                       mb: 1.5,
                     }}
@@ -894,6 +926,23 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                         <MenuItem value="planned">Запланировано</MenuItem>
                         <MenuItem value="active">Активно</MenuItem>
                         <MenuItem value="archived">В архиве</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" fullWidth>
+                      <InputLabel>Категория</InputLabel>
+                      <Select
+                        label="Категория"
+                        value={policyCategoryFilter}
+                        onChange={(e) =>
+                          setPolicyCategoryFilter(e.target.value as 'all' | FactionPolicyCategory)
+                        }
+                      >
+                        <MenuItem value="all">Все категории</MenuItem>
+                        {Object.entries(FACTION_DECREE_CATEGORY_LABELS).map(([key, label]) => (
+                          <MenuItem key={key} value={key}>
+                            {label}
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Box>
@@ -955,6 +1004,19 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                                   variant="outlined"
                                   sx={{ height: 20, fontSize: '0.65rem' }}
                                 />
+                                <Chip
+                                  label={FACTION_DECREE_CATEGORY_LABELS[p.category ?? 'other'] ?? (p.category ?? 'other')}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ height: 20, fontSize: '0.65rem' }}
+                                />
+                                {p.enactedDate ? (
+                                  <Chip
+                                    label={p.enactedDate}
+                                    size="small"
+                                    sx={{ height: 20, fontSize: '0.65rem' }}
+                                  />
+                                ) : null}
                               </Box>
                             }
                             secondary={
@@ -1074,7 +1136,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       />
 
       <Dialog open={policyDialogOpen} onClose={() => setPolicyDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editingPolicy ? 'Редактировать политику' : 'Новая политика'}</DialogTitle>
+        <DialogTitle>{editingPolicy ? 'Редактировать указ' : 'Новый указ'}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: 2 }}>
           <TextField
             autoFocus
@@ -1111,6 +1173,30 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
               ))}
             </Select>
           </FormControl>
+          <FormControl fullWidth>
+            <InputLabel>Категория</InputLabel>
+            <Select
+              label="Категория"
+              value={policyForm.category}
+              onChange={(e) =>
+                setPolicyForm((prev) => ({ ...prev, category: e.target.value as FactionPolicyCategory }))
+              }
+            >
+              {Object.entries(FACTION_DECREE_CATEGORY_LABELS).map(([key, label]) => (
+                <MenuItem key={key} value={key}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            label="Дата принятия"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={policyForm.enactedDate}
+            onChange={(e) => setPolicyForm((prev) => ({ ...prev, enactedDate: e.target.value }))}
+          />
           <TextField
             fullWidth
             label="Описание"
