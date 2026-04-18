@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { findNearestEditableEdge, type EdgeInsertPhantom } from '@/utils/mapGeometry';
 import {
   DRAG_THRESHOLD,
   isPointInTerritory,
   screenDistanceBetweenPercentPointsInPx,
 } from '../components/mapUtils';
 import type { MapData, MapMode, Marker, Territory, TerritoryPointDragPayload } from '../components/mapUtils';
+
+export type { EdgeInsertPhantom } from '@/utils/mapGeometry';
 
 type UseMapInteractionsArgs = {
   mode: MapMode;
@@ -89,7 +92,9 @@ export function useMapInteractions({
 }: UseMapInteractionsArgs) {
   const [draggingTerritoryPoint, setDraggingTerritoryPoint] = useState<TerritoryPointDragPayload | null>(null);
   const [drawPointerPercent, setDrawPointerPercent] = useState<{ x: number; y: number } | null>(null);
+  const [edgeInsertPhantom, setEdgeInsertPhantom] = useState<EdgeInsertPhantom | null>(null);
   const lastPointDragUpdateAtRef = useRef(0);
+  const lastPhantomAtRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -97,6 +102,10 @@ export function useMapInteractions({
       setDrawPointerPercent(null);
     }
   }, [mode, drawingPoints.length]);
+
+  useEffect(() => {
+    if (!editingTerritoryPoints) setEdgeInsertPhantom(null);
+  }, [editingTerritoryPoints]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.shiftKey) {
@@ -113,11 +122,13 @@ export function useMapInteractions({
   const handlePointDragStart = useCallback((e: React.MouseEvent, payload: TerritoryPointDragPayload) => {
     e.stopPropagation();
     e.preventDefault();
+    setEdgeInsertPhantom(null);
     setDraggingTerritoryPoint(payload);
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanningRef.current) {
+      setEdgeInsertPhantom(null);
       panRef.current = {
         x: panOriginRef.current.x + e.clientX - panStartRef.current.x,
         y: panOriginRef.current.y + e.clientY - panStartRef.current.y,
@@ -153,8 +164,37 @@ export function useMapInteractions({
       const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
       const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
       setDrawPointerPercent({ x: px, y: py });
+      setEdgeInsertPhantom(null);
     } else {
       setDrawPointerPercent(null);
+    }
+
+    if (mode === 'select' && editingTerritoryPoints && draggingTerritoryPoint === null && imgRef.current) {
+      const now = performance.now();
+      if (now - lastPhantomAtRef.current >= 16) {
+        lastPhantomAtRef.current = now;
+        const rect = imgRef.current.getBoundingClientRect();
+        const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+        const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+        const iw = imgRef.current.clientWidth;
+        const ih = imgRef.current.clientHeight;
+        const hit = findNearestEditableEdge(
+          { x: px, y: py },
+          editingTerritoryPoints.rings,
+          8,
+          8,
+          iw,
+          ih,
+          zoomDisplay,
+        );
+        setEdgeInsertPhantom(
+          hit
+            ? { ringIndex: hit.ringIndex, edgeIndex: hit.edgeIndex, projection: hit.projection }
+            : null,
+        );
+      }
+    } else {
+      setEdgeInsertPhantom(null);
     }
 
     handleMarkerDragMove(e, imgRef.current, DRAG_THRESHOLD);
@@ -172,11 +212,13 @@ export function useMapInteractions({
     panStartRef,
     setDrawingPoints,
     setEditingTerritoryPoints,
+    zoomDisplay,
   ]);
 
   const handleMouseUp = useCallback(async (e?: React.MouseEvent) => {
     if (e?.type === 'mouseleave') {
       setDrawPointerPercent(null);
+      setEdgeInsertPhantom(null);
     }
 
     if (draggingTerritoryPoint !== null) {
@@ -356,6 +398,7 @@ export function useMapInteractions({
   return {
     draggingTerritoryPoint,
     drawPointerPercent,
+    edgeInsertPhantom,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,

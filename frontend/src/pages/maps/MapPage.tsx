@@ -184,7 +184,7 @@ export const MapPage: React.FC = () => {
     saveEditingPoints,
     cancelEditingPoints,
     deletePoint,
-    addPointOnEdge,
+    insertVertexOnEdge,
     handleEditTerritory,
     handleDeleteTerritory,
     closeTerritoryDialog,
@@ -238,6 +238,7 @@ export const MapPage: React.FC = () => {
   const {
     draggingTerritoryPoint,
     drawPointerPercent,
+    edgeInsertPhantom,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
@@ -291,6 +292,11 @@ export const MapPage: React.FC = () => {
     setPendingNewTerritoryRings,
     showSnackbar,
   });
+
+  const handlePhantomVertexClick = useCallback(() => {
+    if (!edgeInsertPhantom) return;
+    insertVertexOnEdge(edgeInsertPhantom.ringIndex, edgeInsertPhantom.edgeIndex, edgeInsertPhantom.projection);
+  }, [edgeInsertPhantom, insertVertexOnEdge]);
 
   useEffect(() => {
     if (!editingTerritoryPoints) return;
@@ -461,13 +467,14 @@ export const MapPage: React.FC = () => {
                 drawPointerPercent={drawPointerPercent}
                 onDrawClosureHoverChange={handleDrawClosureHoverChange}
                 editingTerritoryPoints={editingTerritoryPoints}
+                edgeInsertPhantom={edgeInsertPhantom}
+                onPhantomVertexClick={handlePhantomVertexClick}
                 selectedTerritory={selectedTerritory}
                 draggingMarker={draggingMarker}
                 draggingTerritoryPoint={draggingTerritoryPoint}
                 onTerritoryClick={handleTerritoryClick}
                 onPointDragStart={handlePointDragStart}
                 onDeletePoint={deletePoint}
-                onAddPointOnEdge={addPointOnEdge}
               />
               {markers.map(marker => {
                 const isDraggingVisual = draggingMarker?.id === marker.id && didDragRef.current;
