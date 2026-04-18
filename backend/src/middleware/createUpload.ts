@@ -7,6 +7,8 @@ import { BadRequestError } from './errorHandler.js';
 const DEFAULT_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.svg'];
 const DEFAULT_ALLOWED_MIME_TYPES = [
   'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
   'image/png',
   'image/webp',
   'image/svg+xml',
@@ -71,17 +73,20 @@ export function createDiskUpload(options: CreateDiskUploadOptions) {
 
     const extAllowed = allowedExtensions.includes(ext);
     const mimeAllowed = allowedMimeTypes.includes(mime);
+    /** Браузеры/ОС иногда шлют пустой type или octet-stream для jpg/png — при известном расширении разрешаем. */
+    const mimeUnknownButExtOk =
+      extAllowed && (mime === '' || mime === 'application/octet-stream');
 
-    if (!extAllowed || !mimeAllowed) {
-      cb(
-        new BadRequestError(
-          `Invalid file type. Allowed extensions: ${allowedExtensions.join(', ')}`
-        ) as unknown as Error
-      );
+    if (extAllowed && (mimeAllowed || mimeUnknownButExtOk)) {
+      cb(null, true);
       return;
     }
 
-    cb(null, true);
+    cb(
+      new BadRequestError(
+        `Invalid file type. Allowed extensions: ${allowedExtensions.join(', ')}`
+      ) as unknown as Error
+    );
   };
 
   return multer({

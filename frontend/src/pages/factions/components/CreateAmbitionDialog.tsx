@@ -35,8 +35,17 @@ interface UploadAmbitionResponse {
   data?: { path?: string };
 }
 
-const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
-const ACCEPT_HINT = 'image/jpeg,image/png,image/webp';
+const ACCEPTED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/webp',
+] as const;
+/** MIME + расширения: часть браузеров не выставляет type для jpeg при выборе файла. */
+const ACCEPT_HINT = 'image/jpeg,image/jpg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+
+const IMAGE_EXT_RE = /\.(jpe?g|png|webp)$/i;
 
 export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
   open,
@@ -91,8 +100,15 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
   const canSubmit = name.trim().length > 0 && description.trim().length > 0 && !submitting;
 
   const validateFile = (candidate: File): string | null => {
-    if (!ACCEPTED_MIME_TYPES.includes(candidate.type as (typeof ACCEPTED_MIME_TYPES)[number])) {
-      return 'Допустимые форматы: jpg, png, webp';
+    const mimeOk = ACCEPTED_MIME_TYPES.includes(
+      candidate.type as (typeof ACCEPTED_MIME_TYPES)[number]
+    );
+    const extOk = IMAGE_EXT_RE.test(candidate.name);
+    const unknownMime =
+      candidate.type === '' ||
+      candidate.type === 'application/octet-stream';
+    if (!mimeOk && !(unknownMime && extOk) && !extOk) {
+      return 'Допустимые форматы: jpg, jpeg, png, webp';
     }
     if (candidate.size > LIMITS.MAX_FILE_SIZE) {
       return `Максимальный размер файла: ${Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024))}MB`;
@@ -209,7 +225,8 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
             <input type="file" hidden accept={ACCEPT_HINT} onChange={handleFileChange} />
           </Button>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            Допустимые форматы: jpg, png, webp. Максимум: {Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024))}
+            Допустимые форматы: jpeg, jpg, png, webp. Максимум:{' '}
+            {Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024))}
             MB
           </Typography>
         </Box>
