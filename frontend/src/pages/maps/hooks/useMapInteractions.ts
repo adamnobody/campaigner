@@ -1,5 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
-import { DRAG_THRESHOLD, isPointInTerritory } from '../components/mapUtils';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  DRAG_THRESHOLD,
+  isPointInTerritory,
+  screenDistanceBetweenPercentPointsInPx,
+} from '../components/mapUtils';
 import type { MapData, MapMode, Marker, Territory, TerritoryPointDragPayload } from '../components/mapUtils';
 
 type UseMapInteractionsArgs = {
@@ -18,6 +22,9 @@ type UseMapInteractionsArgs = {
   applyTransform: () => void;
   imgRef: React.RefObject<HTMLImageElement>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Array<{ x: number; y: number }>>>;
+  drawingPoints: Array<{ x: number; y: number }>;
+  zoomDisplay: number;
+  completeContour: () => void;
   clearDrawingDraft: () => void;
   buildRingsSnapshotForCreateDialog: () => Array<Array<{ x: number; y: number }>> | null;
   openNewMarkerDialogAt: (x: number, y: number) => void;
@@ -55,6 +62,9 @@ export function useMapInteractions({
   applyTransform,
   imgRef,
   setDrawingPoints,
+  drawingPoints,
+  zoomDisplay,
+  completeContour,
   clearDrawingDraft,
   buildRingsSnapshotForCreateDialog,
   openNewMarkerDialogAt,
@@ -75,8 +85,15 @@ export function useMapInteractions({
   setPendingNewTerritoryRings,
 }: UseMapInteractionsArgs) {
   const [draggingTerritoryPoint, setDraggingTerritoryPoint] = useState<TerritoryPointDragPayload | null>(null);
+  const [drawPointerPercent, setDrawPointerPercent] = useState<{ x: number; y: number } | null>(null);
   const lastPointDragUpdateAtRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (mode !== 'draw_territory' || drawingPoints.length === 0) {
+      setDrawPointerPercent(null);
+    }
+  }, [mode, drawingPoints.length]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -121,20 +138,41 @@ export function useMapInteractions({
           );
           return { ...prev, rings: newRings };
         });
-      } else if (draggingTerritoryPoint.mode === 'draw') {
-        setDrawingPoints(prev => {
-          const next = [...prev];
-          next[draggingTerritoryPoint.pointIndex] = { x: px, y: py };
-          return next;
-        });
       }
       return;
     }
 
-    handleMarkerDragMove(e, imgRef.current, DRAG_THRESHOLD);
-  }, [applyTransform, draggingTerritoryPoint, editingTerritoryPoints, handleMarkerDragMove, imgRef, isPanningRef, panOriginRef, panRef, panStartRef, setDrawingPoints, setEditingTerritoryPoints]);
+    if (mode === 'draw_territory' && drawingPoints.length > 0 && imgRef.current) {
+      const rect = imgRef.current.getBoundingClientRect();
+      const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+      setDrawPointerPercent({ x: px, y: py });
+    } else {
+      setDrawPointerPercent(null);
+    }
 
-  const handleMouseUp = useCallback(async () => {
+    handleMarkerDragMove(e, imgRef.current, DRAG_THRESHOLD);
+  }, [
+    applyTransform,
+    draggingTerritoryPoint,
+    drawingPoints.length,
+    editingTerritoryPoints,
+    handleMarkerDragMove,
+    imgRef,
+    isPanningRef,
+    mode,
+    panOriginRef,
+    panRef,
+    panStartRef,
+    setDrawingPoints,
+    setEditingTerritoryPoints,
+  ]);
+
+  const handleMouseUp = useCallback(async (e?: React.MouseEvent) => {
+    if (e?.type === 'mouseleave') {
+      setDrawPointerPercent(null);
+    }
+
     if (draggingTerritoryPoint !== null) {
       setDraggingTerritoryPoint(null);
       return;
@@ -195,6 +233,17 @@ export function useMapInteractions({
     const py = ((e.clientY - rect.top) / rect.height) * 100;
 
     if (mode === 'draw_territory') {
+      const iw = imgRef.current.clientWidth;
+      const ih = imgRef.current.clientHeight;
+      if (
+        drawingPoints.length >= 3 &&
+        iw > 0 &&
+        ih > 0 &&
+        screenDistanceBetweenPercentPointsInPx(drawingPoints[0], { x: px, y: py }, iw, ih, zoomDisplay) < 10
+      ) {
+        completeContour();
+        return;
+      }
       setDrawingPoints(prev => [...prev, { x: px, y: py }]);
       return;
     }
@@ -212,7 +261,24 @@ export function useMapInteractions({
     }
 
     openNewMarkerDialogAt(px, py);
-  }, [currentMap, didDragRef, imgRef, isPanningRef, mode, openNewMarkerDialogAt, setDrawingPoints, setPanelOpen, setPanelType, setSelectedMarker, setSelectedTerritory, territories, transitioning]);
+  }, [
+    completeContour,
+    currentMap,
+    didDragRef,
+    drawingPoints,
+    imgRef,
+    isPanningRef,
+    mode,
+    openNewMarkerDialogAt,
+    setDrawingPoints,
+    setPanelOpen,
+    setPanelType,
+    setSelectedMarker,
+    setSelectedTerritory,
+    territories,
+    transitioning,
+    zoomDisplay,
+  ]);
 
   const finishDrawing = useCallback(() => {
     const rings = buildRingsSnapshotForCreateDialog();
@@ -246,6 +312,7 @@ export function useMapInteractions({
 
   return {
     draggingTerritoryPoint,
+    drawPointerPercent,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,

@@ -154,6 +154,24 @@ export const pointsToSvgPath = (points: { x: number; y: number }[]): string => {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 };
 
+/**
+ * Расстояние в экранных px между двумя точками в процентах (0–100) по ширине/высоте изображения,
+ * при масштабе карты `zoom` (как у `scale(zoom)` на контейнере).
+ */
+export function screenDistanceBetweenPercentPointsInPx(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  imgWidth: number,
+  imgHeight: number,
+  zoom: number,
+): number {
+  const sx0 = (a.x / 100) * imgWidth;
+  const sy0 = (a.y / 100) * imgHeight;
+  const sx1 = (b.x / 100) * imgWidth;
+  const sy1 = (b.y / 100) * imgHeight;
+  return Math.hypot(sx1 - sx0, sy1 - sy0) * zoom;
+}
+
 /** Средняя ширина глифа относительно fontSize (латиница + кириллица, ~600 weight). */
 const TERRITORY_LABEL_AVG_CHAR_EM = 0.52;
 const TERRITORY_LABEL_MIN_SCREEN_PX = 11;

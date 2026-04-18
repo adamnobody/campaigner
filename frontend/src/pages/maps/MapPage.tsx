@@ -49,6 +49,7 @@ export const MapPage: React.FC = () => {
   const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelType, setPanelType] = useState<'marker' | 'territory'>('marker');
+  const [drawClosureHover, setDrawClosureHover] = useState(false);
 
   const {
     drawingCompletedRings,
@@ -201,8 +202,13 @@ export const MapPage: React.FC = () => {
     showConfirmDialog,
   });
 
+  const handleDrawClosureHoverChange = useCallback((active: boolean) => {
+    setDrawClosureHover(active);
+  }, []);
+
   const {
     draggingTerritoryPoint,
+    drawPointerPercent,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
@@ -232,6 +238,9 @@ export const MapPage: React.FC = () => {
     applyTransform,
     imgRef,
     setDrawingPoints,
+    drawingPoints,
+    zoomDisplay,
+    completeContour,
     clearDrawingDraft,
     buildRingsSnapshotForCreateDialog,
     openNewMarkerDialogAt,
@@ -337,7 +346,7 @@ export const MapPage: React.FC = () => {
         {editingTerritoryPoints
           ? 'Перетащите точки для изменения формы · ПКМ — удалить точку · Двойной клик — добавить точку на ребре'
           : mode === 'draw_territory'
-          ? 'Клик — точки контура · R или «Контур готов» — зафиксировать контур · «Сохранить» — имя и создание · ПКМ / двойной клик — как раньше'
+          ? 'Клик — вершины линии · замкнуть: наведи на первую точку (кольцо) и кликни, или R / «Контур готов» · «Сохранить» — имя и создание'
           : 'Клик — маркер · Shift+клик по территории — маркер поверх неё · Клик по территории — настройки · Перетаскивание маркера · Двойной клик — вложенная карта · Alt+drag / СКМ — пан · Колёсико — зум'
         }
       </Typography>
@@ -352,7 +361,7 @@ export const MapPage: React.FC = () => {
               position: 'relative',
             cursor: isPanningRef.current ? 'grabbing'
               : (draggingMarker && didDragRef.current) ? 'grabbing'
-              : mode === 'draw_territory' ? 'crosshair'
+              : mode === 'draw_territory' ? (drawClosureHover ? 'pointer' : 'crosshair')
               : 'crosshair',
           }}
           onMouseDown={handleMouseDown}
@@ -394,6 +403,8 @@ export const MapPage: React.FC = () => {
                 mode={mode}
                 drawingCompletedRings={drawingCompletedRings}
                 drawingPoints={drawingPoints}
+                drawPointerPercent={drawPointerPercent}
+                onDrawClosureHoverChange={handleDrawClosureHoverChange}
                 editingTerritoryPoints={editingTerritoryPoints}
                 selectedTerritory={selectedTerritory}
                 draggingMarker={draggingMarker}
