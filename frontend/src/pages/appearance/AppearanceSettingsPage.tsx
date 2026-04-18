@@ -51,13 +51,13 @@ import {
   presetOrder,
   safeRgba,
   AnimatedSlider,
-} from '@/pages/appearance/AppearancePrimitives';
+} from '@/pages/appearance/components/AppearancePrimitives';
 import { FloatingOrb } from '@/components/ui/FloatingOrb';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { AppearanceLivePreview } from '@/pages/appearance/AppearanceLivePreview';
-import { FONT_PRESET_OPTIONS } from '@/pages/appearance/fontPresets';
-import { useDebouncedDraft } from '@/pages/appearance/useDebouncedDraft';
+import { AppearanceLivePreview } from '@/pages/appearance/components/AppearanceLivePreview';
+import { FONT_PRESET_OPTIONS } from '@/pages/appearance/components/fontPresets';
+import { useDebouncedDraft } from '@/pages/appearance/components/useDebouncedDraft';
 import {
   INTERFACE_STYLE_ORDER,
   INTERFACE_STYLE_PROFILES,

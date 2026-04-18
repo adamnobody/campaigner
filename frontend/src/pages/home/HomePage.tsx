@@ -25,9 +25,9 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { shallow } from 'zustand/shallow';
-import { HomeBackground } from '@/pages/home/HomeBackground';
-import { CreateProjectDialog } from '@/pages/home/CreateProjectDialog';
-import { EmptyStateIllustration } from '@/pages/home/HomePrimitives';
+import { HomeBackground } from '@/pages/home/components/HomeBackground';
+import { CreateProjectDialog } from '@/pages/home/components/CreateProjectDialog';
+import { EmptyStateIllustration } from '@/pages/home/components/HomePrimitives';
 import { GlassCard } from '@/components/ui/GlassCard';
 
 export const HomePage: React.FC = () => {

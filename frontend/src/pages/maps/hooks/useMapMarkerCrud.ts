@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { mapApi } from '@/api/maps';
 import { projectsApi } from '@/api/projects';
-import { extractData, normalizeMap, normalizeMarker, DEFAULT_FORM, MARKER_COLORS } from './mapUtils';
-import type { MapData, MapMode, Marker } from './mapUtils';
+import { extractData, normalizeMap, normalizeMarker, DEFAULT_FORM, MARKER_COLORS } from '../components/mapUtils';
+import type { MapData, MapMode, Marker } from '../components/mapUtils';
 import type { Project } from '@campaigner/shared';
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';

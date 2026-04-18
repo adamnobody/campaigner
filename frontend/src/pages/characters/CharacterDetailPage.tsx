@@ -20,7 +20,7 @@ import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import FaceIcon from '@mui/icons-material/Face';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CharacterTraitsTab } from '@/pages/character/CharacterTraitsTab';
+import { CharacterTraitsTab } from '@/pages/characters/components/CharacterTraitsTab';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { factionsApi } from '@/api/factions';
 import { useUIStore } from '@/store/useUIStore';

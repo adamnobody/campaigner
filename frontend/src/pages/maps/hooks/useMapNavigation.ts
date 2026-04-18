@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { mapApi } from '@/api/maps';
-import { extractData, normalizeMap } from './mapUtils';
-import type { MapData } from './mapUtils';
+import { extractData, normalizeMap } from '../components/mapUtils';
+import type { MapData } from '../components/mapUtils';
 
 type UseMapNavigationArgs = {
   loadMapData: (mapId: number) => Promise<void>;

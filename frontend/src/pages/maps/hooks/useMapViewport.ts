@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect, type RefObject } from 'react';
-import { MIN_ZOOM, MAX_ZOOM, ZOOM_SPEED } from './mapUtils';
+import { MIN_ZOOM, MAX_ZOOM, ZOOM_SPEED } from '../components/mapUtils';
 
 type Params = {
   containerRef: RefObject<HTMLDivElement | null>;

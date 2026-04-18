@@ -21,12 +21,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { GlassCard } from '@/components/ui/GlassCard';
 import type { Note } from '@campaigner/shared';
-import { WikiArticleCard } from '@/pages/wiki/WikiArticleCard';
+import { WikiArticleCard } from '@/pages/wiki/components/WikiArticleCard';
 import {
   WikiCreateArticleDialog,
   WikiTagsDialog,
   WikiLinkArticlesDialog,
-} from '@/pages/wiki/WikiDialogs';
+} from '@/pages/wiki/components/WikiDialogs';
 
 export const WikiPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();

@@ -25,8 +25,8 @@ import {
   DOGMA_IMPORTANCE_LABELS,
 } from '@campaigner/shared';
 import type { Dogma } from '@campaigner/shared';
-import { DogmaFormDialog } from '@/pages/dogma/DogmaFormDialog';
-import { DogmaListItem } from '@/pages/dogma/DogmaListItem';
+import { DogmaFormDialog } from '@/pages/dogmas/components/DogmaFormDialog';
+import { DogmaListItem } from '@/pages/dogmas/components/DogmaListItem';
 
 const PAGE_SIZE = 30;
 

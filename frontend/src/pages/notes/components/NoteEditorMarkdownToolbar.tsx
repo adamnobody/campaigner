@@ -11,7 +11,7 @@ import TitleIcon from '@mui/icons-material/Title';
 import LinkIcon from '@mui/icons-material/Link';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import { ToolbarButton } from '@/pages/note-editor/ToolbarButton';
+import { ToolbarButton } from '@/pages/notes/components/ToolbarButton';
 
 type Props = {
   canUndo: boolean;

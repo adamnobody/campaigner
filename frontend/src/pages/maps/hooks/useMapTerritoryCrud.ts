@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { mapApi } from '@/api/maps';
-import { extractData, normalizeTerritory } from './mapUtils';
-import type { MapData, Territory, TerritoryPointDragPayload, MapMode } from './mapUtils';
+import { extractData, normalizeTerritory } from '../components/mapUtils';
+import type { MapData, Territory, TerritoryPointDragPayload, MapMode } from '../components/mapUtils';
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 

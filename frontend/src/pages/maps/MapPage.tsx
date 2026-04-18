@@ -12,23 +12,23 @@ import {
   extractData, normalizeMap,
   territoryTotalPointCount,
   parseTerritories,
-} from './map/mapUtils';
-import type { MapMode, Marker, Territory, NoteOption, FactionOption } from './map/mapUtils';
-import { MapMarkerDialog } from './map/MapMarkerDialog';
-import { MapTerritoryDialog } from './map/MapTerritoryDialog';
-import { MapMarkerPanel } from './map/MapMarkerPanel';
-import { MapTerritoryPanel } from './map/MapTerritoryPanel';
-import { MapTerritorySvg } from './map/MapTerritorySvg';
-import { MapMarkerOnMap } from './map/MapMarkerOnMap';
-import { MapToolbar } from './map/MapToolbar';
-import { useMapViewport } from './map/useMapViewport';
-import { useMapTerritoryDrawing } from './map/useMapTerritoryDrawing';
+} from './components/mapUtils';
+import type { MapMode, Marker, Territory, NoteOption, FactionOption } from './components/mapUtils';
+import { MapMarkerDialog } from './components/MapMarkerDialog';
+import { MapTerritoryDialog } from './components/MapTerritoryDialog';
+import { MapMarkerPanel } from './components/MapMarkerPanel';
+import { MapTerritoryPanel } from './components/MapTerritoryPanel';
+import { MapTerritorySvg } from './components/MapTerritorySvg';
+import { MapMarkerOnMap } from './components/MapMarkerOnMap';
+import { MapToolbar } from './components/MapToolbar';
+import { useMapViewport } from './hooks/useMapViewport';
+import { useMapTerritoryDrawing } from './hooks/useMapTerritoryDrawing';
 import { shallow } from 'zustand/shallow';
-import { useMapData } from './map/useMapData';
-import { useMapNavigation } from './map/useMapNavigation';
-import { useMapMarkerCrud } from './map/useMapMarkerCrud';
-import { useMapTerritoryCrud } from './map/useMapTerritoryCrud';
-import { useMapInteractions } from './map/useMapInteractions';
+import { useMapData } from './hooks/useMapData';
+import { useMapNavigation } from './hooks/useMapNavigation';
+import { useMapMarkerCrud } from './hooks/useMapMarkerCrud';
+import { useMapTerritoryCrud } from './hooks/useMapTerritoryCrud';
+import { useMapInteractions } from './hooks/useMapInteractions';
 
 // ==================== Component ====================
 export const MapPage: React.FC = () => {

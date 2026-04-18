@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { MapMode } from './mapUtils';
+import type { MapMode } from '../components/mapUtils';
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 

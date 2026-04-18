@@ -12,8 +12,8 @@ import {
   parseNotes,
   parseFactions,
   preloadImage,
-} from './mapUtils';
-import type { MapData, Marker, Territory, NoteOption, FactionOption } from './mapUtils';
+} from '../components/mapUtils';
+import type { MapData, Marker, Territory, NoteOption, FactionOption } from '../components/mapUtils';
 
 type UseMapDataArgs = {
   projectId: number;

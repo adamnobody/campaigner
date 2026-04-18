@@ -18,7 +18,7 @@ import {
   R,
   MIN_ZOOM,
   MAX_ZOOM,
-} from '@/pages/character-graph/graphConstants';
+} from '@/pages/characters/graph/graphConstants';
 
 export const CharacterGraphPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();

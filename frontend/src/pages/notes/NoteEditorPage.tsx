@@ -23,11 +23,11 @@ import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { wikiApi } from '@/api/wiki';
 import { notesApi } from '@/api/notes';
-import { NoteEditorMarkdownToolbar } from '@/pages/note-editor/NoteEditorMarkdownToolbar';
-import { NoteEditorWikiSidebar, type EditorWikiLink } from '@/pages/note-editor/NoteEditorWikiSidebar';
-import { InsertWikiLinkDialog } from '@/pages/note-editor/InsertWikiLinkDialog';
-import { CreateWikiLinkDialog } from '@/pages/note-editor/CreateWikiLinkDialog';
-import { MarkdownPreview } from '@/pages/note-editor/MarkdownPreview';
+import { NoteEditorMarkdownToolbar } from '@/pages/notes/components/NoteEditorMarkdownToolbar';
+import { NoteEditorWikiSidebar, type EditorWikiLink } from '@/pages/notes/components/NoteEditorWikiSidebar';
+import { InsertWikiLinkDialog } from '@/pages/notes/components/InsertWikiLinkDialog';
+import { CreateWikiLinkDialog } from '@/pages/notes/components/CreateWikiLinkDialog';
+import { MarkdownPreview } from '@/pages/notes/components/MarkdownPreview';
 import { shallow } from 'zustand/shallow';
 
 const AUTOSAVE_DELAY = 3000;

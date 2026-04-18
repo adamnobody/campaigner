@@ -1,6 +1,6 @@
 /**
  * chunker.mjs — собирает исходники монорепо Campaigner в тематические .txt-чанки
- * для обзора/LLM. Запуск из корня: node scripts/chunker.mjs
+ * для обзора/LLM. Запуск из корня: node scripts/chunker.mjs (или `npm run chunker` из корня).
  * Зависимости: только node:fs и node:path.
  */
 import fs from 'node:fs/promises';
@@ -134,7 +134,7 @@ function assignChunk(posixRel) {
     'frontend/src/components/ui/',
     'frontend/src/components/detail/',
     'frontend/src/components/forms/',
-    'frontend/src/components/Layout/',
+    'frontend/src/components/layout/',
     'frontend/src/components/onboarding/',
     'frontend/src/components/settings/',
   ];
@@ -146,15 +146,15 @@ function assignChunk(posixRel) {
 
     // Визуализация
     if (base === 'CharacterGraphPage.tsx') return 'frontend_pages_visualization';
-    if (posixRel.startsWith('frontend/src/pages/character-graph/')) return 'frontend_pages_visualization';
+    if (posixRel.startsWith('frontend/src/pages/characters/graph/')) return 'frontend_pages_visualization';
     if (base === 'TimelinePage.tsx') return 'frontend_pages_visualization';
     if (base === 'MapPage.tsx') return 'frontend_pages_visualization';
-    if (posixRel.startsWith('frontend/src/pages/map/')) return 'frontend_pages_visualization';
+    if (posixRel.startsWith('frontend/src/pages/maps/')) return 'frontend_pages_visualization';
     if (base === 'WikiGraphPage.tsx') return 'frontend_pages_visualization';
 
     // Контент (заметки, вики)
     if (/^Note.*\.tsx$/i.test(base)) return 'frontend_pages_content';
-    if (posixRel.startsWith('frontend/src/pages/note-editor/')) return 'frontend_pages_content';
+    if (posixRel.startsWith('frontend/src/pages/notes/components/')) return 'frontend_pages_content';
     if (/^Wiki.*\.tsx$/i.test(base)) return 'frontend_pages_content';
     if (posixRel.startsWith('frontend/src/pages/wiki/')) return 'frontend_pages_content';
 
@@ -169,13 +169,13 @@ function assignChunk(posixRel) {
     if (base !== 'CharacterGraphPage.tsx' && /^Character.*\.tsx$/i.test(base)) {
       return 'frontend_pages_entities';
     }
-    if (posixRel.startsWith('frontend/src/pages/character/')) return 'frontend_pages_entities';
+    if (posixRel.startsWith('frontend/src/pages/characters/components/')) return 'frontend_pages_entities';
     if (/^Faction.*\.tsx$/i.test(base)) return 'frontend_pages_entities';
-    if (posixRel.startsWith('frontend/src/pages/faction/')) return 'frontend_pages_entities';
+    if (posixRel.startsWith('frontend/src/pages/factions/components/')) return 'frontend_pages_entities';
     if (/^Dynast.*\.tsx$/i.test(base)) return 'frontend_pages_entities';
-    if (posixRel.startsWith('frontend/src/pages/dynasty/')) return 'frontend_pages_entities';
+    if (posixRel.startsWith('frontend/src/pages/dynasties/components/')) return 'frontend_pages_entities';
     if (/^Dogma.*\.tsx$/i.test(base)) return 'frontend_pages_entities';
-    if (posixRel.startsWith('frontend/src/pages/dogma/')) return 'frontend_pages_entities';
+    if (posixRel.startsWith('frontend/src/pages/dogmas/components/')) return 'frontend_pages_entities';
 
     // Остальное под pages — без категории (если появятся новые файлы)
     return 'uncategorized';

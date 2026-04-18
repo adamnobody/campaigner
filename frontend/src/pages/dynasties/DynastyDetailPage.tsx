@@ -26,7 +26,7 @@ import { useTagStore } from '@/store/useTagStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
-import { DynastyMemberDialog, DynastyFamilyLinkDialog, DynastyEventDialog } from '@/pages/dynasty/DynastyDialogs';
+import { DynastyMemberDialog, DynastyFamilyLinkDialog, DynastyEventDialog } from '@/pages/dynasties/components/DynastyDialogs';
 import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -36,8 +36,8 @@ import {
   DYNASTY_FAMILY_RELATION_LABELS,
 } from '@campaigner/shared';
 import type { DynastyMember, DynastyEvent } from '@campaigner/shared';
-import { FamilyTree } from '@/pages/dynasty/FamilyTree';
-import { DynastyEventsTimeline } from '@/pages/dynasty/DynastyEventsTimeline';
+import { FamilyTree } from '@/pages/dynasties/components/FamilyTree';
+import { DynastyEventsTimeline } from '@/pages/dynasties/components/DynastyEventsTimeline';
 import { shallow } from 'zustand/shallow';
 
 // ==================== Form ====================

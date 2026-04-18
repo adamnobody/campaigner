@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import { DRAG_THRESHOLD, isPointInTerritory } from './mapUtils';
-import type { MapData, MapMode, Marker, Territory, TerritoryPointDragPayload } from './mapUtils';
+import { DRAG_THRESHOLD, isPointInTerritory } from '../components/mapUtils';
+import type { MapData, MapMode, Marker, Territory, TerritoryPointDragPayload } from '../components/mapUtils';
 
 type UseMapInteractionsArgs = {
   mode: MapMode;
