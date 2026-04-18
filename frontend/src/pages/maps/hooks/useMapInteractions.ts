@@ -96,6 +96,9 @@ export function useMapInteractions({
   }, [mode, drawingPoints.length]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.shiftKey) {
+      e.preventDefault();
+    }
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
       isPanningRef.current = true;
       panStartRef.current = { x: e.clientX, y: e.clientY };

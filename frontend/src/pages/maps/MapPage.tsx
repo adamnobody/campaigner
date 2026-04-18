@@ -359,6 +359,8 @@ export const MapPage: React.FC = () => {
               width: '100%', height: '100%', overflow: 'hidden',
               backgroundColor: (theme) => theme.palette.background.default,
               position: 'relative',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
             cursor: isPanningRef.current ? 'grabbing'
               : (draggingMarker && didDragRef.current) ? 'grabbing'
               : mode === 'draw_territory' ? (drawClosureHover ? 'pointer' : 'crosshair')
