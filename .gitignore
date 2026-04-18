@@ -20,6 +20,9 @@ dist-electron/
 /data/*
 !data/.gitkeep
 
+# Пользовательские загрузки под backend/ (не путать с runtime data/uploads у корня репо).
+backend/uploads/
+
 # ==================== Environment ====================
 .env
 .env.local

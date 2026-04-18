@@ -79,7 +79,7 @@ $env:API_BASE="http://localhost:3001/api"; npm run smoke
 ## Скрипты и данные
 
 - Вспомогательные сценарии — **`scripts/`** (Node `.mjs`, кроссплатформенно).
-- База и загрузки бэкенда — см. `backend/data`, `backend/uploads`; не коммитить личные дампы без необходимости.
+- База и загрузки бэкенда — см. `backend/data/` (включая `backend/data/uploads/`); не коммитить личные дампы без необходимости.
 
 ---
 
@@ -107,15 +107,12 @@ $env:API_BASE="http://localhost:3001/api"; npm run smoke
 - **Canonical API imports**:
   - транспортный слой — `frontend/src/api/client.ts`
   - доменные API — `frontend/src/api/<domain>.ts`
-  - `frontend/src/api/axiosClient.ts` — **только compatibility layer для legacy-кода**
-- В **новом коде** не импортировать доменные API через `axiosClient.ts`.
-- Не добавлять новые re-export доменных клиентов в `axiosClient.ts`, если нет явной необходимости для мягкой миграции.
 
 - **Размещение кода**:
   - `frontend/src/components/ui/*` — только переиспользуемые domain-agnostic UI-примитивы
   - `frontend/src/components/forms/*` — только переиспользуемые form-компоненты
-  - `frontend/src/components/Layout/*` — глобальный layout/navigation shell
-  - `frontend/src/pages/<domain>/*` — route-level страница и весь domain-local код: подкомпоненты, хуки, утилиты, локальные стили/константы
+  - `frontend/src/components/layout/*` — глобальный layout/navigation shell
+  - `frontend/src/pages/<feature>/` — route-level страницы (`*Page.tsx`) и локальный код: `components/`, при необходимости `hooks/` (см. фактическую структуру в репозитории)
 - Если компонент используется только внутри одного домена/маршрута, его **не нужно** поднимать в глобальные `components/*`.
 
 - **Сторы (`frontend/src/store/*`)**:
@@ -133,3 +130,5 @@ $env:API_BASE="http://localhost:3001/api"; npm run smoke
   - предпочитать маленькие PR и минимальный diff
   - giant files декомпозировать постепенно (strangler pattern), а не переписывать целиком
   - не переносить файлы “на будущее”, если переиспользование пока не подтверждено
+
+- После структурных изменений запусти npm run tree перед коммитом

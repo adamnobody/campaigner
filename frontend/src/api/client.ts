@@ -1,3 +1,4 @@
+/** Canonical shared Axios instance for the app; domain APIs live in `@/api/<domain>`. */
 import axios from 'axios';
 import type { ApiResponse } from '@campaigner/shared';
 

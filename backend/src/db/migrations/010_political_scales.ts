@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { SYSTEM_POLITICAL_SCALES_SEED } from './politicalScalesSeedData.js';
+import { SYSTEM_POLITICAL_SCALES_SEED } from '../seeds/politicalScalesSeedData.js';
 
 function hasColumn(db: Database.Database, tableName: string, columnName: string): boolean {
   const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
