@@ -1,6 +1,7 @@
 import { alpha, createTheme } from '@mui/material/styles';
 import { THEME_PRESETS } from './presets';
 import type { PreferencesState } from '@/store/usePreferencesStore';
+import type { ThemePresetDefinition } from './presets';
 
 export const createAppTheme = (preferences: Pick<
   PreferencesState,
@@ -22,8 +23,11 @@ export const createAppTheme = (preferences: Pick<
   | 'cardPatternOpacity'
   | 'cardPatternSize'
   | 'cardPatternUrl'
->) => {
-  const preset = THEME_PRESETS[preferences.themePreset] || THEME_PRESETS['obsidian-gold'];
+>, options?: {
+  presets?: Record<string, ThemePresetDefinition>;
+}) => {
+  const presetMap = options?.presets || THEME_PRESETS;
+  const preset = presetMap[preferences.themePreset] || THEME_PRESETS['obsidian-gold'];
 
   const spacingBase =
     preferences.uiDensity === 'compact' ? 7 :

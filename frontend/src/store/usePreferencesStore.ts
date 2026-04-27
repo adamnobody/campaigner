@@ -48,6 +48,24 @@ export interface SavedCustomTheme {
   settings: CustomThemeSnapshot;
 }
 
+export interface CustomColorThemePreset {
+  id: ThemePreset;
+  label: string;
+  background: string;
+  backgroundAccent: string;
+  panelBaseRgb: string;
+  borderRgb: string;
+  textPrimary: string;
+  textSecondary: string;
+  muted: string;
+  accentMain: string;
+  accentSoft: string;
+  accentStrong: string;
+  success: string;
+  warning: string;
+  error: string;
+}
+
 export interface PreferencesState {
   interfaceStyle: InterfaceStyle;
   autoApplyRecommendedPalette: boolean;
@@ -74,6 +92,7 @@ export interface PreferencesState {
   cardPatternSize: number;
   cardPatternUrl: string;
   customThemes: SavedCustomTheme[];
+  customColorThemes: CustomColorThemePreset[];
   selectedCustomThemeId: string | null;
 
   setThemePreset: (value: ThemePreset) => void;
@@ -105,6 +124,7 @@ export interface PreferencesState {
   saveCurrentAsCustomTheme: (name: string) => void;
   applyCustomTheme: (id: string) => void;
   deleteCustomTheme: (id: string) => void;
+  addCustomColorTheme: (theme: CustomColorThemePreset) => void;
 
   resetAppearance: () => void;
 }
@@ -135,6 +155,7 @@ const defaultPreferences = {
   cardPatternSize: 22,
   cardPatternUrl: '',
   customThemes: [] as SavedCustomTheme[],
+  customColorThemes: [] as CustomColorThemePreset[],
   selectedCustomThemeId: null as string | null,
 };
 
@@ -240,10 +261,16 @@ export const usePreferencesStore = create<PreferencesState>()(
         customThemes: prev.customThemes.filter((t) => t.id !== id),
         selectedCustomThemeId: prev.selectedCustomThemeId === id ? null : prev.selectedCustomThemeId,
       })),
+      addCustomColorTheme: (theme) => set((prev) => ({
+        customColorThemes: [...prev.customColorThemes.filter((item) => item.id !== theme.id), theme],
+        themePreset: theme.id,
+        selectedCustomThemeId: null,
+      })),
 
       resetAppearance: () => set({
         ...defaultPreferences,
         customThemes: get().customThemes,
+        customColorThemes: get().customColorThemes,
         selectedCustomThemeId: null,
       }),
     }),
@@ -275,6 +302,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         cardPatternSize: state.cardPatternSize,
         cardPatternUrl: state.cardPatternUrl,
         customThemes: state.customThemes,
+        customColorThemes: state.customColorThemes,
         selectedCustomThemeId: state.selectedCustomThemeId,
       }),
     }

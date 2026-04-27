@@ -3,6 +3,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { shallow } from 'zustand/shallow';
 import { createAppTheme } from './createAppTheme';
+import { THEME_PRESETS } from './presets';
 
 interface Props {
   children: React.ReactNode;
@@ -29,6 +30,7 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
     cardPatternOpacity,
     cardPatternSize,
     cardPatternUrl,
+    customColorThemes,
   } = usePreferencesStore((state) => ({
     themePreset: state.themePreset,
     surfaceMode: state.surfaceMode,
@@ -49,6 +51,7 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
     cardPatternOpacity: state.cardPatternOpacity,
     cardPatternSize: state.cardPatternSize,
     cardPatternUrl: state.cardPatternUrl,
+    customColorThemes: state.customColorThemes,
   }), shallow);
 
   React.useEffect(() => {
@@ -71,6 +74,11 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
   }, [customFontCssUrl]);
 
   const theme = useMemo(() => {
+    const presets = customColorThemes.reduce<Record<string, typeof THEME_PRESETS[string]>>((acc, preset) => {
+      acc[preset.id] = preset;
+      return acc;
+    }, { ...THEME_PRESETS });
+
     return createAppTheme({
       themePreset,
       surfaceMode,
@@ -90,7 +98,7 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
       cardPatternOpacity,
       cardPatternSize,
       cardPatternUrl,
-    });
+    }, { presets });
   }, [
     themePreset,
     surfaceMode,
@@ -110,6 +118,7 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
     cardPatternOpacity,
     cardPatternSize,
     cardPatternUrl,
+    customColorThemes,
   ]);
 
   return (

@@ -41,6 +41,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import TextureIcon from '@mui/icons-material/Texture';
 import FontDownloadIcon from '@mui/icons-material/FontDownload';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { shallow } from 'zustand/shallow';
 import { THEME_PRESETS } from '@/theme/presets';
@@ -58,11 +60,11 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { AppearanceLivePreview } from '@/pages/appearance/components/AppearanceLivePreview';
 import { FONT_PRESET_OPTIONS } from '@/pages/appearance/components/fontPresets';
 import { useDebouncedDraft } from '@/pages/appearance/components/useDebouncedDraft';
+import { CreateColorThemeDialog, type CreateColorThemeValues } from '@/pages/appearance/components/CreateColorThemeDialog';
 import {
   INTERFACE_STYLE_ORDER,
   INTERFACE_STYLE_PROFILES,
   getPaletteCompatibility,
-  getStyleForPalette,
 } from '@/theme/interfaceStyles';
 
 export const AppearanceSettingsPage: React.FC = () => {
@@ -70,6 +72,9 @@ export const AppearanceSettingsPage: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredPreset, setHoveredPreset] = useState<string | null>(null);
   const [customThemeName, setCustomThemeName] = useState('');
+  const [customPaletteDialogOpen, setCustomPaletteDialogOpen] = useState(false);
+  const [editingPaletteId, setEditingPaletteId] = useState<string | null>(null);
+  const [editingPaletteValues, setEditingPaletteValues] = useState<CreateColorThemeValues | null>(null);
   const [selectedFontPresetId, setSelectedFontPresetId] = useState('default-inter-cinzel');
 
   const {
@@ -97,6 +102,7 @@ export const AppearanceSettingsPage: React.FC = () => {
     cardPatternSize,
     cardPatternUrl,
     customThemes,
+    customColorThemes,
     selectedCustomThemeId,
     setThemePreset,
     setSurfaceMode,
@@ -125,6 +131,7 @@ export const AppearanceSettingsPage: React.FC = () => {
     saveCurrentAsCustomTheme,
     applyCustomTheme,
     deleteCustomTheme,
+    addCustomColorTheme,
     resetAppearance,
   } = usePreferencesStore((state) => ({
     interfaceStyle: state.interfaceStyle,
@@ -151,6 +158,7 @@ export const AppearanceSettingsPage: React.FC = () => {
     cardPatternSize: state.cardPatternSize,
     cardPatternUrl: state.cardPatternUrl,
     customThemes: state.customThemes,
+    customColorThemes: state.customColorThemes,
     selectedCustomThemeId: state.selectedCustomThemeId,
     setThemePreset: state.setThemePreset,
     setSurfaceMode: state.setSurfaceMode,
@@ -179,10 +187,25 @@ export const AppearanceSettingsPage: React.FC = () => {
     saveCurrentAsCustomTheme: state.saveCurrentAsCustomTheme,
     applyCustomTheme: state.applyCustomTheme,
     deleteCustomTheme: state.deleteCustomTheme,
+    addCustomColorTheme: state.addCustomColorTheme,
     resetAppearance: state.resetAppearance,
   }), shallow);
 
-  const currentPreset = THEME_PRESETS[themePreset] || THEME_PRESETS['obsidian-gold'];
+  const allThemePresets = React.useMemo(() => {
+    const customMap = customColorThemes.reduce<Record<string, typeof THEME_PRESETS[string]>>((acc, preset) => {
+      acc[preset.id] = preset;
+      return acc;
+    }, {});
+    return {
+      ...THEME_PRESETS,
+      ...customMap,
+    };
+  }, [customColorThemes]);
+  const paletteOrder = React.useMemo(
+    () => [...presetOrder, ...customColorThemes.map((preset) => preset.id)],
+    [customColorThemes]
+  );
+  const currentPreset = allThemePresets[themePreset] || THEME_PRESETS['obsidian-gold'];
   const currentStyleProfile = INTERFACE_STYLE_PROFILES[interfaceStyle];
   const currentPaletteCompatibility = getPaletteCompatibility(interfaceStyle, themePreset);
   const compatibilityColor: Record<'ideal' | 'good' | 'experimental', 'success' | 'info' | 'warning'> = {
@@ -376,6 +399,68 @@ export const AppearanceSettingsPage: React.FC = () => {
     setCustomBodyFontFamily(preset.bodyFamily);
     setCustomHeadingFontFamily(preset.headingFamily);
     setFontMode('custom');
+  };
+
+  const hexToRgbTriplet = (hex: string) => {
+    const normalized = hex.trim().replace('#', '');
+    const full = normalized.length === 3
+      ? normalized.split('').map((char) => `${char}${char}`).join('')
+      : normalized;
+    if (full.length !== 6) return '120, 130, 150';
+    const red = Number.parseInt(full.slice(0, 2), 16);
+    const green = Number.parseInt(full.slice(2, 4), 16);
+    const blue = Number.parseInt(full.slice(4, 6), 16);
+    if ([red, green, blue].some((value) => Number.isNaN(value))) return '120, 130, 150';
+    return `${red}, ${green}, ${blue}`;
+  };
+
+  const buildCustomPaletteId = () => `custom-${Date.now().toString(36)}`;
+
+  const handleSaveCustomPalette = (values: CreateColorThemeValues) => {
+    const accentRgb = hexToRgbTriplet(values.accent);
+    const textRgb = hexToRgbTriplet(values.text);
+    const paletteId = editingPaletteId || buildCustomPaletteId();
+
+    addCustomColorTheme({
+      id: paletteId,
+      label: values.name,
+      background: values.background,
+      backgroundAccent: `radial-gradient(circle at top left, rgba(${accentRgb}, 0.2), transparent 34%)`,
+      panelBaseRgb: hexToRgbTriplet(values.background),
+      borderRgb: accentRgb,
+      textPrimary: values.text,
+      textSecondary: `rgba(${textRgb}, 0.8)`,
+      muted: `rgba(${textRgb}, 0.44)`,
+      accentMain: values.accent,
+      accentSoft: `rgba(${accentRgb}, 0.18)`,
+      accentStrong: values.accent,
+      success: '#7BD88F',
+      warning: '#F6C177',
+      error: '#FF7A7A',
+    });
+    setThemePreset(paletteId);
+    setCustomPaletteDialogOpen(false);
+    setEditingPaletteId(null);
+    setEditingPaletteValues(null);
+  };
+
+  const handleCreatePaletteOpen = () => {
+    setEditingPaletteId(null);
+    setEditingPaletteValues(null);
+    setCustomPaletteDialogOpen(true);
+  };
+
+  const handleEditPaletteOpen = (presetId: string) => {
+    const palette = customColorThemes.find((item) => item.id === presetId);
+    if (!palette) return;
+    setEditingPaletteId(palette.id);
+    setEditingPaletteValues({
+      name: palette.label,
+      background: palette.background,
+      accent: palette.accentMain,
+      text: palette.textPrimary,
+    });
+    setCustomPaletteDialogOpen(true);
   };
 
   return (
@@ -629,7 +714,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                 <SectionHeader
                   icon={<PaletteIcon sx={{ fontSize: '1.2rem' }} />}
                   title="Цветовая тема"
-                  subtitle={`${presetOrder.length} уникальных палитр`}
+                  subtitle={`${paletteOrder.length} уникальных палитр`}
                 />
 
                 <Box
@@ -639,10 +724,12 @@ export const AppearanceSettingsPage: React.FC = () => {
                     gap: 2,
                   }}
                 >
-                  {presetOrder.map((presetId, index) => {
-                    const preset = THEME_PRESETS[presetId];
+                  {paletteOrder.map((presetId, index) => {
+                    const preset = allThemePresets[presetId];
                     const selected = presetId === themePreset;
                     const hovered = hoveredPreset === presetId;
+                    const isCustomPalette = customColorThemes.some((item) => item.id === presetId);
+                    if (!preset) return null;
 
                     return (
                       <Tooltip
@@ -653,7 +740,6 @@ export const AppearanceSettingsPage: React.FC = () => {
                       >
                         <Box
                           onClick={() => {
-                            applyInterfaceStyle(getStyleForPalette(preset.id));
                             setThemePreset(preset.id);
                           }}
                           onMouseEnter={() => setHoveredPreset(preset.id)}
@@ -703,6 +789,32 @@ export const AppearanceSettingsPage: React.FC = () => {
                               },
                             }}
                           >
+                            {isCustomPalette && (
+                              <IconButton
+                                size="small"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleEditPaletteOpen(preset.id);
+                                }}
+                                sx={{
+                                  position: 'absolute',
+                                  top: 6,
+                                  right: 6,
+                                  zIndex: 2,
+                                  width: 24,
+                                  height: 24,
+                                  color: alpha(theme.palette.common.white, 0.85),
+                                  backgroundColor: alpha(theme.palette.common.black, 0.28),
+                                  border: `1px solid ${alpha(theme.palette.common.white, 0.24)}`,
+                                  '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.28),
+                                    color: theme.palette.common.white,
+                                  },
+                                }}
+                              >
+                                <EditIcon sx={{ fontSize: '0.9rem' }} />
+                              </IconButton>
+                            )}
                             {selected && (
                               <motion.div
                                 initial={{ scale: 0, rotate: -180, opacity: 0 }}
@@ -768,6 +880,32 @@ export const AppearanceSettingsPage: React.FC = () => {
                       </Tooltip>
                     );
                   })}
+                  <Box
+                    onClick={handleCreatePaletteOpen}
+                    sx={{
+                      cursor: 'pointer',
+                      borderRadius: 2.5,
+                      minHeight: 112,
+                      border: `2px dashed ${alpha(theme.palette.primary.main, 0.45)}`,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.06),
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                      transition: 'all 0.25s ease',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                        borderColor: theme.palette.primary.main,
+                        transform: 'translateY(-3px)',
+                      },
+                    }}
+                  >
+                    <AddIcon sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'primary.main' }}>
+                      Добавить
+                    </Typography>
+                  </Box>
                 </Box>
               </GlassCard>
 
@@ -1693,6 +1831,18 @@ export const AppearanceSettingsPage: React.FC = () => {
           </Box>
         </Fade>
       </Box>
+
+      <CreateColorThemeDialog
+        open={customPaletteDialogOpen}
+        onClose={() => {
+          setCustomPaletteDialogOpen(false);
+          setEditingPaletteId(null);
+          setEditingPaletteValues(null);
+        }}
+        onSave={handleSaveCustomPalette}
+        initialValues={editingPaletteValues}
+        mode={editingPaletteId ? 'edit' : 'create'}
+      />
     </Box>
   );
 };

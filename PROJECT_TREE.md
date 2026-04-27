@@ -4,40 +4,6 @@
 
 ```
 campaigner
-├─ .cursor
-│  ├─ skills
-│  │  ├─ code-quality
-│  │  │  ├─ api-layer-discipline.md
-│  │  │  ├─ consistent-error-handling.md
-│  │  │  ├─ no-dead-code.md
-│  │  │  ├─ safe-refactor-guard.md
-│  │  │  └─ zustand-store-hygiene.md
-│  │  ├─ process
-│  │  │  ├─ honest-uncertainty.md
-│  │  │  ├─ plan-before-patch.md
-│  │  │  ├─ scope-creep-blocker.md
-│  │  │  └─ structured-patch-report.md
-│  │  ├─ ui
-│  │  │  ├─ anti-dribbblization-guard.md
-│  │  │  ├─ consistency-enforcer.md
-│  │  │  ├─ design-system-respecter.md
-│  │  │  ├─ frontend-ux-critic.md
-│  │  │  ├─ intentional-aesthetics.md
-│  │  │  ├─ page-visual-auditor.md
-│  │  │  └─ theme-hardcode-cleaner.md
-│  │  ├─ ui-ux-pro-max
-│  │  │  ├─ scripts
-│  │  │  │  ├─ __pycache__
-│  │  │  │  │  ├─ core.cpython-314.pyc
-│  │  │  │  │  ├─ design_system.cpython-314.pyc
-│  │  │  │  │  └─ search.cpython-314.pyc
-│  │  │  │  ├─ core.py
-│  │  │  │  ├─ design_system.py
-│  │  │  │  └─ search.py
-│  │  │  └─ SKILL.md
-│  │  └─ workflows
-│  │     └─ ui-rollout-planner.md
-│  └─ debug-316f21.log
 ├─ backend
 │  ├─ src
 │  │  ├─ controllers
@@ -146,23 +112,6 @@ campaigner
 │  ├─ .env.example
 │  ├─ package.json
 │  └─ tsconfig.json
-├─ chunks
-│  ├─ chunk_backend_api.txt
-│  ├─ chunk_backend_db.txt
-│  ├─ chunk_backend_services.txt
-│  ├─ chunk_backend_utils.txt
-│  ├─ chunk_frontend_api.txt
-│  ├─ chunk_frontend_components_ui.txt
-│  ├─ chunk_frontend_entry.txt
-│  ├─ chunk_frontend_hooks.txt
-│  ├─ chunk_frontend_pages_content.txt
-│  ├─ chunk_frontend_pages_entities.txt
-│  ├─ chunk_frontend_pages_system.txt
-│  ├─ chunk_frontend_pages_visualization.txt
-│  ├─ chunk_frontend_store.txt
-│  ├─ chunk_frontend_theme.txt
-│  ├─ chunk_shared.txt
-│  └─ chunk_uncategorized.txt
 ├─ docs
 │  ├─ architecture
 │  │  └─ conventions.md
@@ -176,8 +125,8 @@ campaigner
 │  │  │  ├─ demokratizatsiya.svg
 │  │  │  ├─ diplomaticheskaya-gegemoniya.svg
 │  │  │  ├─ ekologicheskaya-garmoniya.svg
-│  │  │  ├─ industrializatsiya.svg
-│  │  │  ├─ izolyatsionizm.svg
+│  │  │  ├─ industrializatsiya.jpg
+│  │  │  ├─ izolyatsionizm.jpg
 │  │  │  ├─ kontrol-morskikh-putey.svg
 │  │  │  ├─ kontrol-torgovykh-marshrutov.svg
 │  │  │  ├─ kulturnaya-assimilyatsiya.svg
@@ -265,7 +214,7 @@ campaigner
 │  │  │  │  └─ CollapsibleSection.tsx
 │  │  │  ├─ forms
 │  │  │  │  └─ TagAutocompleteField.tsx
-│  │  │  ├─ layout
+│  │  │  ├─ Layout
 │  │  │  │  ├─ AppLayout.tsx
 │  │  │  │  ├─ Sidebar.tsx
 │  │  │  │  └─ TopBar.tsx
@@ -419,6 +368,7 @@ campaigner
 │  │  ├─ utils
 │  │  │  ├─ error.ts
 │  │  │  ├─ exclusions.ts
+│  │  │  ├─ mapGeometry.ts
 │  │  │  └─ uploadAssetUrl.ts
 │  │  ├─ App.tsx
 │  │  └─ main.tsx
@@ -493,8 +443,9 @@ campaigner
 ├─ LICENSE
 ├─ package-lock.json
 ├─ package.json
+├─ PLAN_EXECUTION.md
+├─ PLAN.md
 ├─ README.md
 ├─ start.bat
-├─ start.log
 └─ tsconfig.json
 ```

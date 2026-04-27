@@ -30,6 +30,23 @@ import { CreateProjectDialog } from '@/pages/home/components/CreateProjectDialog
 import { EmptyStateIllustration } from '@/pages/home/components/HomePrimitives';
 import { GlassCard } from '@/components/ui/GlassCard';
 
+const HOME_PANEL_POSITION_STORAGE_KEY = 'campaigner.homePanelPosition.v1';
+const DEFAULT_PANEL_OFFSET = { x: 0, y: 0 };
+
+const readStoredPanelOffset = () => {
+  if (typeof window === 'undefined') return DEFAULT_PANEL_OFFSET;
+  try {
+    const raw = window.localStorage.getItem(HOME_PANEL_POSITION_STORAGE_KEY);
+    if (!raw) return DEFAULT_PANEL_OFFSET;
+    const parsed = JSON.parse(raw) as { x?: unknown; y?: unknown };
+    if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return DEFAULT_PANEL_OFFSET;
+    if (!Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) return DEFAULT_PANEL_OFFSET;
+    return { x: parsed.x, y: parsed.y };
+  } catch {
+    return DEFAULT_PANEL_OFFSET;
+  }
+};
+
 export const HomePage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -53,10 +70,18 @@ export const HomePage: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isContainerHovered, setIsContainerHovered] = useState(true);
   const [isHoverCapable, setIsHoverCapable] = useState(false);
+  const [panelOffset, setPanelOffset] = useState(readStoredPanelOffset);
   const startOnboarding = useOnboardingStore((state) => state.startForProject);
   const parallaxLayerRef = useRef<HTMLDivElement | null>(null);
   const parallaxTargetRef = useRef({ x: 0, y: 0 });
   const parallaxRafRef = useRef<number | null>(null);
+  const dragStateRef = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
 
   useEffect(() => {
     fetchProjects();
@@ -111,6 +136,46 @@ export const HomePage: React.FC = () => {
       }
     };
   }, []);
+
+  const handlePanelDragMove = useCallback((event: PointerEvent) => {
+    if (!dragStateRef.current.active) return;
+    const deltaX = event.clientX - dragStateRef.current.startX;
+    const deltaY = event.clientY - dragStateRef.current.startY;
+    setPanelOffset({
+      x: dragStateRef.current.originX + deltaX,
+      y: dragStateRef.current.originY + deltaY,
+    });
+  }, []);
+
+  const stopPanelDrag = useCallback(() => {
+    dragStateRef.current.active = false;
+    window.removeEventListener('pointermove', handlePanelDragMove);
+    window.removeEventListener('pointerup', stopPanelDrag);
+  }, [handlePanelDragMove]);
+
+  const handlePanelDragStart = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    dragStateRef.current = {
+      active: true,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: panelOffset.x,
+      originY: panelOffset.y,
+    };
+    window.addEventListener('pointermove', handlePanelDragMove);
+    window.addEventListener('pointerup', stopPanelDrag);
+  }, [handlePanelDragMove, panelOffset.x, panelOffset.y, stopPanelDrag]);
+
+  useEffect(() => {
+    return () => {
+      stopPanelDrag();
+    };
+  }, [stopPanelDrag]);
+
+  useEffect(() => {
+    window.localStorage.setItem(HOME_PANEL_POSITION_STORAGE_KEY, JSON.stringify(panelOffset));
+  }, [panelOffset]);
 
   const handleCreateSubmit = async (name: string, description: string) => {
     const project = await createProject({ name, description });
@@ -273,6 +338,10 @@ export const HomePage: React.FC = () => {
               onMouseLeave={() => {
                 if (isHoverCapable) setIsContainerHovered(false);
               }}
+              sx={{
+                transform: `translate3d(${panelOffset.x}px, ${panelOffset.y}px, 0)`,
+                willChange: 'transform',
+              }}
             >
               <GlassCard
                 sx={{
@@ -287,6 +356,33 @@ export const HomePage: React.FC = () => {
                   }),
                 }}
               >
+              <Box
+                onPointerDown={handlePanelDragStart}
+                sx={{
+                  mb: 2,
+                  mx: { xs: -1, md: -1.5 },
+                  mt: { xs: -1, md: -1.5 },
+                  px: 1.5,
+                  py: 1,
+                  borderRadius: 1.5,
+                  cursor: 'grab',
+                  touchAction: 'none',
+                  userSelect: 'none',
+                  '&:active': {
+                    cursor: 'grabbing',
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 72,
+                    height: 4,
+                    mx: 'auto',
+                    borderRadius: 999,
+                    backgroundColor: alpha(theme.palette.text.primary, 0.26),
+                  }}
+                />
+              </Box>
               <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
                 <DndButton
                   variant="outlined"
@@ -337,7 +433,20 @@ export const HomePage: React.FC = () => {
               </Typography>
 
               {projects.length > 0 ? (
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: 2,
+                    maxHeight: {
+                      xs: 'min(62vh, 520px)',
+                      md: 'min(60vh, 560px)',
+                    },
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    pr: 0.5,
+                  }}
+                >
                   {projects.map((project, index) => (
                     <GlassCard
                       key={project.id}

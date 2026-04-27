@@ -1,6 +1,6 @@
 import React, { Suspense, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AppLayout } from './components/layout/AppLayout';
+import { AppLayout } from './components/Layout/AppLayout';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { CircularProgress, Box } from '@mui/material';

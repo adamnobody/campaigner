@@ -373,6 +373,8 @@ projects
 - `timeline`: CRUD + reorder + tags.
 - `dogmas`: CRUD + reorder + tags.
 - `factions`: CRUD, image/banner, ranks/members/assets/relations/policies, graph, tags.
+- `ambitions`: каталог амбиций проекта, CRUD кастомных амбиций, exclusions, привязка к фракциям.
+- `political-scales`: справочник шкал (по `entityType`) и assignment'ы значений для `faction/state`.
 - `dynasties`: CRUD, image, members/family-links/events/graph-positions, tags.
 - `wiki`: links + categories.
 - `tags`, `search`, `branches`, `character-traits`, `upload`.
@@ -472,16 +474,14 @@ projects
 | Dynasties | Реализовано | `dynasties`, members/family-links/events |
 | Electron | Реализовано | `electron/main.js`, `electron-builder` конфиг |
 
-### 18.2 Запланированные задачи (по приоритету)
-
-Явного файла roadmap в репозитории не найдено; таблица ниже зафиксирована как рабочий план из текущего запроса.
+### 18.2 План развития (актуализирован)
 
 | Приоритет | Задача | Краткое описание | Статус |
 |---|---|---|---|
-| P1 | Государства | Выделить государства в отдельный домен, не смешанный с фракциями; добавить отдельный пункт в `Sidebar` и соответствующие страницы/API. | Planned |
-| P1 | Амбиции фракций | Добавить карточки-амбиции в стиле trait-системы персонажей, с набором примерно 25-35 предустановленных вариантов и возможностью расширения. | Planned |
-| P1 | Политика-шкалы | Переработать блок политик после отделения амбиций: сделать шкалы и более явную метрику состояния вместо текущего плоского списка. | Planned |
-| P2 | Структурированные активы | Перевести активы фракций из свободного текста в структурированные числовые поля, чтобы строить графики и сравнения между фракциями. | Planned |
+| P1 | Государства | В проектной навигации и роутинге добавлен отдельный раздел `states`; используются те же базовые экраны, но с `entityType="state"` и отдельным сценарием управления. | Implemented (MVP) |
+| P1 | Амбиции фракций | Реализован каталог амбиций, привязка к фракциям, пользовательские амбиции, исключения-конфликты и UI-карточки. | Implemented |
+| P1 | Политика-шкалы | Добавлены политические шкалы с assignment'ами для `faction/state`, зонностью, комментариями и управлением включением шкал. | Implemented |
+| P2 | Структурированные активы | Введены настраиваемые метрики (`custom metrics`) и сравнение фракций; развитие в сторону единой числовой модели активов продолжается. | In progress |
 | P2 | Рисование прямыми линиями | Добавить режим рисования на карте «как в Pax Historia»: линейные/контурные инструменты вместо текущей опоры на круглые маркеры. | Planned |
 | P2 | Надписи на карте | Добавить самостоятельные текстовые метки на карте, не привязанные к территории или маркеру. | Planned |
 | P2 | Примитивы на карте | Добавить примитивы (в первую очередь прямоугольники/«полки») с опциональной подписью для схем и аннотаций. | Planned |
@@ -538,13 +538,14 @@ export type Example = z.infer<typeof exampleSchema>;
 Основные маршруты внутри проекта:
 - `/project/:projectId/map` и `/project/:projectId/map/:mapId`;
 - `/project/:projectId/characters`, `/characters/new`, `/characters/:characterId`, `/characters/graph`;
+- `/project/:projectId/states`, `/states/new`, `/states/:factionId`;
 - `/project/:projectId/factions`, `/factions/new`, `/factions/:factionId`;
 - `/project/:projectId/dynasties`, `/dynasties/new`, `/dynasties/:dynastyId`;
 - `/project/:projectId/notes`, `/notes/:noteId`, `/wiki`, `/wiki/graph`, `/timeline`, `/dogmas`, `/settings`.
 
-Как устроен `Sidebar` (`frontend/src/components/layout/Sidebar.tsx`):
+Как устроен `Sidebar` (`frontend/src/components/Layout/Sidebar.tsx`):
 - всегда есть глобальные пункты: «Все кампании» (`/`) и «Внешний вид» (`/appearance`);
-- в контексте проекта показывается project-local меню (`map`, `characters`, `factions`, `notes`, `wiki`, `timeline`, `dogmas`, `dynasties`) и «Настройки проекта»;
+- в контексте проекта показывается project-local меню (`map`, `characters`, `states`, `factions`, `notes`, `wiki`, `timeline`, `dogmas`, `dynasties`) и «Настройки проекта»;
 - активный пункт определяется через `location.pathname.startsWith(...)`.
 
 Паттерн страницы домена (по реальному коду `pages/*`):
@@ -624,7 +625,9 @@ UI/предпочтения:
 - секция «Члены» (добавление/удаление участников, переход к персонажу).
 
 `politics`:
-- секция «Амбиции и политика» (`faction_policies` с фильтрами по типу/статусу и поиском);
+- секция «Амбиции фракции» (каталог, привязка, кастомные амбиции, exclusions-конфликты);
+- секция «Политические шкалы» (assignment'ы, зоны, комментарии, включение/выключение шкал);
+- секция «Политики» (`faction_policies` с фильтрами по типу/статусу и поиском);
 - секция «Связи с фракциями» (relations CRUD, переход к другой фракции).
 
 `assets`:
