@@ -55,6 +55,8 @@ export const DogmasPage: React.FC = () => {
   const [importance, setImportance] = useState<string>('major');
   const [icon, setIcon] = useState('');
   const [tagsStr, setTagsStr] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [existingTagNames, setExistingTagNames] = useState<string[]>([]);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -90,6 +92,17 @@ export const DogmasPage: React.FC = () => {
       setTotalUnfiltered(useDogmaStore.getState().total);
     });
   }, [pid, fetchDogmas]);
+
+  useEffect(() => {
+    tagsApi.getAll(pid)
+      .then((res) => {
+        const tags = res.data.data || [];
+        setExistingTagNames(tags.map((tag: { name: string }) => tag.name));
+      })
+      .catch(() => {
+        setExistingTagNames([]);
+      });
+  }, [pid]);
 
   // Загрузка при смене фильтров
   useEffect(() => {
@@ -170,6 +183,7 @@ export const DogmasPage: React.FC = () => {
     setImportance('major');
     setIcon('');
     setTagsStr('');
+    setTagsInput('');
     setEditingDogma(null);
   };
 
@@ -187,6 +201,20 @@ export const DogmasPage: React.FC = () => {
     setIcon(dogma.icon || '');
     setTagsStr((dogma.tags || []).map((t: any) => t.name).join(', '));
     setDialogOpen(true);
+  };
+
+  const mergeTagValues = (tagsString: string, pendingInput: string): string => {
+    const committed = tagsString
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const pending = pendingInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set([...committed, ...pending])).join(', ');
   };
 
   const saveTags = async (dogmaId: number, tagsString: string) => {
@@ -212,14 +240,15 @@ export const DogmasPage: React.FC = () => {
 
   const handleSave = async () => {
     if (!title.trim()) return;
+    const finalTags = mergeTagValues(tagsStr, tagsInput);
     try {
       if (editingDogma) {
         await updateDogma(editingDogma.id, {
           title, category: category as any, description, impact, exceptions,
           isPublic, importance: importance as any, icon,
         });
-        if (tagsStr !== (editingDogma.tags || []).map((t: any) => t.name).join(', ')) {
-          await saveTags(editingDogma.id, tagsStr);
+        if (finalTags !== (editingDogma.tags || []).map((t: any) => t.name).join(', ')) {
+          await saveTags(editingDogma.id, finalTags);
         }
         showSnackbar('Догма обновлена', 'success');
       } else {
@@ -229,7 +258,7 @@ export const DogmasPage: React.FC = () => {
           importance: importance as any, icon,
           status: 'active', sortOrder: 0, color: '',
         });
-        if (tagsStr.trim()) await saveTags(created.id, tagsStr);
+        if (finalTags.trim()) await saveTags(created.id, finalTags);
         showSnackbar('Догма создана', 'success');
         // Обновить totalUnfiltered
         setTotalUnfiltered(prev => prev + 1);
@@ -442,6 +471,9 @@ export const DogmasPage: React.FC = () => {
         setIcon={setIcon}
         tagsStr={tagsStr}
         setTagsStr={setTagsStr}
+        tagsInput={tagsInput}
+        setTagsInput={setTagsInput}
+        existingTagNames={existingTagNames}
         onSave={handleSave}
       />
     </Box>

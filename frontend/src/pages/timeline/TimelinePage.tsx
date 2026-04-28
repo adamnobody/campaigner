@@ -26,6 +26,7 @@ import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { TimelineEvent } from '@campaigner/shared';
 
@@ -68,6 +69,8 @@ export const TimelinePage: React.FC = () => {
   const [eventDate, setEventDate] = useState('');
   const [era, setEra] = useState('');
   const [tagsStr, setTagsStr] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [existingTagNames, setExistingTagNames] = useState<string[]>([]);
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
 
   // Notes for linking
@@ -95,6 +98,13 @@ export const TimelinePage: React.FC = () => {
       opts.forEach(n => m.set(n.id, n.title));
       setNotesMap(m);
     }).catch(() => {});
+
+    tagsApi.getAll(pid).then((res) => {
+      const tags = res.data.data || [];
+      setExistingTagNames(tags.map((tag: { name: string }) => tag.name));
+    }).catch(() => {
+      setExistingTagNames([]);
+    });
   }, [pid, fetchEvents]);
 
   // Eras list
@@ -125,7 +135,7 @@ export const TimelinePage: React.FC = () => {
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setEventDate('');
-    setEra(''); setTagsStr(''); setLinkedNoteId(null); setEditingEvent(null);
+    setEra(''); setTagsStr(''); setTagsInput(''); setLinkedNoteId(null); setEditingEvent(null);
   };
 
   const handleOpenCreate = () => { resetForm(); setDialogOpen(true); };
@@ -137,8 +147,23 @@ export const TimelinePage: React.FC = () => {
     setEventDate(event.eventDate);
     setEra(event.era || '');
     setTagsStr((event.tags || []).map((t: any) => t.name).join(', '));
+    setTagsInput('');
     setLinkedNoteId(event.linkedNoteId || null);
     setDialogOpen(true);
+  };
+
+  const mergeTagValues = (tagsString: string, pendingInput: string): string => {
+    const committed = tagsString
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const pending = pendingInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set([...committed, ...pending])).join(', ');
   };
 
   const saveTags = async (eventId: number, tagsString: string) => {
@@ -164,13 +189,14 @@ export const TimelinePage: React.FC = () => {
 
   const handleSave = async () => {
     if (!title.trim() || !eventDate.trim()) return;
+    const finalTags = mergeTagValues(tagsStr, tagsInput);
     try {
       if (editingEvent) {
         await updateEvent(editingEvent.id, {
           title, description, eventDate, era, linkedNoteId,
         });
-        if (tagsStr !== (editingEvent.tags || []).map((t: any) => t.name).join(', ')) {
-          await saveTags(editingEvent.id, tagsStr);
+        if (finalTags !== (editingEvent.tags || []).map((t: any) => t.name).join(', ')) {
+          await saveTags(editingEvent.id, finalTags);
         }
         showSnackbar('Событие обновлено', 'success');
       } else {
@@ -178,7 +204,7 @@ export const TimelinePage: React.FC = () => {
           projectId: pid, title, description, eventDate, era,
           sortOrder: 0, linkedNoteId,
         });
-        if (tagsStr.trim()) await saveTags(created.id, tagsStr);
+        if (finalTags.trim()) await saveTags(created.id, finalTags);
         showSnackbar('Событие создано', 'success');
       }
       setDialogOpen(false);
@@ -605,21 +631,17 @@ export const TimelinePage: React.FC = () => {
             </Box>
           )}
 
-          <TextField fullWidth label="Теги (через запятую)" value={tagsStr}
-            onChange={e => setTagsStr(e.target.value)} margin="normal"
-            placeholder="напр. война, магия, катастрофа" />
-
-          {tagsStr.trim() && (
-            <Box display="flex" gap={0.5} flexWrap="wrap" mt={1}>
-              {tagsStr.split(',').map((t, i) => {
-                const trimmed = t.trim();
-                return trimmed ? (
-                  <Chip key={i} label={trimmed} size="small"
-                    sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
-                ) : null;
-              })}
-            </Box>
-          )}
+          <TagAutocompleteField
+            options={existingTagNames}
+            value={tagsStr}
+            pendingInput={tagsInput}
+            label="Теги"
+            placeholder="Выберите или введите..."
+            helperText="Можно выбрать существующие теги или добавить новые"
+            margin="normal"
+            onValueChange={setTagsStr}
+            onPendingInputChange={setTagsInput}
+          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)} color="inherit">Отмена</Button>

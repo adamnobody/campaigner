@@ -1,11 +1,12 @@
 import React from 'react';
 import {
   TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  Box, FormControl, InputLabel, Select, MenuItem, Chip, Switch, FormControlLabel, Typography,
+  Box, FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel, Typography,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { DndButton } from '@/components/ui/DndButton';
+import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import {
   DOGMA_CATEGORIES,
   DOGMA_IMPORTANCE,
@@ -37,6 +38,9 @@ type Props = {
   setIcon: (v: string) => void;
   tagsStr: string;
   setTagsStr: (v: string) => void;
+  tagsInput: string;
+  setTagsInput: (v: string) => void;
+  existingTagNames: string[];
   onSave: () => void;
 };
 
@@ -62,6 +66,9 @@ export const DogmaFormDialog: React.FC<Props> = ({
   setIcon,
   tagsStr,
   setTagsStr,
+  tagsInput,
+  setTagsInput,
+  existingTagNames,
   onSave,
 }) => (
   <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
@@ -138,21 +145,17 @@ export const DogmaFormDialog: React.FC<Props> = ({
         />
       </Box>
 
-      <TextField fullWidth label="Теги (через запятую)" value={tagsStr}
-        onChange={e => setTagsStr(e.target.value)} margin="normal"
-        placeholder="напр. магия, луна, ограничения" />
-
-      {tagsStr.trim() && (
-        <Box display="flex" gap={0.5} flexWrap="wrap" mt={1}>
-          {tagsStr.split(',').map((t, i) => {
-            const trimmed = t.trim();
-            return trimmed ? (
-              <Chip key={i} label={trimmed} size="small"
-                sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
-            ) : null;
-          })}
-        </Box>
-      )}
+      <TagAutocompleteField
+        options={existingTagNames}
+        value={tagsStr}
+        pendingInput={tagsInput}
+        label="Теги"
+        placeholder="Выберите или введите..."
+        helperText="Можно выбрать существующие теги или добавить новые"
+        margin="normal"
+        onValueChange={setTagsStr}
+        onPendingInputChange={setTagsInput}
+      />
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2 }}>
       <Button onClick={onClose} color="inherit">Отмена</Button>

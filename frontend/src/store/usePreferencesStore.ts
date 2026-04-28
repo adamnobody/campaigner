@@ -251,6 +251,8 @@ export const usePreferencesStore = create<PreferencesState>()(
         set({
           ...defaultPreferences,
           autoApplyRecommendedPalette: state.autoApplyRecommendedPalette,
+          customThemes: state.customThemes,
+          customColorThemes: state.customColorThemes,
           ...found.settings,
           interfaceStyle: found.settings.interfaceStyle ?? defaultPreferences.interfaceStyle,
           selectedCustomThemeId: found.id,
