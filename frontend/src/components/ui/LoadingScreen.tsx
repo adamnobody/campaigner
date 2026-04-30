@@ -1,11 +1,14 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 interface LoadingScreenProps {
   message?: string;
 }
 
-export const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Loading...' }) => {
+export const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
+  const { t } = useTranslation('common');
+  const text = message ?? t('loading');
   return (
     <Box
       display="flex"
@@ -17,7 +20,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Loading
     >
       <CircularProgress size={48} color="primary" />
       <Typography variant="body1" color="text.secondary">
-        {message}
+        {text}
       </Typography>
     </Box>
   );

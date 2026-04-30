@@ -1,0 +1,14 @@
+{
+  "appName": "Campaigner",
+  "language": "Язык",
+  "english": "Английский",
+  "russian": "Русский",
+  "loading": "Загрузка…",
+  "error": "Ошибка",
+  "save": "Сохранить",
+  "cancel": "Отмена",
+  "create": "Создать",
+  "delete": "Удалить",
+  "edit": "Редактировать",
+  "close": "Закрыть"
+}

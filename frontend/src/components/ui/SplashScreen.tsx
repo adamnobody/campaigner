@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, LinearProgress, Fade } from '@mui/material';
 
 const quotes = [
@@ -14,6 +15,7 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
+  const { t } = useTranslation('common');
   const [progress, setProgress] = useState(0);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
@@ -72,7 +74,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
           mb: 4,
         }}
       >
-        Campaigner
+        {t('appName')}
       </Typography>
 
       {/* Progress bar */}
