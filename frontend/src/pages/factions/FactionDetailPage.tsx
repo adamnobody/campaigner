@@ -99,6 +99,10 @@ interface FactionForm {
   disbandedDate: string;
   parentFactionId: string;
   tagsStr: string;
+  rulingDynastyId: string;
+  rulerCharacterId: number | null;
+  rulerName: string;
+  territoryIds: number[];
 }
 
 const EMPTY_FORM: FactionForm = {
@@ -109,6 +113,10 @@ const EMPTY_FORM: FactionForm = {
   headquarters: '', territory: '', status: 'active',
   color: '#4e8a6e', secondaryColor: '#2a2a4a', foundedDate: '', disbandedDate: '',
   parentFactionId: '', tagsStr: '',
+  rulingDynastyId: '',
+  rulerCharacterId: null,
+  rulerName: '',
+  territoryIds: [],
 };
 
 type RulerOption =
@@ -239,10 +247,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const [policyCategoryFilter, setPolicyCategoryFilter] = useState<'all' | FactionPolicyCategory>('all');
   const [dynastiesList, setDynastiesList] = useState<Dynasty[]>([]);
   const [territoryOptions, setTerritoryOptions] = useState<MapTerritorySummary[]>([]);
-  const [rulingDynastyId, setRulingDynastyId] = useState('');
-  const [rulerValue, setRulerValue] = useState<RulerOption | null>(null);
   const [rulerInput, setRulerInput] = useState('');
-  const [territoryIds, setTerritoryIds] = useState<number[]>([]);
   const [creatingRuler, setCreatingRuler] = useState(false);
   /** Поля формы и тело PUT по маршруту, не по `currentFaction.kind` (иначе теряются state-only поля). */
   const resolvedEntityType: 'state' | 'faction' = normalizedEntityType;
@@ -271,10 +276,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       setTagsInput('');
       setCustomMetrics([]);
       if (normalizedEntityType === 'state') {
-        setRulingDynastyId('');
-        setRulerValue(null);
         setRulerInput('');
-        setTerritoryIds([]);
       }
       return;
     }
@@ -306,6 +308,28 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
 
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;
+
+    const isThisState =
+      resolvedEntityType === 'state' && currentFaction.id === parseInt(factionId!, 10);
+    const stateFields: Pick<FactionForm, 'rulingDynastyId' | 'rulerCharacterId' | 'rulerName' | 'territoryIds'> =
+      isThisState
+        ? {
+            rulingDynastyId:
+              currentFaction.rulingDynastyId != null ? String(currentFaction.rulingDynastyId) : '',
+            rulerCharacterId: currentFaction.rulerCharacterId ?? null,
+            rulerName:
+              currentFaction.rulerCharacterId != null
+                ? (currentFaction.ruler?.name ?? '').trim() || '—'
+                : '',
+            territoryIds: (currentFaction.territories || []).map((t) => t.id),
+          }
+        : {
+            rulingDynastyId: '',
+            rulerCharacterId: null,
+            rulerName: '',
+            territoryIds: [],
+          };
+
     setForm({
       name: currentFaction.name || '', type: currentFaction.type || '',
       motto: currentFaction.motto || '',
@@ -325,6 +349,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       foundedDate: currentFaction.foundedDate || '', disbandedDate: currentFaction.disbandedDate || '',
       parentFactionId: currentFaction.parentFactionId ? String(currentFaction.parentFactionId) : '',
       tagsStr: (currentFaction.tags || []).map((t: any) => t.name).join(', '),
+      ...stateFields,
     });
     setCustomMetrics(
       (currentFaction.customMetrics || []).map((metric, index) => ({
@@ -336,21 +361,10 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       }))
     );
     setTagsInput('');
-    if (!isNew && resolvedEntityType === 'state' && currentFaction.id === parseInt(factionId!, 10)) {
-      setRulingDynastyId(currentFaction.rulingDynastyId != null ? String(currentFaction.rulingDynastyId) : '');
-      setTerritoryIds((currentFaction.territories || []).map((t) => t.id));
-      if (currentFaction.rulerCharacterId != null) {
-        const rulerOption = {
-          type: 'char' as const,
-          id: currentFaction.rulerCharacterId,
-          name: (currentFaction.ruler?.name ?? '').trim() || '—',
-        };
-        setRulerValue(rulerOption);
-        setRulerInput(rulerOption.name);
-      } else {
-        setRulerValue(null);
-        setRulerInput('');
-      }
+    if (isThisState && currentFaction.rulerCharacterId != null) {
+      setRulerInput((currentFaction.ruler?.name ?? '').trim() || '—');
+    } else {
+      setRulerInput('');
     }
   }, [currentFaction, factionId, isNew, resolvedEntityType]);
 
@@ -407,6 +421,12 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     }
     return mapped;
   }, [allCharacters, rulerInput]);
+  const rulerValue = useMemo((): RulerOption | null => {
+    if (form.rulerCharacterId != null) {
+      return { type: 'char', id: form.rulerCharacterId, name: form.rulerName };
+    }
+    return null;
+  }, [form.rulerCharacterId, form.rulerName]);
   const currentRanks: FactionRank[] = currentFaction?.ranks || [];
   const currentMembers: FactionMember[] = currentFaction?.members || [];
   const factionRelations = useMemo(() => fid ? relations.filter(r => r.sourceFactionId === fid || r.targetFactionId === fid) : [], [relations, fid]);
@@ -444,23 +464,25 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const handleTerritoriesMultiChange = useCallback(
     (newValue: MapTerritorySummary[]) => {
       const newIds = newValue.map((t) => t.id);
-      const added = newValue.filter((t) => !territoryIds.includes(t.id));
-      const conflicts = added.filter((t) => t.factionId != null && (isNew || t.factionId !== fid));
-      if (conflicts.length === 0) {
-        setTerritoryIds(newIds);
-        return;
-      }
-      const t = conflicts[0];
-      const occupant = factions.find((f) => f.id === t.factionId);
-      const occupantName = occupant?.name || `ID ${t.factionId}`;
-      const selfName = form.name.trim() || 'это государство';
-      showConfirmDialog(
-        'Перепривязка территории',
-        `Территория "${t.name}" сейчас принадлежит государству «${occupantName}». Перепривязать к «${selfName}»?`,
-        () => setTerritoryIds(newIds)
-      );
+      setForm((prev) => {
+        const added = newValue.filter((t) => !prev.territoryIds.includes(t.id));
+        const conflicts = added.filter((t) => t.factionId != null && (isNew || t.factionId !== fid));
+        if (conflicts.length === 0) {
+          return { ...prev, territoryIds: newIds };
+        }
+        const t = conflicts[0];
+        const occupant = factions.find((f) => f.id === t.factionId);
+        const occupantName = occupant?.name || `ID ${t.factionId}`;
+        const selfName = prev.name.trim() || 'это государство';
+        showConfirmDialog(
+          'Перепривязка территории',
+          `Территория "${t.name}" сейчас принадлежит государству «${occupantName}». Перепривязать к «${selfName}»?`,
+          () => setForm((p) => ({ ...p, territoryIds: newIds }))
+        );
+        return prev;
+      });
     },
-    [territoryIds, isNew, fid, factions, form.name, showConfirmDialog]
+    [isNew, fid, factions, showConfirmDialog]
   );
 
   // ==================== Actions ====================
@@ -509,10 +531,10 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       };
       if (resolvedEntityType === 'state') {
         payload.territory = '';
-        payload.rulingDynastyId = rulingDynastyId ? parseInt(rulingDynastyId, 10) : null;
-        payload.territoryIds = territoryIds;
-        if (rulerValue?.type === 'char') {
-          payload.rulerCharacterId = rulerValue.id;
+        payload.rulingDynastyId = form.rulingDynastyId ? parseInt(form.rulingDynastyId, 10) : null;
+        payload.territoryIds = form.territoryIds;
+        if (form.rulerCharacterId != null) {
+          payload.rulerCharacterId = form.rulerCharacterId;
         } else {
           payload.rulerCharacterId = null;
         }
@@ -870,9 +892,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                       <FormControl fullWidth>
                         <InputLabel>Династия</InputLabel>
                         <Select
-                          value={rulingDynastyId}
+                          value={form.rulingDynastyId}
                           label="Династия"
-                          onChange={(e) => setRulingDynastyId(e.target.value)}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, rulingDynastyId: e.target.value as string }))
+                          }
                         >
                           <MenuItem value="">Не выбрано</MenuItem>
                           {dynastiesList.map((d) => (
@@ -888,7 +912,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                         value={rulerValue}
                         onChange={async (_, v) => {
                           if (v == null) {
-                            setRulerValue(null);
+                            setForm((prev) => ({
+                              ...prev,
+                              rulerCharacterId: null,
+                              rulerName: '',
+                            }));
                             setRulerInput('');
                             return;
                           }
@@ -897,7 +925,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                             try {
                               const res = await charactersApi.create({ projectId: pid, name: v.name });
                               const c = res.data.data;
-                              setRulerValue({ type: 'char', id: c.id, name: c.name });
+                              setForm((prev) => ({
+                                ...prev,
+                                rulerCharacterId: c.id,
+                                rulerName: c.name,
+                              }));
                               setRulerInput(c.name);
                               await fetchCharacters(pid, { limit: 500 });
                               showSnackbar('Персонаж создан', 'success');
@@ -908,7 +940,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                             }
                             return;
                           }
-                          setRulerValue(v);
+                          setForm((prev) => ({
+                            ...prev,
+                            rulerCharacterId: v.id,
+                            rulerName: v.name,
+                          }));
                           setRulerInput(v.name);
                         }}
                         inputValue={rulerInput}
@@ -916,7 +952,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                           if (reason === 'input') setRulerInput(v);
                           if (reason === 'clear') {
                             setRulerInput('');
-                            setRulerValue(null);
+                            setForm((prev) => ({
+                              ...prev,
+                              rulerCharacterId: null,
+                              rulerName: '',
+                            }));
                           }
                         }}
                         getOptionLabel={(o) => (o.type === 'create' ? `+ Создать персонажа «${o.name}»` : o.name)}
@@ -941,7 +981,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                       <Autocomplete<MapTerritorySummary, true, false, false>
                         multiple
                         options={territoryOptions}
-                        value={territoryOptions.filter((t) => territoryIds.includes(t.id))}
+                        value={territoryOptions.filter((t) => form.territoryIds.includes(t.id))}
                         onChange={(_, v) => handleTerritoriesMultiChange(v)}
                         getOptionLabel={(o) => `${o.name} (${o.mapName})`}
                         isOptionEqualToValue={(a, b) => a.id === b.id}
