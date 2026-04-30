@@ -255,7 +255,6 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
           {attachedTraits.map((t) => (
             <TraitFlipCard
               key={t.id}
-              id={t.id}
               name={t.name}
               description={t.description}
               imageSrc={uploadAssetUrl(t.imagePath)}
@@ -302,7 +301,6 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
                   return (
                 <TraitFlipCard
                   key={t.id}
-                  id={t.id}
                   name={t.name}
                   description={t.description}
                   imageSrc={uploadAssetUrl(t.imagePath)}

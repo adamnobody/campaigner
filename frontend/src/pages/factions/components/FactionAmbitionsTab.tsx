@@ -251,7 +251,6 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
           {attachedAmbitions.map((ambition) => (
             <AmbitionFlipCard
               key={ambition.id}
-              id={ambition.id}
               name={ambition.name}
               description={ambition.description}
               imageSrc={uploadAssetUrl(ambition.iconPath)}
@@ -314,7 +313,6 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
                   return (
                 <AmbitionFlipCard
                   key={ambition.id}
-                  id={ambition.id}
                   name={ambition.name}
                   description={ambition.description}
                   imageSrc={uploadAssetUrl(ambition.iconPath)}
