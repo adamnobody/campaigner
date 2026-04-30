@@ -30,20 +30,23 @@ export const AnimatedGraphSidePanel: React.FC<Props> = ({ side, open, panelWidth
   }, [motionMode, prefersReducedMotion]);
 
   const easing = theme.transitions.easing.easeInOut;
-
-  const transition = theme.transitions.create(['width', 'minWidth', 'maxWidth', 'opacity', 'transform'], {
-    duration: durationMs,
-    easing,
-  });
+  const easingStr = typeof easing === 'string' ? easing : String(easing);
+  const t = `${durationMs}ms ${easingStr}`;
+  /** Явные имена свойств (kebab-case): иначе transition с camelCase часто игнорируется при закрытии. */
+  const transition = `flex-basis ${t}, max-width ${t}, opacity ${t}, transform ${t}`;
 
   const slideClosed = side === 'left' ? `translateX(-${translatePx}px)` : `translateX(${translatePx}px)`;
+
+  const basis = open ? `${panelWidth}px` : '0px';
 
   return (
     <Box
       sx={{
-        width: open ? panelWidth : 0,
-        minWidth: open ? panelWidth : 0,
-        maxWidth: open ? panelWidth : 0,
+        flexGrow: 0,
+        flexShrink: 0,
+        flexBasis: basis,
+        maxWidth: open ? `${panelWidth}px` : '0px',
+        minWidth: 0,
         opacity: open ? 1 : 0,
         transform: open ? 'translateX(0)' : slideClosed,
         overflow: 'hidden',
@@ -52,7 +55,7 @@ export const AnimatedGraphSidePanel: React.FC<Props> = ({ side, open, panelWidth
         alignSelf: 'stretch',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0,
+        boxSizing: 'border-box',
       }}
     >
       <Box
