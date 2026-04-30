@@ -265,8 +265,27 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
 
   useEffect(() => {
     if (normalizedEntityType !== 'state') return;
-    dynastiesApi.getAll(pid, { limit: 500 }).then((res) => setDynastiesList(res.data.data || [])).catch(() => {});
-    mapApi.getTerritorySummariesForProject(pid).then((res) => setTerritoryOptions(res.data.data || [])).catch(() => {});
+    let cancelled = false;
+
+    dynastiesApi
+      .getAll(pid, { limit: 500 })
+      .then((res) => {
+        if (cancelled) return;
+        setDynastiesList(res.data.data || []);
+      })
+      .catch(() => {});
+
+    mapApi
+      .getTerritorySummariesForProject(pid)
+      .then((res) => {
+        if (cancelled) return;
+        setTerritoryOptions(res.data.data || []);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [pid, normalizedEntityType]);
 
   useEffect(() => {

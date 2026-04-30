@@ -164,15 +164,31 @@ export const CharacterDetailPage: React.FC = () => {
   // ==================== Load ====================
 
   useEffect(() => {
+    let cancelled = false;
+
     fetchTags(pid).catch(() => {});
     fetchCharacters(pid, { limit: 200 }).catch(() => {});
     fetchRelationships(pid).catch(() => {});
-    factionsApi.getAll(pid, { kind: 'state', limit: 500 }).then((res) => {
-      setStateOptions((res.data.data || []).map((item) => ({ id: item.id, name: item.name })));
-    }).catch(() => {});
-    factionsApi.getAll(pid, { kind: 'faction', limit: 500 }).then((res) => {
-      setFactionOptions((res.data.data || []).map((item) => ({ id: item.id, name: item.name })));
-    }).catch(() => {});
+
+    factionsApi
+      .getAll(pid, { kind: 'state', limit: 500 })
+      .then((res) => {
+        if (cancelled) return;
+        setStateOptions((res.data.data || []).map((item) => ({ id: item.id, name: item.name })));
+      })
+      .catch(() => {});
+
+    factionsApi
+      .getAll(pid, { kind: 'faction', limit: 500 })
+      .then((res) => {
+        if (cancelled) return;
+        setFactionOptions((res.data.data || []).map((item) => ({ id: item.id, name: item.name })));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [pid]);
 
   useEffect(() => {
