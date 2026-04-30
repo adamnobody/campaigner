@@ -3,6 +3,7 @@
   "language": "Language",
   "english": "English",
   "russian": "Russian",
+  "selectLanguage": "Select language",
   "loading": "Loading...",
   "error": "Error",
   "save": "Save",

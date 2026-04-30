@@ -1,8 +1,9 @@
 {
   "appName": "Campaigner",
   "language": "Язык",
-  "english": "Английский",
+  "english": "English",
   "russian": "Русский",
+  "selectLanguage": "Выбрать язык",
   "loading": "Загрузка…",
   "error": "Ошибка",
   "save": "Сохранить",

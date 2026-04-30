@@ -29,6 +29,7 @@ import { HomeBackground } from '@/pages/home/components/HomeBackground';
 import { CreateProjectDialog } from '@/pages/home/components/CreateProjectDialog';
 import { EmptyStateIllustration } from '@/pages/home/components/HomePrimitives';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 const HOME_PANEL_POSITION_STORAGE_KEY = 'campaigner.homePanelPosition.v1';
 const DEFAULT_PANEL_OFFSET = { x: 0, y: 0 };
@@ -292,31 +293,39 @@ export const HomePage: React.FC = () => {
             opacity: isLoaded ? 1 : 0,
             transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
             transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'flex-start' },
+            justifyContent: 'space-between',
+            gap: 2,
           }}
         >
-          <Typography variant="h3" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
-            Campaigner
-          </Typography>
-          <Box
-            sx={{
-              mt: 1.5,
-              mb: 2,
-              width: 200,
-              height: 3,
-              borderRadius: 2,
-              background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.main, 0.25)} 100%)`,
-              backgroundSize: '220% 100%',
-              animation: 'campaignerLineShimmer 4.8s ease-in-out infinite',
-              '@keyframes campaignerLineShimmer': {
-                '0%': { backgroundPosition: '0% 50%' },
-                '50%': { backgroundPosition: '100% 50%' },
-                '100%': { backgroundPosition: '0% 50%' },
-              },
-            }}
-          />
-          <Typography sx={{ color: 'text.secondary', maxWidth: 560, lineHeight: 1.6 }}>
-            Среда для создания интерактивных карт, заметок, связей и истории вашего мира
-          </Typography>
+          <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Typography variant="h3" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+              Campaigner
+            </Typography>
+            <Box
+              sx={{
+                mt: 1.5,
+                mb: 2,
+                width: 200,
+                height: 3,
+                borderRadius: 2,
+                background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.main, 0.25)} 100%)`,
+                backgroundSize: '220% 100%',
+                animation: 'campaignerLineShimmer 4.8s ease-in-out infinite',
+                '@keyframes campaignerLineShimmer': {
+                  '0%': { backgroundPosition: '0% 50%' },
+                  '50%': { backgroundPosition: '100% 50%' },
+                  '100%': { backgroundPosition: '0% 50%' },
+                },
+              }}
+            />
+            <Typography sx={{ color: 'text.secondary', maxWidth: 560, lineHeight: 1.6 }}>
+              Среда для создания интерактивных карт, заметок, связей и истории вашего мира
+            </Typography>
+          </Box>
+          <LanguageSwitcher sx={{ flexShrink: 0, alignSelf: { xs: 'flex-end', sm: 'flex-start' }, mt: { sm: 0.25 } }} />
         </Box>
 
         {/* Central Unified Container */}
