@@ -48,6 +48,13 @@ type RelationshipType = typeof RELATIONSHIP_TYPES[number];
 const isRelationshipType = (value: string): value is RelationshipType =>
   RELATIONSHIP_TYPES.includes(value as RelationshipType);
 
+const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
+  ally: 'Союзник', enemy: 'Враг', family: 'Семья', friend: 'Друг',
+  rival: 'Соперник', mentor: 'Наставник', student: 'Ученик',
+  lover: 'Возлюбленный', spouse: 'Супруг', employer: 'Работодатель',
+  employee: 'Работник', custom: 'Другое',
+};
+
 const getRelationshipLabel = (value: unknown): string => {
   if (typeof value === 'string' && isRelationshipType(value)) return RELATIONSHIP_LABELS[value];
   return String(value ?? 'custom');
@@ -74,23 +81,16 @@ const getRelationshipColor = (value: unknown, theme: any): string => {
   return theme.palette.primary.main;
 };
 
-const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
-  ally: 'Союзник', enemy: 'Враг', family: 'Семья', friend: 'Друг',
-  rival: 'Соперник', mentor: 'Наставник', student: 'Ученик',
-  lover: 'Возлюбленный', spouse: 'Супруг', employer: 'Работодатель',
-  employee: 'Работник', custom: 'Другое',
-};
-
 interface CharacterForm {
   name: string; title: string; bio: string; appearance: string;
-  personality: string; backstory: string; notes: string; tagsStr: string;
+  backstory: string; notes: string; tagsStr: string;
   stateId: string;
   factionIds: number[];
 }
 
 const EMPTY_FORM: CharacterForm = {
   name: '', title: '', bio: '', appearance: '',
-  personality: '', backstory: '', notes: '', tagsStr: '', stateId: '', factionIds: [],
+  backstory: '', notes: '', tagsStr: '', stateId: '', factionIds: [],
 };
 
 // ==================== Helpers ====================
@@ -184,7 +184,7 @@ export const CharacterDetailPage: React.FC = () => {
     setForm({
       name: currentCharacter.name || '', title: currentCharacter.title || '',
       bio: currentCharacter.bio || '', appearance: currentCharacter.appearance || '',
-      personality: currentCharacter.personality || '', backstory: currentCharacter.backstory || '',
+      backstory: currentCharacter.backstory || '',
       notes: currentCharacter.notes || '',
       tagsStr: (currentCharacter.tags || []).map((t: any) => t.name).join(', '),
       stateId: currentCharacter.stateId ? String(currentCharacter.stateId) : '',
