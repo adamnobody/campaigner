@@ -6,6 +6,7 @@ import ReactFlow, {
 } from 'reactflow';
 import dagre from 'dagre';
 import { Box, Typography, Avatar, Chip } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import PersonIcon from '@mui/icons-material/Person';
 import type { DynastyMember, DynastyFamilyLink } from '@campaigner/shared';
 import { DYNASTY_FAMILY_RELATION_LABELS } from '@campaigner/shared';
@@ -14,6 +15,7 @@ import { routes } from '@/utils/routes';
 import 'reactflow/dist/style.css';
 
 const MemberNode: React.FC<{ data: any }> = ({ data }) => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
 
@@ -23,13 +25,19 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
       sx={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         p: 1.5, minWidth: 120,
-        backgroundColor: data.isMainLine ? 'rgba(201,169,89,0.12)' : 'rgba(255,255,255,0.06)',
-        border: `2px solid ${data.isDead ? 'rgba(150,150,150,0.3)' : 'rgba(201,169,89,0.3)'}`,
+        backgroundColor: data.isMainLine
+          ? alpha(theme.palette.primary.main, 0.12)
+          : alpha(theme.palette.common.white, 0.06),
+        border: `2px solid ${
+          data.isDead
+            ? alpha(theme.palette.grey[500], 0.3)
+            : alpha(theme.palette.primary.main, 0.3)
+        }`,
         borderRadius: '12px', cursor: 'pointer',
         transition: 'all 0.15s',
         '&:hover': {
-          backgroundColor: 'rgba(201,169,89,0.2)',
-          borderColor: 'rgba(201,169,89,0.6)',
+          backgroundColor: alpha(theme.palette.primary.main, 0.2),
+          borderColor: alpha(theme.palette.primary.main, 0.6),
           transform: 'scale(1.05)',
         },
       }}
@@ -43,16 +51,20 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
         src={data.imagePath || undefined}
         sx={{
           width: 44, height: 44, mb: 0.75,
-          bgcolor: 'rgba(201,169,89,0.15)',
-          border: `2px solid ${data.isDead ? 'rgba(150,150,150,0.3)' : 'rgba(201,169,89,0.25)'}`,
+          bgcolor: alpha(theme.palette.primary.main, 0.15),
+          border: `2px solid ${
+            data.isDead
+              ? alpha(theme.palette.grey[500], 0.3)
+              : alpha(theme.palette.primary.main, 0.25)
+          }`,
           filter: data.isDead ? 'grayscale(0.7)' : 'none',
         }}
       >
-        <PersonIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 20 }} />
+        <PersonIcon sx={{ color: alpha(theme.palette.primary.main, 0.5), fontSize: 20 }} />
       </Avatar>
 
       <Typography sx={{
-        fontWeight: 700, fontSize: '0.75rem', color: '#fff',
+        fontWeight: 700, fontSize: '0.75rem', color: 'text.primary',
         textAlign: 'center', maxWidth: 100,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
@@ -60,7 +72,7 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
       </Typography>
 
       {data.role && (
-        <Typography sx={{ fontSize: '0.55rem', color: 'rgba(201,169,89,0.7)', textAlign: 'center', mt: 0.25 }}>
+        <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.primary.main, 0.7), textAlign: 'center', mt: 0.25 }}>
           {data.role}
         </Typography>
       )}
@@ -68,7 +80,8 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
       {data.isDead && (
         <Chip label="†" size="small" sx={{
           height: 14, fontSize: '0.5rem', mt: 0.3,
-          backgroundColor: 'rgba(150,150,150,0.15)', color: 'rgba(150,150,150,0.7)',
+          backgroundColor: alpha(theme.palette.grey[500], 0.15),
+          color: alpha(theme.palette.grey[500], 0.7),
         }} />
       )}
     </Box>
@@ -77,12 +90,14 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
 
 const nodeTypes = { member: MemberNode };
 
-const EDGE_COLORS: Record<string, string> = {
-  parent: '#c9a959',
-  child: '#c9a959',
-  spouse: '#ff6baa',
-  sibling: '#8282ff',
-};
+interface EdgePalette {
+  primary: string;
+  spouse: string;
+  sibling: string;
+  dynastyFallback?: string;
+  edgeLabelFill: string;
+  edgeLabelBg: string;
+}
 
 const NODE_WIDTH = 140;
 const NODE_HEIGHT = 100;
@@ -103,7 +118,7 @@ function buildNodeData(m: DynastyMember) {
 function buildLayout(
   members: DynastyMember[],
   familyLinks: DynastyFamilyLink[],
-  dynastyColor?: string,
+  edgePalette: EdgePalette,
 ) {
   const hasSavedPositions = members.some(m => m.graphX != null && m.graphY != null);
 
@@ -115,7 +130,7 @@ function buildLayout(
       data: buildNodeData(m),
     }));
 
-    const edges: Edge[] = buildEdges(familyLinks, dynastyColor);
+    const edges: Edge[] = buildEdges(familyLinks, edgePalette);
     return { nodes, edges };
   }
 
@@ -185,16 +200,23 @@ function buildLayout(
     });
   });
 
-  const edges: Edge[] = buildEdges(familyLinks, dynastyColor);
+  const edges: Edge[] = buildEdges(familyLinks, edgePalette);
   return { nodes, edges };
 }
 
-function buildEdges(familyLinks: DynastyFamilyLink[], dynastyColor?: string): Edge[] {
+function buildEdges(familyLinks: DynastyFamilyLink[], palette: EdgePalette): Edge[] {
   return familyLinks.map(link => {
     const relType = link.relationType;
     const isSpouse = relType === 'spouse';
     const isSibling = relType === 'sibling';
-    const color = EDGE_COLORS[relType] || dynastyColor || '#c9a959';
+    const color =
+      relType === 'parent' || relType === 'child'
+        ? palette.primary
+        : relType === 'spouse'
+          ? palette.spouse
+          : relType === 'sibling'
+            ? palette.sibling
+            : palette.dynastyFallback || palette.primary;
 
     return {
       id: `link-${link.id}`,
@@ -205,8 +227,8 @@ function buildEdges(familyLinks: DynastyFamilyLink[], dynastyColor?: string): Ed
       type: isSpouse ? 'straight' : isSibling ? 'step' : 'smoothstep',
       animated: isSpouse,
       label: link.customLabel || DYNASTY_FAMILY_RELATION_LABELS[relType] || '',
-      labelStyle: { fill: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: 600 },
-      labelBgStyle: { fill: 'rgba(15,15,25,0.9)' },
+      labelStyle: { fill: palette.edgeLabelFill, fontSize: 9, fontWeight: 600 },
+      labelBgStyle: { fill: palette.edgeLabelBg },
       labelBgPadding: [6, 3] as [number, number],
       labelBgBorderRadius: 4,
       style: {
@@ -235,9 +257,19 @@ interface FamilyTreeProps {
 export const FamilyTree: React.FC<FamilyTreeProps> = ({
   members, familyLinks, dynastyColor, onSavePositions,
 }) => {
+  const theme = useTheme();
+  const edgePalette = useMemo((): EdgePalette => ({
+    primary: theme.palette.primary.main,
+    spouse: theme.palette.secondary.main,
+    sibling: theme.palette.info.main,
+    dynastyFallback: dynastyColor,
+    edgeLabelFill: alpha(theme.palette.common.white, 0.6),
+    edgeLabelBg: alpha(theme.palette.background.paper, 0.9),
+  }), [theme, dynastyColor]);
+
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
-    () => buildLayout(members, familyLinks, dynastyColor),
-    [members, familyLinks, dynastyColor]
+    () => buildLayout(members, familyLinks, edgePalette),
+    [members, familyLinks, edgePalette]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
@@ -283,8 +315,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       height: treeHeight,
       borderRadius: 2,
       overflow: 'hidden',
-      backgroundColor: 'rgba(0,0,0,0.25)',
-      border: '1px solid rgba(201,169,89,0.1)',
+      backgroundColor: alpha(theme.palette.common.black, 0.25),
+      border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
       position: 'relative',
       '& .react-flow__renderer': { backgroundColor: 'transparent' },
       '& .react-flow__edge-path': { strokeLinecap: 'round' },
@@ -307,28 +339,28 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         zoomOnScroll={true}
         zoomOnPinch={true}
       >
-        <Background color="rgba(201,169,89,0.04)" gap={24} size={1} />
+        <Background color={alpha(theme.palette.primary.main, 0.04)} gap={24} size={1} />
       </ReactFlow>
 
       <Box sx={{
         position: 'absolute', top: 8, right: 8, zIndex: 10,
         display: 'flex', gap: 1.5,
         px: 1.5, py: 0.75,
-        backgroundColor: 'rgba(15,15,25,0.85)',
+        backgroundColor: alpha(theme.palette.background.paper, 0.85),
         borderRadius: 1.5,
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: `1px solid ${alpha(theme.palette.common.white, 0.06)}`,
       }}>
         <Box display="flex" alignItems="center" gap={0.5}>
-          <Box sx={{ width: 14, height: 2, backgroundColor: '#c9a959', borderRadius: 1 }} />
-          <Typography sx={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)' }}>Родитель</Typography>
+          <Box sx={{ width: 14, height: 2, backgroundColor: theme.palette.primary.main, borderRadius: 1 }} />
+          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>Родитель</Typography>
         </Box>
         <Box display="flex" alignItems="center" gap={0.5}>
-          <Box sx={{ width: 14, height: 2, backgroundColor: '#ff6baa', borderRadius: 1 }} />
-          <Typography sx={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)' }}>Супруг</Typography>
+          <Box sx={{ width: 14, height: 2, backgroundColor: theme.palette.secondary.main, borderRadius: 1 }} />
+          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>Супруг</Typography>
         </Box>
         <Box display="flex" alignItems="center" gap={0.5}>
-          <Box sx={{ width: 14, height: 0, borderTop: '2px dashed #8282ff' }} />
-          <Typography sx={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.45)' }}>Родные</Typography>
+          <Box sx={{ width: 14, height: 0, borderTop: `2px dashed ${theme.palette.info.main}` }} />
+          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>Родные</Typography>
         </Box>
       </Box>
     </Box>

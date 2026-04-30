@@ -4,6 +4,7 @@ import {
   DialogTitle, DialogContent, DialogActions,
   Select, MenuItem, FormControl, InputLabel,
 } from '@mui/material';
+import { alpha, type Theme } from '@mui/material/styles';
 import { DndButton } from '@/components/ui/DndButton';
 import {
   FACTION_KIND_ICONS,
@@ -39,8 +40,11 @@ interface FactionRelationForm {
 // ==================== Dialog props ====================
 
 const DIALOG_PAPER_PROPS = {
-  sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' },
-} as const;
+  sx: (theme: Theme) => ({
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
+  }),
+};
 
 // ==================== Rank Dialog ====================
 
