@@ -17,7 +17,9 @@ import { GraphCanvasShell } from '@/pages/graph/components/GraphCanvasShell';
 import { GraphDetailsPanel } from '@/pages/graph/components/GraphDetailsPanel';
 import { GraphFiltersPanel } from '@/pages/graph/components/GraphFiltersPanel';
 import { GraphStatusBar } from '@/pages/graph/components/GraphStatusBar';
+import { AnimatedGraphSidePanel } from '@/pages/graph/components/AnimatedGraphSidePanel';
 import { GraphToolbar } from '@/pages/graph/components/GraphToolbar';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 import {
   DEFAULT_PROJECT_GRAPH_PANEL_STATE,
   DEFAULT_PROJECT_GRAPH_VIEW_SETTINGS,
@@ -89,7 +91,6 @@ const LAYOUT_PRESET = {
 const PANEL_WIDTH = 300;
 
 const panelPaperSx = (theme: Theme) => ({
-  width: PANEL_WIDTH,
   flexShrink: 0,
   display: 'flex',
   flexDirection: 'column' as const,
@@ -107,6 +108,13 @@ export const ProjectGraphPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
+  const motionMode = usePreferencesStore((s) => s.motionMode);
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)', { noSsr: true });
+
+  const drawerTransitionMs = useMemo(() => {
+    const smooth = motionMode === 'full' && !prefersReducedMotion;
+    return { enter: smooth ? 230 : 82, exit: smooth ? 200 : 72 };
+  }, [motionMode, prefersReducedMotion]);
 
   const [loading, setLoading] = useState(true);
   const [graphData, setGraphData] = useState<ProjectGraphData>({ nodes: [], edges: [] });
@@ -815,10 +823,12 @@ export const ProjectGraphPage: React.FC = () => {
           py: 0.5,
         }}
       >
-        {isMdUp && panelState.filtersOpen ? (
-          <Paper variant="outlined" elevation={0} sx={{ ...panelPaperSx(theme), p: 1.5 }}>
-            {filtersBody}
-          </Paper>
+        {isMdUp ? (
+          <AnimatedGraphSidePanel side="left" open={panelState.filtersOpen} panelWidth={PANEL_WIDTH}>
+            <Paper variant="outlined" elevation={0} sx={{ ...panelPaperSx(theme), flex: 1, width: '100%', p: 1.5 }}>
+              {filtersBody}
+            </Paper>
+          </AnimatedGraphSidePanel>
         ) : null}
 
         <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -845,10 +855,12 @@ export const ProjectGraphPage: React.FC = () => {
           <GraphStatusBar nodeCount={filteredGraph.nodes.length} edgeCount={filteredGraph.edges.length} zoomPercent={zoomPercent} />
         </Box>
 
-        {isMdUp && panelState.detailsOpen ? (
-          <Paper variant="outlined" elevation={0} sx={{ ...panelPaperSx(theme), p: 1.5 }}>
-            {detailsBody}
-          </Paper>
+        {isMdUp ? (
+          <AnimatedGraphSidePanel side="right" open={panelState.detailsOpen} panelWidth={PANEL_WIDTH}>
+            <Paper variant="outlined" elevation={0} sx={{ ...panelPaperSx(theme), flex: 1, width: '100%', p: 1.5 }}>
+              {detailsBody}
+            </Paper>
+          </AnimatedGraphSidePanel>
         ) : null}
       </Box>
 
@@ -857,6 +869,7 @@ export const ProjectGraphPage: React.FC = () => {
         open={!isMdUp && panelState.filtersOpen}
         onClose={() => setPanelState((p) => ({ ...p, filtersOpen: false }))}
         ModalProps={{ keepMounted: true }}
+        transitionDuration={{ enter: drawerTransitionMs.enter, exit: drawerTransitionMs.exit }}
         PaperProps={{ sx: { width: PANEL_WIDTH, maxWidth: '90vw', boxSizing: 'border-box' } }}
       >
         <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>{filtersBody}</Box>
@@ -867,6 +880,7 @@ export const ProjectGraphPage: React.FC = () => {
         open={!isMdUp && panelState.detailsOpen}
         onClose={() => setPanelState((p) => ({ ...p, detailsOpen: false }))}
         ModalProps={{ keepMounted: true }}
+        transitionDuration={{ enter: drawerTransitionMs.enter, exit: drawerTransitionMs.exit }}
         PaperProps={{ sx: { width: PANEL_WIDTH, maxWidth: '90vw', boxSizing: 'border-box' } }}
       >
         <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>{detailsBody}</Box>
