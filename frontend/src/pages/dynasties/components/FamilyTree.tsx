@@ -10,6 +10,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import type { DynastyMember, DynastyFamilyLink } from '@campaigner/shared';
 import { DYNASTY_FAMILY_RELATION_LABELS } from '@campaigner/shared';
 import { useNavigate, useParams } from 'react-router-dom';
+import { routes } from '@/utils/routes';
 import 'reactflow/dist/style.css';
 
 const MemberNode: React.FC<{ data: any }> = ({ data }) => {
@@ -18,7 +19,7 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
 
   return (
     <Box
-      onClick={(e) => { e.stopPropagation(); navigate(`/project/${projectId}/characters/${data.characterId}`); }}
+      onClick={(e) => { e.stopPropagation(); navigate(routes.characterDetail(projectId!, data.characterId)); }}
       sx={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         p: 1.5, minWidth: 120,

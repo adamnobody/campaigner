@@ -19,6 +19,7 @@ import {
   MIN_ZOOM,
   MAX_ZOOM,
 } from '@/pages/characters/graph/graphConstants';
+import { routes } from '@/utils/routes';
 
 export const CharacterGraphPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -437,7 +438,7 @@ export const CharacterGraphPage: React.FC = () => {
   const onDblClick = useCallback((e: React.MouseEvent) => {
     const { sx, sy } = canvasXY(e);
     const node = hitTest(sx, sy);
-    if (node) navigate(`/project/${pid}/characters/${node.id}`);
+    if (node) navigate(routes.characterDetail(pid, node.id));
   }, [canvasXY, hitTest, navigate, pid]);
 
   const zoomBtn = useCallback((delta: number) => {
@@ -475,7 +476,7 @@ export const CharacterGraphPage: React.FC = () => {
             variant="outlined"
             startIcon={<ArrowBackIcon />}
             size="small"
-            onClick={() => navigate(`/project/${pid}/characters`)}
+            onClick={() => navigate(routes.characters(pid))}
             sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
           >
             Назад
@@ -521,7 +522,7 @@ export const CharacterGraphPage: React.FC = () => {
           <Typography sx={{ color: 'text.secondary', mb: 2 }}>
             Нет персонажей для отображения
           </Typography>
-          <Button variant="outlined" onClick={() => navigate(`/project/${pid}/characters`)}>
+          <Button variant="outlined" onClick={() => navigate(routes.characters(pid))}>
             К списку
           </Button>
         </GlassCard>
@@ -573,7 +574,7 @@ export const CharacterGraphPage: React.FC = () => {
                 <Button
                   size="small"
                   variant="outlined"
-                  onClick={() => navigate(`/project/${pid}/characters/${selectedNode.id}`)}
+                  onClick={() => navigate(routes.characterDetail(pid, selectedNode.id))}
                   sx={{
                     borderColor: alpha(theme.palette.primary.main, 0.3),
                     color: theme.palette.primary.main,
