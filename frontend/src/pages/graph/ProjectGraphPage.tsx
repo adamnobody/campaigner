@@ -1,48 +1,84 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Tooltip, Typography, useTheme } from '@mui/material';
+import {
+  Box,
+  Drawer,
+  Paper,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import { alpha, type Theme } from '@mui/material/styles';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/EmptyState';
 import HubIcon from '@mui/icons-material/Hub';
 import { buildProjectGraph } from '@/pages/graph/data/buildProjectGraph';
-import { ProjectGraphToolbar } from '@/pages/graph/components/ProjectGraphToolbar';
-import { ProjectGraphFilters } from '@/pages/graph/components/ProjectGraphFilters';
-import { ProjectGraphLegend } from '@/pages/graph/components/ProjectGraphLegend';
-import { ProjectGraphNodePanel } from '@/pages/graph/components/ProjectGraphNodePanel';
+import { GraphCanvasShell } from '@/pages/graph/components/GraphCanvasShell';
+import { GraphDetailsPanel } from '@/pages/graph/components/GraphDetailsPanel';
+import { GraphFiltersPanel } from '@/pages/graph/components/GraphFiltersPanel';
+import { GraphStatusBar } from '@/pages/graph/components/GraphStatusBar';
+import { GraphToolbar } from '@/pages/graph/components/GraphToolbar';
 import {
+  DEFAULT_PROJECT_GRAPH_PANEL_STATE,
   DEFAULT_PROJECT_GRAPH_VIEW_SETTINGS,
-  GRAPH_EDGE_KIND_LABELS,
   GRAPH_EDGE_KIND_COLORS,
+  GRAPH_EDGE_KIND_LABELS,
   GRAPH_EDGE_KINDS,
   GRAPH_NODE_TYPE_COLORS,
   GRAPH_NODE_TYPES,
+  PROJECT_GRAPH_PANEL_STATE_KEY,
+  PROJECT_GRAPH_UI_VISIBILITY_KEY,
   PROJECT_GRAPH_VIEW_SETTINGS_KEY,
   getNodeRoute,
-  type GraphNodeType,
   type GraphEdge,
   type GraphEdgeKind,
   type GraphNode,
-  type ProjectGraphViewSettings,
+  type GraphNodeType,
   type ProjectGraphData,
+  type ProjectGraphPanelState,
+  type ProjectGraphUiVisibility,
+  type ProjectGraphViewSettings,
 } from '@/pages/graph/types';
 
 type SimNode = GraphNode & { x: number; y: number; vx: number; vy: number };
 
+function loadPanelState(): ProjectGraphPanelState {
+  try {
+    const v2 = localStorage.getItem(PROJECT_GRAPH_PANEL_STATE_KEY);
+    if (v2) {
+      const p = JSON.parse(v2) as Partial<ProjectGraphPanelState>;
+      return { ...DEFAULT_PROJECT_GRAPH_PANEL_STATE, ...p };
+    }
+    const v1Raw = localStorage.getItem(PROJECT_GRAPH_UI_VISIBILITY_KEY);
+    if (v1Raw) {
+      const o = JSON.parse(v1Raw) as ProjectGraphUiVisibility;
+      return {
+        filtersOpen: Boolean(o.showFilters && o.showDisplaySection),
+        detailsOpen: Boolean(o.showLegend),
+      };
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_PROJECT_GRAPH_PANEL_STATE;
+}
+
 const NODE_RADIUS_MAP = {
-  small: 13,
-  medium: 18,
-  large: 24,
+  small: 15,
+  medium: 21,
+  large: 28,
 } as const;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 const EDGE_OPACITY_MAP = {
-  low: 0.24,
-  medium: 0.42,
-  high: 0.68,
+  low: 0.34,
+  medium: 0.52,
+  high: 0.8,
 } as const;
 const EDGE_THICKNESS_MAP = {
-  thin: 1.2,
-  normal: 1.9,
-  thick: 2.8,
+  thin: 1.45,
+  normal: 2.25,
+  thick: 3.2,
 } as const;
 const LAYOUT_PRESET = {
   compact: { repel: 5400, linkDistance: 125, gravity: 0.00026, damping: 0.84, spring: 0.009 },
@@ -50,11 +86,27 @@ const LAYOUT_PRESET = {
   loose: { repel: 9200, linkDistance: 220, gravity: 0.0001, damping: 0.88, spring: 0.0042 },
 } as const;
 
+const PANEL_WIDTH = 300;
+
+const panelPaperSx = (theme: Theme) => ({
+  width: PANEL_WIDTH,
+  flexShrink: 0,
+  display: 'flex',
+  flexDirection: 'column' as const,
+  minHeight: 0,
+  overflow: 'hidden',
+  borderRadius: 2,
+  border: `1px solid ${theme.palette.divider}`,
+  bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.35 : 0.85),
+  backdropFilter: 'blur(10px)',
+});
+
 export const ProjectGraphPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number.parseInt(projectId || '0', 10);
   const navigate = useNavigate();
   const theme = useTheme();
+  const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
 
   const [loading, setLoading] = useState(true);
   const [graphData, setGraphData] = useState<ProjectGraphData>({ nodes: [], edges: [] });
@@ -80,6 +132,8 @@ export const ProjectGraphPage: React.FC = () => {
     }
   });
 
+  const [panelState, setPanelState] = useState<ProjectGraphPanelState>(loadPanelState);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
@@ -96,6 +150,10 @@ export const ProjectGraphPage: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(PROJECT_GRAPH_VIEW_SETTINGS_KEY, JSON.stringify(viewSettings));
   }, [viewSettings]);
+
+  useEffect(() => {
+    localStorage.setItem(PROJECT_GRAPH_PANEL_STATE_KEY, JSON.stringify(panelState));
+  }, [panelState]);
 
   useEffect(() => {
     let active = true;
@@ -170,7 +228,7 @@ export const ProjectGraphPage: React.FC = () => {
   ]);
 
   useEffect(() => {
-    const radius = Math.max(140, filteredGraph.nodes.length * 18);
+    const radius = Math.max(168, filteredGraph.nodes.length * 22);
     nodesRef.current = filteredGraph.nodes.map((node, index) => {
       const angle = (index / Math.max(filteredGraph.nodes.length, 1)) * Math.PI * 2;
       return {
@@ -186,11 +244,6 @@ export const ProjectGraphPage: React.FC = () => {
   }, [filteredGraph, relayoutSeed]);
 
   const getNodeRadius = useCallback(() => NODE_RADIUS_MAP[viewSettings.nodeSize], [viewSettings.nodeSize]);
-
-  const worldToScreen = useCallback((wx: number, wy: number) => ({
-    x: wx * camRef.current.zoom + camRef.current.panX,
-    y: wy * camRef.current.zoom + camRef.current.panY,
-  }), []);
 
   const screenToWorld = useCallback((sx: number, sy: number) => ({
     x: (sx - camRef.current.panX) / camRef.current.zoom,
@@ -245,18 +298,20 @@ export const ProjectGraphPage: React.FC = () => {
     });
     if (nodes.length === 1) {
       const node = nodes[0];
+      const zoom = Math.min(MAX_ZOOM, Math.max((Math.min(wrap.clientWidth, wrap.clientHeight) / 340) * 0.92, 1.35));
       camRef.current = {
-        zoom: 1,
-        panX: wrap.clientWidth / 2 - node.x,
-        panY: wrap.clientHeight / 2 - node.y,
+        zoom,
+        panX: wrap.clientWidth / 2 - node.x * zoom,
+        panY: wrap.clientHeight / 2 - node.y * zoom,
       };
-      setZoomPercent(100);
+      setZoomPercent(Math.round(zoom * 100));
       return;
     }
-    const padding = 64;
+    const padding = 72;
     const width = Math.max(maxX - minX + padding * 2, 1);
     const height = Math.max(maxY - minY + padding * 2, 1);
-    const zoom = Math.min(wrap.clientWidth / width, wrap.clientHeight / height, MAX_ZOOM);
+    let zoom = Math.min(wrap.clientWidth / width, wrap.clientHeight / height, MAX_ZOOM);
+    if (nodes.length <= 3) zoom = Math.min(MAX_ZOOM, Math.max(zoom, 0.95));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
     camRef.current = {
@@ -405,32 +460,42 @@ export const ProjectGraphPage: React.FC = () => {
         const source = nodes.find((node) => node.id === edge.source);
         const target = nodes.find((node) => node.id === edge.target);
         if (!source || !target) return;
-        const connectedToSelected =
-          !selectedNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId;
-        const alphaMultiplier = connectedToSelected ? 1 : 0.22;
-        const opacity = EDGE_OPACITY_MAP[viewSettings.edgeOpacity] * alphaMultiplier;
+
+        let alphaMultiplier = 1;
+        if (selectedNodeId) {
+          const connectedToSelected = edge.source === selectedNodeId || edge.target === selectedNodeId;
+          alphaMultiplier = connectedToSelected ? 1 : 0.22;
+        } else if (hoveredNodeId) {
+          const touchesHover = edge.source === hoveredNodeId || edge.target === hoveredNodeId;
+          alphaMultiplier = touchesHover ? 1 : 0.4;
+        }
+
+        const baseOpacity = EDGE_OPACITY_MAP[viewSettings.edgeOpacity] * alphaMultiplier;
         ctx.beginPath();
         ctx.moveTo(source.x, source.y);
         ctx.lineTo(target.x, target.y);
-        ctx.strokeStyle = `${GRAPH_EDGE_KIND_COLORS[edge.kind]}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`;
+        ctx.strokeStyle = `${GRAPH_EDGE_KIND_COLORS[edge.kind]}${Math.round(Math.min(255, baseOpacity * 255)).toString(16).padStart(2, '0')}`;
         const baseWidth = EDGE_THICKNESS_MAP[viewSettings.edgeThickness];
-        ctx.lineWidth = edge.kind === 'relationship' ? baseWidth + 0.4 : baseWidth;
-        if (edge.kind === 'wiki-link' || edge.kind === 'note-link') ctx.setLineDash([4, 4]);
+        ctx.lineWidth = edge.kind === 'relationship' ? baseWidth + 0.55 : baseWidth;
+        if (edge.kind === 'wiki-link' || edge.kind === 'note-link') ctx.setLineDash([5, 5]);
         else ctx.setLineDash([]);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        if (viewSettings.edgeLabels === 'on-hover' && (edge.source === hoveredNodeId || edge.target === hoveredNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId)) {
+        if (
+          viewSettings.edgeLabels === 'on-hover'
+          && (edge.source === hoveredNodeId || edge.target === hoveredNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId)
+        ) {
           const edgeLabel = edge.label || GRAPH_EDGE_KIND_LABELS[edge.kind];
           const mx = (source.x + target.x) / 2;
           const my = (source.y + target.y) / 2;
-          ctx.font = '10px system-ui,sans-serif';
+          ctx.font = '11px system-ui,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          const tw = ctx.measureText(edgeLabel).width + 10;
-          ctx.fillStyle = 'rgba(8, 10, 18, 0.86)';
+          const tw = ctx.measureText(edgeLabel).width + 12;
+          ctx.fillStyle = 'rgba(8, 10, 18, 0.88)';
           ctx.beginPath();
-          ctx.roundRect(mx - tw / 2, my - 8, tw, 16, 4);
+          ctx.roundRect(mx - tw / 2, my - 9, tw, 18, 5);
           ctx.fill();
           ctx.fillStyle = '#f3f5ff';
           ctx.fillText(edgeLabel, mx, my);
@@ -443,12 +508,17 @@ export const ProjectGraphPage: React.FC = () => {
       nodes.forEach((node) => {
         const relatedToSelected =
           !selectedNodeId || node.id === selectedNodeId || selectedNeighborIds.has(node.id);
-        const dim = relatedToSelected ? 1 : 0.32;
-        const radius = node.id === selectedNodeId ? nodeRadius + 6 : selectedNeighborIds.has(node.id) ? nodeRadius + 2 : nodeRadius;
+        const relatedToHover = !hoveredNodeId || node.id === hoveredNodeId;
+        const dim =
+          selectedNodeId || hoveredNodeId
+            ? (selectedNodeId ? relatedToSelected : relatedToHover) ? 1 : 0.28
+            : 1;
+        const radius =
+          node.id === selectedNodeId ? nodeRadius + 7 : selectedNeighborIds.has(node.id) ? nodeRadius + 3 : nodeRadius;
         if (node.id === hoveredNodeId || node.id === selectedNodeId || selectedNeighborIds.has(node.id)) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, radius + (node.id === selectedNodeId ? 10 : 7), 0, Math.PI * 2);
-          ctx.fillStyle = `${GRAPH_NODE_TYPE_COLORS[node.type]}${node.id === selectedNodeId ? '40' : '2f'}`;
+          ctx.arc(node.x, node.y, radius + (node.id === selectedNodeId ? 12 : 8), 0, Math.PI * 2);
+          ctx.fillStyle = `${GRAPH_NODE_TYPE_COLORS[node.type]}${node.id === selectedNodeId ? '55' : '38'}`;
           ctx.fill();
         }
         ctx.beginPath();
@@ -456,19 +526,23 @@ export const ProjectGraphPage: React.FC = () => {
         const fillAlphaHex = Math.round(255 * dim).toString(16).padStart(2, '0');
         ctx.fillStyle = `${GRAPH_NODE_TYPE_COLORS[node.type]}${fillAlphaHex}`;
         ctx.fill();
-        ctx.strokeStyle = node.id === selectedNodeId ? '#ffffff' : 'rgba(12,18,30,0.7)';
-        ctx.lineWidth = node.id === selectedNodeId ? 2.4 : 1.2;
+        ctx.strokeStyle =
+          node.id === selectedNodeId ? '#ffffff' : node.id === hoveredNodeId ? 'rgba(255,255,255,0.95)' : 'rgba(12,18,30,0.82)';
+        ctx.lineWidth = node.id === selectedNodeId ? 3 : node.id === hoveredNodeId ? 2.2 : 1.45;
         ctx.stroke();
         const shouldDrawNodeLabel =
           viewSettings.nodeLabels === 'always'
           || (viewSettings.nodeLabels === 'on-hover' && (node.id === hoveredNodeId || node.id === selectedNodeId));
         if (shouldDrawNodeLabel) {
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 10px system-ui,sans-serif';
+          ctx.font = 'bold 11px system-ui,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          const short = node.label.length > 16 ? `${node.label.slice(0, 14)}…` : node.label;
-          ctx.fillText(short, node.x, node.y + radius + 11);
+          const short = node.label.length > 18 ? `${node.label.slice(0, 16)}…` : node.label;
+          ctx.shadowColor = 'rgba(0,0,0,0.55)';
+          ctx.shadowBlur = 5;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(short, node.x, node.y + radius + 12);
+          ctx.shadowBlur = 0;
         }
       });
 
@@ -476,20 +550,20 @@ export const ProjectGraphPage: React.FC = () => {
         ctx.font = '12px system-ui,sans-serif';
         const textWidth = ctx.measureText(hoveredNode.label).width + 18;
         const x = hoveredNode.x - textWidth / 2;
-        const y = hoveredNode.y - nodeRadius - 28;
-        ctx.fillStyle = 'rgba(10, 12, 22, 0.9)';
+        const y = hoveredNode.y - nodeRadius - 30;
+        ctx.fillStyle = 'rgba(10, 12, 22, 0.92)';
         ctx.beginPath();
-        ctx.roundRect(x, y, textWidth, 22, 6);
+        ctx.roundRect(x, y, textWidth, 24, 6);
         ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.fillText(hoveredNode.label, hoveredNode.x, y + 11);
+        ctx.fillText(hoveredNode.label, hoveredNode.x, y + 12);
       }
 
       if (selectedNode) {
         ctx.beginPath();
-        ctx.arc(selectedNode.x, selectedNode.y, nodeRadius + 12, 0, Math.PI * 2);
-        ctx.strokeStyle = `${GRAPH_NODE_TYPE_COLORS[selectedNode.type]}99`;
-        ctx.lineWidth = 1.8;
+        ctx.arc(selectedNode.x, selectedNode.y, nodeRadius + 14, 0, Math.PI * 2);
+        ctx.strokeStyle = `${GRAPH_NODE_TYPE_COLORS[selectedNode.type]}aa`;
+        ctx.lineWidth = 2.2;
         ctx.stroke();
       }
 
@@ -504,7 +578,6 @@ export const ProjectGraphPage: React.FC = () => {
   }, [
     filteredGraph.nodes.length,
     centerCameraDefault,
-    fitCamera,
     getNodeRadius,
     hoveredNodeId,
     layoutPaused,
@@ -536,14 +609,20 @@ export const ProjectGraphPage: React.FC = () => {
   const hitNode = (sx: number, sy: number): SimNode | null => {
     const { x, y } = screenToWorld(sx, sy);
     const nodeRadius = getNodeRadius();
+    const hitPadding = 8;
     for (let idx = nodesRef.current.length - 1; idx >= 0; idx -= 1) {
       const node = nodesRef.current[idx];
       const dx = x - node.x;
       const dy = y - node.y;
-      if (dx * dx + dy * dy <= (nodeRadius + 6) * (nodeRadius + 6)) return node;
+      const rSel = node.id === selectedNodeId ? nodeRadius + 7 + hitPadding : nodeRadius + hitPadding;
+      if (dx * dx + dy * dy <= rSel * rSel) return node;
     }
     return null;
   };
+
+  const toggleFilters = () => setPanelState((p) => ({ ...p, filtersOpen: !p.filtersOpen }));
+
+  const toggleDetails = () => setPanelState((p) => ({ ...p, detailsOpen: !p.detailsOpen }));
 
   const handleMouseDown = (event: React.MouseEvent) => {
     const { sx, sy } = getMousePositionOnCanvas(event);
@@ -551,6 +630,9 @@ export const ProjectGraphPage: React.FC = () => {
     if (hit && event.button === 0) {
       dragNodeIdRef.current = hit.id;
       setSelectedNodeId(hit.id);
+      if (isMdUp) {
+        setPanelState((p) => ({ ...p, detailsOpen: true }));
+      }
       setCanvasCursor('grabbing');
       return;
     }
@@ -605,9 +687,11 @@ export const ProjectGraphPage: React.FC = () => {
 
   const selectedNode = useMemo(() => filteredGraph.nodes.find((node) => node.id === selectedNodeId) || null, [filteredGraph.nodes, selectedNodeId]);
   const selectedNodeEdges = useMemo(
-    () => (selectedNode ? filteredGraph.edges.filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id) : []),
+    () =>
+      selectedNode ? filteredGraph.edges.filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id) : [],
     [filteredGraph.edges, selectedNode]
   );
+  const nodeById = useMemo(() => new Map(filteredGraph.nodes.map((node) => [node.id, node])), [filteredGraph.nodes]);
 
   const toggleNodeType = (nodeType: GraphNodeType) => {
     setEnabledNodeTypes((prev) => {
@@ -627,6 +711,35 @@ export const ProjectGraphPage: React.FC = () => {
     });
   };
 
+  const filtersBody = (
+    <GraphFiltersPanel
+      enabledNodeTypes={enabledNodeTypes}
+      enabledEdgeKinds={enabledEdgeKinds}
+      onToggleNodeType={toggleNodeType}
+      onToggleEdgeKind={toggleEdgeKind}
+      onSelectAllNodeTypes={() => setEnabledNodeTypes(new Set(GRAPH_NODE_TYPES))}
+      onSelectNoNodeTypes={() => setEnabledNodeTypes(new Set())}
+      onSelectAllEdgeKinds={() => setEnabledEdgeKinds(new Set(GRAPH_EDGE_KINDS))}
+      onSelectNoEdgeKinds={() => setEnabledEdgeKinds(new Set())}
+      viewSettings={viewSettings}
+      onViewSettingsChange={updateViewSettings}
+    />
+  );
+
+  const detailsBody = (
+    <GraphDetailsPanel
+      projectId={pid}
+      selectedNode={selectedNode}
+      connectedEdges={selectedNodeEdges}
+      nodeById={nodeById}
+      onOpenEntity={() => {
+        if (selectedNode) navigate(getNodeRoute(pid, selectedNode));
+      }}
+    />
+  );
+
+  const detailsBadge = !isMdUp && Boolean(selectedNode) && !panelState.detailsOpen;
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -639,8 +752,8 @@ export const ProjectGraphPage: React.FC = () => {
     return (
       <EmptyState
         icon={<HubIcon sx={{ fontSize: 64 }} />}
-        title="Граф пуст"
-        description="В проекте пока недостаточно данных и явных связей для построения графа."
+        title="Нет данных для графа"
+        description="Добавьте персонажей, фракции, события или связи, чтобы увидеть граф проекта."
       />
     );
   }
@@ -649,93 +762,115 @@ export const ProjectGraphPage: React.FC = () => {
     <Box
       sx={{
         height: 'calc(100vh - 64px - 46px)',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
         minHeight: 0,
-        display: 'grid',
-        gridTemplateColumns: '300px minmax(0, 1fr) 300px',
-        gap: 1.5,
+        display: 'flex',
+        flexDirection: 'column',
         overflow: 'hidden',
       }}
     >
-      <Box sx={{ minHeight: 0, overflowY: 'auto', pr: 0.5 }}>
-        <ProjectGraphFilters
-          enabledNodeTypes={enabledNodeTypes}
-          enabledEdgeKinds={enabledEdgeKinds}
-          onToggleNodeType={toggleNodeType}
-          onToggleEdgeKind={toggleEdgeKind}
-          viewSettings={viewSettings}
-          onViewSettingsChange={updateViewSettings}
-        />
-      </Box>
+      <Typography
+        sx={{
+          fontFamily: '"Cinzel", serif',
+          fontSize: { xs: '1.25rem', sm: '1.45rem' },
+          fontWeight: 700,
+          mb: 1,
+          flexShrink: 0,
+        }}
+      >
+        Граф проекта
+      </Typography>
 
-      <Box sx={{ minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <Typography sx={{ fontFamily: '"Cinzel", serif', fontSize: '1.45rem', fontWeight: 700, mb: 0.4 }}>
-          Граф проекта
-        </Typography>
-        <ProjectGraphToolbar
-          search={search}
-          onSearchChange={setSearch}
-          showIsolated={showIsolated}
-          onShowIsolatedChange={setShowIsolated}
-          nodeLimit={nodeLimit}
-          onNodeLimitChange={setNodeLimit}
-          zoomPercent={zoomPercent}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onResetView={resetCameraView}
-          onFit={fitCamera}
-          layoutPaused={layoutPaused}
-          onToggleLayoutPaused={() => setLayoutPaused((prev) => !prev)}
-          onRelayout={handleRelayout}
-        />
-        <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.8 }}>
-          Узлы: {filteredGraph.nodes.length} · Связи: {filteredGraph.edges.length}
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.8 }}>
-          Колесо - масштаб · Перетаскивание фона - панорамирование · Двойной клик по узлу - открыть сущность
-        </Typography>
-        <Box
-          ref={wrapRef}
-          sx={{
-            position: 'relative',
-            flexGrow: 1,
-            minHeight: 0,
-            borderRadius: 2,
-            border: `1px solid ${theme.palette.divider}`,
-            backgroundColor: theme.palette.background.default,
-            overflow: 'hidden',
-            touchAction: 'none',
-          }}
-        >
-          <Tooltip title="Двойной клик по узлу открывает сущность">
-            <canvas
-              ref={canvasRef}
-              style={{
-                display: 'block',
-                width: '100%',
-                height: '100%',
-                cursor: canvasCursor,
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onDoubleClick={handleDoubleClick}
-            />
-          </Tooltip>
+      <GraphToolbar
+        search={search}
+        onSearchChange={setSearch}
+        showIsolated={showIsolated}
+        onShowIsolatedChange={setShowIsolated}
+        nodeLimit={nodeLimit}
+        onNodeLimitChange={setNodeLimit}
+        zoomPercent={zoomPercent}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onResetView={resetCameraView}
+        onFit={fitCamera}
+        layoutPaused={layoutPaused}
+        onToggleLayoutPaused={() => setLayoutPaused((prev) => !prev)}
+        onRelayout={handleRelayout}
+        filtersOpen={panelState.filtersOpen}
+        onToggleFilters={toggleFilters}
+        detailsOpen={panelState.detailsOpen}
+        onToggleDetails={toggleDetails}
+        detailsButtonBadge={detailsBadge}
+      />
+
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: { xs: 360, md: 0 },
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 1,
+          py: 0.5,
+        }}
+      >
+        {isMdUp && panelState.filtersOpen ? (
+          <Paper variant="outlined" elevation={0} sx={{ ...panelPaperSx(theme), p: 1.5 }}>
+            {filtersBody}
+          </Paper>
+        ) : null}
+
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <GraphCanvasShell>
+            <Box ref={wrapRef} sx={{ width: '100%', height: '100%', position: 'relative' }}>
+              <Tooltip title="Двойной клик по узлу открывает сущность">
+                <canvas
+                  ref={canvasRef}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    height: '100%',
+                    cursor: canvasCursor,
+                  }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onDoubleClick={handleDoubleClick}
+                />
+              </Tooltip>
+            </Box>
+          </GraphCanvasShell>
+          <GraphStatusBar nodeCount={filteredGraph.nodes.length} edgeCount={filteredGraph.edges.length} zoomPercent={zoomPercent} />
         </Box>
+
+        {isMdUp && panelState.detailsOpen ? (
+          <Paper variant="outlined" elevation={0} sx={{ ...panelPaperSx(theme), p: 1.5 }}>
+            {detailsBody}
+          </Paper>
+        ) : null}
       </Box>
 
-      <Box sx={{ minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1.2, pl: 0.5 }}>
-        <ProjectGraphLegend />
-        <ProjectGraphNodePanel
-          selectedNode={selectedNode}
-          connectedEdges={selectedNodeEdges}
-          onOpen={() => {
-            if (!selectedNode) return;
-            navigate(getNodeRoute(pid, selectedNode));
-          }}
-        />
-      </Box>
+      <Drawer
+        anchor="left"
+        open={!isMdUp && panelState.filtersOpen}
+        onClose={() => setPanelState((p) => ({ ...p, filtersOpen: false }))}
+        ModalProps={{ keepMounted: true }}
+        PaperProps={{ sx: { width: PANEL_WIDTH, maxWidth: '90vw', boxSizing: 'border-box' } }}
+      >
+        <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>{filtersBody}</Box>
+      </Drawer>
+
+      <Drawer
+        anchor="right"
+        open={!isMdUp && panelState.detailsOpen}
+        onClose={() => setPanelState((p) => ({ ...p, detailsOpen: false }))}
+        ModalProps={{ keepMounted: true }}
+        PaperProps={{ sx: { width: PANEL_WIDTH, maxWidth: '90vw', boxSizing: 'border-box' } }}
+      >
+        <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>{detailsBody}</Box>
+      </Drawer>
     </Box>
   );
 };

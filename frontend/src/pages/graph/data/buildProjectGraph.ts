@@ -95,52 +95,68 @@ export const buildProjectGraph = async (
   });
 
   characters.forEach((character: any) => {
+    const meta: GraphNode['meta'] = {};
+    if (character.title) meta.title = character.title;
+    if (character.race) meta.race = character.race;
+    if (character.characterClass) meta.characterClass = character.characterClass;
+    if (typeof character.level === 'number') meta.level = character.level;
     pushNode(nodes, {
       id: toNodeId('character', character.id),
       type: 'character',
       entityId: character.id,
       label: character.name,
-      meta: { title: character.title || '', status: character.status || '' },
+      meta,
     });
   });
 
   factions.forEach((faction: any) => {
+    const meta: GraphNode['meta'] = {};
+    if (faction.kind) meta.kind = faction.kind;
+    if (faction.type) meta.type = faction.type;
     pushNode(nodes, {
       id: toNodeId('faction', faction.id),
       type: 'faction',
       entityId: faction.id,
       label: faction.name,
-      meta: { kind: faction.kind || 'faction', type: faction.type || '', status: faction.status || '' },
+      meta,
     });
   });
 
   dynasties.forEach((dynasty: any) => {
+    const meta: GraphNode['meta'] = {};
+    if (dynasty.motto) meta.motto = dynasty.motto;
     pushNode(nodes, {
       id: toNodeId('dynasty', dynasty.id),
       type: 'dynasty',
       entityId: dynasty.id,
       label: dynasty.name,
-      meta: { status: dynasty.status || '', motto: dynasty.motto || '' },
+      meta,
     });
   });
 
   dogmas.forEach((dogma: any) => {
+    const meta: GraphNode['meta'] = {};
+    if (dogma.category) meta.category = dogma.category;
+    if (dogma.importance) meta.importance = dogma.importance;
     pushNode(nodes, {
       id: toNodeId('dogma', dogma.id),
       type: 'dogma',
       entityId: dogma.id,
       label: dogma.title,
-      meta: { category: dogma.category || '', importance: dogma.importance || '' },
+      meta,
     });
   });
 
   timelineEvents.forEach((event: any) => {
+    const meta: GraphNode['meta'] = {};
+    if (event.era) meta.era = event.era;
+    if (event.eventDate) meta.eventDate = event.eventDate;
     pushNode(nodes, {
       id: toNodeId('timeline', event.id),
       type: 'timeline',
       entityId: event.id,
       label: event.title,
-      meta: { era: event.era || '', eventDate: event.eventDate || '' },
+      meta,
     });
   });
 

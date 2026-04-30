@@ -60,6 +60,60 @@ export const DEFAULT_PROJECT_GRAPH_VIEW_SETTINGS: ProjectGraphViewSettings = {
   focusSelectedNeighborhood: false,
 };
 
+/** @deprecated только для миграции из localStorage v1 → v2 */
+export interface ProjectGraphUiVisibility {
+  showFilters: boolean;
+  showDisplaySection: boolean;
+  showLegend: boolean;
+}
+
+export const PROJECT_GRAPH_UI_VISIBILITY_KEY = 'campaigner.projectGraph.uiVisibility.v1';
+
+/** Состояние боковых панелей (canvas-first UX). */
+export interface ProjectGraphPanelState {
+  filtersOpen: boolean;
+  detailsOpen: boolean;
+}
+
+export const PROJECT_GRAPH_PANEL_STATE_KEY = 'campaigner.projectGraph.panels.v2';
+
+/** По умолчанию: фильтры свернуты, панель деталей открыта — легенда доступна без лишнего клика. */
+export const DEFAULT_PROJECT_GRAPH_PANEL_STATE: ProjectGraphPanelState = {
+  filtersOpen: false,
+  detailsOpen: true,
+};
+
+/** Подписи полей метаданных в панели узла (русский). */
+export const GRAPH_PANEL_META_LABELS: Record<GraphNodeType, Record<string, string>> = {
+  character: {
+    title: 'Титул / должность',
+    race: 'Раса',
+    characterClass: 'Класс / профессия',
+    level: 'Уровень',
+  },
+  faction: {
+    kind: 'Категория',
+    type: 'Тип организации',
+  },
+  dynasty: {
+    motto: 'Девиз',
+  },
+  dogma: {
+    category: 'Категория',
+    importance: 'Важность',
+  },
+  timeline: {
+    era: 'Эпоха',
+    eventDate: 'Дата',
+  },
+  note: {
+    noteType: 'Тип заметки',
+  },
+  wiki: {
+    noteType: 'Тип записи',
+  },
+};
+
 export const GRAPH_NODE_TYPE_LABELS: Record<GraphNodeType, string> = {
   character: 'Персонажи',
   faction: 'Фракции/государства',
