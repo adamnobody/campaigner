@@ -18,9 +18,13 @@ type AmbitionCatalogRow = Ambition & ExclusionItem;
 
 type CreateAmbitionExtra = { editingAmbition?: Ambition | null };
 
+function mapAmbitionCatalogRow(ambition: Ambition): AmbitionCatalogRow {
+  return { ...ambition, imagePath: ambition.iconPath };
+}
+
 export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projectId, factionId }) => {
   const [editingAmbition, setEditingAmbition] = useState<Ambition | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const {
     catalog,
@@ -86,20 +90,12 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
   }, [catalog, factionAmbitionIds]);
 
   const items = useMemo<AmbitionCatalogRow[]>(
-    () =>
-      sortedCatalog.map((ambition) => ({
-        ...ambition,
-        imagePath: ambition.iconPath,
-      })),
+    () => sortedCatalog.map(mapAmbitionCatalogRow),
     [sortedCatalog]
   );
 
   const assignedMainItems = useMemo<AmbitionCatalogRow[]>(
-    () =>
-      attachedAmbitions.map((ambition) => ({
-        ...ambition,
-        imagePath: ambition.iconPath,
-      })),
+    () => attachedAmbitions.map(mapAmbitionCatalogRow),
     [attachedAmbitions]
   );
 
@@ -149,7 +145,6 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
       items={items}
       assignedMainItems={assignedMainItems}
       assignedIds={assignedIds}
-      loading={loading}
       error={error}
       attachActionsDisabled={attachActionsDisabled}
       isEntitySaved={factionId != null && factionId > 0}
@@ -159,8 +154,8 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
       gridMinColumnWidth={220}
       CreateDialog={CreateAmbitionDialog}
       createDialogExtraProps={{ editingAmbition }}
-      createDialogOpen={editDialogOpen}
-      onCreateDialogOpenChange={setEditDialogOpen}
+      createDialogOpen={createDialogOpen}
+      onCreateDialogOpenChange={setCreateDialogOpen}
       onCreateDialogClose={() => setEditingAmbition(null)}
       prepareCreateNew={() => setEditingAmbition(null)}
       renderCard={({
@@ -189,7 +184,7 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
             item.isCustom
               ? () => {
                   setEditingAmbition(item);
-                  setEditDialogOpen(true);
+                  setCreateDialogOpen(true);
                 }
               : undefined
           }

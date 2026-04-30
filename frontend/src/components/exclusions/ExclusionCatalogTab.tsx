@@ -43,10 +43,7 @@ export interface RenderExclusionCardArgs<T extends ExclusionItem> {
   onConfigureExclusions: () => void;
 }
 
-export interface ExclusionCatalogTabProps<
-  T extends ExclusionItem,
-  TCreateExtra extends object = Record<string, never>,
-> {
+export interface ExclusionCatalogTabProps<T extends ExclusionItem, TCreateExtra extends object = object> {
   projectId: number;
 
   title: string;
@@ -56,7 +53,6 @@ export interface ExclusionCatalogTabProps<
   catalogDialogTitle: string;
   catalogTabLabel?: string;
   createTabLabel?: string;
-  /** Текст под вкладкой «Создать свою» и над кнопкой создания. */
   createTabDescription: string;
   createButtonLabel: string;
 
@@ -75,19 +71,14 @@ export interface ExclusionCatalogTabProps<
   exclusionsSavedSnackbar: string;
 
   exclusionsCatalog: ExcludableItem[];
-  /** Порядок элементов в сетке вкладки «Каталог» диалога (как раньше — прикреплённые первыми). */
   items: T[];
-  /** Элементы основной сетки при ненулевом числе прикреплённых (порядок задаёт родитель). */
   assignedMainItems: T[];
 
   assignedIds: number[];
-  loading: boolean;
   error?: string | null;
 
   attachActionsDisabled?: boolean;
-  /** Есть сохранённая сущность (персонаж / фракция), с которой работают назначения. */
   isEntitySaved: boolean;
-  /** Показывать спиннер при первой загрузке пустого каталога: `loading && catalogLength === 0`. */
   showInitialSpinner: boolean;
 
   onToggleAssign: (itemId: number) => void | Promise<void>;
@@ -98,20 +89,13 @@ export interface ExclusionCatalogTabProps<
   CreateDialog: ComponentType<ExclusionCatalogCreateDialogBaseProps & Partial<TCreateExtra>>;
   createDialogExtraProps?: TCreateExtra;
   onCreateDialogClose?: () => void;
-  /** Вызывается перед открытием диалога создания с вкладки «Создать свою» (напр. сброс `editingAmbition`). */
   prepareCreateNew?: () => void;
 
   gridMinColumnWidth?: number;
   gridGap?: number | string;
 
-  /**
-   * Контролируемое открытие диалога создания (и редактирования, если тот же компонент).
-   * Без этого — локальный state (как у черт).
-   */
   createDialogOpen?: boolean;
   onCreateDialogOpenChange?: (open: boolean) => void;
-
-  /** Доп. sx для контейнера SectionHeader + кнопка (напр. `flexWrap: 'wrap'` у черт). */
   catalogHeaderExtraSx?: object;
 }
 
@@ -138,7 +122,6 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
   items,
   assignedMainItems,
   assignedIds,
-  loading: _loading,
   error,
   attachActionsDisabled = false,
   isEntitySaved,
@@ -198,8 +181,6 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
     gridTemplateColumns: `repeat(auto-fill, minmax(${gridMinColumnWidth}px, 1fr))`,
     gap: gridGap,
   } as const;
-
-  const CreateDialogComponent = CreateDialog;
 
   const mergedCreateDialogProps = {
     open: createDialogOpen,
@@ -386,7 +367,7 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
         </DialogContent>
       </Dialog>
 
-      <CreateDialogComponent {...mergedCreateDialogProps} />
+      <CreateDialog {...mergedCreateDialogProps} />
 
       <EditExclusionsDialog
         open={Boolean(editingExclusionsItem)}

@@ -17,6 +17,14 @@ export interface CharacterTraitsTabProps {
 
 type TraitCatalogRow = CharacterTrait & ExclusionItem;
 
+function mapTraitCatalogRow(trait: CharacterTrait): TraitCatalogRow {
+  return {
+    ...trait,
+    isCustom: !trait.isPredefined,
+    imagePath: trait.imagePath,
+  };
+}
+
 export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectId, characterId }) => {
   const {
     traits,
@@ -77,22 +85,12 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
   );
 
   const items = useMemo<TraitCatalogRow[]>(
-    () =>
-      sortedTraits.map((trait) => ({
-        ...trait,
-        isCustom: !trait.isPredefined,
-        imagePath: trait.imagePath,
-      })),
+    () => sortedTraits.map(mapTraitCatalogRow),
     [sortedTraits]
   );
 
   const assignedMainItems = useMemo<TraitCatalogRow[]>(
-    () =>
-      attachedTraits.map((trait) => ({
-        ...trait,
-        isCustom: !trait.isPredefined,
-        imagePath: trait.imagePath,
-      })),
+    () => attachedTraits.map(mapTraitCatalogRow),
     [attachedTraits]
   );
 
@@ -144,7 +142,6 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
       items={items}
       assignedMainItems={assignedMainItems}
       assignedIds={assignedIds}
-      loading={loading}
       error={error}
       attachActionsDisabled={attachActionsDisabled}
       isEntitySaved={characterId != null && characterId > 0}
