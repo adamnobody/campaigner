@@ -29,6 +29,7 @@ import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
+import { routes } from '@/utils/routes';
 import {
   FACTION_KIND_ICONS,
   FACTION_STATUS_LABELS,
@@ -69,8 +70,6 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   const entityLabelPlural = isStatePage ? 'Государства' : 'Фракции';
   const deletedMessage = isStatePage ? 'Государство удалено' : 'Фракция удалена';
   const createLabel = isStatePage ? 'Создать государство' : 'Создать фракцию';
-  const listBasePath = isStatePage ? 'states' : 'factions';
-
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [filterStatus, setFilterStatus] = useState('');
@@ -200,7 +199,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
               : 'Внутренние объединения, организации и группировки'}
           </Typography>
         </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(`/project/${pid}/${listBasePath}/new`)}>
+        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(routes.factionDetail(pid, entityType, 'new'))}>
           {createLabel}
         </DndButton>
       </Box>
@@ -269,7 +268,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                 : 'Создайте первую фракцию или внутреннюю группировку'
             }
             actionLabel={createLabel}
-            onAction={() => navigate(`/project/${pid}/${listBasePath}/new`)}
+            onAction={() => navigate(routes.factionDetail(pid, entityType, 'new'))}
           />
         )
       ) : (
@@ -294,7 +293,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                 <GlassCard
                   interactive
                   key={entity.id}
-                  onClick={() => navigate(`/project/${pid}/${listBasePath}/${entity.id}`)}
+                  onClick={() => navigate(routes.factionDetail(pid, entity.kind, entity.id))}
                   sx={{
                     p: 0,
                     '&:hover': {

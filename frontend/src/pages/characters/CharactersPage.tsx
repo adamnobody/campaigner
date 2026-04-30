@@ -18,6 +18,7 @@ import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { routes } from '@/utils/routes';
 
 export const CharactersPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -98,7 +99,7 @@ export const CharactersPage: React.FC = () => {
           <DndButton
             variant="outlined"
             startIcon={<AccountTreeIcon />}
-            onClick={() => navigate(`/project/${pid}/characters/graph`)}
+            onClick={() => navigate(routes.charactersGraph(pid))}
             sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}
           >
             Граф связей
@@ -106,7 +107,7 @@ export const CharactersPage: React.FC = () => {
           <DndButton
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => navigate(`/project/${pid}/characters/new`)}
+            onClick={() => navigate(routes.characterDetail(pid, 'new'))}
           >
             Добавить
           </DndButton>
@@ -171,7 +172,7 @@ export const CharactersPage: React.FC = () => {
           title="Персонажи не найдены"
           description="Создайте первого персонажа вашей истории"
           actionLabel="Создать персонажа"
-          onAction={() => navigate(`/project/${pid}/characters/new`)}
+          onAction={() => navigate(routes.characterDetail(pid, 'new'))}
         />
       ) : filtered.length === 0 ? (
         <EmptyState
@@ -200,7 +201,7 @@ export const CharactersPage: React.FC = () => {
             >
               <GlassCard
                 interactive
-                onClick={() => navigate(`/project/${pid}/characters/${ch.id}`)}
+                onClick={() => navigate(routes.characterDetail(pid, ch.id))}
                 sx={{
                   display: 'flex',
                   alignItems: 'flex-start',

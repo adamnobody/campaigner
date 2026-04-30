@@ -70,6 +70,7 @@ import type {
   Dynasty,
 } from '@campaigner/shared';
 import { shallow } from 'zustand/shallow';
+import { routes } from '@/utils/routes';
 
 // ==================== Types ====================
 
@@ -150,7 +151,6 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const navigate = useNavigate();
   const theme = useTheme();
   const normalizedEntityType: 'state' | 'faction' = entityType === 'state' ? 'state' : 'faction';
-  const listBasePath = normalizedEntityType === 'state' ? 'states' : 'factions';
 
   const { showSnackbar, showConfirmDialog } = useUIStore((state) => ({
     showSnackbar: state.showSnackbar,
@@ -422,8 +422,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   }), [factionRelations, fid]);
   const resolveEntityPath = (targetId: number) => {
     const target = factions.find((item) => item.id === targetId);
-    const base = target?.kind === 'state' ? 'states' : 'factions';
-    return `/project/${pid}/${base}/${targetId}`;
+    const kind = target?.kind === 'state' ? 'state' : 'faction';
+    return routes.factionDetail(pid, kind, targetId);
   };
 
   const sortedFactionPolicies = useMemo(
@@ -538,7 +538,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           mapApi.getTerritorySummariesForProject(pid).then((res) => setTerritoryOptions(res.data.data || [])).catch(() => {});
         }
         showSnackbar(`${entityLabelCapitalized} создано!`, 'success');
-        navigate(`/project/${pid}/${listBasePath}/${created.id}`, { replace: true });
+        navigate(routes.factionDetail(pid, resolvedEntityType, created.id), { replace: true });
       } else {
         await updateFaction(fid, payload as Parameters<typeof updateFaction>[1]);
         await replaceCustomMetrics(fid, { metrics: preparedCustomMetrics });
@@ -557,7 +557,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const handleDelete = () => {
     if (isNew) return;
     showConfirmDialog(`Удалить ${entityLabel}`, `Удалить "${form.name}"?`, async () => {
-      try { await deleteFaction(fid); showSnackbar('Удалена', 'success'); navigate(`/project/${pid}/${listBasePath}`); }
+      try { await deleteFaction(fid); showSnackbar('Удалена', 'success'); navigate(routes.factionList(pid, resolvedEntityType)); }
       catch { showSnackbar('Ошибка', 'error'); }
     });
   };
@@ -710,7 +710,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   return (
     <Box>
       <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(`/project/${pid}/${listBasePath}`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <IconButton onClick={() => navigate(routes.factionList(pid, normalizedEntityType))} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
         <Typography variant="body2" color="text.secondary">
           {resolvedEntityType === 'state' ? 'К списку государств' : 'К списку фракций'}
         </Typography>
@@ -794,7 +794,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                   <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Правитель</Typography>
                     <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>
-                      <Link component={RouterLink} to={`/project/${pid}/characters/${currentFaction.ruler.id}`} underline="hover" color="inherit">
+                      <Link component={RouterLink} to={routes.characterDetail(pid, currentFaction.ruler.id)} underline="hover" color="inherit">
                         {currentFaction.ruler.name}
                       </Link>
                     </Typography>
@@ -1067,7 +1067,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                           <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
                         </IconButton>
                       }
-                      onClick={() => navigate(`/project/${pid}/characters/${member.characterId}`)}
+                      onClick={() => navigate(routes.characterDetail(pid, member.characterId))}
                       sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.5), borderRadius: 1.5, mb: 1, cursor: 'pointer', border: `1px solid ${alpha(theme.palette.divider, 0.5)}`, '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.1) } }}>
                       <ListItemAvatar>
                         <Avatar src={member.characterImagePath || undefined} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }}><PersonIcon /></Avatar>

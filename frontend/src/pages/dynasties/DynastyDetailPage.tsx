@@ -39,6 +39,7 @@ import type { DynastyMember, DynastyEvent } from '@campaigner/shared';
 import { FamilyTree } from '@/pages/dynasties/components/FamilyTree';
 import { DynastyEventsTimeline } from '@/pages/dynasties/components/DynastyEventsTimeline';
 import { shallow } from 'zustand/shallow';
+import { routes } from '@/utils/routes';
 
 // ==================== Form ====================
 
@@ -229,7 +230,7 @@ export const DynastyDetailPage: React.FC = () => {
         if (finalTags.trim()) await saveTagsForDynasty(created.id, finalTags);
         setTagsInput('');
         showSnackbar('Династия создана!', 'success');
-        navigate(`/project/${pid}/dynasties/${created.id}`, { replace: true });
+        navigate(routes.dynastyDetail(pid, created.id), { replace: true });
       } else {
         await updateDynasty(did, payload);
         await saveTagsForDynasty(did, finalTags);
@@ -243,7 +244,7 @@ export const DynastyDetailPage: React.FC = () => {
   const handleDelete = () => {
     if (isNew) return;
     showConfirmDialog('Удалить династию', `Удалить "${form.name}"?`, async () => {
-      try { await deleteDynasty(did); showSnackbar('Удалена', 'success'); navigate(`/project/${pid}/dynasties`); }
+      try { await deleteDynasty(did); showSnackbar('Удалена', 'success'); navigate(routes.dynasties(pid)); }
       catch { showSnackbar('Ошибка', 'error'); }
     });
   };
@@ -374,7 +375,7 @@ export const DynastyDetailPage: React.FC = () => {
   return (
     <Box>
       <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(`/project/${pid}/dynasties`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <IconButton onClick={() => navigate(routes.dynasties(pid))} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
         <Typography variant="body2" color="text.secondary">К списку династий</Typography>
       </Box>
 
@@ -632,7 +633,7 @@ export const DynastyDetailPage: React.FC = () => {
                             transition: 'all 0.15s',
                             '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.1), '& .member-delete': { opacity: 1 } },
                           }}
-                            onClick={() => navigate(`/project/${pid}/characters/${member.characterId}`)}
+                            onClick={() => navigate(routes.characterDetail(pid, member.characterId))}
                           >
                             <Avatar
                               src={member.characterImagePath || undefined}

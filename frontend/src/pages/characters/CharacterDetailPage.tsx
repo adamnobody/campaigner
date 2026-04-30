@@ -34,6 +34,7 @@ import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { routes } from '@/utils/routes';
 
 // ==================== Constants ====================
 
@@ -251,7 +252,7 @@ export const CharacterDetailPage: React.FC = () => {
         if (finalTags.trim()) await saveTagsForCharacter(created.id, finalTags);
         setTagsInput('');
         showSnackbar('Персонаж создан!', 'success');
-        navigate(`/project/${pid}/characters/${created.id}`, { replace: true });
+        navigate(routes.characterDetail(pid, created.id), { replace: true });
       } else {
         await updateCharacter(cid, payload);
         await saveTagsForCharacter(cid, finalTags);
@@ -265,7 +266,7 @@ export const CharacterDetailPage: React.FC = () => {
   const handleDelete = () => {
     if (isNew) return;
     showConfirmDialog('Удалить персонажа', `Удалить "${form.name}"? Все связи тоже будут удалены.`, async () => {
-      try { await deleteCharacter(cid); showSnackbar('Удалён', 'success'); navigate(`/project/${pid}/characters`); }
+      try { await deleteCharacter(cid); showSnackbar('Удалён', 'success'); navigate(routes.characters(pid)); }
       catch { showSnackbar('Ошибка', 'error'); }
     });
   };
@@ -303,7 +304,7 @@ export const CharacterDetailPage: React.FC = () => {
   return (
     <Box>
       <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(`/project/${pid}/characters`)} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <IconButton onClick={() => navigate(routes.characters(pid))} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
         <Typography variant="body2" color="text.secondary">К списку персонажей</Typography>
       </Box>
 
@@ -469,7 +470,7 @@ export const CharacterDetailPage: React.FC = () => {
                             <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
                           </IconButton>
                         }
-                        onClick={() => navigate(`/project/${pid}/characters/${rel.otherId}`)}
+                        onClick={() => navigate(routes.characterDetail(pid, rel.otherId))}
                         sx={{
                           backgroundColor: alpha(relColor, 0.08),
                           borderRadius: 1.5, mb: 1, cursor: 'pointer',

@@ -17,6 +17,7 @@ import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
+import { routes } from '@/utils/routes';
 import {
   DYNASTY_STATUSES,
   DYNASTY_STATUS_LABELS,
@@ -95,7 +96,7 @@ export const DynastiesPage: React.FC = () => {
             Родословные линии и правящие дома вашего мира
           </Typography>
         </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(`/project/${pid}/dynasties/new`)}>
+        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(routes.dynastyDetail(pid, 'new'))}>
           Создать династию
         </DndButton>
       </Box>
@@ -157,7 +158,7 @@ export const DynastiesPage: React.FC = () => {
             title="Династий пока нет"
             description="Создайте родословные линии — правящие дома, благородные семьи и древние роды"
             actionLabel="Создать династию"
-            onAction={() => navigate(`/project/${pid}/dynasties/new`)}
+            onAction={() => navigate(routes.dynastyDetail(pid, 'new'))}
           />
         )
       ) : (
@@ -174,7 +175,7 @@ export const DynastiesPage: React.FC = () => {
               <GlassCard
                 interactive
                 key={dynasty.id}
-                onClick={() => navigate(`/project/${pid}/dynasties/${dynasty.id}`)}
+                onClick={() => navigate(routes.dynastyDetail(pid, dynasty.id))}
                 sx={{
                   p: 0,
                   '&:hover': {
