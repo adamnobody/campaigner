@@ -1,5 +1,5 @@
 import { getDb } from '../../db/connection.js';
-import { NotFoundError } from '../../middleware/errorHandler.js';
+import { BadRequestError, NotFoundError } from '../../middleware/errorHandler.js';
 import { buildUpdateQuery, ensureEntityExists } from '../../utils/dbHelpers.js';
 import type {
   DynastyFilters,
@@ -244,6 +244,27 @@ export class DynastyService {
     const event = getDb().prepare('SELECT * FROM dynasty_events WHERE id = ?').get(eventId) as DynastyEventRow | undefined;
     if (!event) throw new NotFoundError('DynastyEvent');
     return mapDynastyEvent(event);
+  }
+
+  static reorderEvents(dynastyId: number, orderedIds: number[]): void {
+    this.getById(dynastyId);
+
+    const db = getDb();
+    const placeholders = orderedIds.map(() => '?').join(',');
+    const rows = db.prepare(
+      `SELECT id FROM dynasty_events WHERE dynasty_id = ? AND id IN (${placeholders})`
+    ).all(dynastyId, ...orderedIds) as { id: number }[];
+
+    if (rows.length !== orderedIds.length) {
+      throw new BadRequestError('Some event IDs do not belong to this dynasty');
+    }
+
+    const stmt = db.prepare(`UPDATE dynasty_events SET sort_order = ? WHERE id = ? AND dynasty_id = ?`);
+    db.transaction(() => {
+      orderedIds.forEach((eventId, index) => {
+        stmt.run(index, eventId, dynastyId);
+      });
+    })();
   }
 
   // ==================== Graph Layout ====================

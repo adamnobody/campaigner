@@ -48,6 +48,7 @@ interface DynastyState {
   addEvent: (dynastyId: number, data: CreateDynastyEvent) => Promise<DynastyEvent>;
   updateEvent: (dynastyId: number, eventId: number, data: UpdateDynastyEvent) => Promise<DynastyEvent>;
   deleteEvent: (dynastyId: number, eventId: number) => Promise<void>;
+  reorderEvents: (dynastyId: number, orderedIds: number[]) => Promise<void>;
 
   saveGraphPositions: (dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) => Promise<void>;
 
@@ -56,7 +57,7 @@ interface DynastyState {
   reset: () => void;
 }
 
-export const useDynastyStore = create<DynastyState>((set) => ({
+export const useDynastyStore = create<DynastyState>((set, get) => ({
   dynasties: [],
   total: 0,
   loading: false,
@@ -294,6 +295,52 @@ export const useDynastyStore = create<DynastyState>((set) => ({
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to delete dynasty event') });
+      throw error;
+    }
+  },
+
+  reorderEvents: async (dynastyId, orderedIds) => {
+    const prevCurrent = get().currentDynasty;
+    const prevEvents =
+      prevCurrent?.id === dynastyId && prevCurrent.events
+        ? prevCurrent.events.map((e) => ({ ...e }))
+        : undefined;
+
+    if (prevCurrent?.id === dynastyId && prevCurrent.events) {
+      const byId = new Map(prevCurrent.events.map((e) => [e.id, e]));
+      const nextEvents: DynastyEvent[] = [];
+      for (let i = 0; i < orderedIds.length; i++) {
+        const e = byId.get(orderedIds[i]);
+        if (e) nextEvents.push({ ...e, sortOrder: i });
+      }
+      for (const e of prevCurrent.events) {
+        if (!orderedIds.includes(e.id)) {
+          nextEvents.push(e);
+        }
+      }
+      set({ currentDynasty: { ...prevCurrent, events: nextEvents } });
+    }
+
+    try {
+      const res = await dynastiesApi.reorderEvents(dynastyId, orderedIds);
+      const updated = res.data.data;
+      if (updated) {
+        set((state) => ({
+          currentDynasty:
+            state.currentDynasty?.id === dynastyId ? updated : state.currentDynasty,
+          dynasties: state.dynasties.map((d) => (d.id === dynastyId ? updated : d)),
+        }));
+      }
+    } catch (error: unknown) {
+      if (prevEvents !== undefined && prevCurrent?.id === dynastyId) {
+        set({ currentDynasty: { ...prevCurrent, events: prevEvents } });
+      }
+      try {
+        await get().fetchDynasty(dynastyId);
+      } catch {
+        // ignore secondary refresh failure
+      }
+      set({ error: getErrorMessage(error, 'Failed to reorder dynasty events') });
       throw error;
     }
   },

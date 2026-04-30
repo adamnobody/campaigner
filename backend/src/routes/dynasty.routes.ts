@@ -11,6 +11,7 @@ import {
   createDynastyRelationSchema,
   createDynastyEventSchema,
   updateDynastyEventSchema,
+  reorderDynastyEventsSchema,
 } from '@campaigner/shared';
 import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
 
@@ -157,7 +158,16 @@ router.delete(
   DynastyController.deleteFamilyLink
 );
 
-// Events
+// Events (reorder before /:eventId routes)
+router.post(
+  '/:id/events/reorder',
+  validateRequest({
+    params: idParamsSchema,
+    body: reorderDynastyEventsSchema,
+  }),
+  DynastyController.reorderEvents
+);
+
 router.post(
   '/:id/events',
   validateRequest({

@@ -89,7 +89,7 @@ export const DynastyDetailPage: React.FC = () => {
     uploadImage, setTags,
     addMember, updateMember, removeMember,
     addFamilyLink, deleteFamilyLink,
-    addEvent, updateEvent, deleteEvent,
+    addEvent, updateEvent, deleteEvent, reorderEvents,
     saveGraphPositions,
     setCurrentDynasty,
   } = useDynastyStore((state) => ({
@@ -109,6 +109,7 @@ export const DynastyDetailPage: React.FC = () => {
     addEvent: state.addEvent,
     updateEvent: state.updateEvent,
     deleteEvent: state.deleteEvent,
+    reorderEvents: state.reorderEvents,
     saveGraphPositions: state.saveGraphPositions,
     setCurrentDynasty: state.setCurrentDynasty,
   }), shallow);
@@ -335,17 +336,10 @@ export const DynastyDetailPage: React.FC = () => {
     });
   };
   const handleReorderEvents = async (reordered: DynastyEvent[]) => {
-    // Optimistic: update locally, then save each sortOrder
     try {
-      for (let i = 0; i < reordered.length; i++) {
-        if (reordered[i].sortOrder !== i) {
-          await updateEvent(did, reordered[i].id, { sortOrder: i });
-        }
-      }
+      await reorderEvents(did, reordered.map((e) => e.id));
     } catch {
       showSnackbar('Ошибка сортировки', 'error');
-      // Reload
-      fetchDynasty(did);
     }
   };
 
