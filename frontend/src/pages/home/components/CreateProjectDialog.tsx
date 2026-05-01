@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -26,6 +27,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   onSubmit,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['projects', 'common']);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [creating, setCreating] = useState(false);
@@ -108,18 +110,18 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         >
           <AddIcon sx={{ color: '#fff', fontSize: '1.2rem' }} />
         </Box>
-        Создать новый проект
+        {t('projects:createDialog.title')}
       </DialogTitle>
 
       <DialogContent sx={{ pt: 2 }}>
         <TextField
           autoFocus
           fullWidth
-          label="Название кампании"
+          label={t('projects:createDialog.fields.nameLabel')}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           margin="normal"
-          placeholder="например, Затерянные Рудники Фанделвера"
+          placeholder={t('projects:createDialog.fields.namePlaceholder')}
           sx={{
             '& .MuiOutlinedInput-root': {
               transition: 'all 0.3s ease',
@@ -132,13 +134,13 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
         <TextField
           fullWidth
-          label="Описание"
+          label={t('projects:createDialog.fields.descriptionLabel')}
           value={newDescription}
           onChange={(e) => setNewDescription(e.target.value)}
           margin="normal"
           multiline
           rows={3}
-          placeholder="Краткое описание кампании..."
+          placeholder={t('projects:createDialog.fields.descriptionPlaceholder')}
           sx={{
             '& .MuiOutlinedInput-root': {
               transition: 'all 0.3s ease',
@@ -164,7 +166,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
         >
           <AutoAwesomeIcon sx={{ color: 'info.main', fontSize: '1.2rem', mt: 0.3 }} />
           <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.5, fontSize: '0.78rem' }}>
-            <strong>Совет:</strong> Хорошее название задаёт тон всему миру. Подумайте о жанре, атмосфере и главной идее вашей истории.
+            <strong>{t('projects:createDialog.tipPrefix')}</strong> {t('projects:createDialog.tipText')}
           </Typography>
         </Box>
       </DialogContent>
@@ -181,7 +183,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             },
           }}
         >
-          Отмена
+          {t('projects:createDialog.cancel')}
         </Button>
 
         <DndButton
@@ -201,7 +203,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
               : `0 4px 15px ${alpha(theme.palette.primary.main, 0.4)}`,
           }}
         >
-          {creating ? 'Создание...' : '✨ Создать'}
+          {creating ? t('projects:createDialog.creating') : t('projects:createDialog.submit')}
         </DndButton>
       </DialogActions>
     </Dialog>

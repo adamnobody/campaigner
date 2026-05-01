@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -10,6 +11,7 @@ import {
 import { useUIStore } from '@/store/useUIStore';
 
 export const ConfirmDialog: React.FC = () => {
+  const { t } = useTranslation('common');
   const { confirmDialog, hideConfirmDialog } = useUIStore();
 
   const handleConfirm = () => {
@@ -33,10 +35,10 @@ export const ConfirmDialog: React.FC = () => {
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={hideConfirmDialog} color="inherit">
-          Cancel
+          {t('cancel')}
         </Button>
         <Button onClick={handleConfirm} variant="contained" color="error">
-          Confirm
+          {t('confirm')}
         </Button>
       </DialogActions>
     </Dialog>
