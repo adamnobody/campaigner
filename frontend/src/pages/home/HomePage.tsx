@@ -181,7 +181,11 @@ export const HomePage: React.FC = () => {
   }, [panelOffset]);
 
   const handleCreateSubmit = async (name: string, description: string) => {
-    const project = await createProject({ name, description });
+    const project = await createProject({
+      name,
+      description,
+      mainBranchName: t('projects:defaultMainBranchName'),
+    });
     setCreateDialogOpen(false);
     showSnackbar(t('projects:snackbar.created'), 'success');
     navigate(`/project/${project.id}/map`);

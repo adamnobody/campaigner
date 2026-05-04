@@ -45,10 +45,11 @@ export class ProjectService {
     `).run(data.name, data.description || '', data.status || 'active');
 
     const projectId = result.lastInsertRowid as number;
+    const mainBranchName = (data.mainBranchName?.trim() || 'Canon branch').slice(0, 120);
     db.prepare(`
       INSERT INTO scenario_branches (project_id, name, is_main)
-      VALUES (?, 'Каноничная ветвь', 1)
-    `).run(projectId);
+      VALUES (?, ?, 1)
+    `).run(projectId, mainBranchName);
     const mapService = new MapService();
     mapService.createRootMapForProject(projectId);
     CharacterTraitService.seedPredefined(projectId);

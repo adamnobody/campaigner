@@ -16,6 +16,8 @@ export const createProjectSchema = z.object({
   name: z.string().min(LIMITS.PROJECT_NAME_MIN).max(LIMITS.PROJECT_NAME_MAX).trim(),
   description: z.string().max(LIMITS.PROJECT_DESCRIPTION_MAX).optional().default(''),
   status: z.enum(PROJECT_STATUSES).optional().default('active'),
+  /** Display name for the initial main scenario branch (UI locale). */
+  mainBranchName: z.string().min(1).max(120).trim().optional(),
 });
 
 export const updateProjectSchema = projectSchema

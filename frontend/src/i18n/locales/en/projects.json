@@ -21,6 +21,7 @@
       "madeFor": "Made for creators"
     }
   },
+  "defaultMainBranchName": "Canonical branch",
   "deleteConfirm": {
     "title": "Delete project",
     "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
