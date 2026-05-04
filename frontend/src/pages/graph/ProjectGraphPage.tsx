@@ -23,6 +23,12 @@ import { AnimatedGraphSidePanel } from '@/pages/graph/components/AnimatedGraphSi
 import { GraphToolbar } from '@/pages/graph/components/GraphToolbar';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import {
+  PROJECT_GRAPH_LAYOUT_TYPE,
+  emptyGraphLayoutData,
+  type GraphLayoutDataV1,
+} from '@campaigner/shared';
+import { graphLayoutApi } from '@/api/graphLayout';
+import {
   DEFAULT_PROJECT_GRAPH_PANEL_STATE,
   DEFAULT_PROJECT_GRAPH_VIEW_SETTINGS,
   GRAPH_EDGE_KIND_COLORS,
@@ -43,7 +49,7 @@ import {
   type ProjectGraphViewSettings,
 } from '@/pages/graph/types';
 
-type SimNode = GraphNode & { x: number; y: number; vx: number; vy: number };
+type SimNode = GraphNode & { x: number; y: number; vx: number; vy: number; pinned?: boolean };
 
 function loadPanelState(): ProjectGraphPanelState {
   try {
@@ -157,6 +163,26 @@ export const ProjectGraphPage: React.FC = () => {
   const panningRef = useRef(false);
   const panStartRef = useRef({ mx: 0, my: 0, px: 0, py: 0 });
   const justPannedRef = useRef(false);
+  const ignoreSavedLayoutRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
+  /** Full server layout payload for PUT merges (preserve viewport in DB while only saving node coords). */
+  const serverLayoutSnapshotRef = useRef<GraphLayoutDataV1>(emptyGraphLayoutData());
+  const savedLayoutNodesRef = useRef<GraphLayoutDataV1['nodes']>({});
+  /** After branch switch: don't reuse xy from previous branch's sim state. */
+  const skipPositionCarryoverRef = useRef(false);
+  /** After "Reset layout" / "Re-layout": one rebuild without prev-node carry (avoids frozen pinned positions). */
+  const skipCarryPositionsOnceRef = useRef(false);
+  /** Bump when server layout should be reapplied (GET success). Not on selection/filter. */
+  const [layoutSyncGeneration, setLayoutSyncGeneration] = useState(0);
+  /** When true, next nodes rebuild may reset camera (fit / saved viewport). */
+  const resetViewportAfterLayoutRef = useRef(false);
+
+  const preferServerLayoutPositionsRef = useRef(false);
+  const selectedNodeIdRef = useRef<string | null>(null);
+  const hoveredNodeIdRef = useRef<string | null>(null);
+  selectedNodeIdRef.current = selectedNodeId;
+  hoveredNodeIdRef.current = hoveredNodeId;
 
   useEffect(() => {
     localStorage.setItem(PROJECT_GRAPH_VIEW_SETTINGS_KEY, JSON.stringify(viewSettings));
@@ -181,6 +207,52 @@ export const ProjectGraphPage: React.FC = () => {
       active = false;
     };
   }, [pid, i18n.language, activeBranchId]);
+
+  useEffect(() => {
+    let active = true;
+    if (!pid) return undefined;
+    savedLayoutNodesRef.current = {};
+    skipPositionCarryoverRef.current = true;
+    graphLayoutApi
+      .get(pid, { graphType: PROJECT_GRAPH_LAYOUT_TYPE, branchId: activeBranchId ?? undefined })
+      .then((res) => {
+        if (!active) return;
+        const data = res.data.data?.layoutData ?? emptyGraphLayoutData();
+        serverLayoutSnapshotRef.current = data;
+        savedLayoutNodesRef.current = data.nodes;
+        pendingViewportRef.current = data.viewport ?? null;
+        resetViewportAfterLayoutRef.current = true;
+        skipPositionCarryoverRef.current = false;
+        preferServerLayoutPositionsRef.current = true;
+        setLayoutSyncGeneration((g) => g + 1);
+      })
+      .catch(() => {
+        if (!active) return;
+        const empty = emptyGraphLayoutData();
+        serverLayoutSnapshotRef.current = empty;
+        savedLayoutNodesRef.current = {};
+        pendingViewportRef.current = null;
+        resetViewportAfterLayoutRef.current = true;
+        skipPositionCarryoverRef.current = false;
+        preferServerLayoutPositionsRef.current = true;
+        setLayoutSyncGeneration((g) => g + 1);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pid, activeBranchId]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+    };
+  }, [pid, activeBranchId]);
+
+  const focusNeighborhood = viewSettings.focusSelectedNeighborhood;
+  const neighborhoodAnchorId = focusNeighborhood ? selectedNodeId : null;
 
   const filteredGraph = useMemo(() => {
     const lowerSearch = search.trim().toLowerCase();
@@ -210,19 +282,19 @@ export const ProjectGraphPage: React.FC = () => {
       const connected = new Set(edges.flatMap((edge) => [edge.source, edge.target]));
       nodes = nodes.filter((node) => connected.has(node.id));
     }
-    if (viewSettings.focusSelectedNeighborhood && selectedNodeId) {
-      const neighbors = new Set<string>([selectedNodeId]);
+    if (focusNeighborhood && neighborhoodAnchorId) {
+      const neighbors = new Set<string>([neighborhoodAnchorId]);
       edges.forEach((edge) => {
-        if (edge.source === selectedNodeId) neighbors.add(edge.target);
-        if (edge.target === selectedNodeId) neighbors.add(edge.source);
+        if (edge.source === neighborhoodAnchorId) neighbors.add(edge.target);
+        if (edge.target === neighborhoodAnchorId) neighbors.add(edge.source);
       });
       nodes = nodes.filter((node) => neighbors.has(node.id));
     }
     const finalNodeSet = new Set(nodes.map((node) => node.id));
     const finalEdges = edges.filter((edge) => {
       if (!finalNodeSet.has(edge.source) || !finalNodeSet.has(edge.target)) return false;
-      if (!viewSettings.focusSelectedNeighborhood || !selectedNodeId) return true;
-      if (edge.source === selectedNodeId || edge.target === selectedNodeId) return true;
+      if (!focusNeighborhood || !neighborhoodAnchorId) return true;
+      if (edge.source === neighborhoodAnchorId || edge.target === neighborhoodAnchorId) return true;
       return finalNodeSet.has(edge.source) && finalNodeSet.has(edge.target);
     });
     return { nodes, edges: finalEdges };
@@ -233,26 +305,133 @@ export const ProjectGraphPage: React.FC = () => {
     graphData.nodes,
     nodeLimit,
     search,
-    selectedNodeId,
+    neighborhoodAnchorId,
+    focusNeighborhood,
     showIsolated,
     viewSettings.focusSelectedNeighborhood,
   ]);
 
+  const schedulePersistLayoutNodes = useCallback(() => {
+    if (!pid) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      const nodes: GraphLayoutDataV1['nodes'] = {};
+      nodesRef.current.forEach((node) => {
+        nodes[node.id] = { x: node.x, y: node.y, pinned: true };
+      });
+      const layoutData: GraphLayoutDataV1 = {
+        version: 1,
+        viewport: serverLayoutSnapshotRef.current.viewport,
+        nodes,
+      };
+      graphLayoutApi
+        .put(pid, {
+          graphType: PROJECT_GRAPH_LAYOUT_TYPE,
+          layoutData,
+          branchId: activeBranchId ?? undefined,
+        })
+        .then((res) => {
+          const saved = res.data.data?.layoutData;
+          if (saved) {
+            serverLayoutSnapshotRef.current = saved;
+            savedLayoutNodesRef.current = saved.nodes;
+          }
+        })
+        .catch(() => {});
+    }, 550);
+  }, [pid, activeBranchId]);
+
   useEffect(() => {
     const radius = Math.max(168, filteredGraph.nodes.length * 22);
+    const savedNodes = ignoreSavedLayoutRef.current ? {} : savedLayoutNodesRef.current;
+    if (ignoreSavedLayoutRef.current) {
+      ignoreSavedLayoutRef.current = false;
+    }
+
+    const prevById = new Map(nodesRef.current.map((n) => [n.id, n]));
+    const skipCarryOnce = skipCarryPositionsOnceRef.current;
+    if (skipCarryOnce) {
+      skipCarryPositionsOnceRef.current = false;
+    }
+    const carryPositions = !skipPositionCarryoverRef.current && !skipCarryOnce;
+    const preferServerLayout = preferServerLayoutPositionsRef.current;
+    if (preferServerLayout) {
+      preferServerLayoutPositionsRef.current = false;
+    }
+
     nodesRef.current = filteredGraph.nodes.map((node, index) => {
       const angle = (index / Math.max(filteredGraph.nodes.length, 1)) * Math.PI * 2;
+      const prev = carryPositions ? prevById.get(node.id) : undefined;
+      const preset = savedNodes[node.id];
+      const hasSaved =
+        preset &&
+        typeof preset.x === 'number' &&
+        typeof preset.y === 'number' &&
+        Number.isFinite(preset.x) &&
+        Number.isFinite(preset.y);
+
+      if (preferServerLayout) {
+        if (hasSaved) {
+          return {
+            ...node,
+            x: preset!.x,
+            y: preset!.y,
+            vx: 0,
+            vy: 0,
+            pinned: true,
+          };
+        }
+        const jit = skipCarryOnce ? (Math.random() - 0.5) * 16 : 0;
+        const kick = skipCarryOnce ? (Math.random() - 0.5) * 5 : 0;
+        return {
+          ...node,
+          x: Math.cos(angle) * radius + jit,
+          y: Math.sin(angle) * radius + jit,
+          vx: kick,
+          vy: kick,
+          pinned: false,
+        };
+      }
+
+      if (carryPositions && prev) {
+        return {
+          ...node,
+          x: prev.x,
+          y: prev.y,
+          vx: prev.vx ?? 0,
+          vy: prev.vy ?? 0,
+          pinned: prev.pinned ?? false,
+        };
+      }
+      if (hasSaved) {
+        return {
+          ...node,
+          x: preset!.x,
+          y: preset!.y,
+          vx: 0,
+          vy: 0,
+          pinned: true,
+        };
+      }
+      const jit = skipCarryOnce ? (Math.random() - 0.5) * 16 : 0;
+      const kick = skipCarryOnce ? (Math.random() - 0.5) * 5 : 0;
       return {
         ...node,
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
-        vx: 0,
-        vy: 0,
+        x: Math.cos(angle) * radius + jit,
+        y: Math.sin(angle) * radius + jit,
+        vx: kick,
+        vy: kick,
+        pinned: false,
       };
     });
     edgesRef.current = filteredGraph.edges;
-    didFitRef.current = false;
-  }, [filteredGraph, relayoutSeed]);
+
+    if (resetViewportAfterLayoutRef.current) {
+      didFitRef.current = false;
+      resetViewportAfterLayoutRef.current = false;
+    }
+  }, [filteredGraph, relayoutSeed, layoutSyncGeneration]);
 
   const getNodeRadius = useCallback(() => NODE_RADIUS_MAP[viewSettings.nodeSize], [viewSettings.nodeSize]);
 
@@ -367,9 +546,37 @@ export const ProjectGraphPage: React.FC = () => {
   }, [applyZoom]);
 
   const handleRelayout = useCallback(() => {
+    skipCarryPositionsOnceRef.current = true;
+    ignoreSavedLayoutRef.current = true;
+    resetViewportAfterLayoutRef.current = true;
     setRelayoutSeed((seed) => seed + 1);
     setLayoutPaused(false);
   }, []);
+
+  const handleResetPersistedLayout = useCallback(async () => {
+    if (!pid) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    try {
+      await graphLayoutApi.delete(pid, {
+        graphType: PROJECT_GRAPH_LAYOUT_TYPE,
+        branchId: activeBranchId ?? undefined,
+      });
+      const empty = emptyGraphLayoutData();
+      serverLayoutSnapshotRef.current = empty;
+      savedLayoutNodesRef.current = {};
+      pendingViewportRef.current = null;
+      ignoreSavedLayoutRef.current = true;
+      skipCarryPositionsOnceRef.current = true;
+      resetViewportAfterLayoutRef.current = true;
+      setRelayoutSeed((s) => s + 1);
+      setLayoutPaused(false);
+    } catch {
+      /* ignore */
+    }
+  }, [pid, activeBranchId]);
 
   const updateViewSettings = useCallback((next: Partial<ProjectGraphViewSettings>) => {
     setViewSettings((prev) => ({ ...prev, ...next }));
@@ -396,7 +603,15 @@ export const ProjectGraphPage: React.FC = () => {
         canvas.style.height = `${ch}px`;
       }
       if (!didFitRef.current) {
-        centerCameraDefault();
+        const pv = pendingViewportRef.current;
+        if (pv && Number.isFinite(pv.zoom) && Number.isFinite(pv.x) && Number.isFinite(pv.y)) {
+          const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pv.zoom));
+          camRef.current = { zoom: z, panX: pv.x, panY: pv.y };
+          setZoomPercent(Math.round(z * 100));
+          pendingViewportRef.current = null;
+        } else {
+          centerCameraDefault();
+        }
         didFitRef.current = true;
       }
 
@@ -445,10 +660,16 @@ export const ProjectGraphPage: React.FC = () => {
           node.vy -= node.y * layout.gravity;
           node.vx *= layout.damping;
           node.vy *= layout.damping;
-          if (node.id !== dragNodeIdRef.current) {
-            node.x += node.vx;
-            node.y += node.vy;
+          if (node.id === dragNodeIdRef.current) {
+            return;
           }
+          if (node.pinned) {
+            node.vx = 0;
+            node.vy = 0;
+            return;
+          }
+          node.x += node.vx;
+          node.y += node.vy;
         });
       }
 
@@ -459,11 +680,14 @@ export const ProjectGraphPage: React.FC = () => {
       ctx.translate(camera.panX, camera.panY);
       ctx.scale(camera.zoom, camera.zoom);
 
+      const selId = selectedNodeIdRef.current;
+      const hovId = hoveredNodeIdRef.current;
+
       const selectedNeighborIds = new Set<string>();
-      if (selectedNodeId) {
+      if (selId) {
         edges.forEach((edge) => {
-          if (edge.source === selectedNodeId) selectedNeighborIds.add(edge.target);
-          if (edge.target === selectedNodeId) selectedNeighborIds.add(edge.source);
+          if (edge.source === selId) selectedNeighborIds.add(edge.target);
+          if (edge.target === selId) selectedNeighborIds.add(edge.source);
         });
       }
 
@@ -473,11 +697,11 @@ export const ProjectGraphPage: React.FC = () => {
         if (!source || !target) return;
 
         let alphaMultiplier = 1;
-        if (selectedNodeId) {
-          const connectedToSelected = edge.source === selectedNodeId || edge.target === selectedNodeId;
+        if (selId) {
+          const connectedToSelected = edge.source === selId || edge.target === selId;
           alphaMultiplier = connectedToSelected ? 1 : 0.22;
-        } else if (hoveredNodeId) {
-          const touchesHover = edge.source === hoveredNodeId || edge.target === hoveredNodeId;
+        } else if (hovId) {
+          const touchesHover = edge.source === hovId || edge.target === hovId;
           alphaMultiplier = touchesHover ? 1 : 0.4;
         }
 
@@ -495,7 +719,7 @@ export const ProjectGraphPage: React.FC = () => {
 
         if (
           viewSettings.edgeLabels === 'on-hover'
-          && (edge.source === hoveredNodeId || edge.target === hoveredNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId)
+          && (edge.source === hovId || edge.target === hovId || edge.source === selId || edge.target === selId)
         ) {
           const edgeLabel = edge.label || i18n.t(`graph:edgeKinds.${edge.kind}`);
           const mx = (source.x + target.x) / 2;
@@ -513,23 +737,19 @@ export const ProjectGraphPage: React.FC = () => {
         }
       });
 
-      const hoveredNode = nodes.find((node) => node.id === hoveredNodeId);
-      const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+      const hoveredNode = nodes.find((node) => node.id === hovId);
+      const selectedNode = nodes.find((node) => node.id === selId);
 
       nodes.forEach((node) => {
-        const relatedToSelected =
-          !selectedNodeId || node.id === selectedNodeId || selectedNeighborIds.has(node.id);
-        const relatedToHover = !hoveredNodeId || node.id === hoveredNodeId;
+        const relatedToSelected = !selId || node.id === selId || selectedNeighborIds.has(node.id);
+        const relatedToHover = !hovId || node.id === hovId;
         const dim =
-          selectedNodeId || hoveredNodeId
-            ? (selectedNodeId ? relatedToSelected : relatedToHover) ? 1 : 0.28
-            : 1;
-        const radius =
-          node.id === selectedNodeId ? nodeRadius + 7 : selectedNeighborIds.has(node.id) ? nodeRadius + 3 : nodeRadius;
-        if (node.id === hoveredNodeId || node.id === selectedNodeId || selectedNeighborIds.has(node.id)) {
+          selId || hovId ? (selId ? relatedToSelected : relatedToHover) ? 1 : 0.28 : 1;
+        const radius = node.id === selId ? nodeRadius + 7 : selectedNeighborIds.has(node.id) ? nodeRadius + 3 : nodeRadius;
+        if (node.id === hovId || node.id === selId || selectedNeighborIds.has(node.id)) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, radius + (node.id === selectedNodeId ? 12 : 8), 0, Math.PI * 2);
-          ctx.fillStyle = `${GRAPH_NODE_TYPE_COLORS[node.type]}${node.id === selectedNodeId ? '55' : '38'}`;
+          ctx.arc(node.x, node.y, radius + (node.id === selId ? 12 : 8), 0, Math.PI * 2);
+          ctx.fillStyle = `${GRAPH_NODE_TYPE_COLORS[node.type]}${node.id === selId ? '55' : '38'}`;
           ctx.fill();
         }
         ctx.beginPath();
@@ -538,12 +758,12 @@ export const ProjectGraphPage: React.FC = () => {
         ctx.fillStyle = `${GRAPH_NODE_TYPE_COLORS[node.type]}${fillAlphaHex}`;
         ctx.fill();
         ctx.strokeStyle =
-          node.id === selectedNodeId ? '#ffffff' : node.id === hoveredNodeId ? 'rgba(255,255,255,0.95)' : 'rgba(12,18,30,0.82)';
-        ctx.lineWidth = node.id === selectedNodeId ? 3 : node.id === hoveredNodeId ? 2.2 : 1.45;
+          node.id === selId ? '#ffffff' : node.id === hovId ? 'rgba(255,255,255,0.95)' : 'rgba(12,18,30,0.82)';
+        ctx.lineWidth = node.id === selId ? 3 : node.id === hovId ? 2.2 : 1.45;
         ctx.stroke();
         const shouldDrawNodeLabel =
           viewSettings.nodeLabels === 'always'
-          || (viewSettings.nodeLabels === 'on-hover' && (node.id === hoveredNodeId || node.id === selectedNodeId));
+          || (viewSettings.nodeLabels === 'on-hover' && (node.id === hovId || node.id === selId));
         if (shouldDrawNodeLabel) {
           ctx.font = 'bold 11px system-ui,sans-serif';
           ctx.textAlign = 'center';
@@ -590,11 +810,9 @@ export const ProjectGraphPage: React.FC = () => {
     filteredGraph.nodes.length,
     centerCameraDefault,
     getNodeRadius,
-    hoveredNodeId,
     i18n.language,
     layoutPaused,
     loading,
-    selectedNodeId,
     viewSettings.edgeLabels,
     viewSettings.edgeOpacity,
     viewSettings.edgeThickness,
@@ -626,7 +844,8 @@ export const ProjectGraphPage: React.FC = () => {
       const node = nodesRef.current[idx];
       const dx = x - node.x;
       const dy = y - node.y;
-      const rSel = node.id === selectedNodeId ? nodeRadius + 7 + hitPadding : nodeRadius + hitPadding;
+      const rSel =
+        node.id === selectedNodeIdRef.current ? nodeRadius + 7 + hitPadding : nodeRadius + hitPadding;
       if (dx * dx + dy * dy <= rSel * rSel) return node;
     }
     return null;
@@ -666,6 +885,7 @@ export const ProjectGraphPage: React.FC = () => {
       dragged.y = world.y;
       dragged.vx = 0;
       dragged.vy = 0;
+      dragged.pinned = true;
       setCanvasCursor('grabbing');
       return;
     }
@@ -684,8 +904,12 @@ export const ProjectGraphPage: React.FC = () => {
   };
 
   const handleMouseUp = () => {
+    const hadDrag = dragNodeIdRef.current !== null;
     dragNodeIdRef.current = null;
     panningRef.current = false;
+    if (hadDrag) {
+      schedulePersistLayoutNodes();
+    }
     setCanvasCursor(hoveredNodeId ? 'pointer' : 'grab');
   };
 
@@ -698,6 +922,7 @@ export const ProjectGraphPage: React.FC = () => {
   };
 
   const selectedNode = useMemo(() => filteredGraph.nodes.find((node) => node.id === selectedNodeId) || null, [filteredGraph.nodes, selectedNodeId]);
+
   const selectedNodeEdges = useMemo(
     () =>
       selectedNode ? filteredGraph.edges.filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id) : [],
@@ -809,6 +1034,7 @@ export const ProjectGraphPage: React.FC = () => {
         layoutPaused={layoutPaused}
         onToggleLayoutPaused={() => setLayoutPaused((prev) => !prev)}
         onRelayout={handleRelayout}
+        onResetLayout={handleResetPersistedLayout}
         filtersOpen={panelState.filtersOpen}
         onToggleFilters={toggleFilters}
         detailsOpen={panelState.detailsOpen}
