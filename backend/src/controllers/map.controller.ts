@@ -25,7 +25,8 @@ export class MapController {
 
   static getRootMap = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.params.projectId, 'project id');
-    const map = mapService.getRootMap(projectId);
+    const branchId = MapController.parseBranchId(req.query.branchId);
+    const map = mapService.getRootMap(projectId, branchId);
     return ok(res, map);
   });
 
@@ -37,7 +38,8 @@ export class MapController {
 
   static getMapTree = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.params.projectId, 'project id');
-    const maps = mapService.getMapTree(projectId);
+    const branchId = MapController.parseBranchId(req.query.branchId);
+    const maps = mapService.getMapTree(projectId, branchId);
     return ok(res, maps);
   });
 
@@ -49,7 +51,8 @@ export class MapController {
   });
 
   static createMap = asyncHandler(async (req: Request, res: Response) => {
-    const map = mapService.createMap(req.body);
+    const branchId = MapController.parseBranchId(req.body?.branchId);
+    const map = mapService.createMap(req.body, branchId);
     return created(res, map);
   });
 

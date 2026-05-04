@@ -18,6 +18,15 @@ const upload = createDiskUpload({
 
 const importArraySchema = z.array(z.record(z.string(), z.unknown())).optional();
 
+const createDemoProjectBodySchema = z.preprocess(
+  (val) => (val == null || typeof val !== 'object' ? {} : val),
+  z
+    .object({
+      locale: z.enum(['en', 'ru']).optional(),
+    })
+    .strict()
+);
+
 const importProjectSchema = z.object({
   version: z.string(),
   project: z.object({
@@ -46,6 +55,7 @@ const importProjectSchema = z.object({
   dynastyMembers: importArraySchema,
   dynastyFamilyLinks: importArraySchema,
   dynastyEvents: importArraySchema,
+  importLocale: z.enum(['en', 'ru']).optional(),
 });
 
 router.get('/', ProjectController.getAll);
@@ -96,6 +106,10 @@ router.post(
   ProjectController.import
 );
 
-router.post('/demo', ProjectController.createDemo);
+router.post(
+  '/demo',
+  validateRequest({ body: createDemoProjectBodySchema }),
+  ProjectController.createDemo
+);
 
 export default router;

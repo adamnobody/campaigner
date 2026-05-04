@@ -11,9 +11,12 @@ export class WikiController {
     const noteIdRaw = req.query.noteId as string | undefined;
     const noteId = noteIdRaw ? parseId(noteIdRaw, 'note id') : undefined;
 
+    const branchIdRaw = req.query.branchId as string | undefined;
+    const branchId = branchIdRaw ? parseId(branchIdRaw, 'branch id') : undefined;
+
     const links = noteId
-      ? WikiService.getLinksForNote(noteId)
-      : WikiService.getAllLinks(projectId);
+      ? WikiService.getLinksForNote(noteId, branchId)
+      : WikiService.getAllLinks(projectId, branchId);
 
     return ok(res, links);
   });
@@ -33,11 +36,17 @@ export class WikiController {
       throw new BadRequestError('Valid targetNoteId is required');
     }
 
+    const branchId =
+      typeof req.body.branchId === 'number' && Number.isInteger(req.body.branchId) && req.body.branchId > 0
+        ? req.body.branchId
+        : undefined;
+
     const link = WikiService.createLink(
       projectId,
       sourceNoteId,
       targetNoteId,
-      label || ''
+      label || '',
+      branchId,
     );
 
     return created(res, link);
@@ -51,7 +60,9 @@ export class WikiController {
 
   static getCategories = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.query.projectId as string, 'project id');
-    const categories = WikiService.getCategories(projectId);
+    const branchIdRaw = req.query.branchId as string | undefined;
+    const branchId = branchIdRaw ? parseId(branchIdRaw, 'branch id') : undefined;
+    const categories = WikiService.getCategories(projectId, branchId);
     return ok(res, categories);
   });
 }

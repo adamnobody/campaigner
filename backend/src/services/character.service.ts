@@ -12,6 +12,13 @@ import {
 import { BadRequestError, NotFoundError } from '../middleware/errorHandler.js';
 import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../utils/dbHelpers.js';
+import {
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
+  resolveCreatedBranchId,
+  assertBranchBelongsToProject,
+} from './branchScope.js';
 
 type CharacterStatus = Character['status'];
 
@@ -33,6 +40,7 @@ interface CharacterRow {
   imagePath: string | null;
   createdAt: string;
   updatedAt: string;
+  createdBranchId?: number | null;
 }
 
 interface CharacterRelationshipRow {
@@ -45,6 +53,7 @@ interface CharacterRelationshipRow {
   description: string;
   isBidirectional: number | boolean;
   createdAt: string;
+  createdBranchId?: number | null;
   sourceCharacterName?: string;
   targetCharacterName?: string;
 }
@@ -245,7 +254,8 @@ export class CharacterService {
 
   static getAll(
     projectId: number,
-    pagination?: Pagination
+    pagination?: Pagination,
+    branchId?: number,
   ): { items: Character[]; total: number } {
     const db = getDb();
     const {
@@ -278,21 +288,25 @@ export class CharacterService {
     const sortColumn = allowedSortColumns[sortBy] || 'name';
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
+
     const totalRow = db.prepare(`
       SELECT COUNT(*) as count
       FROM characters
-      ${whereClause}
-    `).get(...params) as { count: number };
+      ${whereClause}${scope.sql}
+    `).get(...params, ...scope.params) as { count: number };
 
     const rows = db.prepare(`
       SELECT id, project_id as projectId, name, title, race, character_class as characterClass,
              level, status, bio, appearance, personality, backstory, notes, state_id as stateId,
-             image_path as imagePath, created_at as createdAt, updated_at as updatedAt
+             image_path as imagePath, created_at as createdAt, updated_at as updatedAt,
+             created_branch_id as createdBranchId
       FROM characters
-      ${whereClause}
+      ${whereClause}${scope.sql}
       ORDER BY ${sortColumn} ${order}
       LIMIT ? OFFSET ?
-    `).all(...params, limit, offset) as CharacterRow[];
+    `).all(...params, ...scope.params, limit, offset) as CharacterRow[];
 
     const ids = rows.map((row) => row.id);
     const tagsMap = loadTagsBatch(projectId, 'character', ids);
@@ -308,18 +322,24 @@ export class CharacterService {
     return { items, total: totalRow.count };
   }
 
-  static getById(id: number): Character {
+  static getById(id: number, branchId?: number): Character {
     const db = getDb();
 
     const row = db.prepare(`
       SELECT id, project_id as projectId, name, title, race, character_class as characterClass,
              level, status, bio, appearance, personality, backstory, notes, state_id as stateId,
-             image_path as imagePath, created_at as createdAt, updated_at as updatedAt
+             image_path as imagePath, created_at as createdAt, updated_at as updatedAt,
+             created_branch_id as createdBranchId
       FROM characters
       WHERE id = ?
     `).get(id) as CharacterRow | undefined;
 
     if (!row) {
+      throw new NotFoundError('Character');
+    }
+
+    const viewBranch = effectiveBranchIdForRead(row.projectId, branchId);
+    if (!isEntityVisibleInBranch(row.projectId, viewBranch, row.createdBranchId, row.createdAt)) {
       throw new NotFoundError('Character');
     }
 
@@ -329,15 +349,19 @@ export class CharacterService {
     return character;
   }
 
-  static create(data: CreateCharacter): Character {
+  static create(data: CreateCharacter, requestBranchId?: number): Character {
     const db = getDb();
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, data.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
     const run = db.transaction(() => {
       const result = db.prepare(`
         INSERT INTO characters (
           project_id, name, title, race, character_class, level, status,
-          bio, appearance, personality, backstory, notes, state_id
+          bio, appearance, personality, backstory, notes, state_id, created_branch_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         data.projectId,
         data.name,
@@ -351,7 +375,8 @@ export class CharacterService {
         data.personality || '',
         data.backstory || '',
         data.notes || '',
-        data.stateId ?? null
+        data.stateId ?? null,
+        createdBranchId,
       );
 
       const characterId = result.lastInsertRowid as number;
@@ -359,11 +384,12 @@ export class CharacterService {
       return characterId;
     });
 
-    return this.getById(run());
+    const viewBranch = requestBranchId ?? effectiveBranchIdForRead(data.projectId, undefined);
+    return this.getById(run(), viewBranch);
   }
 
-  static update(id: number, data: UpdateCharacter): Character {
-    const current = this.getById(id);
+  static update(id: number, data: UpdateCharacter, branchId?: number): Character {
+    const current = this.getById(id, branchId);
     const { factionIds, ...characterData } = data;
 
     const db = getDb();
@@ -373,17 +399,17 @@ export class CharacterService {
     });
     run();
 
-    return this.getById(id);
+    return this.getById(id, branchId);
   }
 
-  static delete(id: number): void {
-    this.getById(id);
+  static delete(id: number, branchId?: number): void {
+    this.getById(id, branchId);
     const db = getDb();
     db.prepare('DELETE FROM characters WHERE id = ?').run(id);
   }
 
-  static updateImage(id: number, imagePath: string): Character {
-    this.getById(id);
+  static updateImage(id: number, imagePath: string, branchId?: number): Character {
+    this.getById(id, branchId);
     const db = getDb();
     db.prepare(`
       UPDATE characters
@@ -391,13 +417,17 @@ export class CharacterService {
       WHERE id = ?
     `).run(imagePath, id);
 
-    return this.getById(id);
+    return this.getById(id, branchId);
   }
 
   // ==================== Relationships ====================
 
-  static getRelationships(projectId: number): CharacterRelationshipRow[] {
+  static getRelationships(projectId: number, branchId?: number): CharacterRelationshipRow[] {
     const db = getDb();
+    const vb = effectiveBranchIdForRead(projectId, branchId);
+    const crV = branchEntityVisibilitySql(projectId, vb, 'cr.created_branch_id', 'cr.created_at');
+    const scV = branchEntityVisibilitySql(projectId, vb, 'sc.created_branch_id', 'sc.created_at');
+    const tcV = branchEntityVisibilitySql(projectId, vb, 'tc.created_branch_id', 'tc.created_at');
 
     return db.prepare(`
       SELECT cr.id, cr.project_id as projectId,
@@ -412,22 +442,39 @@ export class CharacterService {
       FROM character_relationships cr
       LEFT JOIN characters sc ON cr.source_character_id = sc.id
       LEFT JOIN characters tc ON cr.target_character_id = tc.id
-      WHERE cr.project_id = ?
-    `).all(projectId) as CharacterRelationshipRow[];
+      WHERE cr.project_id = ?${crV.sql}${scV.sql}${tcV.sql}
+    `).all(projectId, ...crV.params, ...scV.params, ...tcV.params) as CharacterRelationshipRow[];
   }
 
-  static createRelationship(data: CreateRelationship): CharacterRelationshipRow {
+  private static assertRelationshipVisible(id: number, branchId?: number): void {
+    const db = getDb();
+    const raw = db
+      .prepare(
+        `SELECT project_id as projectId, created_at as createdAt, created_branch_id as createdBranchId
+         FROM character_relationships WHERE id = ?`,
+      )
+      .get(id) as { projectId: number; createdAt: string; createdBranchId: number | null } | undefined;
+    if (!raw) throw new NotFoundError('Relationship');
+    const vb = effectiveBranchIdForRead(raw.projectId, branchId);
+    if (!isEntityVisibleInBranch(raw.projectId, vb, raw.createdBranchId, raw.createdAt)) {
+      throw new NotFoundError('Relationship');
+    }
+  }
+
+  static createRelationship(data: CreateRelationship, requestBranchId?: number): CharacterRelationshipRow {
     const db = getDb();
 
-    this.getById(data.sourceCharacterId);
-    this.getById(data.targetCharacterId);
+    this.getById(data.sourceCharacterId, requestBranchId);
+    this.getById(data.targetCharacterId, requestBranchId);
+
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
 
     const result = db.prepare(`
       INSERT INTO character_relationships (
         project_id, source_character_id, target_character_id,
-        relationship_type, custom_label, description, is_bidirectional
+        relationship_type, custom_label, description, is_bidirectional, created_branch_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.projectId,
       data.sourceCharacterId,
@@ -435,7 +482,8 @@ export class CharacterService {
       data.relationshipType,
       data.customLabel || '',
       data.description || '',
-      data.isBidirectional ? 1 : 0
+      data.isBidirectional ? 1 : 0,
+      createdBranchId,
     );
 
     return db.prepare(`
@@ -455,8 +503,8 @@ export class CharacterService {
     `).get(result.lastInsertRowid as number) as CharacterRelationshipRow;
   }
 
-  static updateRelationship(id: number, data: UpdateRelationship): CharacterRelationship {
-    ensureEntityExists('character_relationships', id, 'Relationship');
+  static updateRelationship(id: number, data: UpdateRelationship, branchId?: number): CharacterRelationship {
+    this.assertRelationshipVisible(id, branchId);
 
     buildUpdateQuery(
       'character_relationships',
@@ -482,31 +530,48 @@ export class CharacterService {
     `).get(id) as CharacterRelationship;
   }
 
-  static deleteRelationship(id: number): void {
-    ensureEntityExists('character_relationships', id, 'Relationship');
+  static deleteRelationship(id: number, branchId?: number): void {
+    this.assertRelationshipVisible(id, branchId);
     const db = getDb();
     db.prepare('DELETE FROM character_relationships WHERE id = ?').run(id);
   }
 
   // ==================== Character Graph ====================
 
-  static getGraph(projectId: number): CharacterGraph {
+  static getGraph(projectId: number, branchId?: number): CharacterGraph {
     const db = getDb();
-
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const nScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'characters.created_branch_id',
+      'characters.created_at',
+    );
     const nodes = db.prepare(`
       SELECT id, name, title, status, image_path as imagePath
       FROM characters
-      WHERE project_id = ?
-    `).all(projectId) as CharacterGraph['nodes'];
+      WHERE project_id = ?${nScope.sql}
+    `).all(projectId, ...nScope.params) as CharacterGraph['nodes'];
 
+    const nodeIds = new Set(nodes.map(( n) => n.id));
+    const eScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'cr.created_branch_id',
+      'cr.created_at',
+    );
     const edges = db.prepare(`
       SELECT id, source_character_id as source, target_character_id as target,
              relationship_type as relationshipType, custom_label as customLabel,
              is_bidirectional as isBidirectional
-      FROM character_relationships
-      WHERE project_id = ?
-    `).all(projectId) as CharacterGraph['edges'];
+      FROM character_relationships cr
+      WHERE project_id = ?${eScope.sql}
+    `).all(projectId, ...eScope.params) as CharacterGraph['edges'];
 
-    return { nodes, edges };
+    const filteredEdges = edges.filter(
+      (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
+    );
+
+    return { nodes, edges: filteredEdges };
   }
 }

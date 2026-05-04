@@ -1,5 +1,5 @@
 import { getDb } from '../db/connection.js';
-import { branchCreatedScopeSql } from './branchScope.js';
+import { branchEntityVisibilitySql, effectiveBranchIdForRead } from './branchScope.js';
 
 export interface SearchResult {
   type: 'character' | 'note' | 'marker' | 'event' | 'dogma' | 'tag' | 'faction';
@@ -91,15 +91,23 @@ export class SearchService {
     const like = `%${query}%`;
     const results: SearchResult[] = [];
 
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+
+    const charScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'characters.created_branch_id',
+      'characters.created_at',
+    );
     const characters = db.prepare(`
       SELECT id, name, title, race, character_class as characterClass, status
       FROM characters
       WHERE project_id = ? AND (
         name LIKE ? OR title LIKE ? OR race LIKE ? OR
         character_class LIKE ? OR bio LIKE ? OR backstory LIKE ?
-      )
+      )${charScope.sql}
       LIMIT ?
-    `).all(projectId, like, like, like, like, like, like, safeLimit) as CharacterSearchRow[];
+    `).all(projectId, like, like, like, like, like, like, ...charScope.params, safeLimit) as CharacterSearchRow[];
 
     for (const character of characters) {
       const parts = [character.race, character.characterClass, character.title].filter(Boolean);
@@ -114,7 +122,7 @@ export class SearchService {
       });
     }
 
-    const noteScope = branchCreatedScopeSql(branchId);
+    const noteScope = branchEntityVisibilitySql(projectId, viewBranch, 'notes.created_branch_id', 'notes.created_at');
     const notes = db.prepare(`
       SELECT id, title, content, note_type as noteType
       FROM notes
@@ -141,7 +149,12 @@ export class SearchService {
       });
     }
 
-    const markerScope = branchCreatedScopeSql(branchId, 'mm.created_branch_id');
+    const markerScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'mm.created_branch_id',
+      'mm.created_at',
+    );
     const markers = db.prepare(`
       SELECT mm.id, mm.title, mm.description, mm.icon
       FROM map_markers mm
@@ -161,7 +174,12 @@ export class SearchService {
       });
     }
 
-    const eventScope = branchCreatedScopeSql(branchId);
+    const eventScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'timeline_events.created_branch_id',
+      'timeline_events.created_at',
+    );
     const events = db.prepare(`
       SELECT id, title, description, event_date as eventDate, era
       FROM timeline_events
@@ -182,7 +200,12 @@ export class SearchService {
       });
     }
 
-    const dogmaScope = branchCreatedScopeSql(branchId);
+    const dogmaScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'dogmas.created_branch_id',
+      'dogmas.created_at',
+    );
     const dogmas = db.prepare(`
       SELECT id, title, description, category, importance
       FROM dogmas
@@ -201,12 +224,18 @@ export class SearchService {
       });
     }
 
+    const factionScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'factions.created_branch_id',
+      'factions.created_at',
+    );
     const factions = db.prepare(`
       SELECT id, name, kind, type, motto, description, status
       FROM factions
-      WHERE project_id = ? AND (name LIKE ? OR motto LIKE ? OR description LIKE ? OR headquarters LIKE ?)
+      WHERE project_id = ? AND (name LIKE ? OR motto LIKE ? OR description LIKE ? OR headquarters LIKE ?)${factionScope.sql}
       LIMIT ?
-    `).all(projectId, like, like, like, like, safeLimit) as FactionSearchRow[];
+    `).all(projectId, like, like, like, like, ...factionScope.params, safeLimit) as FactionSearchRow[];
 
     for (const faction of factions) {
       const subtitle =

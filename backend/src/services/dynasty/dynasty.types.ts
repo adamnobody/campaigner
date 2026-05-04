@@ -37,6 +37,7 @@ export interface DynastyRow {
   heir_id: number | null;
   linked_faction_id: number | null;
   sort_order: number;
+  created_branch_id: number | null;
   created_at: string;
   updated_at: string;
   member_count?: number;

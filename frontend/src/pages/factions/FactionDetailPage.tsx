@@ -288,8 +288,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       }
       return;
     }
-    fetchFaction(parseInt(factionId!)).catch(() => showSnackbar(t('factions:snackbar.loadError'), 'error'));
-  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, t]);
+    fetchFaction(pid, parseInt(factionId!)).catch(() => showSnackbar(t('factions:snackbar.loadError'), 'error'));
+  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, t, pid]);
 
   useEffect(() => {
     if (isNew || !fid) {
@@ -299,7 +299,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     let cancelled = false;
     setPoliciesLoading(true);
     factionsApi
-      .getPolicies(fid)
+      .getPolicies(fid, pid)
       .then((res) => {
         if (!cancelled) setFactionPolicies(res.data.data || []);
       })
@@ -312,7 +312,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     return () => {
       cancelled = true;
     };
-  }, [fid, isNew, showSnackbar, t]);
+  }, [fid, isNew, pid, showSnackbar, t]);
 
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;
@@ -715,7 +715,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           category: policyForm.category,
           enactedDate: policyForm.enactedDate.trim() || null,
           description: policyForm.description,
-        });
+        }, pid);
         showSnackbar(t('factions:snackbar.policyUpdated'), 'success');
       } else {
         await factionsApi.createPolicy(fid, {
@@ -726,11 +726,11 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           enactedDate: policyForm.enactedDate.trim() || null,
           description: policyForm.description,
           sortOrder: factionPolicies.length,
-        });
+        }, pid);
         showSnackbar(t('factions:snackbar.policyAdded'), 'success');
       }
       setPolicyDialogOpen(false);
-      const res = await factionsApi.getPolicies(fid);
+      const res = await factionsApi.getPolicies(fid, pid);
       setFactionPolicies(res.data.data || []);
     } catch (err: unknown) {
       showSnackbar(err instanceof Error ? err.message : t('factions:snackbar.genericError'), 'error');
@@ -740,9 +740,9 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const handleDeletePolicy = (policy: FactionPolicy) => {
     showConfirmDialog(t('factions:relations.genericDeleteTitle'), t('factions:detail.policies.deleteConfirmMessage', { title: policy.title }), async () => {
       try {
-        await factionsApi.deletePolicy(fid, policy.id);
+        await factionsApi.deletePolicy(fid, policy.id, pid);
         showSnackbar(t('factions:snackbar.removed'), 'success');
-        const res = await factionsApi.getPolicies(fid);
+        const res = await factionsApi.getPolicies(fid, pid);
         setFactionPolicies(res.data.data || []);
       } catch {
         showSnackbar(t('factions:snackbar.genericError'), 'error');

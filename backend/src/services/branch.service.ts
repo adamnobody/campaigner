@@ -68,4 +68,16 @@ export class BranchService {
     if (!row) throw new NotFoundError('Scenario branch');
     return { ...row, isMain: Boolean(row.isMain) };
   }
+
+  /** Active branch first, then each parent up to root (main). Max depth guarded. */
+  static getAncestryToRoot(branchId: number): ScenarioBranch[] {
+    const chain: ScenarioBranch[] = [];
+    let currentId: number | null = branchId;
+    for (let depth = 0; depth < 64 && currentId != null; depth++) {
+      const b = this.getById(currentId);
+      chain.push(b);
+      currentId = b.parentBranchId ?? null;
+    }
+    return chain;
+  }
 }

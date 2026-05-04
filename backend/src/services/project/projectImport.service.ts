@@ -6,33 +6,48 @@ import { saveBase64ToFile } from './assetHelpers.js';
 import type { ImportedProjectPayload } from './project.types.js';
 import type { Project } from '@campaigner/shared';
 
-export function importProject(data: ImportedProjectPayload): Project {
+const DEFAULT_MAIN_BRANCH_ON_IMPORT = 'Canonical branch';
+
+export type ImportProjectOptions = {
+  /** When false, project name is stored as in the payload (no ` (импорт)`). Default true. */
+  appendImportNameSuffix?: boolean;
+  /** Main branch label; default is English {@link DEFAULT_MAIN_BRANCH_ON_IMPORT}. */
+  mainBranchName?: string;
+};
+
+export function importProject(
+  data: ImportedProjectPayload,
+  options?: ImportProjectOptions
+): Project {
   const db = getDb();
 
   if (!data.version || !data.project?.name) {
     throw new ValidationError('Invalid export file format');
   }
 
+  const appendImportNameSuffix = options?.appendImportNameSuffix !== false;
+  const projectName = appendImportNameSuffix
+    ? `${data.project.name} (импорт)`
+    : data.project.name;
+  const mainBranchName = (options?.mainBranchName?.trim() || DEFAULT_MAIN_BRANCH_ON_IMPORT).slice(0, 120);
+
   const transaction = db.transaction(() => {
     const projectResult = db.prepare(`
       INSERT INTO projects (name, description, status)
       VALUES (?, ?, ?)
-    `).run(
-      `${data.project.name} (импорт)`,
-      data.project.description || '',
-      data.project.status || 'active'
-    );
+    `).run(projectName, data.project.description || '', data.project.status || 'active');
 
     const projectId = projectResult.lastInsertRowid as number;
 
-    db.prepare(`
+    const mainBranchInsert = db.prepare(`
       INSERT INTO scenario_branches (project_id, name, is_main)
-      VALUES (?, 'Каноничная ветвь', 1)
-    `).run(projectId);
+      VALUES (?, ?, 1)
+    `).run(projectId, mainBranchName);
+    const mainBranchId = mainBranchInsert.lastInsertRowid as number;
 
     const mapService = new MapService();
     if (!data.maps?.length) {
-      mapService.createRootMapForProject(projectId);
+      mapService.createRootMapForProject(projectId, undefined, mainBranchId);
     }
 
     if (data.project.mapImageBase64) {
@@ -83,9 +98,9 @@ export function importProject(data: ImportedProjectPayload): Project {
           : (map.imagePath || null);
 
         const result = db.prepare(`
-          INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path)
-          VALUES (?, ?, NULL, ?, ?)
-        `).run(projectId, newParentMapId, map.name, importedMapImagePath);
+          INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path, created_branch_id)
+          VALUES (?, ?, NULL, ?, ?, ?)
+        `).run(projectId, newParentMapId, map.name, importedMapImagePath, mainBranchId);
 
         mapIdMap.set(map.id, result.lastInsertRowid as number);
       }
@@ -110,8 +125,8 @@ export function importProject(data: ImportedProjectPayload): Project {
         const result = db.prepare(`
           INSERT INTO characters (
             project_id, name, title, race, character_class,
-            level, status, bio, appearance, personality, backstory, notes, image_path, state_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            level, status, bio, appearance, personality, backstory, notes, image_path, state_id, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId,
           character.name,
@@ -126,7 +141,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           character.backstory || '',
           character.notes || '',
           newImagePath,
-          null
+          null,
+          mainBranchId,
         );
 
         characterIdMap.set(character.id, result.lastInsertRowid as number);
@@ -140,8 +156,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           : null;
 
         const result = db.prepare(`
-          INSERT INTO notes (project_id, folder_id, title, content, format, note_type, is_pinned)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO notes (project_id, folder_id, title, content, format, note_type, is_pinned, created_branch_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId,
           newFolderId,
@@ -149,7 +165,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           note.content || '',
           note.format || 'md',
           note.noteType || 'note',
-          note.isPinned ? 1 : 0
+          note.isPinned ? 1 : 0,
+          mainBranchId,
         );
 
         noteIdMap.set(note.id, result.lastInsertRowid as number);
@@ -165,12 +182,13 @@ export function importProject(data: ImportedProjectPayload): Project {
           db.prepare(`
             INSERT INTO character_relationships (
               project_id, source_character_id, target_character_id,
-              relationship_type, custom_label, description, is_bidirectional
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+              relationship_type, custom_label, description, is_bidirectional, created_branch_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             projectId, newSource, newTarget,
             rel.relationshipType, rel.customLabel || '',
-            rel.description || '', rel.isBidirectional ? 1 : 0
+            rel.description || '', rel.isBidirectional ? 1 : 0,
+            mainBranchId,
           );
         }
       }
@@ -186,13 +204,14 @@ export function importProject(data: ImportedProjectPayload): Project {
           const result = db.prepare(`
             INSERT INTO map_markers (
               map_id, title, description, position_x, position_y,
-              color, icon, linked_note_id, child_map_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              color, icon, linked_note_id, child_map_id, created_branch_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             newMapId, marker.title, marker.description || '',
             marker.positionX, marker.positionY,
             marker.color || '#FF6B6B', marker.icon || 'custom',
-            newLinkedNoteId, newChildMapId
+            newLinkedNoteId, newChildMapId,
+            mainBranchId,
           );
           markerIdMap.set(marker.id, result.lastInsertRowid as number);
         }
@@ -216,12 +235,13 @@ export function importProject(data: ImportedProjectPayload): Project {
         const result = db.prepare(`
           INSERT INTO timeline_events (
             project_id, title, description, event_date,
-            sort_order, era, linked_note_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            sort_order, era, linked_note_id, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId, event.title, event.description || '',
           event.eventDate, event.sortOrder || 0,
-          event.era || '', newLinkedNoteId
+          event.era || '', newLinkedNoteId,
+          mainBranchId,
         );
         timelineEventIdMap.set(event.id, result.lastInsertRowid as number);
       }
@@ -235,9 +255,9 @@ export function importProject(data: ImportedProjectPayload): Project {
 
         db.prepare(`
           INSERT OR IGNORE INTO wiki_links (
-            project_id, source_note_id, target_note_id, label
-          ) VALUES (?, ?, ?, ?)
-        `).run(projectId, newSourceNoteId, newTargetNoteId, link.label || '');
+            project_id, source_note_id, target_note_id, label, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?)
+        `).run(projectId, newSourceNoteId, newTargetNoteId, link.label || '', mainBranchId);
       }
     }
 
@@ -246,8 +266,8 @@ export function importProject(data: ImportedProjectPayload): Project {
         const result = db.prepare(`
           INSERT INTO dogmas (
             project_id, title, category, description, impact, exceptions,
-            is_public, importance, status, sort_order, icon, color
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            is_public, importance, status, sort_order, icon, color, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId,
           dogma.title,
@@ -260,7 +280,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           dogma.status || 'active',
           dogma.sortOrder ?? 0,
           dogma.icon || '',
-          dogma.color || ''
+          dogma.color || '',
+          mainBranchId,
         );
         dogmaIdMap.set(dogma.id, result.lastInsertRowid as number);
       }
@@ -278,8 +299,8 @@ export function importProject(data: ImportedProjectPayload): Project {
             project_id, name, kind, type, motto, description, history, goals, headquarters, territory, status,
             treasury, population, army_size, navy_size, territory_km2, annual_income, annual_expenses, members_count, influence,
             color, secondary_color, image_path, banner_path, founded_date, disbanded_date,
-            parent_faction_id, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            parent_faction_id, sort_order, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId,
           faction.name,
@@ -308,7 +329,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           faction.foundedDate || '',
           faction.disbandedDate || '',
           null,
-          faction.sortOrder ?? 0
+          faction.sortOrder ?? 0,
+          mainBranchId,
         );
         factionIdMap.set(faction.id, result.lastInsertRowid as number);
         importedFactionKindMap.set(faction.id, normalizedKind);
@@ -462,8 +484,8 @@ export function importProject(data: ImportedProjectPayload): Project {
         db.prepare(`
           INSERT INTO map_territories (
             map_id, name, description, color, opacity, border_color, border_width,
-            points, faction_id, smoothing, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            points, faction_id, smoothing, sort_order, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           newMapId,
           territory.name,
@@ -475,7 +497,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           territory.points || '[]',
           newFactionId,
           territory.smoothing ?? 0,
-          territory.sortOrder ?? 0
+          territory.sortOrder ?? 0,
+          mainBranchId,
         );
       }
     }
@@ -486,8 +509,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           INSERT INTO dynasties (
             project_id, name, motto, description, history, status, color, secondary_color,
             image_path, founded_date, extinct_date, founder_id, current_leader_id, heir_id,
-            linked_faction_id, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            linked_faction_id, sort_order, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId,
           dynasty.name,
@@ -504,7 +527,8 @@ export function importProject(data: ImportedProjectPayload): Project {
           dynasty.currentLeaderId ? (characterIdMap.get(dynasty.currentLeaderId) || null) : null,
           dynasty.heirId ? (characterIdMap.get(dynasty.heirId) || null) : null,
           dynasty.linkedFactionId ? (factionIdMap.get(dynasty.linkedFactionId) || null) : null,
-          dynasty.sortOrder ?? 0
+          dynasty.sortOrder ?? 0,
+          mainBranchId,
         );
         dynastyIdMap.set(dynasty.id, result.lastInsertRowid as number);
       }

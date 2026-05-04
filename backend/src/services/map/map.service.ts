@@ -8,8 +8,9 @@ import type { MapTerritory, CreateMapTerritoryData, UpdateMapTerritoryData, Terr
 import { parseTerritoryRings, serializeTerritoryRings } from './map.types.js';
 import { BranchOverlayService } from '../branchOverlay.service.js';
 import {
-  branchCreatedScopeSql,
-  isRowVisibleForActiveBranch,
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
   resolveCreatedBranchId,
   assertBranchBelongsToProject,
 } from '../branchScope.js';
@@ -51,14 +52,16 @@ function pickTerritoryPatch(data: UpdateMapTerritoryData): Record<string, unknow
 export class MapService {
   // ==================== Maps ====================
 
-  getRootMap(projectId: number): Map | null {
+  getRootMap(projectId: number, branchId?: number): Map | null {
     const db = getDb();
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
     return (db.prepare(`
       SELECT id, project_id as projectId, parent_map_id as parentMapId,
         parent_marker_id as parentMarkerId, name, image_path as imagePath,
         created_at as createdAt, updated_at as updatedAt
-      FROM maps WHERE project_id = ? AND parent_map_id IS NULL LIMIT 1
-    `).get(projectId) as Map | undefined) || null;
+      FROM maps WHERE project_id = ? AND parent_map_id IS NULL${scope.sql} LIMIT 1
+    `).get(projectId, ...scope.params) as Map | undefined) || null;
   }
 
   getMapById(mapId: number): Map | null {
@@ -77,20 +80,23 @@ export class MapService {
     return map;
   }
 
-  getMapTree(projectId: number): Map[] {
+  getMapTree(projectId: number, branchId?: number): Map[] {
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
     return getDb().prepare(`
       SELECT id, project_id as projectId, parent_map_id as parentMapId,
         parent_marker_id as parentMarkerId, name, image_path as imagePath,
         created_at as createdAt, updated_at as updatedAt
-      FROM maps WHERE project_id = ? ORDER BY parent_map_id, name
-    `).all(projectId) as Map[];
+      FROM maps WHERE project_id = ?${scope.sql} ORDER BY parent_map_id, name
+    `).all(projectId, ...scope.params) as Map[];
   }
 
-  createMap(data: CreateMap): Map {
+  createMap(data: CreateMap, requestBranchId?: number): Map {
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
     const result = getDb().prepare(`
-      INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(data.projectId, data.parentMapId || null, data.parentMarkerId || null, data.name, data.imagePath || null);
+      INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path, created_branch_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(data.projectId, data.parentMapId || null, data.parentMarkerId || null, data.name, data.imagePath || null, createdBranchId);
     return this.getMapByIdOrThrow(result.lastInsertRowid as number);
   }
 
@@ -137,18 +143,19 @@ export class MapService {
     getDb().prepare('DELETE FROM maps WHERE id = ?').run(mapId);
   }
 
-  createRootMapForProject(projectId: number, imagePath?: string): Map {
+  createRootMapForProject(projectId: number, imagePath?: string, createdBranchId?: number | null): Map {
     const result = getDb().prepare(`
-      INSERT INTO maps (project_id, parent_map_id, name, image_path) VALUES (?, NULL, ?, ?)
-    `).run(projectId, 'Мир', imagePath || null);
+      INSERT INTO maps (project_id, parent_map_id, name, image_path, created_branch_id) VALUES (?, NULL, ?, ?, ?)
+    `).run(projectId, 'Мир', imagePath || null, createdBranchId ?? null);
     return this.getMapByIdOrThrow(result.lastInsertRowid as number);
   }
 
   // ==================== Markers ====================
 
   getMarkersByMapId(mapId: number, branchId?: number): MapMarker[] {
-    this.getMapByIdOrThrow(mapId);
-    const scope = branchCreatedScopeSql(branchId);
+    const map = this.getMapByIdOrThrow(mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    const scope = branchEntityVisibilitySql(map.projectId, viewBranch, 'created_branch_id', 'created_at');
     const baseRows = getDb().prepare(`
       SELECT id, map_id as mapId, title, description,
         position_x as positionX, position_y as positionY,
@@ -172,7 +179,9 @@ export class MapService {
     `).get(markerId) as MarkerRow | undefined;
 
     if (!raw) return null;
-    if (!isRowVisibleForActiveBranch(raw.createdBranchId, branchId)) return null;
+    const map = this.getMapByIdOrThrow(raw.mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    if (!isEntityVisibleInBranch(map.projectId, viewBranch, raw.createdBranchId, raw.createdAt)) return null;
 
     const { createdBranchId: _cb, ...markerRest } = raw;
     const baseRow = markerRest as MapMarker;
@@ -200,7 +209,10 @@ export class MapService {
     `).run(mapId, data.title, data.description || '', data.positionX, data.positionY,
       data.color || '#FF6B6B', data.icon || 'custom', data.linkedNoteId || null, data.childMapId || null,
       createdBranchId);
-    return this.getMarkerByIdOrThrow(result.lastInsertRowid as number, requestBranchId);
+    return this.getMarkerByIdOrThrow(
+      result.lastInsertRowid as number,
+      requestBranchId ?? effectiveBranchIdForRead(map.projectId, undefined),
+    );
   }
 
   updateMarker(markerId: number, data: UpdateMarker, branchId?: number): MapMarker {
@@ -258,8 +270,9 @@ export class MapService {
   // ==================== Territories ====================
 
   getTerritoriesByMapId(mapId: number, branchId?: number): MapTerritory[] {
-    this.getMapByIdOrThrow(mapId);
-    const scope = branchCreatedScopeSql(branchId);
+    const map = this.getMapByIdOrThrow(mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    const scope = branchEntityVisibilitySql(map.projectId, viewBranch, 'created_branch_id', 'created_at');
     const rows = getDb().prepare(`
       SELECT id, map_id as mapId, name, description,
         color, opacity, border_color as borderColor,
@@ -290,7 +303,9 @@ export class MapService {
     `).get(territoryId) as TerritoryRawRow | undefined;
 
     if (!row) return null;
-    if (!isRowVisibleForActiveBranch(row.createdBranchId, branchId)) return null;
+    const map = this.getMapByIdOrThrow(row.mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    if (!isEntityVisibleInBranch(map.projectId, viewBranch, row.createdBranchId, row.createdAt)) return null;
 
     const { points: rawPoints, createdBranchId: _cb, ...rest } = row;
     const baseRow = { ...rest, rings: parseTerritoryRings(rawPoints) };
@@ -319,7 +334,10 @@ export class MapService {
       data.opacity ?? 0.25, data.borderColor || '#4ECDC4', data.borderWidth ?? 2,
       data.smoothing ?? 0, serializeTerritoryRings(rings),
       data.factionId || null, data.sortOrder ?? 0, createdBranchId);
-    return this.getTerritoryByIdOrThrow(result.lastInsertRowid as number, requestBranchId);
+    return this.getTerritoryByIdOrThrow(
+      result.lastInsertRowid as number,
+      requestBranchId ?? effectiveBranchIdForRead(map.projectId, undefined),
+    );
   }
 
   updateTerritory(territoryId: number, data: UpdateMapTerritoryData, branchId?: number): MapTerritory {
@@ -376,8 +394,9 @@ export class MapService {
     occupantName: string | null;
     occupantKind: 'state' | 'faction' | null;
   }> {
-    const scope = branchCreatedScopeSql(branchId, 'mt.created_branch_id');
-    const params: number[] = [projectId, ...scope.params];
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'mt.created_branch_id', 'mt.created_at');
+    const params: Array<number | string> = [projectId, ...scope.params];
     return getDb().prepare(`
       SELECT mt.id, mt.name, mt.map_id as mapId, m.name as mapName,
         mt.faction_id as factionId,

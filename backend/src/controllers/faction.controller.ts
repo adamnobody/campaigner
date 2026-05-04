@@ -5,6 +5,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
 import { BadRequestError } from '../middleware/errorHandler.js';
+import { parseOptionalBranchId, parseBranchIdStrict } from '../utils/branchRequest.js';
+
+function branchFromReq(req: Request): number | undefined {
+  return parseOptionalBranchId(req.query.branchId ?? req.body?.branchId);
+}
 
 export class FactionController {
   // ==================== FACTIONS CRUD ====================
@@ -28,7 +33,8 @@ export class FactionController {
       offset: Number.isFinite(offset) ? offset : 0,
     };
 
-    const result = FactionService.getAll(projectId, filters);
+    const branchId = parseOptionalBranchId(req.query.branchId);
+    const result = FactionService.getAll(projectId, filters, branchId);
 
     return res.status(200).json({
       success: true,
@@ -39,7 +45,8 @@ export class FactionController {
 
   static getById = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'faction id');
-    const faction = FactionService.getById(id);
+    const branchId = parseOptionalBranchId(req.query.branchId);
+    const faction = FactionService.getById(id, branchId);
     return ok(res, faction);
   });
 
@@ -47,41 +54,52 @@ export class FactionController {
 
   static getPolicies = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     return ok(res, FactionPolicyService.list(factionId));
   });
 
   static createPolicy = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     return created(res, FactionPolicyService.create(factionId, req.body));
   });
 
   static updatePolicy = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
     const policyId = parseId(req.params.policyId, 'policy id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     return ok(res, FactionPolicyService.update(factionId, policyId, req.body));
   });
 
   static deletePolicy = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
     const policyId = parseId(req.params.policyId, 'policy id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     FactionPolicyService.delete(factionId, policyId);
     return ok(res, undefined, 'Faction policy deleted');
   });
 
   static create = asyncHandler(async (req: Request, res: Response) => {
-    const faction = FactionService.create(req.body);
+    const branchId = parseOptionalBranchId(req.body?.branchId);
+    const faction = FactionService.create(req.body, branchId);
     return created(res, faction);
   });
 
   static update = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'faction id');
-    const faction = FactionService.update(id, req.body);
+    const branchId = parseOptionalBranchId(req.body?.branchId);
+    const faction = FactionService.update(id, req.body, branchId);
     return ok(res, faction);
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'faction id');
-    FactionService.delete(id);
+    const branchId = parseBranchIdStrict(req.query.branchId);
+    FactionService.delete(id, branchId);
     return ok(res, undefined, 'Faction deleted');
   });
 
@@ -94,8 +112,9 @@ export class FactionController {
       throw new BadRequestError('No file uploaded');
     }
 
+    const branchId = parseOptionalBranchId(req.query.branchId);
     const imagePath = `/uploads/factions/${req.file.filename}`;
-    const faction = FactionService.updateImage(id, 'image_path', imagePath);
+    const faction = FactionService.updateImage(id, 'image_path', imagePath, branchId);
 
     return ok(res, faction);
   });
@@ -107,8 +126,9 @@ export class FactionController {
       throw new BadRequestError('No file uploaded');
     }
 
+    const branchId = parseOptionalBranchId(req.query.branchId);
     const bannerPath = `/uploads/factions/${req.file.filename}`;
-    const faction = FactionService.updateImage(id, 'banner_path', bannerPath);
+    const faction = FactionService.updateImage(id, 'banner_path', bannerPath, branchId);
 
     return ok(res, faction);
   });
@@ -117,7 +137,8 @@ export class FactionController {
 
   static setTags = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'faction id');
-    const faction = FactionService.getById(id);
+    const branchId = parseOptionalBranchId(req.query.branchId);
+    const faction = FactionService.getById(id, branchId);
     const tagIds = req.body?.tagIds;
 
     if (!Array.isArray(tagIds)) {
@@ -132,24 +153,34 @@ export class FactionController {
 
   static getRanks = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     const ranks = FactionService.getRanks(factionId);
     return ok(res, ranks);
   });
 
   static createRank = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     const rank = FactionService.createRank({ ...req.body, factionId });
     return created(res, rank);
   });
 
   static updateRank = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
     const rankId = parseId(req.params.rankId, 'rank id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     const rank = FactionService.updateRank(rankId, req.body);
     return ok(res, rank);
   });
 
   static deleteRank = asyncHandler(async (req: Request, res: Response) => {
+    const factionId = parseId(req.params.id, 'faction id');
     const rankId = parseId(req.params.rankId, 'rank id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     FactionService.deleteRank(rankId);
     return ok(res, undefined, 'Rank deleted');
   });
@@ -158,12 +189,16 @@ export class FactionController {
 
   static getMembers = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     const members = FactionService.getMembers(factionId);
     return ok(res, members);
   });
 
   static addMember = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
+    const branchId = branchFromReq(req);
+    FactionService.getById(factionId, branchId);
     const member = FactionService.addMember({ ...req.body, factionId });
     return created(res, member);
   });
@@ -184,13 +219,15 @@ export class FactionController {
 
   static getRelations = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.query.projectId as string, 'project id');
-    const relations = FactionService.getRelations(projectId);
+    const branchId = parseOptionalBranchId(req.query.branchId);
+    const relations = FactionService.getRelations(projectId, branchId);
     return ok(res, relations);
   });
 
   static replaceCustomMetrics = asyncHandler(async (req: Request, res: Response) => {
     const factionId = parseId(req.params.id, 'faction id');
-    const metrics = FactionService.replaceCustomMetrics(factionId, req.body.metrics || []);
+    const branchId = branchFromReq(req);
+    const metrics = FactionService.replaceCustomMetrics(factionId, req.body.metrics || [], branchId);
     return ok(res, metrics);
   });
 
@@ -200,7 +237,8 @@ export class FactionController {
   });
 
   static createRelation = asyncHandler(async (req: Request, res: Response) => {
-    const relation = FactionService.createRelation(req.body);
+    const branchId = parseOptionalBranchId(req.body?.branchId);
+    const relation = FactionService.createRelation(req.body, branchId);
     return created(res, relation);
   });
 
@@ -220,7 +258,8 @@ export class FactionController {
 
   static getGraph = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.query.projectId as string, 'project id');
-    const graph = FactionService.getGraph(projectId);
+    const branchId = parseOptionalBranchId(req.query.branchId);
+    const graph = FactionService.getGraph(projectId, branchId);
     return ok(res, graph);
   });
 }

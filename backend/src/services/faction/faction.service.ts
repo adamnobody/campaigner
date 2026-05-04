@@ -1,6 +1,13 @@
 import { getDb } from '../../db/connection.js';
 import { BadRequestError, NotFoundError } from '../../middleware/errorHandler.js';
 import { loadTagsBatch, buildUpdateQuery, ensureEntityExists } from '../../utils/dbHelpers.js';
+import {
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
+  resolveCreatedBranchId,
+  assertBranchBelongsToProject,
+} from '../branchScope.js';
 import { FACTION_METRICS, STATE_METRICS } from '@campaigner/shared';
 import type {
   FactionFilters,
@@ -216,7 +223,7 @@ export class FactionService {
 
   // ==================== FACTIONS CRUD ====================
 
-  static getAll(projectId: number, filters: FactionFilters = {}) {
+  static getAll(projectId: number, filters: FactionFilters = {}, branchId?: number) {
     const db = getDb();
     const conditions = ['f.project_id = ?'];
     const params: Array<number | string> = [projectId];
@@ -237,11 +244,15 @@ export class FactionService {
       params.push(like, like, like);
     }
 
-    const where = conditions.join(' AND ');
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'f.created_branch_id', 'f.created_at');
+
+    const where = `${conditions.join(' AND ')}${scope.sql}`;
+    const allParams = [...params, ...scope.params];
 
     const countRow = db.prepare(`
       SELECT COUNT(*) as cnt FROM factions f WHERE ${where}
-    `).get(...params) as CountRow;
+    `).get(...allParams) as CountRow;
 
     const total = countRow.cnt;
     const limit = filters.limit ?? 50;
@@ -256,7 +267,7 @@ export class FactionService {
       WHERE ${where}
       ORDER BY f.sort_order ASC, f.name ASC
       LIMIT ? OFFSET ?
-    `).all(...params, limit, offset) as FactionWithMetaRow[];
+    `).all(...allParams, limit, offset) as FactionWithMetaRow[];
 
     const tagsMap = loadTagsBatch(projectId, 'faction', rows.map((row) => row.id));
 
@@ -275,7 +286,7 @@ export class FactionService {
     return { items: factions, total };
   }
 
-  static getById(id: number) {
+  static getById(id: number, branchId?: number) {
     const db = getDb();
 
     const row = db.prepare(`
@@ -290,6 +301,11 @@ export class FactionService {
     `).get(id) as FactionWithMetaRow | undefined;
 
     if (!row) throw new NotFoundError('Faction');
+
+    const vb = effectiveBranchIdForRead(row.project_id, branchId);
+    if (!isEntityVisibleInBranch(row.project_id, vb, row.created_branch_id, row.created_at)) {
+      throw new NotFoundError('Faction');
+    }
 
     const faction = toFaction(row);
 
@@ -351,9 +367,13 @@ export class FactionService {
     };
   }
 
-  static create(data: FactionCreateData) {
+  static create(data: FactionCreateData, requestBranchId?: number) {
     const db = getDb();
     const kind = data.kind || 'faction';
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, data.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
     this.validateMetricsByKind(kind, data);
     this.validateStateRelationsInput(db, data.projectId, data);
 
@@ -363,8 +383,8 @@ export class FactionService {
           project_id, name, kind, type, motto, description, history, goals, headquarters, territory,
           treasury, population, army_size, navy_size, territory_km2, annual_income, annual_expenses, members_count, influence,
           status, color, secondary_color, founded_date, disbanded_date,
-          parent_faction_id, ruling_dynasty_id, ruler_character_id, sort_order
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          parent_faction_id, ruling_dynasty_id, ruler_character_id, sort_order, created_branch_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         data.projectId,
         data.name,
@@ -393,7 +413,8 @@ export class FactionService {
         data.parentFactionId || null,
         data.rulingDynastyId ?? null,
         data.rulerCharacterId ?? null,
-        data.sortOrder || 0
+        data.sortOrder || 0,
+        createdBranchId,
       );
 
       const newId = result.lastInsertRowid as number;
@@ -405,11 +426,12 @@ export class FactionService {
       return newId;
     })();
 
-    return this.getById(factionId);
+    const viewBranch = requestBranchId ?? effectiveBranchIdForRead(data.projectId, undefined);
+    return this.getById(factionId, viewBranch);
   }
 
-  static update(id: number, data: FactionUpdateData) {
-    const current = this.getById(id);
+  static update(id: number, data: FactionUpdateData, branchId?: number) {
+    const current = this.getById(id, branchId);
     const kind = (data.kind as 'state' | 'faction' | undefined) ?? current.kind;
     this.validateMetricsByKind(kind, data);
 
@@ -429,20 +451,20 @@ export class FactionService {
       }
     })();
 
-    return this.getById(id);
+    return this.getById(id, branchId);
   }
 
-  static delete(id: number) {
-    this.getById(id);
+  static delete(id: number, branchId?: number) {
+    this.getById(id, branchId);
     const db = getDb();
     db.prepare('DELETE FROM factions WHERE id = ?').run(id);
   }
 
-  static updateImage(id: number, field: 'image_path' | 'banner_path', imagePath: string) {
-    this.getById(id);
+  static updateImage(id: number, field: 'image_path' | 'banner_path', imagePath: string, branchId?: number) {
+    this.getById(id, branchId);
     const db = getDb();
     db.prepare(`UPDATE factions SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`).run(imagePath, id);
-    return this.getById(id);
+    return this.getById(id, branchId);
   }
 
   // ==================== RANKS ====================
@@ -542,14 +564,22 @@ export class FactionService {
 
   // ==================== RELATIONS ====================
 
-  static getRelations(projectId: number) {
+  static getRelations(projectId: number, branchId?: number) {
     const db = getDb();
-    const rows = db.prepare(`${RELATION_SELECT} WHERE fr.project_id = ? ORDER BY fr.created_at DESC`).all(projectId) as RelationRow[];
+    const vb = effectiveBranchIdForRead(projectId, branchId);
+    const rScope = branchEntityVisibilitySql(projectId, vb, 'fr.created_branch_id', 'fr.created_at');
+    const sfScope = branchEntityVisibilitySql(projectId, vb, 'sf.created_branch_id', 'sf.created_at');
+    const tfScope = branchEntityVisibilitySql(projectId, vb, 'tf.created_branch_id', 'tf.created_at');
+    const rows = db.prepare(`
+      ${RELATION_SELECT}
+      WHERE fr.project_id = ?${rScope.sql}${sfScope.sql}${tfScope.sql}
+      ORDER BY fr.created_at DESC
+    `).all(projectId, ...rScope.params, ...sfScope.params, ...tfScope.params) as RelationRow[];
     return rows.map(toRelation);
   }
 
-  static replaceCustomMetrics(factionId: number, metrics: CustomMetricInput[]) {
-    ensureEntityExists('factions', factionId, 'Faction');
+  static replaceCustomMetrics(factionId: number, metrics: CustomMetricInput[], branchId?: number) {
+    this.getById(factionId, branchId);
     const db = getDb();
     const names = new Set<string>();
 
@@ -582,7 +612,7 @@ export class FactionService {
       }
     });
     run();
-    return this.getById(factionId).customMetrics ?? [];
+    return this.getById(factionId, branchId).customMetrics ?? [];
   }
 
   static compare(factionIds: number[], metricKeys: string[]): CompareFactionResult {
@@ -656,18 +686,23 @@ export class FactionService {
     return { factions, metrics };
   }
 
-  static createRelation(data: RelationCreateData) {
+  static createRelation(data: RelationCreateData, requestBranchId?: number) {
     const db = getDb();
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, data.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
     const result = db.prepare(`
       INSERT INTO faction_relations (
         project_id, source_faction_id, target_faction_id,
-        relation_type, custom_label, description, started_date, is_bidirectional
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        relation_type, custom_label, description, started_date, is_bidirectional, created_branch_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.projectId, data.sourceFactionId, data.targetFactionId,
       data.relationType || 'neutral', data.customLabel || '',
       data.description || '', data.startedDate || '',
-      data.isBidirectional !== false ? 1 : 0
+      data.isBidirectional !== false ? 1 : 0,
+      createdBranchId,
     );
 
     const row = db.prepare(`${RELATION_SELECT} WHERE fr.id = ?`).get(result.lastInsertRowid as number) as RelationRow;
@@ -690,20 +725,36 @@ export class FactionService {
 
   // ==================== GRAPH ====================
 
-  static getGraph(projectId: number) {
+  static getGraph(projectId: number, branchId?: number) {
     const db = getDb();
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const fScope = branchEntityVisibilitySql(
+      projectId,
+      viewBranch,
+      'factions.created_branch_id',
+      'factions.created_at',
+    );
 
     const factions = db.prepare(`
       SELECT id, name, kind, type, status, color, image_path,
         (SELECT COUNT(*) FROM faction_members fm WHERE fm.faction_id = factions.id AND fm.is_active = 1) as member_count
-      FROM factions WHERE project_id = ?
-    `).all(projectId) as Array<{
+      FROM factions WHERE project_id = ?${fScope.sql}
+    `).all(projectId, ...fScope.params) as Array<{
       id: number; name: string; kind: 'state' | 'faction'; type: string | null;
       status: string; color: string | null;
       image_path: string | null; member_count: number;
     }>;
 
-    const relations = db.prepare(`${RELATION_SELECT} WHERE fr.project_id = ?`).all(projectId) as RelationRow[];
+    const rScope = branchEntityVisibilitySql(projectId, viewBranch, 'fr.created_branch_id', 'fr.created_at');
+    const relations = db.prepare(`${RELATION_SELECT} WHERE fr.project_id = ?${rScope.sql}`).all(
+      projectId,
+      ...rScope.params,
+    ) as RelationRow[];
+
+    const nodeIds = new Set(factions.map((f) => f.id));
+    const filteredRelations = relations.filter(
+      (r) => nodeIds.has(r.source_faction_id) && nodeIds.has(r.target_faction_id),
+    );
 
     return {
       nodes: factions.map((f) => ({
@@ -711,7 +762,7 @@ export class FactionService {
         status: f.status, color: f.color || '',
         imagePath: f.image_path || '', memberCount: f.member_count,
       })),
-      edges: relations.map(toRelation),
+      edges: filteredRelations.map(toRelation),
     };
   }
 }

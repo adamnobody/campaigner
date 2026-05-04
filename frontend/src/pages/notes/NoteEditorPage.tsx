@@ -307,7 +307,7 @@ export const NoteEditorPage: React.FC = () => {
 
   const handleDeleteLink = async (linkId: number) => {
     try {
-      await wikiApi.deleteLink(linkId);
+      await wikiApi.deleteLink(linkId, pid);
       showSnackbar(t('notes:snackbar.linkDeleted'), 'success');
       loadWikiData();
     } catch {

@@ -5,8 +5,9 @@ import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers.js';
 import { BranchOverlayService } from './branchOverlay.service.js';
 import {
-  branchCreatedScopeSql,
-  isRowVisibleForActiveBranch,
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
   resolveCreatedBranchId,
   assertBranchBelongsToProject,
 } from './branchScope.js';
@@ -132,7 +133,8 @@ export class DogmaService {
       queryParams.push(searchTerm, searchTerm);
     }
 
-    const scope = branchCreatedScopeSql(branchId);
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
     whereClause += scope.sql;
     queryParams.push(...scope.params);
 
@@ -190,13 +192,18 @@ export class DogmaService {
       SELECT ${SELECT_FIELDS} FROM dogmas WHERE id = ?
     `).get(id) as DogmaRow | undefined;
 
-    if (row && !isRowVisibleForActiveBranch(row.createdBranchId, branchId)) {
+    if (!row) {
       throw new NotFoundError('Dogma');
     }
 
-    const projectedRow = branchId
-      ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'dogma'))
-      : row ?? null;
+    const viewBranch = effectiveBranchIdForRead(row.projectId, branchId);
+    if (!isEntityVisibleInBranch(row.projectId, viewBranch, row.createdBranchId, row.createdAt)) {
+      throw new NotFoundError('Dogma');
+    }
+
+    const projectedRow = viewBranch
+      ? BranchOverlayService.applyItemOverlay(row, BranchOverlayService.getOverrides(viewBranch, 'dogma'))
+      : row;
 
     if (!projectedRow) {
       throw new NotFoundError('Dogma');
@@ -247,7 +254,8 @@ export class DogmaService {
       createdBranchId,
     );
 
-    return this.getById(result.lastInsertRowid as number, requestBranchId);
+    const viewBranch = requestBranchId ?? effectiveBranchIdForRead(data.projectId, undefined);
+    return this.getById(result.lastInsertRowid as number, viewBranch);
   }
 
   static update(id: number, data: UpdateDogma, branchId?: number): Dogma {

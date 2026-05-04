@@ -9,8 +9,9 @@ import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers.js';
 import { BranchOverlayService } from './branchOverlay.service.js';
 import {
-  branchCreatedScopeSql,
-  isRowVisibleForActiveBranch,
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
   resolveCreatedBranchId,
   assertBranchBelongsToProject,
 } from './branchScope.js';
@@ -70,7 +71,8 @@ export class TimelineService {
       params.push(era);
     }
 
-    const scope = branchCreatedScopeSql(branchId);
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
     query += scope.sql;
     params.push(...scope.params);
 
@@ -101,13 +103,18 @@ export class TimelineService {
       `SELECT ${SELECT_FIELDS} FROM timeline_events WHERE id = ?`
     ).get(id) as TimelineEventRow | undefined;
 
-    if (row && !isRowVisibleForActiveBranch(row.createdBranchId, branchId)) {
+    if (!row) {
       throw new NotFoundError('Timeline event');
     }
 
-    const projectedRow = branchId
-      ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'timeline_event'))
-      : row ?? null;
+    const viewBranch = effectiveBranchIdForRead(row.projectId, branchId);
+    if (!isEntityVisibleInBranch(row.projectId, viewBranch, row.createdBranchId, row.createdAt)) {
+      throw new NotFoundError('Timeline event');
+    }
+
+    const projectedRow = viewBranch
+      ? BranchOverlayService.applyItemOverlay(row, BranchOverlayService.getOverrides(viewBranch, 'timeline_event'))
+      : row;
 
     if (!projectedRow) {
       throw new NotFoundError('Timeline event');
@@ -149,7 +156,8 @@ export class TimelineService {
       createdBranchId,
     );
 
-    return this.getById(result.lastInsertRowid as number, requestBranchId);
+    const viewBranch = requestBranchId ?? effectiveBranchIdForRead(data.projectId, undefined);
+    return this.getById(result.lastInsertRowid as number, viewBranch);
   }
 
   static update(id: number, data: UpdateTimelineEvent, branchId?: number): TimelineEvent {

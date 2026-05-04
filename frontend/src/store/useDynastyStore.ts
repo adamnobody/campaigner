@@ -31,7 +31,7 @@ interface DynastyState {
   initialized: boolean;
 
   fetchDynasties: (projectId: number, params?: DynastyListParams) => Promise<void>;
-  fetchDynasty: (id: number) => Promise<Dynasty>;
+  fetchDynasty: (projectId: number, id: number) => Promise<Dynasty>;
   createDynasty: (data: CreateDynasty) => Promise<Dynasty>;
   updateDynasty: (id: number, data: UpdateDynasty) => Promise<Dynasty>;
   deleteDynasty: (id: number) => Promise<void>;
@@ -48,13 +48,28 @@ interface DynastyState {
   addEvent: (dynastyId: number, data: CreateDynastyEvent) => Promise<DynastyEvent>;
   updateEvent: (dynastyId: number, eventId: number, data: UpdateDynastyEvent) => Promise<DynastyEvent>;
   deleteEvent: (dynastyId: number, eventId: number) => Promise<void>;
-  reorderEvents: (dynastyId: number, orderedIds: number[]) => Promise<void>;
+  reorderEvents: (dynastyId: number, orderedIds: number[], projectId: number) => Promise<void>;
 
-  saveGraphPositions: (dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) => Promise<void>;
+  saveGraphPositions: (
+    dynastyId: number,
+    positions: { characterId: number; graphX: number; graphY: number }[],
+    projectId: number,
+  ) => Promise<void>;
 
   setCurrentDynasty: (d: Dynasty | null) => void;
   clearError: () => void;
   reset: () => void;
+}
+
+function dynastyProjectId(get: () => DynastyState, dynastyId: number): number {
+  const st = get();
+  const pid =
+    st.dynasties.find((d) => d.id === dynastyId)?.projectId ??
+    (st.currentDynasty?.id === dynastyId ? st.currentDynasty.projectId : undefined);
+  if (!pid) {
+    throw new Error('Missing project context for dynasty request');
+  }
+  return pid;
 }
 
 export const useDynastyStore = create<DynastyState>((set, get) => ({
@@ -77,10 +92,10 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     }
   },
 
-  fetchDynasty: async (id) => {
+  fetchDynasty: async (projectId, id) => {
     set({ loading: true, error: null });
     try {
-      const res = await dynastiesApi.getById(id);
+      const res = await dynastiesApi.getById(id, projectId);
       const dynasty = res.data.data;
       set({ currentDynasty: dynasty });
       return dynasty;
@@ -96,7 +111,7 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     try {
       const res = await dynastiesApi.create(data);
       const dynasty = res.data.data;
-      set(state => ({
+      set((state) => ({
         dynasties: [dynasty, ...state.dynasties],
         total: state.total + 1,
       }));
@@ -109,10 +124,11 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   updateDynasty: async (id, data) => {
     try {
-      const res = await dynastiesApi.update(id, data);
+      const projectId = dynastyProjectId(get, id);
+      const res = await dynastiesApi.update(id, data, projectId);
       const updated = res.data.data;
-      set(state => ({
-        dynasties: state.dynasties.map(d => d.id === id ? updated : d),
+      set((state) => ({
+        dynasties: state.dynasties.map((d) => (d.id === id ? updated : d)),
         currentDynasty: state.currentDynasty?.id === id ? updated : state.currentDynasty,
       }));
       return updated;
@@ -124,9 +140,10 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   deleteDynasty: async (id) => {
     try {
-      await dynastiesApi.delete(id);
-      set(state => ({
-        dynasties: state.dynasties.filter(d => d.id !== id),
+      const projectId = dynastyProjectId(get, id);
+      await dynastiesApi.delete(id, projectId);
+      set((state) => ({
+        dynasties: state.dynasties.filter((d) => d.id !== id),
         total: state.total - 1,
         currentDynasty: state.currentDynasty?.id === id ? null : state.currentDynasty,
       }));
@@ -138,11 +155,12 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   uploadImage: async (id, file) => {
     try {
-      const res = await dynastiesApi.uploadImage(id, file);
+      const projectId = dynastyProjectId(get, id);
+      const res = await dynastiesApi.uploadImage(id, file, projectId);
       const updated = res.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: state.currentDynasty?.id === id ? updated : state.currentDynasty,
-        dynasties: state.dynasties.map(d => d.id === id ? { ...d, imagePath: updated.imagePath } : d),
+        dynasties: state.dynasties.map((d) => (d.id === id ? { ...d, imagePath: updated.imagePath } : d)),
       }));
       return updated;
     } catch (error: unknown) {
@@ -153,12 +171,13 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   setTags: async (id, tagIds) => {
     try {
-      await dynastiesApi.setTags(id, tagIds);
-      const res = await dynastiesApi.getById(id);
+      const projectId = dynastyProjectId(get, id);
+      await dynastiesApi.setTags(id, tagIds, projectId);
+      const res = await dynastiesApi.getById(id, projectId);
       const updated = res.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: state.currentDynasty?.id === id ? updated : state.currentDynasty,
-        dynasties: state.dynasties.map(d => d.id === id ? updated : d),
+        dynasties: state.dynasties.map((d) => (d.id === id ? updated : d)),
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to update dynasty tags') });
@@ -166,16 +185,16 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     }
   },
 
-  // Members
   addMember: async (dynastyId, data) => {
     try {
-      const res = await dynastiesApi.addMember(dynastyId, data);
+      const projectId = dynastyProjectId(get, dynastyId);
+      const res = await dynastiesApi.addMember(dynastyId, data, projectId);
       const member = res.data.data;
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
       return member;
     } catch (error: unknown) {
@@ -186,13 +205,14 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   updateMember: async (dynastyId, memberId, data) => {
     try {
+      const projectId = dynastyProjectId(get, dynastyId);
       const res = await dynastiesApi.updateMember(dynastyId, memberId, data);
       const member = res.data.data;
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
       return member;
     } catch (error: unknown) {
@@ -203,12 +223,13 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   removeMember: async (dynastyId, memberId) => {
     try {
+      const projectId = dynastyProjectId(get, dynastyId);
       await dynastiesApi.removeMember(dynastyId, memberId);
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to remove dynasty member') });
@@ -216,16 +237,16 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     }
   },
 
-  // Family links
   addFamilyLink: async (dynastyId, data) => {
     try {
-      const res = await dynastiesApi.addFamilyLink(dynastyId, data);
+      const projectId = dynastyProjectId(get, dynastyId);
+      const res = await dynastiesApi.addFamilyLink(dynastyId, data, projectId);
       const link = res.data.data;
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
       return link;
     } catch (error: unknown) {
@@ -236,12 +257,13 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   deleteFamilyLink: async (dynastyId, linkId) => {
     try {
+      const projectId = dynastyProjectId(get, dynastyId);
       await dynastiesApi.deleteFamilyLink(dynastyId, linkId);
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to delete family link') });
@@ -249,16 +271,16 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     }
   },
 
-  // Events
   addEvent: async (dynastyId, data) => {
     try {
-      const res = await dynastiesApi.addEvent(dynastyId, data);
+      const projectId = dynastyProjectId(get, dynastyId);
+      const res = await dynastiesApi.addEvent(dynastyId, data, projectId);
       const event = res.data.data;
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
       return event;
     } catch (error: unknown) {
@@ -269,13 +291,14 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   updateEvent: async (dynastyId, eventId, data) => {
     try {
+      const projectId = dynastyProjectId(get, dynastyId);
       const res = await dynastiesApi.updateEvent(dynastyId, eventId, data);
       const event = res.data.data;
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
       return event;
     } catch (error: unknown) {
@@ -286,12 +309,13 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   deleteEvent: async (dynastyId, eventId) => {
     try {
+      const projectId = dynastyProjectId(get, dynastyId);
       await dynastiesApi.deleteEvent(dynastyId, eventId);
-      const dRes = await dynastiesApi.getById(dynastyId);
+      const dRes = await dynastiesApi.getById(dynastyId, projectId);
       const refreshed = dRes.data.data;
-      set(state => ({
+      set((state) => ({
         currentDynasty: refreshed,
-        dynasties: state.dynasties.map(d => d.id === dynastyId ? refreshed : d),
+        dynasties: state.dynasties.map((d) => (d.id === dynastyId ? refreshed : d)),
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to delete dynasty event') });
@@ -299,7 +323,7 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     }
   },
 
-  reorderEvents: async (dynastyId, orderedIds) => {
+  reorderEvents: async (dynastyId, orderedIds, projectId) => {
     const prevCurrent = get().currentDynasty;
     const prevEvents =
       prevCurrent?.id === dynastyId && prevCurrent.events
@@ -322,7 +346,7 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     }
 
     try {
-      const res = await dynastiesApi.reorderEvents(dynastyId, orderedIds);
+      const res = await dynastiesApi.reorderEvents(dynastyId, orderedIds, projectId);
       const updated = res.data.data;
       if (updated) {
         set((state) => ({
@@ -336,7 +360,7 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
         set({ currentDynasty: { ...prevCurrent, events: prevEvents } });
       }
       try {
-        await get().fetchDynasty(dynastyId);
+        await get().fetchDynasty(projectId, dynastyId);
       } catch {
         // ignore secondary refresh failure
       }
@@ -345,9 +369,9 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
     }
   },
 
-  saveGraphPositions: async (dynastyId, positions) => {
+  saveGraphPositions: async (dynastyId, positions, projectId) => {
     try {
-      await dynastiesApi.saveGraphPositions(dynastyId, positions);
+      await dynastiesApi.saveGraphPositions(dynastyId, positions, projectId);
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to save graph positions') });
       throw error;
@@ -358,8 +382,13 @@ export const useDynastyStore = create<DynastyState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 
-  reset: () => set({
-    dynasties: [], total: 0, loading: false, currentDynasty: null,
-    error: null, initialized: false,
-  }),
+  reset: () =>
+    set({
+      dynasties: [],
+      total: 0,
+      loading: false,
+      currentDynasty: null,
+      error: null,
+      initialized: false,
+    }),
 }));

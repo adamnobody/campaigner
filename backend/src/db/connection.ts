@@ -14,6 +14,8 @@ import { migrateFactionMetrics } from './migrations/009_faction_metrics.js';
 import { migratePoliticalScales } from './migrations/010_political_scales.js';
 import { migrateStateRelations } from './migrations/011_state_relations.js';
 import { migrateBranchScopedCreates } from './migrations/012_branch_scoped_creates.js';
+import { migrateBranchVisibilityV020 } from './migrations/013_branch_visibility_v020.js';
+import { migrateFactionRelationsBranch014 } from './migrations/014_faction_relations_branch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +54,8 @@ export function initializeDatabase(): void {
   migratePoliticalScales(database);
   migrateStateRelations(database);
   migrateBranchScopedCreates(database);
+  migrateBranchVisibilityV020(database);
+  migrateFactionRelationsBranch014(database);
   createIndexes(database);
 
   console.log('✅ Database initialized successfully');

@@ -188,8 +188,8 @@ export const CharacterDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (isNew) { setForm(EMPTY_FORM); setCurrentCharacter(null); setTagsInput(''); return; }
-    fetchCharacter(parseInt(characterId!)).catch(() => showSnackbar(t('snackbar.loadError'), 'error'));
-  }, [characterId, isNew, fetchCharacter, showSnackbar, t]);
+    fetchCharacter(pid, parseInt(characterId!)).catch(() => showSnackbar(t('snackbar.loadError'), 'error'));
+  }, [characterId, isNew, fetchCharacter, showSnackbar, t, pid]);
 
   useEffect(() => {
     if (isNew || !currentCharacter || currentCharacter.id !== parseInt(characterId!)) return;
@@ -310,7 +310,7 @@ export const CharacterDetailPage: React.FC = () => {
       t('detail.confirmDeleteRelationship.title'),
       t('detail.confirmDeleteRelationship.message'),
       async () => {
-      try { await deleteRelationship(relId); showSnackbar(t('snackbar.relationshipRemoved'), 'success'); } catch { showSnackbar(t('snackbar.genericError'), 'error'); }
+      try { await deleteRelationship(relId, pid); showSnackbar(t('snackbar.relationshipRemoved'), 'success'); } catch { showSnackbar(t('snackbar.genericError'), 'error'); }
     });
   };
 

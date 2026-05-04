@@ -1,13 +1,16 @@
 import { getDb } from '../../db/connection.js';
-import { CreateProject, UpdateProject, Project } from '@campaigner/shared';
+import { CreateProject, UpdateProject, Project, type ImportedProjectPayload } from '@campaigner/shared';
 import { NotFoundError } from '../../middleware/errorHandler.js';
 import { MapService } from '../map/index.js';
 import { CharacterTraitService } from '../character-trait.service.js';
 import { buildUpdateQuery } from '../../utils/dbHelpers.js';
 import { exportProject } from './projectExport.service.js';
-import { importProject } from './projectImport.service.js';
-import type { ImportedProjectPayload } from '@campaigner/shared';
-import { demoProjectPayload } from './demoProject.payload.js';
+import { importProject, type ImportProjectOptions } from './projectImport.service.js';
+import {
+  getDemoProjectPayload,
+  mainBranchLabelForLocale,
+  type DemoProjectLocale,
+} from './demoProject.payload.js';
 
 const PROJECT_UPDATE_MAP: Record<string, string> = {
   name: 'name',
@@ -46,12 +49,13 @@ export class ProjectService {
 
     const projectId = result.lastInsertRowid as number;
     const mainBranchName = (data.mainBranchName?.trim() || 'Canon branch').slice(0, 120);
-    db.prepare(`
+    const branchResult = db.prepare(`
       INSERT INTO scenario_branches (project_id, name, is_main)
       VALUES (?, ?, 1)
     `).run(projectId, mainBranchName);
+    const mainBranchId = branchResult.lastInsertRowid as number;
     const mapService = new MapService();
-    mapService.createRootMapForProject(projectId);
+    mapService.createRootMapForProject(projectId, undefined, mainBranchId);
     CharacterTraitService.seedPredefined(projectId);
 
     return this.getById(projectId);
@@ -82,11 +86,14 @@ export class ProjectService {
     return exportProject(id);
   }
 
-  static importProject(data: ImportedProjectPayload): Project {
-    return importProject(data);
+  static importProject(data: ImportedProjectPayload, options?: ImportProjectOptions): Project {
+    return importProject(data, options);
   }
 
-  static createDemoProject(): Project {
-    return importProject(demoProjectPayload);
+  static createDemoProject(locale: DemoProjectLocale = 'en'): Project {
+    return importProject(getDemoProjectPayload(locale), {
+      appendImportNameSuffix: false,
+      mainBranchName: mainBranchLabelForLocale(locale),
+    });
   }
 }

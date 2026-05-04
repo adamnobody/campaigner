@@ -5,8 +5,9 @@ import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers.js';
 import { BranchOverlayService } from './branchOverlay.service.js';
 import {
-  branchCreatedScopeSql,
-  isRowVisibleForActiveBranch,
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
   resolveCreatedBranchId,
   assertBranchBelongsToProject,
 } from './branchScope.js';
@@ -103,7 +104,8 @@ export class NoteService {
     const sortColumn = allowedSortColumns[sortBy] || 'updated_at';
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
-    const scope = branchCreatedScopeSql(branchId);
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
     const scopedWhere = `${whereClause}${scope.sql}`;
     const listParams = [...params, ...scope.params];
 
@@ -168,13 +170,18 @@ export class NoteService {
       WHERE id = ?
     `).get(id) as NoteRow | undefined;
 
-    if (row && !isRowVisibleForActiveBranch(row.createdBranchId, branchId)) {
+    if (!row) {
       throw new NotFoundError('Note');
     }
 
-    const projectedRow = branchId
-      ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'note'))
-      : row ?? null;
+    const viewBranch = effectiveBranchIdForRead(row.projectId, branchId);
+    if (!isEntityVisibleInBranch(row.projectId, viewBranch, row.createdBranchId, row.createdAt)) {
+      throw new NotFoundError('Note');
+    }
+
+    const projectedRow = viewBranch
+      ? BranchOverlayService.applyItemOverlay(row, BranchOverlayService.getOverrides(viewBranch, 'note'))
+      : row;
 
     if (!projectedRow) {
       throw new NotFoundError('Note');
@@ -207,7 +214,8 @@ export class NoteService {
       createdBranchId,
     );
 
-    return this.getById(result.lastInsertRowid as number, requestBranchId);
+    const viewBranch = requestBranchId ?? effectiveBranchIdForRead(data.projectId, undefined);
+    return this.getById(result.lastInsertRowid as number, viewBranch);
   }
 
   static update(id: number, data: UpdateNote, branchId?: number): Note {
