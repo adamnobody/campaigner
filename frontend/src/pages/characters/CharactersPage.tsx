@@ -10,6 +10,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -21,6 +22,7 @@ import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { routes } from '@/utils/routes';
 
 export const CharactersPage: React.FC = () => {
+  const { t } = useTranslation(['characters', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -61,14 +63,18 @@ export const CharactersPage: React.FC = () => {
 
   const handleDelete = (ch: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    showConfirmDialog('Удалить персонажа', `Удалить "${ch.name}"?`, async () => {
-      try {
-        await deleteCharacter(ch.id);
-        showSnackbar('Персонаж удалён', 'success');
-      } catch {
-        showSnackbar('Ошибка удаления', 'error');
+    showConfirmDialog(
+      t('characters:confirm.deleteCharacterTitle'),
+      t('characters:confirm.deleteCharacterListMessage', { name: ch.name }),
+      async () => {
+        try {
+          await deleteCharacter(ch.id);
+          showSnackbar(t('characters:snackbar.characterDeleted'), 'success');
+        } catch {
+          showSnackbar(t('characters:snackbar.deleteFailed'), 'error');
+        }
       }
-    });
+    );
   };
 
   const handleReset = () => {
@@ -79,7 +85,7 @@ export const CharactersPage: React.FC = () => {
   if (loading && characters.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
       </Box>
     );
   }
@@ -89,10 +95,10 @@ export const CharactersPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            Персонажи
+            {t('characters:page.title')}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Действующие лица вашей истории
+            {t('characters:page.subtitle')}
           </Typography>
         </Box>
         <Box display="flex" gap={1}>
@@ -102,14 +108,14 @@ export const CharactersPage: React.FC = () => {
             onClick={() => navigate(routes.charactersGraph(pid))}
             sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}
           >
-            Граф связей
+            {t('characters:page.relationshipGraph')}
           </DndButton>
           <DndButton
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate(routes.characterDetail(pid, 'new'))}
           >
-            Добавить
+            {t('common:add')}
           </DndButton>
         </Box>
       </Box>
@@ -117,7 +123,7 @@ export const CharactersPage: React.FC = () => {
       {characters.length > 0 && (
         <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
-            placeholder="Поиск по имени..."
+            placeholder={t('characters:page.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             sx={{
@@ -140,7 +146,7 @@ export const CharactersPage: React.FC = () => {
               onChange={(e) => setSelectedTag(e.target.value)}
               displayEmpty
             >
-              <MenuItem value="">Все теги</MenuItem>
+              <MenuItem value="">{t('characters:page.allTags')}</MenuItem>
               {tags.map((tag: any) => (
                 <MenuItem key={tag.id} value={tag.name}>
                   {tag.name}
@@ -156,12 +162,12 @@ export const CharactersPage: React.FC = () => {
               size="small"
               sx={{ borderColor: alpha(theme.palette.primary.main, 0.5), textTransform: 'none' }}
             >
-              Сброс
+              {t('common:reset')}
             </Button>
           )}
 
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
-            {filtered.length} из {characters.length}
+            {t('characters:page.count', { filtered: filtered.length, total: characters.length })}
           </Typography>
         </GlassCard>
       )}
@@ -169,17 +175,17 @@ export const CharactersPage: React.FC = () => {
       {characters.length === 0 ? (
         <EmptyState
           icon={<PersonIcon sx={{ fontSize: 64 }} />}
-          title="Персонажи не найдены"
-          description="Создайте первого персонажа вашей истории"
-          actionLabel="Создать персонажа"
+          title={t('characters:page.empty.noCharacters.title')}
+          description={t('characters:page.empty.noCharacters.description')}
+          actionLabel={t('characters:page.empty.noCharacters.action')}
           onAction={() => navigate(routes.characterDetail(pid, 'new'))}
         />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<SearchIcon sx={{ fontSize: 64 }} />}
-          title="Ничего не найдено"
-          description="Попробуйте изменить параметры поиска или фильтры"
-          actionLabel="Сбросить фильтры"
+          title={t('characters:page.empty.noMatch.title')}
+          description={t('characters:page.empty.noMatch.description')}
+          actionLabel={t('characters:page.empty.noMatch.action')}
           onAction={handleReset}
         />
       ) : (

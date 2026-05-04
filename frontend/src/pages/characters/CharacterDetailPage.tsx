@@ -20,6 +20,7 @@ import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import FaceIcon from '@mui/icons-material/Face';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CharacterTraitsTab } from '@/pages/characters/components/CharacterTraitsTab';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { factionsApi } from '@/api/factions';
@@ -35,31 +36,17 @@ import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { routes } from '@/utils/routes';
+import {
+  RELATIONSHIP_TYPE_KEYS,
+  type RelationshipTypeKey,
+} from '@/pages/characters/graph/graphConstants';
 
 // ==================== Constants ====================
 
-const RELATIONSHIP_TYPES = [
-  'ally', 'enemy', 'family', 'friend', 'rival',
-  'mentor', 'student', 'lover', 'spouse',
-  'employer', 'employee', 'custom',
-] as const;
-
-type RelationshipType = typeof RELATIONSHIP_TYPES[number];
+type RelationshipType = RelationshipTypeKey;
 
 const isRelationshipType = (value: string): value is RelationshipType =>
-  RELATIONSHIP_TYPES.includes(value as RelationshipType);
-
-const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
-  ally: 'Союзник', enemy: 'Враг', family: 'Семья', friend: 'Друг',
-  rival: 'Соперник', mentor: 'Наставник', student: 'Ученик',
-  lover: 'Возлюбленный', spouse: 'Супруг', employer: 'Работодатель',
-  employee: 'Работник', custom: 'Другое',
-};
-
-const getRelationshipLabel = (value: unknown): string => {
-  if (typeof value === 'string' && isRelationshipType(value)) return RELATIONSHIP_LABELS[value];
-  return String(value ?? 'custom');
-};
+  (RELATIONSHIP_TYPE_KEYS as readonly string[]).includes(value);
 
 const getRelationshipColor = (value: unknown, theme: any): string => {
   if (typeof value === 'string' && isRelationshipType(value)) {
@@ -109,6 +96,7 @@ const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) =
 // ==================== Component ====================
 
 export const CharacterDetailPage: React.FC = () => {
+  const { t } = useTranslation(['characters', 'common']);
   const { projectId, characterId } = useParams<{ projectId: string; characterId: string }>();
   const pid = parseInt(projectId!);
   const isNew = !characterId || characterId === 'new';
@@ -148,6 +136,13 @@ export const CharacterDetailPage: React.FC = () => {
     fetchTags: state.fetchTags,
     findOrCreateTagsByNames: state.findOrCreateTagsByNames,
   }), shallow);
+
+  const getRelationshipLabel = (value: unknown): string => {
+    if (typeof value === 'string' && isRelationshipType(value)) {
+      return t(`relationshipTypes.${value}`);
+    }
+    return String(value ?? '');
+  };
 
   const [form, setForm] = useState<CharacterForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -193,8 +188,8 @@ export const CharacterDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (isNew) { setForm(EMPTY_FORM); setCurrentCharacter(null); setTagsInput(''); return; }
-    fetchCharacter(parseInt(characterId!)).catch(() => showSnackbar('Ошибка загрузки', 'error'));
-  }, [characterId, isNew]);
+    fetchCharacter(parseInt(characterId!)).catch(() => showSnackbar(t('snackbar.loadError'), 'error'));
+  }, [characterId, isNew, fetchCharacter, showSnackbar, t]);
 
   useEffect(() => {
     if (isNew || !currentCharacter || currentCharacter.id !== parseInt(characterId!)) return;
@@ -252,7 +247,7 @@ export const CharacterDetailPage: React.FC = () => {
   // ==================== Actions ====================
 
   const handleSave = async () => {
-    if (!form.name.trim()) { showSnackbar('Введите имя', 'error'); return; }
+    if (!form.name.trim()) { showSnackbar(t('snackbar.nameRequired'), 'error'); return; }
     setSaving(true);
     try {
       const payload = {
@@ -267,29 +262,32 @@ export const CharacterDetailPage: React.FC = () => {
         const created = await createCharacter({ ...payload, projectId: pid });
         if (finalTags.trim()) await saveTagsForCharacter(created.id, finalTags);
         setTagsInput('');
-        showSnackbar('Персонаж создан!', 'success');
+        showSnackbar(t('snackbar.characterCreated'), 'success');
         navigate(routes.characterDetail(pid, created.id), { replace: true });
       } else {
         await updateCharacter(cid, payload);
         await saveTagsForCharacter(cid, finalTags);
         setTagsInput('');
-        showSnackbar('Персонаж обновлён!', 'success');
+        showSnackbar(t('snackbar.characterUpdated'), 'success');
       }
-    } catch (err: any) { showSnackbar(err.message || 'Ошибка', 'error'); }
+    } catch (err: any) { showSnackbar(err.message || t('snackbar.genericError'), 'error'); }
     finally { setSaving(false); }
   };
 
   const handleDelete = () => {
     if (isNew) return;
-    showConfirmDialog('Удалить персонажа', `Удалить "${form.name}"? Все связи тоже будут удалены.`, async () => {
-      try { await deleteCharacter(cid); showSnackbar('Удалён', 'success'); navigate(routes.characters(pid)); }
-      catch { showSnackbar('Ошибка', 'error'); }
+    showConfirmDialog(
+      t('confirm.deleteCharacterTitle'),
+      t('confirm.deleteCharacterMessage', { name: form.name }),
+      async () => {
+      try { await deleteCharacter(cid); showSnackbar(t('snackbar.deleted'), 'success'); navigate(routes.characters(pid)); }
+      catch { showSnackbar(t('snackbar.genericError'), 'error'); }
     });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || isNew) return;
-    try { await uploadImage(cid, file); showSnackbar('Фото загружено!', 'success'); } catch { showSnackbar('Ошибка', 'error'); }
+    try { await uploadImage(cid, file); showSnackbar(t('snackbar.photoUploaded'), 'success'); } catch { showSnackbar(t('snackbar.genericError'), 'error'); }
   };
 
   const handleAddRelationship = async () => {
@@ -303,25 +301,28 @@ export const CharacterDetailPage: React.FC = () => {
       await fetchRelationships(pid);
       setRelDialogOpen(false);
       setRelForm({ targetId: '', type: 'ally', description: '' });
-      showSnackbar('Связь добавлена!', 'success');
-    } catch (err: any) { showSnackbar(err.message || 'Ошибка', 'error'); }
+      showSnackbar(t('snackbar.relationshipAdded'), 'success');
+    } catch (err: any) { showSnackbar(err.message || t('snackbar.genericError'), 'error'); }
   };
 
   const handleDeleteRelationship = (relId: number) => {
-    showConfirmDialog('Удалить связь', 'Удалить?', async () => {
-      try { await deleteRelationship(relId); showSnackbar('Удалена', 'success'); } catch { showSnackbar('Ошибка', 'error'); }
+    showConfirmDialog(
+      t('detail.confirmDeleteRelationship.title'),
+      t('detail.confirmDeleteRelationship.message'),
+      async () => {
+      try { await deleteRelationship(relId); showSnackbar(t('snackbar.relationshipRemoved'), 'success'); } catch { showSnackbar(t('snackbar.genericError'), 'error'); }
     });
   };
 
   if (loading && !isNew && !currentCharacter) {
-    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography></Box>;
+    return <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh"><Typography sx={{ color: 'text.secondary' }}>{t('detail.loading')}</Typography></Box>;
   }
 
   return (
     <Box>
       <Box display="flex" alignItems="center" mb={2}>
         <IconButton onClick={() => navigate(routes.characters(pid))} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
-        <Typography variant="body2" color="text.secondary">К списку персонажей</Typography>
+        <Typography variant="body2" color="text.secondary">{t('detail.backToList')}</Typography>
       </Box>
 
       <EntityHeroLayout
@@ -334,13 +335,13 @@ export const CharacterDetailPage: React.FC = () => {
             </Avatar>
           )
         }
-        title={isNew ? 'Новый персонаж' : form.name || 'Персонаж'}
+        title={isNew ? t('detail.newCharacter') : (form.name || t('detail.fallbackName'))}
         subtitle={form.title ? `— ${form.title}` : undefined}
         actionButtons={
           <>
-            {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">Удалить</Button>}
+            {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">{t('common:delete')}</Button>}
             <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
-              {isNew ? 'Создать' : 'Сохранить'}
+              {isNew ? t('common:create') : t('common:save')}
             </DndButton>
           </>
         }
@@ -350,9 +351,9 @@ export const CharacterDetailPage: React.FC = () => {
         value={activeTab}
         onChange={(_, v) => setActiveTab(v)}
         tabs={[
-          { value: 'overview', label: 'Обзор', icon: <EditIcon fontSize="small" /> },
-          { value: 'traits', label: 'Характер', icon: <PsychologyIcon fontSize="small" /> },
-          { value: 'relations', label: 'Связи', icon: <GroupsIcon fontSize="small" /> },
+          { value: 'overview', label: t('detail.tabs.overview'), icon: <EditIcon fontSize="small" /> },
+          { value: 'traits', label: t('detail.tabs.traits'), icon: <PsychologyIcon fontSize="small" /> },
+          { value: 'relations', label: t('detail.tabs.relations'), icon: <GroupsIcon fontSize="small" /> },
         ]}
       />
 
@@ -361,21 +362,21 @@ export const CharacterDetailPage: React.FC = () => {
           {/* LEFT SIDEBAR */}
           <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
             <GlassCard sx={{ p: 3, position: 'sticky', top: 80 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Сводка</Typography>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>{t('detail.summary.title')}</Typography>
               
               {!isNew && (
                 <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small"
                   sx={{ borderColor: alpha(theme.palette.divider, 0.5), mb: 3, fontSize: '0.75rem' }}>
-                  Загрузить фото
+                  {t('detail.summary.uploadPhoto')}
                   <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml,image/webp" onChange={handleImageUpload} />
                 </Button>
               )}
 
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {form.title && <InfoRow label="Титул" value={form.title} />}
+                {form.title && <InfoRow label={t('detail.summary.titleLabel')} value={form.title} />}
                 {form.bio && (
                   <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>Описание</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{t('detail.summary.descriptionLabel')}</Typography>
                     <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.85rem' }}>
                       {form.bio.length > 120 ? form.bio.slice(0, 120) + '…' : form.bio}
                     </Typography>
@@ -383,7 +384,7 @@ export const CharacterDetailPage: React.FC = () => {
                 )}
                 {previewTagsStr.trim() && (
                   <Box sx={{ mt: 1 }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>Теги</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>{t('detail.summary.tagsLabel')}</Typography>
                     <Box display="flex" gap={0.5} flexWrap="wrap">
                       {previewTagsStr.split(',').map((t, i) => { const s = t.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 24, fontSize: '0.75rem' }} /> : null; })}
                     </Box>
@@ -396,26 +397,26 @@ export const CharacterDetailPage: React.FC = () => {
           {/* MAIN CONTENT */}
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             {/* Basic Info */}
-            <Section title="Основное" icon={<EditIcon />} defaultOpen={true}>
+            <Section title={t('detail.sections.basics')} icon={<EditIcon />} defaultOpen={true}>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <TextField fullWidth label="Имя *" value={form.name} onChange={e => handleChange('name', e.target.value)} />
+                  <TextField fullWidth label={t('detail.fields.name')} value={form.name} onChange={e => handleChange('name', e.target.value)} />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField fullWidth label="Титул / Прозвище" value={form.title} onChange={e => handleChange('title', e.target.value)} placeholder="напр. Король Севера" />
+                  <TextField fullWidth label={t('detail.fields.title')} value={form.title} onChange={e => handleChange('title', e.target.value)} placeholder={t('detail.placeholders.titleExample')} />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField fullWidth label="Краткое описание" value={form.bio} onChange={e => handleChange('bio', e.target.value)} multiline rows={3} placeholder="Кто этот персонаж..." />
+                  <TextField fullWidth label={t('detail.fields.bio')} value={form.bio} onChange={e => handleChange('bio', e.target.value)} multiline rows={3} placeholder={t('detail.placeholders.bio')} />
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Государство</InputLabel>
+                    <InputLabel>{t('detail.fields.state')}</InputLabel>
                     <Select
                       value={form.stateId}
-                      label="Государство"
+                      label={t('detail.fields.state')}
                       onChange={e => setForm(prev => ({ ...prev, stateId: e.target.value }))}
                     >
-                      <MenuItem value="">Не указано</MenuItem>
+                      <MenuItem value="">{t('detail.stateNotSpecified')}</MenuItem>
                       {stateOptions.map((item) => (
                         <MenuItem key={item.id} value={String(item.id)}>{item.name}</MenuItem>
                       ))}
@@ -429,33 +430,42 @@ export const CharacterDetailPage: React.FC = () => {
                     getOptionLabel={(option) => option.name}
                     value={factionOptions.filter((option) => form.factionIds.includes(option.id))}
                     onChange={(_, value) => setForm(prev => ({ ...prev, factionIds: value.map((item) => item.id) }))}
-                    renderInput={(params) => <TextField {...params} label="Фракции" placeholder="Выберите фракции" />}
+                    renderInput={(params) => <TextField {...params} label={t('detail.fields.factions')} placeholder={t('detail.placeholders.factions')} />}
                     disableCloseOnSelect
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <TagAutocompleteField options={allTagNames} value={form.tagsStr} pendingInput={tagsInput} onValueChange={v => handleChange('tagsStr', v)} onPendingInputChange={setTagsInput} />
+                  <TagAutocompleteField
+                    options={allTagNames}
+                    value={form.tagsStr}
+                    pendingInput={tagsInput}
+                    onValueChange={v => handleChange('tagsStr', v)}
+                    onPendingInputChange={setTagsInput}
+                    label={t('detail.summary.tagsLabel')}
+                    placeholder={t('detail.placeholders.tags')}
+                    noOptionsText={t('detail.placeholders.tagNewOption')}
+                  />
                 </Grid>
               </Grid>
             </Section>
 
             {/* Appearance */}
-            <Section title="Внешность" icon={<FaceIcon />} defaultOpen={!isNew && !!form.appearance}>
+            <Section title={t('detail.sections.appearance')} icon={<FaceIcon />} defaultOpen={!isNew && !!form.appearance}>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
-                  <TextField fullWidth label="Внешность" value={form.appearance} onChange={e => handleChange('appearance', e.target.value)} multiline rows={5} placeholder="Опишите внешний вид персонажа..." />
+                  <TextField fullWidth label={t('detail.fields.appearance')} value={form.appearance} onChange={e => handleChange('appearance', e.target.value)} multiline rows={5} placeholder={t('detail.placeholders.appearance')} />
                 </Grid>
               </Grid>
             </Section>
 
             {/* Backstory & Notes */}
-            <Section title="История и заметки" icon={<AutoStoriesIcon />} defaultOpen={!isNew && (!!form.backstory || !!form.notes)}>
+            <Section title={t('detail.sections.historyNotes')} icon={<AutoStoriesIcon />} defaultOpen={!isNew && (!!form.backstory || !!form.notes)}>
               <Grid container spacing={2}>
                 <Grid item xs={12}>
-                  <TextField fullWidth label="Предыстория" value={form.backstory} onChange={e => handleChange('backstory', e.target.value)} multiline rows={7} placeholder="Откуда пришёл этот персонаж..." />
+                  <TextField fullWidth label={t('detail.fields.backstory')} value={form.backstory} onChange={e => handleChange('backstory', e.target.value)} multiline rows={7} placeholder={t('detail.placeholders.backstory')} />
                 </Grid>
                 <Grid item xs={12}>
-                  <TextField fullWidth label="Заметки" value={form.notes} onChange={e => handleChange('notes', e.target.value)} multiline rows={4} placeholder="Секреты, планы, идеи..." />
+                  <TextField fullWidth label={t('detail.fields.notes')} value={form.notes} onChange={e => handleChange('notes', e.target.value)} multiline rows={4} placeholder={t('detail.placeholders.notes')} />
                 </Grid>
               </Grid>
             </Section>
@@ -471,10 +481,10 @@ export const CharacterDetailPage: React.FC = () => {
         <Box>
           {/* Relationships */}
           {!isNew && (
-            <Section title="Связи" icon={<GroupsIcon />} badge={allRelsForDisplay.length} defaultOpen={true}
-              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => setRelDialogOpen(true)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>Добавить</DndButton>}>
+            <Section title={t('detail.sections.relationships')} icon={<GroupsIcon />} badge={allRelsForDisplay.length} defaultOpen={true}
+              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => setRelDialogOpen(true)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>{t('common:add')}</DndButton>}>
               {allRelsForDisplay.length === 0 ? (
-                <EmptyState icon={<GroupsIcon />} title="Нет связей" description="Добавьте связи с другими персонажами" actionLabel="Добавить связь" onAction={() => setRelDialogOpen(true)} />
+                <EmptyState icon={<GroupsIcon />} title={t('detail.relationships.emptyTitle')} description={t('detail.relationships.emptyDescription')} actionLabel={t('detail.relationships.addLink')} onAction={() => setRelDialogOpen(true)} />
               ) : (
                 <List disablePadding>
                   {allRelsForDisplay.map((rel: any) => {
@@ -520,36 +530,36 @@ export const CharacterDetailPage: React.FC = () => {
       {/* Relationship Dialog */}
       <Dialog open={relDialogOpen} onClose={() => setRelDialogOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Добавить связь</DialogTitle>
+        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('detail.relationships.dialogTitle')}</DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
-            <InputLabel>С кем</InputLabel>
-            <Select value={relForm.targetId} label="С кем" onChange={e => setRelForm(prev => ({ ...prev, targetId: e.target.value }))}>
+            <InputLabel>{t('detail.relationships.withWhom')}</InputLabel>
+            <Select value={relForm.targetId} label={t('detail.relationships.withWhom')} onChange={e => setRelForm(prev => ({ ...prev, targetId: e.target.value }))}>
               {allCharacters.map((ch: any) => (
                 <MenuItem key={ch.id} value={String(ch.id)}>{ch.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
           <FormControl fullWidth margin="normal">
-            <InputLabel>Тип связи</InputLabel>
-            <Select<RelationshipType> value={relForm.type} label="Тип связи" onChange={handleRelationshipTypeChange}>
-              {RELATIONSHIP_TYPES.map(t => (
-                <MenuItem key={t} value={t}>
+            <InputLabel>{t('detail.relationships.type')}</InputLabel>
+            <Select<RelationshipType> value={relForm.type} label={t('detail.relationships.type')} onChange={handleRelationshipTypeChange}>
+              {RELATIONSHIP_TYPE_KEYS.map((rt) => (
+                <MenuItem key={rt} value={rt}>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: getRelationshipColor(t, theme) }} />
-                    {RELATIONSHIP_LABELS[t]}
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: getRelationshipColor(rt, theme) }} />
+                    {t(`relationshipTypes.${rt}`)}
                   </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          <TextField fullWidth label="Описание связи" value={relForm.description}
+          <TextField fullWidth label={t('detail.fields.relationshipDescription')} value={relForm.description}
             onChange={e => setRelForm(prev => ({ ...prev, description: e.target.value }))}
-            margin="normal" multiline rows={2} placeholder="Подробности отношений..." />
+            margin="normal" multiline rows={2} placeholder={t('detail.placeholders.relationship')} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setRelDialogOpen(false)} color="inherit">Отмена</Button>
-          <DndButton variant="contained" onClick={handleAddRelationship} disabled={!relForm.targetId}>Добавить</DndButton>
+          <Button onClick={() => setRelDialogOpen(false)} color="inherit">{t('common:cancel')}</Button>
+          <DndButton variant="contained" onClick={handleAddRelationship} disabled={!relForm.targetId}>{t('detail.relationships.addButton')}</DndButton>
         </DialogActions>
       </Dialog>
     </Box>

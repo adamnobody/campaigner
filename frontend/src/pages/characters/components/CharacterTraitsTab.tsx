@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import { shallow } from 'zustand/shallow';
 import type { CharacterTrait } from '@campaigner/shared';
@@ -26,6 +27,7 @@ function mapTraitCatalogRow(trait: CharacterTrait): TraitCatalogRow {
 }
 
 export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectId, characterId }) => {
+  const { t } = useTranslation(['characters', 'common']);
   const {
     traits,
     assignedTraitIds,
@@ -106,14 +108,14 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
 
   const handleDeleteTrait = (traitId: number, traitName: string) => {
     showConfirmDialog(
-      'Удалить черту',
-      `Удалить черту «${traitName}»?\nОна будет убрана у всех персонажей проекта.\nЭто действие нельзя отменить.`,
+      t('traits.confirmDeleteTitle'),
+      t('traits.confirmDeleteMessage', { name: traitName }),
       async () => {
         try {
           await deleteTrait(traitId);
-          showSnackbar('Черта удалена', 'success');
+          showSnackbar(t('traits.deleted'), 'success');
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Не удалось удалить черту';
+          const message = error instanceof Error ? error.message : t('traits.deleteFailed');
           showSnackbar(message, 'error');
         }
       }
@@ -123,21 +125,21 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
   return (
     <ExclusionCatalogTab<TraitCatalogRow, object>
       projectId={projectId}
-      title="Черты характера"
+      title={t('traits.tabTitle')}
       icon={<PsychologyIcon sx={{ fontSize: '1.2rem' }} />}
-      addButtonLabel="Добавить черту"
-      catalogDialogTitle="Каталог черт характера"
-      createTabDescription="Создайте пользовательскую черту для текущего проекта. После сохранения она сразу появится в каталоге."
-      createButtonLabel="Создать черту"
-      emptyNotSavedTitle="Сначала сохраните персонажа"
-      emptyNotSavedDescription="После сохранения можно выбирать и настраивать черты характера."
-      emptyNoAssignedTitle="Черты пока не выбраны"
-      emptyNoAssignedDescription="Откройте каталог, чтобы прикрепить встроенные или пользовательские черты."
-      emptyNoAssignedActionLabel="Открыть каталог"
+      addButtonLabel={t('traits.addTrait')}
+      catalogDialogTitle={t('traits.catalogTitle')}
+      createTabDescription={t('traits.createTabDescription')}
+      createButtonLabel={t('traits.createTrait')}
+      emptyNotSavedTitle={t('traits.emptyNotSavedTitle')}
+      emptyNotSavedDescription={t('traits.emptyNotSavedDescription')}
+      emptyNoAssignedTitle={t('traits.emptyNoAssignedTitle')}
+      emptyNoAssignedDescription={t('traits.emptyNoAssignedDescription')}
+      emptyNoAssignedActionLabel={t('traits.openCatalog')}
       emptyStateIcon={<PsychologyIcon />}
-      conflictAlertText="Обнаружены конфликтующие черты. Удалите лишние для корректной работы."
-      exclusionsDialogLabel="Исключает черты:"
-      exclusionsSavedSnackbar="Исключения черты обновлены"
+      conflictAlertText={t('traits.conflictAlert')}
+      exclusionsDialogLabel={t('traits.exclusionsLabel')}
+      exclusionsSavedSnackbar={t('traits.exclusionsSaved')}
       exclusionsCatalog={traits}
       items={items}
       assignedMainItems={assignedMainItems}

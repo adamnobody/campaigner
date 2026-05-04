@@ -1,1 +1,160 @@
-{}
+{
+  "page": {
+    "title": "Characters",
+    "subtitle": "The cast of your story",
+    "relationshipGraph": "Relationship graph",
+    "searchPlaceholder": "Search by name...",
+    "allTags": "All tags",
+    "count": "{{filtered}} of {{total}}",
+    "empty": {
+      "noCharacters": {
+        "title": "No characters found",
+        "description": "Create the first character for your story",
+        "action": "Create character"
+      },
+      "noMatch": {
+        "title": "Nothing found",
+        "description": "Try changing search or filters",
+        "action": "Reset filters"
+      }
+    }
+  },
+  "detail": {
+    "backToList": "Back to character list",
+    "newCharacter": "New character",
+    "fallbackName": "Character",
+    "loading": "Loading...",
+    "tabs": {
+      "overview": "Overview",
+      "traits": "Character",
+      "relations": "Relationships"
+    },
+    "summary": {
+      "title": "Summary",
+      "uploadPhoto": "Upload photo",
+      "titleLabel": "Title",
+      "descriptionLabel": "Description",
+      "tagsLabel": "Tags"
+    },
+    "sections": {
+      "basics": "Basics",
+      "appearance": "Appearance",
+      "historyNotes": "History & notes",
+      "relationships": "Relationships"
+    },
+    "fields": {
+      "name": "Name *",
+      "title": "Title / nickname",
+      "bio": "Short description",
+      "state": "State",
+      "factions": "Factions",
+      "appearance": "Appearance",
+      "backstory": "Backstory",
+      "notes": "Notes",
+      "relationshipDescription": "Relationship notes"
+    },
+    "placeholders": {
+      "titleExample": "e.g. King in the North",
+      "bio": "Who is this character...",
+      "factions": "Select factions",
+      "appearance": "Describe how the character looks...",
+      "backstory": "Where this character came from...",
+      "notes": "Secrets, plans, ideas...",
+      "relationship": "More about the relationship...",
+      "tags": "Select or type...",
+      "tagNewOption": "Type a new tag"
+    },
+    "stateNotSpecified": "Not specified",
+    "relationships": {
+      "addLink": "Add link",
+      "emptyTitle": "No relationships",
+      "emptyDescription": "Add links to other characters",
+      "dialogTitle": "Add link",
+      "withWhom": "With whom",
+      "type": "Relationship type",
+      "addButton": "Add"
+    },
+    "confirmDeleteRelationship": {
+      "title": "Remove link",
+      "message": "Remove this link?"
+    }
+  },
+  "graph": {
+    "loading": "Loading graph...",
+    "title": "Relationship graph",
+    "hint": "Drag a node to move · Double-click to open · Drag background to pan · Wheel to zoom",
+    "empty": "No characters to display",
+    "backToList": "Back to list",
+    "legendTitle": "Links",
+    "characterCount": "{{count}} characters",
+    "edgeCount": "{{count}} links",
+    "open": "Open",
+    "closePanel": "Close"
+  },
+  "relationshipTypes": {
+    "ally": "Ally",
+    "enemy": "Enemy",
+    "family": "Family",
+    "friend": "Friend",
+    "rival": "Rival",
+    "mentor": "Mentor",
+    "student": "Student",
+    "lover": "Lover",
+    "spouse": "Spouse",
+    "employer": "Employer",
+    "employee": "Employee",
+    "custom": "Other"
+  },
+  "traits": {
+    "tabTitle": "Traits",
+    "addTrait": "Add trait",
+    "catalogTitle": "Trait catalog",
+    "createTabDescription": "Create a custom trait for this project. After saving it appears in the catalog immediately.",
+    "createTrait": "Create trait",
+    "emptyNotSavedTitle": "Save the character first",
+    "emptyNotSavedDescription": "After saving you can pick and configure traits.",
+    "emptyNoAssignedTitle": "No traits yet",
+    "emptyNoAssignedDescription": "Open the catalog to attach built-in or custom traits.",
+    "openCatalog": "Open catalog",
+    "conflictAlert": "Conflicting traits detected. Remove extras for everything to work correctly.",
+    "exclusionsLabel": "Excludes traits:",
+    "exclusionsSaved": "Trait exclusions updated",
+    "confirmDeleteTitle": "Delete trait",
+    "confirmDeleteMessage": "Delete trait «{{name}}»?\nIt will be removed from all characters in the project.\nThis cannot be undone.",
+    "deleted": "Trait removed",
+    "deleteFailed": "Could not delete trait",
+    "tooltipConfigureExclusions": "Configure exclusions",
+    "detach": "Detach",
+    "attach": "Attach",
+    "createDialogTitle": "New trait",
+    "fieldName": "Name",
+    "fieldDescription": "Description",
+    "exclusionsAutocompletePlaceholder": "Select traits",
+    "uploadImage": "Upload image",
+    "imageFormatsHint": "Allowed formats: jpg, png, webp. Max: {{maxMb}} MB",
+    "noImageHint": "Without an image, a letter avatar will be used",
+    "fileInvalidType": "Allowed formats: jpg, png, webp",
+    "fileTooLarge": "Maximum file size: {{maxMb}} MB",
+    "created": "Trait created",
+    "createFailed": "Could not create trait",
+    "previewAlt": "Trait preview"
+  },
+  "snackbar": {
+    "loadError": "Failed to load",
+    "nameRequired": "Enter a name",
+    "characterCreated": "Character created!",
+    "characterUpdated": "Character updated!",
+    "genericError": "Error",
+    "deleted": "Removed",
+    "photoUploaded": "Photo uploaded!",
+    "relationshipAdded": "Link added!",
+    "relationshipRemoved": "Removed",
+    "characterDeleted": "Character deleted",
+    "deleteFailed": "Delete failed"
+  },
+  "confirm": {
+    "deleteCharacterTitle": "Delete character",
+    "deleteCharacterMessage": "Delete \"{{name}}\"? All links will be removed as well.",
+    "deleteCharacterListMessage": "Delete \"{{name}}\"?"
+  }
+}

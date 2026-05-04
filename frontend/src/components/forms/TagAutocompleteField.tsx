@@ -8,6 +8,7 @@ interface TagAutocompleteFieldProps {
   pendingInput: string;
   label?: string;
   placeholder?: string;
+  noOptionsText?: string;
   helperText?: string;
   margin?: 'none' | 'dense' | 'normal';
   onValueChange: (value: string) => void;
@@ -20,6 +21,7 @@ export const TagAutocompleteField: React.FC<TagAutocompleteFieldProps> = ({
   pendingInput,
   label = 'Теги',
   placeholder = 'Выберите или введите...',
+  noOptionsText = 'Введите новый тег',
   helperText,
   margin = 'none',
   onValueChange,
@@ -73,7 +75,7 @@ export const TagAutocompleteField: React.FC<TagAutocompleteFieldProps> = ({
           }}
         />
       )}
-      noOptionsText="Введите новый тег"
+      noOptionsText={noOptionsText}
       sx={{
         '& .MuiAutocomplete-clearIndicator': {
           color: 'rgba(255,255,255,0.3)',

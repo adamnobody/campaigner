@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Autocomplete,
   Box,
@@ -39,6 +40,8 @@ const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const ACCEPT_HINT = 'image/jpeg,image/png,image/webp';
 
 export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onClose, projectId }) => {
+  const { t } = useTranslation(['characters', 'common']);
+  const maxMb = Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024));
   const traits = useCharacterTraitsStore((s) => s.traits);
   const createTrait = useCharacterTraitsStore((s) => s.createTrait);
   const showSnackbar = useUIStore((s) => s.showSnackbar);
@@ -74,10 +77,10 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
 
   const validateFile = (candidate: File): string | null => {
     if (!ACCEPTED_MIME_TYPES.includes(candidate.type as (typeof ACCEPTED_MIME_TYPES)[number])) {
-      return 'Допустимые форматы: jpg, png, webp';
+      return t('traits.fileInvalidType');
     }
     if (candidate.size > LIMITS.MAX_FILE_SIZE) {
-      return `Максимальный размер файла: ${Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024))}MB`;
+      return t('traits.fileTooLarge', { maxMb });
     }
     return null;
   };
@@ -141,10 +144,10 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
         excludedIds,
       });
 
-      showSnackbar('Черта создана', 'success');
+      showSnackbar(t('traits.created'), 'success');
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Не удалось создать черту';
+      const message = error instanceof Error ? error.message : t('traits.createFailed');
       showSnackbar(message, 'error');
     } finally {
       setSubmitting(false);
@@ -153,13 +156,13 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
 
   return (
     <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>Новая черта характера</DialogTitle>
+      <DialogTitle>{t('traits.createDialogTitle')}</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
           required
-          label="Название"
+          label={t('traits.fieldName')}
           value={name}
           onChange={(e) => setName(e.target.value.slice(0, 50))}
           margin="normal"
@@ -170,7 +173,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
           required
           multiline
           rows={4}
-          label="Описание"
+          label={t('traits.fieldDescription')}
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 200))}
           margin="normal"
@@ -184,7 +187,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
             getOptionLabel={(option) => option.name}
             onChange={(_, value) => setExcludedIds(value.map((item) => item.id))}
             renderInput={(params) => (
-              <TextField {...params} label="Исключает черты:" placeholder="Выберите черты" />
+              <TextField {...params} label={t('traits.exclusionsLabel')} placeholder={t('traits.exclusionsAutocompletePlaceholder')} />
             )}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
@@ -203,16 +206,15 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
 
         <Box sx={{ mt: 2 }}>
           <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} disabled={submitting}>
-            Загрузить изображение
+            {t('traits.uploadImage')}
             <input type="file" hidden accept={ACCEPT_HINT} onChange={handleFileChange} />
           </Button>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            Допустимые форматы: jpg, png, webp. Максимум: {Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024))}
-            MB
+            {t('traits.imageFormatsHint', { maxMb })}
           </Typography>
           {!file && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Без изображения будет использован буквенный аватар
+              {t('traits.noImageHint')}
             </Typography>
           )}
         </Box>
@@ -232,7 +234,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
             <Box
               component="img"
               src={uploadAssetUrl(previewUrl) ?? previewUrl}
-              alt="Trait preview"
+              alt={t('traits.previewAlt')}
               sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
             <IconButton
@@ -255,10 +257,10 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={handleCancel} color="inherit" disabled={submitting}>
-          Отмена
+          {t('common:cancel')}
         </Button>
         <DndButton variant="contained" onClick={handleCreate} loading={submitting} disabled={!canSubmit}>
-          Создать
+          {t('common:create')}
         </DndButton>
       </DialogActions>
     </Dialog>

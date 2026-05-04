@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, alpha, useTheme, Tooltip, IconButton } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import BlockIcon from '@mui/icons-material/Block';
@@ -34,6 +35,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
   attachActionsDisabled = false,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['characters', 'common']);
   const firstLetter = [...name][0] ?? '?';
 
   return (
@@ -48,7 +50,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
           ? ({ imageFailed }) => (
               <>
                 {onConfigureExclusions && (
-                  <Tooltip title="Настроить исключения">
+                  <Tooltip title={t('traits.tooltipConfigureExclusions')}>
                     <IconButton
                       size="small"
                       onClick={() => onConfigureExclusions()}
@@ -85,7 +87,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
       }
       backBottomSlot={({ imageFailed }) =>
         isAttached ? (
-          <Tooltip title="Сначала сохраните персонажа" disableHoverListener={!attachActionsDisabled}>
+          <Tooltip title={t('traits.emptyNotSavedTitle')} disableHoverListener={!attachActionsDisabled}>
             <span>
               <Button
                 fullWidth
@@ -106,12 +108,12 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
                       }
                 }
               >
-                Открепить
+                {t('traits.detach')}
               </Button>
             </span>
           </Tooltip>
         ) : (
-          <Tooltip title="Сначала сохраните персонажа" disableHoverListener={!attachActionsDisabled}>
+          <Tooltip title={t('traits.emptyNotSavedTitle')} disableHoverListener={!attachActionsDisabled}>
             <span style={{ display: 'block', width: '100%' }}>
               <Button
                 fullWidth
@@ -121,7 +123,7 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
                 disabled={attachActionsDisabled || isBlocked}
                 onClick={() => onToggleAttach()}
               >
-                Прикрепить
+                {t('traits.attach')}
               </Button>
             </span>
           </Tooltip>
