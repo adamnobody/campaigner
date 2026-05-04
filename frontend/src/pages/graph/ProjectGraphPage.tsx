@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/ui/EmptyState';
 import HubIcon from '@mui/icons-material/Hub';
 import { buildProjectGraph } from '@/pages/graph/data/buildProjectGraph';
@@ -24,7 +25,6 @@ import {
   DEFAULT_PROJECT_GRAPH_PANEL_STATE,
   DEFAULT_PROJECT_GRAPH_VIEW_SETTINGS,
   GRAPH_EDGE_KIND_COLORS,
-  GRAPH_EDGE_KIND_LABELS,
   GRAPH_EDGE_KINDS,
   GRAPH_NODE_TYPE_COLORS,
   GRAPH_NODE_TYPES,
@@ -103,6 +103,7 @@ const panelPaperSx = (theme: Theme) => ({
 });
 
 export const ProjectGraphPage: React.FC = () => {
+  const { t, i18n } = useTranslation(['graph', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number.parseInt(projectId || '0', 10);
   const navigate = useNavigate();
@@ -177,7 +178,7 @@ export const ProjectGraphPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [pid]);
+  }, [pid, i18n.language]);
 
   const filteredGraph = useMemo(() => {
     const lowerSearch = search.trim().toLowerCase();
@@ -494,7 +495,7 @@ export const ProjectGraphPage: React.FC = () => {
           viewSettings.edgeLabels === 'on-hover'
           && (edge.source === hoveredNodeId || edge.target === hoveredNodeId || edge.source === selectedNodeId || edge.target === selectedNodeId)
         ) {
-          const edgeLabel = edge.label || GRAPH_EDGE_KIND_LABELS[edge.kind];
+          const edgeLabel = edge.label || i18n.t(`graph:edgeKinds.${edge.kind}`);
           const mx = (source.x + target.x) / 2;
           const my = (source.y + target.y) / 2;
           ctx.font = '11px system-ui,sans-serif';
@@ -588,6 +589,7 @@ export const ProjectGraphPage: React.FC = () => {
     centerCameraDefault,
     getNodeRadius,
     hoveredNodeId,
+    i18n.language,
     layoutPaused,
     loading,
     selectedNodeId,
@@ -751,7 +753,7 @@ export const ProjectGraphPage: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'text.secondary' }}>Загрузка графа проекта...</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('graph:page.loading')}</Typography>
       </Box>
     );
   }
@@ -760,8 +762,8 @@ export const ProjectGraphPage: React.FC = () => {
     return (
       <EmptyState
         icon={<HubIcon sx={{ fontSize: 64 }} />}
-        title="Нет данных для графа"
-        description="Добавьте персонажей, фракции, события или связи, чтобы увидеть граф проекта."
+        title={t('graph:page.emptyTitle')}
+        description={t('graph:page.emptyDescription')}
       />
     );
   }
@@ -787,7 +789,7 @@ export const ProjectGraphPage: React.FC = () => {
           flexShrink: 0,
         }}
       >
-        Граф проекта
+        {t('graph:page.title')}
       </Typography>
 
       <GraphToolbar
@@ -834,7 +836,7 @@ export const ProjectGraphPage: React.FC = () => {
         <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <GraphCanvasShell>
             <Box ref={wrapRef} sx={{ width: '100%', height: '100%', position: 'relative' }}>
-              <Tooltip title="Двойной клик по узлу открывает сущность">
+              <Tooltip title={t('graph:page.canvasDoubleClickHint')}>
                 <canvas
                   ref={canvasRef}
                   style={{

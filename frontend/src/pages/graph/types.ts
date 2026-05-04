@@ -83,45 +83,45 @@ export const DEFAULT_PROJECT_GRAPH_PANEL_STATE: ProjectGraphPanelState = {
   detailsOpen: true,
 };
 
-/** Подписи полей метаданных в панели узла (русский). */
+/** Fallback подписей полей метаданных (англ.); в UI используются ключи graph:metaLabels.* */
 export const GRAPH_PANEL_META_LABELS: Record<GraphNodeType, Record<string, string>> = {
   character: {
-    title: 'Титул / должность',
-    race: 'Раса',
-    characterClass: 'Класс / профессия',
-    level: 'Уровень',
+    title: 'Title / role',
+    race: 'Race',
+    characterClass: 'Class / profession',
+    level: 'Level',
   },
   faction: {
-    kind: 'Категория',
-    type: 'Тип организации',
+    kind: 'Category',
+    type: 'Organization type',
   },
   dynasty: {
-    motto: 'Девиз',
+    motto: 'Motto',
   },
   dogma: {
-    category: 'Категория',
-    importance: 'Важность',
+    category: 'Category',
+    importance: 'Importance',
   },
   timeline: {
-    era: 'Эпоха',
-    eventDate: 'Дата',
+    era: 'Era',
+    eventDate: 'Date',
   },
   note: {
-    noteType: 'Тип заметки',
+    noteType: 'Note type',
   },
   wiki: {
-    noteType: 'Тип записи',
+    noteType: 'Entry type',
   },
 };
 
 export const GRAPH_NODE_TYPE_LABELS: Record<GraphNodeType, string> = {
-  character: 'Персонажи',
-  faction: 'Фракции/государства',
-  dynasty: 'Династии',
-  dogma: 'Догмы',
-  timeline: 'События',
-  note: 'Заметки',
-  wiki: 'Вики',
+  character: 'Characters',
+  faction: 'Factions / states',
+  dynasty: 'Dynasties',
+  dogma: 'Dogmas',
+  timeline: 'Events',
+  note: 'Notes',
+  wiki: 'Wiki',
 };
 
 export const GRAPH_NODE_TYPE_COLORS: Record<GraphNodeType, string> = {
@@ -135,13 +135,13 @@ export const GRAPH_NODE_TYPE_COLORS: Record<GraphNodeType, string> = {
 };
 
 export const GRAPH_EDGE_KIND_LABELS: Record<GraphEdgeKind, string> = {
-  relationship: 'Отношение',
-  membership: 'Принадлежность',
-  'dynasty-member': 'Член династии',
-  'dogma-link': 'Связь с догмой',
-  'timeline-link': 'Событие',
-  'wiki-link': 'Wiki-ссылка',
-  'note-link': 'Связь заметок',
+  relationship: 'Relationship',
+  membership: 'Membership',
+  'dynasty-member': 'Dynasty member',
+  'dogma-link': 'Dogma link',
+  'timeline-link': 'Timeline',
+  'wiki-link': 'Wiki link',
+  'note-link': 'Note link',
 };
 
 export const GRAPH_EDGE_KIND_COLORS: Record<GraphEdgeKind, string> = {

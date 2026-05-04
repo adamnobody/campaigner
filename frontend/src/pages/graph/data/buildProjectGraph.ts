@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { charactersApi } from '@/api/characters';
 import { factionsApi } from '@/api/factions';
 import { dynastiesApi } from '@/api/dynasties';
@@ -18,21 +19,6 @@ const pushEdge = (map: Map<string, GraphEdge>, edge: GraphEdge) => {
 };
 
 const sortedPair = (a: string, b: string) => (a < b ? `${a}::${b}` : `${b}::${a}`);
-const CHARACTER_RELATIONSHIP_LABELS: Record<string, string> = {
-  ally: 'Союзник',
-  enemy: 'Враг',
-  family: 'Семья',
-  friend: 'Друг',
-  rival: 'Соперник',
-  mentor: 'Наставник',
-  student: 'Ученик',
-  lover: 'Возлюбленный',
-  spouse: 'Супруг',
-  employer: 'Работодатель',
-  employee: 'Работник',
-  custom: 'Другое',
-};
-
 export const buildProjectGraph = async (
   projectId: number,
   limits?: { maxCharacters?: number; maxFactions?: number; maxDynasties?: number; maxDogmas?: number; maxNotes?: number }
@@ -180,7 +166,13 @@ export const buildProjectGraph = async (
       source,
       target,
       kind: 'relationship',
-      label: rel.customLabel || CHARACTER_RELATIONSHIP_LABELS[rel.relationshipType] || 'Отношение',
+      label:
+        rel.customLabel
+        || (rel.relationshipType
+          ? i18n.t(`graph:relationshipTypes.${String(rel.relationshipType)}`, {
+              defaultValue: i18n.t('graph:generatedEdgeLabels.relationshipDefault'),
+            })
+          : i18n.t('graph:generatedEdgeLabels.relationshipDefault')),
     });
   });
 
@@ -194,7 +186,7 @@ export const buildProjectGraph = async (
         source,
         target,
         kind: 'membership',
-        label: 'Участник',
+        label: i18n.t('graph:generatedEdgeLabels.factionMember'),
       });
     });
     if (character.stateId) {
@@ -205,7 +197,7 @@ export const buildProjectGraph = async (
         source,
         target,
         kind: 'membership',
-        label: 'Государство',
+        label: i18n.t('graph:generatedEdgeLabels.state'),
       });
     }
   });
@@ -215,11 +207,15 @@ export const buildProjectGraph = async (
     const memberPairs: Array<{ characterId: number; label: string }> = [];
 
     (dynasty.members || []).forEach((member: any) => {
-      if (member.characterId) memberPairs.push({ characterId: member.characterId, label: member.role || 'Член династии' });
+      if (member.characterId) {
+        memberPairs.push({ characterId: member.characterId, label: member.role || i18n.t('graph:generatedEdgeLabels.dynastyMember') });
+      }
     });
-    if (dynasty.founderId) memberPairs.push({ characterId: dynasty.founderId, label: 'Основатель' });
-    if (dynasty.currentLeaderId) memberPairs.push({ characterId: dynasty.currentLeaderId, label: 'Глава' });
-    if (dynasty.heirId) memberPairs.push({ characterId: dynasty.heirId, label: 'Наследник' });
+    if (dynasty.founderId) memberPairs.push({ characterId: dynasty.founderId, label: i18n.t('graph:generatedEdgeLabels.founder') });
+    if (dynasty.currentLeaderId) {
+      memberPairs.push({ characterId: dynasty.currentLeaderId, label: i18n.t('graph:generatedEdgeLabels.leader') });
+    }
+    if (dynasty.heirId) memberPairs.push({ characterId: dynasty.heirId, label: i18n.t('graph:generatedEdgeLabels.heir') });
 
     memberPairs.forEach(({ characterId, label }) => {
       const characterNode = toNodeId('character', characterId);
@@ -241,7 +237,7 @@ export const buildProjectGraph = async (
         source: dynastyNode,
         target: factionNode,
         kind: 'membership',
-        label: 'Связанная фракция',
+        label: i18n.t('graph:generatedEdgeLabels.relatedFaction'),
       });
     }
   });
@@ -255,7 +251,7 @@ export const buildProjectGraph = async (
       source,
       target,
       kind: 'relationship',
-      label: rel.customLabel || rel.relationType || 'Связь',
+      label: rel.customLabel || rel.relationType || i18n.t('graph:generatedEdgeLabels.factionRelationFallback'),
     });
   });
 
@@ -270,7 +266,7 @@ export const buildProjectGraph = async (
       source,
       target,
       kind: 'timeline-link',
-      label: 'Привязана заметка',
+      label: i18n.t('graph:generatedEdgeLabels.noteAttached'),
     });
   });
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Accordion,
   AccordionDetails,
@@ -18,9 +19,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
-  GRAPH_EDGE_KIND_LABELS,
   GRAPH_EDGE_KINDS,
-  GRAPH_NODE_TYPE_LABELS,
   GRAPH_NODE_TYPES,
   type EdgeOpacityMode,
   type EdgeThicknessMode,
@@ -58,160 +57,170 @@ export const GraphFiltersPanel: React.FC<Props> = ({
   onSelectNoEdgeKinds,
   viewSettings,
   onViewSettingsChange,
-}) => (
-  <Box
-    sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      minHeight: 0,
-      overflow: 'hidden',
-    }}
-  >
-    <Typography sx={{ fontWeight: 700, mb: 1, flexShrink: 0 }}>Фильтры</Typography>
-    <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5, mr: -0.5 }}>
-      <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
-          <Typography variant="subtitle2">Типы узлов</Typography>
-        </AccordionSummary>
-        <AccordionDetails sx={{ px: 0, pt: 0 }}>
-          <Stack direction="row" spacing={0.75} sx={{ mb: 1 }}>
-            <Button size="small" variant="outlined" onClick={onSelectAllNodeTypes} sx={graphControlSx}>
-              Все
-            </Button>
-            <Button size="small" variant="outlined" onClick={onSelectNoNodeTypes} sx={graphControlSx}>
-              Ни одного
-            </Button>
-          </Stack>
-          <Stack spacing={0.25}>
-            {GRAPH_NODE_TYPES.map((nodeType) => (
-              <FormControlLabel
-                key={nodeType}
-                control={
-                  <Checkbox size="small" checked={enabledNodeTypes.has(nodeType)} onChange={() => onToggleNodeType(nodeType)} />
-                }
-                label={<Typography variant="body2">{GRAPH_NODE_TYPE_LABELS[nodeType]}</Typography>}
-              />
-            ))}
-          </Stack>
-        </AccordionDetails>
-      </Accordion>
+}) => {
+  const { t } = useTranslation(['graph', 'common']);
+  const nodeSizeLabel = t('graph:filters.nodeSize');
+  const nodeLabelsLabel = t('graph:filters.nodeLabels');
+  const edgeLabelsLabel = t('graph:filters.edgeLabels');
+  const edgeThicknessLabel = t('graph:filters.edgeThickness');
+  const edgeOpacityLabel = t('graph:filters.edgeOpacity');
+  const layoutIntensityLabel = t('graph:filters.layoutIntensity');
 
-      <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
-          <Typography variant="subtitle2">Типы связей</Typography>
-        </AccordionSummary>
-        <AccordionDetails sx={{ px: 0, pt: 0 }}>
-          <Stack direction="row" spacing={0.75} sx={{ mb: 1 }}>
-            <Button size="small" variant="outlined" onClick={onSelectAllEdgeKinds} sx={graphControlSx}>
-              Все
-            </Button>
-            <Button size="small" variant="outlined" onClick={onSelectNoEdgeKinds} sx={graphControlSx}>
-              Ни одного
-            </Button>
-          </Stack>
-          <Stack spacing={0.25}>
-            {GRAPH_EDGE_KINDS.map((edgeKind) => (
-              <FormControlLabel
-                key={edgeKind}
-                control={<Checkbox size="small" checked={enabledEdgeKinds.has(edgeKind)} onChange={() => onToggleEdgeKind(edgeKind)} />}
-                label={<Typography variant="body2">{GRAPH_EDGE_KIND_LABELS[edgeKind]}</Typography>}
-              />
-            ))}
-          </Stack>
-        </AccordionDetails>
-      </Accordion>
-
-      <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
-          <Typography variant="subtitle2">Отображение</Typography>
-        </AccordionSummary>
-        <AccordionDetails sx={{ px: 0, pt: 0 }}>
-          <Stack spacing={1.25}>
-            <FormControl size="small" fullWidth>
-              <InputLabel>Размер узлов</InputLabel>
-              <Select
-                label="Размер узлов"
-                value={viewSettings.nodeSize}
-                onChange={(event) => onViewSettingsChange({ nodeSize: event.target.value as NodeSizeMode })}
-              >
-                <MenuItem value="small">Маленький</MenuItem>
-                <MenuItem value="medium">Средний</MenuItem>
-                <MenuItem value="large">Большой</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" fullWidth>
-              <InputLabel>Подписи узлов</InputLabel>
-              <Select
-                label="Подписи узлов"
-                value={viewSettings.nodeLabels}
-                onChange={(event) => onViewSettingsChange({ nodeLabels: event.target.value as LabelVisibilityMode })}
-              >
-                <MenuItem value="always">Всегда</MenuItem>
-                <MenuItem value="on-hover">При наведении</MenuItem>
-                <MenuItem value="off">Выключено</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" fullWidth>
-              <InputLabel>Подписи связей</InputLabel>
-              <Select
-                label="Подписи связей"
-                value={viewSettings.edgeLabels}
-                onChange={(event) => onViewSettingsChange({ edgeLabels: event.target.value as 'on-hover' | 'off' })}
-              >
-                <MenuItem value="on-hover">При наведении</MenuItem>
-                <MenuItem value="off">Выключено</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" fullWidth>
-              <InputLabel>Толщина связей</InputLabel>
-              <Select
-                label="Толщина связей"
-                value={viewSettings.edgeThickness}
-                onChange={(event) => onViewSettingsChange({ edgeThickness: event.target.value as EdgeThicknessMode })}
-              >
-                <MenuItem value="thin">Тонкие</MenuItem>
-                <MenuItem value="normal">Обычные</MenuItem>
-                <MenuItem value="thick">Толстые</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" fullWidth>
-              <InputLabel>Прозрачность связей</InputLabel>
-              <Select
-                label="Прозрачность связей"
-                value={viewSettings.edgeOpacity}
-                onChange={(event) => onViewSettingsChange({ edgeOpacity: event.target.value as EdgeOpacityMode })}
-              >
-                <MenuItem value="low">Низкая</MenuItem>
-                <MenuItem value="medium">Средняя</MenuItem>
-                <MenuItem value="high">Высокая</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" fullWidth>
-              <InputLabel>Интенсивность layout</InputLabel>
-              <Select
-                label="Интенсивность layout"
-                value={viewSettings.layoutIntensity}
-                onChange={(event) => onViewSettingsChange({ layoutIntensity: event.target.value as LayoutIntensityMode })}
-              >
-                <MenuItem value="compact">Компактно</MenuItem>
-                <MenuItem value="balanced">Сбалансировано</MenuItem>
-                <MenuItem value="loose">Свободно</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={viewSettings.focusSelectedNeighborhood}
-                  onChange={(event) => onViewSettingsChange({ focusSelectedNeighborhood: event.target.checked })}
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <Typography sx={{ fontWeight: 700, mb: 1, flexShrink: 0 }}>{t('graph:filters.title')}</Typography>
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5, mr: -0.5 }}>
+        <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
+            <Typography variant="subtitle2">{t('graph:filters.nodeTypes')}</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ px: 0, pt: 0 }}>
+            <Stack direction="row" spacing={0.75} sx={{ mb: 1 }}>
+              <Button size="small" variant="outlined" onClick={onSelectAllNodeTypes} sx={graphControlSx}>
+                {t('graph:filters.selectAll')}
+              </Button>
+              <Button size="small" variant="outlined" onClick={onSelectNoNodeTypes} sx={graphControlSx}>
+                {t('graph:filters.selectNone')}
+              </Button>
+            </Stack>
+            <Stack spacing={0.25}>
+              {GRAPH_NODE_TYPES.map((nodeType) => (
+                <FormControlLabel
+                  key={nodeType}
+                  control={
+                    <Checkbox size="small" checked={enabledNodeTypes.has(nodeType)} onChange={() => onToggleNodeType(nodeType)} />
+                  }
+                  label={<Typography variant="body2">{t(`graph:nodeTypes.${nodeType}`)}</Typography>}
                 />
-              }
-              label="Окружение выбранного"
-            />
-          </Stack>
-        </AccordionDetails>
-      </Accordion>
-      <Divider sx={{ my: 1 }} />
+              ))}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
+            <Typography variant="subtitle2">{t('graph:filters.edgeKinds')}</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ px: 0, pt: 0 }}>
+            <Stack direction="row" spacing={0.75} sx={{ mb: 1 }}>
+              <Button size="small" variant="outlined" onClick={onSelectAllEdgeKinds} sx={graphControlSx}>
+                {t('graph:filters.selectAll')}
+              </Button>
+              <Button size="small" variant="outlined" onClick={onSelectNoEdgeKinds} sx={graphControlSx}>
+                {t('graph:filters.selectNone')}
+              </Button>
+            </Stack>
+            <Stack spacing={0.25}>
+              {GRAPH_EDGE_KINDS.map((edgeKind) => (
+                <FormControlLabel
+                  key={edgeKind}
+                  control={<Checkbox size="small" checked={enabledEdgeKinds.has(edgeKind)} onChange={() => onToggleEdgeKind(edgeKind)} />}
+                  label={<Typography variant="body2">{t(`graph:edgeKinds.${edgeKind}`)}</Typography>}
+                />
+              ))}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+
+        <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
+            <Typography variant="subtitle2">{t('graph:filters.display')}</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ px: 0, pt: 0 }}>
+            <Stack spacing={1.25}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{nodeSizeLabel}</InputLabel>
+                <Select
+                  label={nodeSizeLabel}
+                  value={viewSettings.nodeSize}
+                  onChange={(event) => onViewSettingsChange({ nodeSize: event.target.value as NodeSizeMode })}
+                >
+                  <MenuItem value="small">{t('graph:filters.nodeSizeSmall')}</MenuItem>
+                  <MenuItem value="medium">{t('graph:filters.nodeSizeMedium')}</MenuItem>
+                  <MenuItem value="large">{t('graph:filters.nodeSizeLarge')}</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{nodeLabelsLabel}</InputLabel>
+                <Select
+                  label={nodeLabelsLabel}
+                  value={viewSettings.nodeLabels}
+                  onChange={(event) => onViewSettingsChange({ nodeLabels: event.target.value as LabelVisibilityMode })}
+                >
+                  <MenuItem value="always">{t('graph:filters.nodeLabelsAlways')}</MenuItem>
+                  <MenuItem value="on-hover">{t('graph:filters.nodeLabelsOnHover')}</MenuItem>
+                  <MenuItem value="off">{t('graph:filters.nodeLabelsOff')}</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{edgeLabelsLabel}</InputLabel>
+                <Select
+                  label={edgeLabelsLabel}
+                  value={viewSettings.edgeLabels}
+                  onChange={(event) => onViewSettingsChange({ edgeLabels: event.target.value as 'on-hover' | 'off' })}
+                >
+                  <MenuItem value="on-hover">{t('graph:filters.edgeLabelsOnHover')}</MenuItem>
+                  <MenuItem value="off">{t('graph:filters.edgeLabelsOff')}</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{edgeThicknessLabel}</InputLabel>
+                <Select
+                  label={edgeThicknessLabel}
+                  value={viewSettings.edgeThickness}
+                  onChange={(event) => onViewSettingsChange({ edgeThickness: event.target.value as EdgeThicknessMode })}
+                >
+                  <MenuItem value="thin">{t('graph:filters.edgeThicknessThin')}</MenuItem>
+                  <MenuItem value="normal">{t('graph:filters.edgeThicknessNormal')}</MenuItem>
+                  <MenuItem value="thick">{t('graph:filters.edgeThicknessThick')}</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{edgeOpacityLabel}</InputLabel>
+                <Select
+                  label={edgeOpacityLabel}
+                  value={viewSettings.edgeOpacity}
+                  onChange={(event) => onViewSettingsChange({ edgeOpacity: event.target.value as EdgeOpacityMode })}
+                >
+                  <MenuItem value="low">{t('graph:filters.edgeOpacityLow')}</MenuItem>
+                  <MenuItem value="medium">{t('graph:filters.edgeOpacityMedium')}</MenuItem>
+                  <MenuItem value="high">{t('graph:filters.edgeOpacityHigh')}</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{layoutIntensityLabel}</InputLabel>
+                <Select
+                  label={layoutIntensityLabel}
+                  value={viewSettings.layoutIntensity}
+                  onChange={(event) => onViewSettingsChange({ layoutIntensity: event.target.value as LayoutIntensityMode })}
+                >
+                  <MenuItem value="compact">{t('graph:filters.layoutCompact')}</MenuItem>
+                  <MenuItem value="balanced">{t('graph:filters.layoutBalanced')}</MenuItem>
+                  <MenuItem value="loose">{t('graph:filters.layoutLoose')}</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={viewSettings.focusSelectedNeighborhood}
+                    onChange={(event) => onViewSettingsChange({ focusSelectedNeighborhood: event.target.checked })}
+                  />
+                }
+                label={t('graph:filters.focusNeighborhood')}
+              />
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+        <Divider sx={{ my: 1 }} />
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};

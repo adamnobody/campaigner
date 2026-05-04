@@ -31,9 +31,9 @@ export const AnimatedGraphSidePanel: React.FC<Props> = ({ side, open, panelWidth
 
   const easing = theme.transitions.easing.easeInOut;
   const easingStr = typeof easing === 'string' ? easing : String(easing);
-  const t = `${durationMs}ms ${easingStr}`;
+  const timing = `${durationMs}ms ${easingStr}`;
   /** Явные имена свойств (kebab-case): иначе transition с camelCase часто игнорируется при закрытии. */
-  const transition = `flex-basis ${t}, max-width ${t}, opacity ${t}, transform ${t}`;
+  const transition = `flex-basis ${timing}, max-width ${timing}, opacity ${timing}, transform ${timing}`;
 
   const slideClosed = side === 'left' ? `translateX(-${translatePx}px)` : `translateX(${translatePx}px)`;
 

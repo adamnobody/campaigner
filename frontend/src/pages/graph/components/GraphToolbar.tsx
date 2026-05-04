@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -66,6 +67,7 @@ export const GraphToolbar: React.FC<Props> = ({
   onToggleDetails,
   detailsButtonBadge,
 }) => {
+  const { t } = useTranslation(['graph', 'common']);
   const theme = useTheme();
   const isNarrowToolbar = useMediaQuery(theme.breakpoints.down('lg'));
 
@@ -73,66 +75,82 @@ export const GraphToolbar: React.FC<Props> = ({
     <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1} useFlexGap>
       {isNarrowToolbar ? (
         <>
-          <Tooltip title="Уменьшить масштаб">
-            <IconButton size="small" onClick={onZoomOut} aria-label="Уменьшить масштаб">
+          <Tooltip title={t('graph:toolbar.zoomOut')}>
+            <IconButton size="small" onClick={onZoomOut} aria-label={t('graph:toolbar.zoomOutAria')}>
               <RemoveIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Typography variant="caption" sx={{ minWidth: 44, textAlign: 'center' }}>
-            {zoomPercent}%
+            {t('graph:toolbar.zoomPercent', { value: zoomPercent })}
           </Typography>
-          <Tooltip title="Увеличить масштаб">
-            <IconButton size="small" onClick={onZoomIn} aria-label="Увеличить масштаб">
+          <Tooltip title={t('graph:toolbar.zoomIn')}>
+            <IconButton size="small" onClick={onZoomIn} aria-label={t('graph:toolbar.zoomInAria')}>
               <AddIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Вписать граф в область">
-            <IconButton size="small" onClick={onFit} aria-label="Вписать">
+          <Tooltip title={t('graph:toolbar.fit')}>
+            <IconButton size="small" onClick={onFit} aria-label={t('graph:toolbar.fitAria')}>
               <CenterFocusStrongIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Сбросить вид камеры">
-            <IconButton size="small" onClick={onResetView} aria-label="Сбросить вид">
+          <Tooltip title={t('graph:toolbar.resetView')}>
+            <IconButton size="small" onClick={onResetView} aria-label={t('graph:toolbar.resetViewAria')}>
               <RestartAltIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title={layoutPaused ? 'Разморозить раскладку' : 'Зафиксировать раскладку'}>
-            <IconButton size="small" onClick={onToggleLayoutPaused} aria-label="Зафиксировать">
+          <Tooltip
+            title={layoutPaused ? t('graph:toolbar.layoutToggleTooltipPaused') : t('graph:toolbar.layoutToggleTooltipRunning')}
+          >
+            <IconButton size="small" onClick={onToggleLayoutPaused} aria-label={t('graph:toolbar.layoutToggleAria')}>
               {layoutPaused ? <PlayCircleOutlineIcon fontSize="small" /> : <PauseCircleOutlineIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
-          <Tooltip title="Перерасставить узлы">
+          <Tooltip title={t('graph:toolbar.relayout')}>
             <Button size="small" variant="outlined" onClick={onRelayout} sx={{ minWidth: 0, px: 1, ...btnSx }}>
-              Перерасставить
+              {t('graph:toolbar.relayout')}
             </Button>
           </Tooltip>
         </>
       ) : (
         <>
           <Stack direction="row" alignItems="center" spacing={0.25}>
-            <Tooltip title="Уменьшить масштаб">
+            <Tooltip title={t('graph:toolbar.zoomOut')}>
               <span>
-                <IconButton size="small" onClick={onZoomOut}>
+                <IconButton size="small" onClick={onZoomOut} aria-label={t('graph:toolbar.zoomOutAria')}>
                   <RemoveIcon fontSize="small" />
                 </IconButton>
               </span>
             </Tooltip>
             <Typography variant="caption" sx={{ minWidth: 46, textAlign: 'center' }}>
-              {zoomPercent}%
+              {t('graph:toolbar.zoomPercent', { value: zoomPercent })}
             </Typography>
-            <Tooltip title="Увеличить масштаб">
+            <Tooltip title={t('graph:toolbar.zoomIn')}>
               <span>
-                <IconButton size="small" onClick={onZoomIn}>
+                <IconButton size="small" onClick={onZoomIn} aria-label={t('graph:toolbar.zoomInAria')}>
                   <AddIcon fontSize="small" />
                 </IconButton>
               </span>
             </Tooltip>
           </Stack>
-          <Button size="small" variant="outlined" startIcon={<CenterFocusStrongIcon />} onClick={onFit} sx={btnSx}>
-            Вписать
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<CenterFocusStrongIcon />}
+            onClick={onFit}
+            sx={btnSx}
+            aria-label={t('graph:toolbar.fitAria')}
+          >
+            {t('graph:toolbar.fit')}
           </Button>
-          <Button size="small" variant="outlined" startIcon={<RestartAltIcon />} onClick={onResetView} sx={btnSx}>
-            Сбросить вид
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<RestartAltIcon />}
+            onClick={onResetView}
+            sx={btnSx}
+            aria-label={t('graph:toolbar.resetViewAria')}
+          >
+            {t('graph:toolbar.resetView')}
           </Button>
           <Button
             size="small"
@@ -140,11 +158,12 @@ export const GraphToolbar: React.FC<Props> = ({
             startIcon={layoutPaused ? <PlayCircleOutlineIcon /> : <PauseCircleOutlineIcon />}
             onClick={onToggleLayoutPaused}
             sx={btnSx}
+            aria-label={t('graph:toolbar.layoutToggleAria')}
           >
-            {layoutPaused ? 'Разморозить' : 'Зафиксировать'}
+            {layoutPaused ? t('graph:toolbar.layoutResume') : t('graph:toolbar.layoutPause')}
           </Button>
-          <Button size="small" variant="outlined" onClick={onRelayout} sx={btnSx}>
-            Перерасставить
+          <Button size="small" variant="outlined" onClick={onRelayout} sx={btnSx} aria-label={t('graph:toolbar.relayout')}>
+            {t('graph:toolbar.relayout')}
           </Button>
         </>
       )}
@@ -156,46 +175,46 @@ export const GraphToolbar: React.FC<Props> = ({
       <Stack direction="row" alignItems="center" flexWrap="wrap" useFlexGap gap={1}>
         <TextField
           size="small"
-          label="Поиск узлов"
+          label={t('graph:toolbar.searchLabel')}
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Имя, название…"
+          placeholder={t('graph:toolbar.searchPlaceholder')}
           sx={{ minWidth: { xs: '100%', sm: 220 }, flexGrow: { sm: 1 }, maxWidth: { sm: 400 } }}
         />
         <TextField
           size="small"
-          label="Лимит"
+          label={t('graph:toolbar.limitLabel')}
           type="number"
           value={nodeLimit}
           onChange={(event) => onNodeLimitChange(Math.max(50, Number(event.target.value) || 300))}
           sx={{ width: 96 }}
           inputProps={{ min: 50, max: 800, step: 10 }}
         />
-        <Tooltip title={filtersOpen ? 'Скрыть фильтры' : 'Показать фильтры'}>
+        <Tooltip title={filtersOpen ? t('graph:toolbar.filtersHide') : t('graph:toolbar.filtersShow')}>
           <Button
             size="small"
             variant={filtersOpen ? 'contained' : 'outlined'}
             onClick={() => onToggleFilters()}
             aria-pressed={filtersOpen}
-            aria-label="Фильтры"
+            aria-label={t('graph:toolbar.filtersAria')}
             sx={{ textTransform: 'none', px: 1.25, fontWeight: 500 }}
           >
             <FilterListIcon sx={{ mr: isNarrowToolbar ? 0 : 0.5, fontSize: '1.1rem' }} />
-            {!isNarrowToolbar ? 'Фильтры' : null}
+            {!isNarrowToolbar ? t('graph:toolbar.filtersButton') : null}
           </Button>
         </Tooltip>
-        <Tooltip title={detailsOpen ? 'Скрыть детали и легенду' : 'Показать детали и легенду'}>
+        <Tooltip title={detailsOpen ? t('graph:toolbar.detailsHide') : t('graph:toolbar.detailsShow')}>
           <Box sx={{ position: 'relative', display: 'inline-flex' }}>
             <Button
               size="small"
               variant={detailsOpen ? 'contained' : 'outlined'}
               onClick={() => onToggleDetails()}
               aria-pressed={detailsOpen}
-              aria-label="Легенда и детали"
+              aria-label={t('graph:toolbar.detailsAria')}
               sx={{ textTransform: 'none', px: 1.25, fontWeight: 500 }}
             >
               <InfoOutlinedIcon sx={{ mr: isNarrowToolbar ? 0 : 0.5, fontSize: '1.1rem' }} />
-              {!isNarrowToolbar ? 'Детали' : null}
+              {!isNarrowToolbar ? t('graph:toolbar.detailsButton') : null}
             </Button>
             {detailsButtonBadge ? (
               <Box
@@ -207,16 +226,16 @@ export const GraphToolbar: React.FC<Props> = ({
                   height: 8,
                   borderRadius: '50%',
                   bgcolor: 'primary.main',
-                  boxShadow: (t) => `0 0 0 2px ${t.palette.background.paper}`,
+                  boxShadow: (th) => `0 0 0 2px ${th.palette.background.paper}`,
                 }}
               />
             ) : null}
           </Box>
         </Tooltip>
-        <Tooltip title="Показывать узлы без связей">
+        <Tooltip title={t('graph:toolbar.isolatedTooltip')}>
           <FormControlLabel
             control={<Switch checked={showIsolated} onChange={(event) => onShowIsolatedChange(event.target.checked)} size="small" />}
-            label="Изолированные"
+            label={t('graph:toolbar.isolatedLabel')}
             sx={{ ml: { xs: 0, md: 0.5 }, mr: 0 }}
           />
         </Tooltip>
