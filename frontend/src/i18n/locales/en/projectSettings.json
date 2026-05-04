@@ -1,0 +1,39 @@
+{
+  "page": {
+    "title": "Project settings"
+  },
+  "sections": {
+    "general": "General",
+    "export": "Export data",
+    "dangerZone": "Danger zone"
+  },
+  "fields": {
+    "projectName": "Project name",
+    "description": "Description",
+    "status": "Status"
+  },
+  "status": {
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "export": {
+    "description": "Download a full copy of the project as JSON. It includes characters, notes, map markers, timeline, tags, and links. You can import the file back from the home page.",
+    "button": "Export to JSON"
+  },
+  "dangerZone": {
+    "hint": "Deleting a project is permanent. We recommend exporting a backup first.",
+    "deleteProject": "Delete project"
+  },
+  "snackbar": {
+    "saved": "Settings saved",
+    "saveError": "Could not save settings",
+    "exported": "Project exported",
+    "exportError": "Export failed",
+    "deleted": "Project deleted",
+    "deleteError": "Could not delete project"
+  },
+  "confirm": {
+    "deleteTitle": "Delete project",
+    "deleteMessage": "Delete \"{{name}}\"? All data will be removed: characters, notes, maps, and timeline. This cannot be undone."
+  }
+}

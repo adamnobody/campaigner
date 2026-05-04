@@ -17,6 +17,7 @@ import notesEn from './locales/en/notes.json';
 import wikiEn from './locales/en/wiki.json';
 import timelineEn from './locales/en/timeline.json';
 import settingsEn from './locales/en/settings.json';
+import projectSettingsEn from './locales/en/projectSettings.json';
 import appearanceEn from './locales/en/appearance.json';
 
 import commonRu from './locales/ru/common.json';
@@ -34,6 +35,7 @@ import notesRu from './locales/ru/notes.json';
 import wikiRu from './locales/ru/wiki.json';
 import timelineRu from './locales/ru/timeline.json';
 import settingsRu from './locales/ru/settings.json';
+import projectSettingsRu from './locales/ru/projectSettings.json';
 import appearanceRu from './locales/ru/appearance.json';
 
 export const NAMESPACES = [
@@ -52,6 +54,7 @@ export const NAMESPACES = [
   'wiki',
   'timeline',
   'settings',
+  'projectSettings',
   'appearance',
 ] as const;
 
@@ -97,6 +100,7 @@ void i18n.use(initReactI18next).init({
       wiki: wikiRu,
       timeline: timelineRu,
       settings: settingsRu,
+      projectSettings: projectSettingsRu,
       appearance: appearanceRu,
     },
   },
