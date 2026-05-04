@@ -39,6 +39,8 @@ type Props = {
   layoutPaused: boolean;
   onToggleLayoutPaused: () => void;
   onRelayout: () => void;
+  /** Clears persisted positions for this branch (server); graph reverts to force layout. */
+  onResetLayout: () => void;
   filtersOpen: boolean;
   onToggleFilters: () => void;
   detailsOpen: boolean;
@@ -61,6 +63,7 @@ export const GraphToolbar: React.FC<Props> = ({
   layoutPaused,
   onToggleLayoutPaused,
   onRelayout,
+  onResetLayout,
   filtersOpen,
   onToggleFilters,
   detailsOpen,
@@ -108,6 +111,11 @@ export const GraphToolbar: React.FC<Props> = ({
           <Tooltip title={t('graph:toolbar.relayout')}>
             <Button size="small" variant="outlined" onClick={onRelayout} sx={{ minWidth: 0, px: 1, ...btnSx }}>
               {t('graph:toolbar.relayout')}
+            </Button>
+          </Tooltip>
+          <Tooltip title={t('graph:toolbar.resetLayoutTooltip')}>
+            <Button size="small" variant="outlined" color="warning" onClick={onResetLayout} sx={{ minWidth: 0, px: 1, ...btnSx }}>
+              {t('graph:toolbar.resetLayout')}
             </Button>
           </Tooltip>
         </>
@@ -164,6 +172,16 @@ export const GraphToolbar: React.FC<Props> = ({
           </Button>
           <Button size="small" variant="outlined" onClick={onRelayout} sx={btnSx} aria-label={t('graph:toolbar.relayout')}>
             {t('graph:toolbar.relayout')}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="warning"
+            onClick={onResetLayout}
+            sx={btnSx}
+            aria-label={t('graph:toolbar.resetLayout')}
+          >
+            {t('graph:toolbar.resetLayout')}
           </Button>
         </>
       )}

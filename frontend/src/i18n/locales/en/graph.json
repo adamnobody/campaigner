@@ -34,6 +34,8 @@
     "layoutToggleTooltipPaused": "Resume layout simulation",
     "layoutToggleTooltipRunning": "Freeze layout",
     "relayout": "Re-layout",
+    "resetLayout": "Reset layout",
+    "resetLayoutTooltip": "Discard saved node positions for this branch and use automatic layout",
     "zoomPercent": "{{value}}%"
   },
   "filters": {

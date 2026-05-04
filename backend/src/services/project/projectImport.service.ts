@@ -1,8 +1,10 @@
 import { getDb } from '../../db/connection.js';
 import { ValidationError } from '../../middleware/errorHandler.js';
 import { MapService } from '../map/index.js';
+import { GraphLayoutService } from '../graphLayout.service.js';
 import { ProjectService } from './project.service.js';
 import { saveBase64ToFile } from './assetHelpers.js';
+import { remapGraphLayoutDataForImport } from './graphLayoutImport.helpers.js';
 import type { ImportedProjectPayload } from './project.types.js';
 import type { Project } from '@campaigner/shared';
 
@@ -14,6 +16,38 @@ export type ImportProjectOptions = {
   /** Main branch label; default is English {@link DEFAULT_MAIN_BRANCH_ON_IMPORT}. */
   mainBranchName?: string;
 };
+
+function sortScenarioBranchesForImport(
+  branches: NonNullable<ImportedProjectPayload['scenarioBranches']>
+): typeof branches {
+  const byId = new Map(branches.map((b) => [b.id, b]));
+  const mains = branches.filter((b) => b.isMain);
+  if (mains.length !== 1) {
+    throw new ValidationError('scenarioBranches must include exactly one main branch');
+  }
+  const result: typeof branches = [mains[0]!];
+  const remaining = new Set(branches.filter((b) => !b.isMain).map((b) => b.id));
+  while (remaining.size > 0) {
+    let progressed = false;
+    for (const id of remaining) {
+      const b = byId.get(id)!;
+      const parentId = b.parentBranchId;
+      if (parentId == null) {
+        throw new ValidationError('Non-main scenario branch must have parentBranchId');
+      }
+      if (!result.some((r) => r.id === parentId)) {
+        continue;
+      }
+      result.push(b);
+      remaining.delete(id);
+      progressed = true;
+    }
+    if (!progressed) {
+      throw new ValidationError('Invalid scenarioBranches hierarchy');
+    }
+  }
+  return result;
+}
 
 export function importProject(
   data: ImportedProjectPayload,
@@ -39,11 +73,38 @@ export function importProject(
 
     const projectId = projectResult.lastInsertRowid as number;
 
-    const mainBranchInsert = db.prepare(`
+    const branchIdMap = new Map<number, number>();
+    let mainBranchId = 0;
+
+    if (data.scenarioBranches && data.scenarioBranches.length > 0) {
+      const sortedBranches = sortScenarioBranchesForImport(data.scenarioBranches);
+      for (const br of sortedBranches) {
+        const newParentId =
+          br.parentBranchId != null ? (branchIdMap.get(br.parentBranchId) ?? null) : null;
+        const ins = db
+          .prepare(
+            `
+          INSERT INTO scenario_branches (project_id, name, parent_branch_id, base_revision, is_main)
+          VALUES (?, ?, ?, ?, ?)
+        `
+          )
+          .run(projectId, br.name, newParentId, br.baseRevision ?? 0, br.isMain ? 1 : 0);
+        const newBid = ins.lastInsertRowid as number;
+        branchIdMap.set(br.id, newBid);
+        if (br.isMain) {
+          mainBranchId = newBid;
+        }
+      }
+      if (!mainBranchId) {
+        throw new ValidationError('scenarioBranches must define a main branch');
+      }
+    } else {
+      const mainBranchInsert = db.prepare(`
       INSERT INTO scenario_branches (project_id, name, is_main)
       VALUES (?, ?, 1)
     `).run(projectId, mainBranchName);
-    const mainBranchId = mainBranchInsert.lastInsertRowid as number;
+      mainBranchId = mainBranchInsert.lastInsertRowid as number;
+    }
 
     const mapService = new MapService();
     if (!data.maps?.length) {
@@ -622,6 +683,24 @@ export function importProject(
         if (newEntityId) {
           insertTagAssociation.run(newTagId, ta.entityType, newEntityId);
         }
+      }
+    }
+
+    if (data.graphLayouts?.length) {
+      const layoutMaps = {
+        characterIdMap,
+        factionIdMap,
+        dynastyIdMap,
+        dogmaIdMap,
+        timelineEventIdMap,
+        noteIdMap,
+      };
+      for (const gl of data.graphLayouts) {
+        const newBranchId = branchIdMap.get(gl.branchId);
+        const graphType = typeof gl.graphType === 'string' ? gl.graphType.trim() : '';
+        if (!newBranchId || !graphType) continue;
+        const remapped = remapGraphLayoutDataForImport(gl.layoutData, layoutMaps);
+        GraphLayoutService.upsert(projectId, graphType, remapped, newBranchId);
       }
     }
 

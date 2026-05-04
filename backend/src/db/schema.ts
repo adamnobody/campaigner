@@ -526,6 +526,21 @@ export function createTables(db: Database.Database): void {
   `);
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS graph_layouts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      branch_id INTEGER NOT NULL,
+      graph_type TEXT NOT NULL,
+      layout_data TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (branch_id) REFERENCES scenario_branches(id) ON DELETE CASCADE,
+      UNIQUE(project_id, branch_id, graph_type)
+    );
+  `);
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS branch_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       branch_id INTEGER NOT NULL,
@@ -705,6 +720,7 @@ export function createIndexes(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_dynasty_events_sort ON dynasty_events(dynasty_id, sort_order);
     CREATE INDEX IF NOT EXISTS idx_branches_project ON scenario_branches(project_id);
     CREATE INDEX IF NOT EXISTS idx_branches_parent ON scenario_branches(parent_branch_id);
+    CREATE INDEX IF NOT EXISTS idx_graph_layouts_project_branch ON graph_layouts(project_id, branch_id);
     CREATE INDEX IF NOT EXISTS idx_branch_overrides_branch_entity ON branch_overrides(branch_id, entity_type, entity_id);
     CREATE INDEX IF NOT EXISTS idx_branch_local_branch_entity ON branch_local_entities(branch_id, entity_type);
     CREATE INDEX IF NOT EXISTS idx_geo_story_branch_date ON geo_story_events(branch_id, event_date, sort_order);

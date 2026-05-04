@@ -1,3 +1,5 @@
+import type { GraphLayoutDataV1 } from '@campaigner/shared';
+
 export interface ExportCharacterRow {
   id: number;
   name: string;
@@ -308,4 +310,19 @@ export interface ImportedProjectPayload {
   dynastyMembers?: ExportDynastyMemberRow[];
   dynastyFamilyLinks?: ExportDynastyFamilyLinkRow[];
   dynastyEvents?: ExportDynastyEventRow[];
+  scenarioBranches?: Array<{
+    id: number;
+    projectId: number;
+    name: string;
+    parentBranchId: number | null;
+    baseRevision: number;
+    isMain: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  graphLayouts?: Array<{
+    branchId: number;
+    graphType: string;
+    layoutData: GraphLayoutDataV1;
+  }>;
 }

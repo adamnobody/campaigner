@@ -391,3 +391,6 @@ export const DYNASTY_EVENT_IMPORTANCE_COLORS: Record<string, string> = {
   normal: '#82E0AA',
   minor: '#85C1E9',
 };
+
+/** Graph type id for the project (multi-entity) graph layout storage. */
+export const PROJECT_GRAPH_LAYOUT_TYPE = 'project-graph' as const;

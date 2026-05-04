@@ -13,3 +13,4 @@ export * from './policy.schema.js';
 export * from './character-trait.schema.js';
 export * from './ambition.schema.js';
 export * from './political-scale.schema.js';
+export * from './graphLayout.schema.js';
