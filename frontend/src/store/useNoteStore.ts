@@ -113,7 +113,7 @@ export const useNoteStore = create<NoteState>((set) => ({
   setTags: async (id, tagIds) => {
     set({ error: null });
     try {
-      await notesApi.setTags(id, tagIds);
+      await notesApi.setTags(id, tagIds, activeProjectId());
       const res = await notesApi.getById(id, activeProjectId());
       const updated = res.data.data;
       set(state => ({

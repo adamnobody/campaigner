@@ -18,4 +18,5 @@ export const createWikiLinkSchema = wikiLinkSchema
 export const getWikiLinksQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
   noteId: z.coerce.number().int().positive().optional(),
+  branchId: z.coerce.number().int().positive().optional(),
 });

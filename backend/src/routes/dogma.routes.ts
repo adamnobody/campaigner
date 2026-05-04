@@ -71,6 +71,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
+    query: branchQuerySchema,
     body: setTagsBodySchema,
   }),
   DogmaController.setTags

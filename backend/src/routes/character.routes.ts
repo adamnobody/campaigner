@@ -9,12 +9,18 @@ import {
   updateRelationshipSchema,
 } from '@campaigner/shared';
 import { uploadCharacterImage } from '../middleware/upload.js';
-import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas.js';
+import {
+  idParamsSchema,
+  setTagsBodySchema,
+  projectIdWithBranchQuerySchema,
+  optionalBranchIdQuerySchema,
+} from './commonSchemas.js';
 
 const router = Router();
 
 const listQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
   search: z.string().optional(),
@@ -31,25 +37,27 @@ router.get(
 
 router.get(
   '/graph',
-  validateRequest({ query: projectIdQuerySchema }),
+  validateRequest({ query: projectIdWithBranchQuerySchema }),
   CharacterController.getGraph
 );
 
 router.get(
   '/relationships/list',
-  validateRequest({ query: projectIdQuerySchema }),
+  validateRequest({ query: projectIdWithBranchQuerySchema }),
   CharacterController.getRelationships
 );
 
 router.get(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   CharacterController.getById
 );
 
 router.post(
   '/',
-  validateRequest({ body: createCharacterSchema }),
+  validateRequest({
+    body: createCharacterSchema.extend({ branchId: z.number().int().positive().optional() }),
+  }),
   CharacterController.create
 );
 
@@ -57,20 +65,20 @@ router.put(
   '/:id',
   validateRequest({
     params: idParamsSchema,
-    body: updateCharacterSchema,
+    body: updateCharacterSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   CharacterController.update
 );
 
 router.delete(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   CharacterController.delete
 );
 
 router.post(
   '/:id/image',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   uploadCharacterImage,
   CharacterController.uploadImage
 );
@@ -79,6 +87,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: setTagsBodySchema,
   }),
   CharacterController.setTags
@@ -87,7 +96,9 @@ router.put(
 // Relationships
 router.post(
   '/relationships',
-  validateRequest({ body: createRelationshipSchema }),
+  validateRequest({
+    body: createRelationshipSchema.extend({ branchId: z.number().int().positive().optional() }),
+  }),
   CharacterController.createRelationship
 );
 
@@ -95,14 +106,14 @@ router.put(
   '/relationships/:id',
   validateRequest({
     params: idParamsSchema,
-    body: updateRelationshipSchema,
+    body: updateRelationshipSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   CharacterController.updateRelationship
 );
 
 router.delete(
   '/relationships/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   CharacterController.deleteRelationship
 );
 

@@ -15,5 +15,6 @@ export const notesApi = {
     apiClient.put<ApiResponse<Note>>(`/notes/${id}`, withBranchParams({ ...data }, projectId)),
   delete: (id: number, projectId?: number) =>
     apiClient.delete<VoidResponse>(`/notes/${id}`, { params: withBranchParams({}, projectId) }),
-  setTags: (id: number, tagIds: number[]) => apiClient.put<ApiResponse<Tag[]>>(`/notes/${id}/tags`, { tagIds }),
+  setTags: (id: number, tagIds: number[], projectId?: number) =>
+    apiClient.put<ApiResponse<Tag[]>>(`/notes/${id}/tags`, { tagIds }, { params: withBranchParams({}, projectId) }),
 };

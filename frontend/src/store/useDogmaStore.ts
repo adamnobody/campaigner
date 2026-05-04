@@ -141,7 +141,7 @@ export const useDogmaStore = create<DogmaState>((set) => ({
   setTags: async (id, tagIds) => {
     set({ error: null });
     try {
-      await dogmasApi.setTags(id, tagIds);
+      await dogmasApi.setTags(id, tagIds, activeProjectId());
       const res = await dogmasApi.getById(id, activeProjectId());
       const updated = res.data.data;
       set(state => ({

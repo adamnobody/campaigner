@@ -88,7 +88,8 @@ export class DogmaController {
 
   static setTags = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dogma id');
-    const dogma = DogmaService.getById(id);
+    const branchId = DogmaController.parseBranchId(req.query.branchId);
+    const dogma = DogmaService.getById(id, branchId);
     const tagIds = req.body?.tagIds;
 
     if (!Array.isArray(tagIds)) {

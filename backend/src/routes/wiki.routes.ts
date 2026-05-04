@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { WikiController } from '../controllers/wiki.controller.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { createWikiLinkSchema, getWikiLinksQuerySchema } from '@campaigner/shared';
-import { idParamsSchema, projectIdQuerySchema } from './commonSchemas.js';
+import { idParamsSchema, projectIdWithBranchQuerySchema } from './commonSchemas.js';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -14,7 +15,9 @@ router.get(
 
 router.post(
   '/links',
-  validateRequest({ body: createWikiLinkSchema }),
+  validateRequest({
+    body: createWikiLinkSchema.extend({ branchId: z.number().int().positive().optional() }),
+  }),
   WikiController.createLink
 );
 
@@ -26,7 +29,7 @@ router.delete(
 
 router.get(
   '/categories',
-  validateRequest({ query: projectIdQuerySchema }),
+  validateRequest({ query: projectIdWithBranchQuerySchema }),
   WikiController.getCategories
 );
 

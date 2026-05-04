@@ -112,7 +112,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   setTags: async (id, tagIds) => {
     set({ error: null });
     try {
-      await timelineApi.setTags(id, tagIds);
+      await timelineApi.setTags(id, tagIds, activeProjectId());
       const res = await timelineApi.getById(id, activeProjectId());
       const updated = res.data.data;
       set(state => ({

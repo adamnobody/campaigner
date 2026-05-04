@@ -19,5 +19,6 @@ export const timelineApi = {
     apiClient.delete<VoidResponse>(`/timeline/${id}`, { params: withBranchParams({}, projectId) }),
   reorder: (projectId: number, orderedIds: number[]) =>
     apiClient.post<ApiResponse<TimelineEvent[]>>('/timeline/reorder', withBranchParams({ projectId, orderedIds })),
-  setTags: (id: number, tagIds: number[]) => apiClient.put<ApiResponse<Tag[]>>(`/timeline/${id}/tags`, { tagIds }),
+  setTags: (id: number, tagIds: number[], projectId?: number) =>
+    apiClient.put<ApiResponse<Tag[]>>(`/timeline/${id}/tags`, { tagIds }, { params: withBranchParams({}, projectId) }),
 };

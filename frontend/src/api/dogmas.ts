@@ -18,5 +18,6 @@ export const dogmasApi = {
     apiClient.delete<VoidResponse>(`/dogmas/${id}`, { params: withBranchParams({}, projectId) }),
   reorder: (projectId: number, orderedIds: number[]) =>
     apiClient.post<ApiResponse<{ items: Dogma[]; total: number }>>('/dogmas/reorder', withBranchParams({ projectId, orderedIds })),
-  setTags: (id: number, tagIds: number[]) => apiClient.put<ApiResponse<Tag[]>>(`/dogmas/${id}/tags`, { tagIds }),
+  setTags: (id: number, tagIds: number[], projectId?: number) =>
+    apiClient.put<ApiResponse<Tag[]>>(`/dogmas/${id}/tags`, { tagIds }, { params: withBranchParams({}, projectId) }),
 };

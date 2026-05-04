@@ -43,6 +43,10 @@ const updateTerritoryWithBranchSchema = z.object({
   branchId: z.number().int().positive().optional(),
 }).and(updateTerritorySchema);
 
+const createTerritoryWithBranchSchema = z.object({
+  branchId: z.number().int().positive().optional(),
+}).and(createTerritorySchema);
+
 // ==================== Карты ====================
 
 router.get(
@@ -141,7 +145,7 @@ router.post(
   '/maps/:mapId/territories',
   validateRequest({
     params: mapIdParamsSchema,
-    body: createTerritorySchema,
+    body: createTerritoryWithBranchSchema,
   }),
   MapController.createTerritory
 );
