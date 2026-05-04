@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { findNearestEditableEdge, type EdgeInsertPhantom } from '@/utils/mapGeometry';
 import {
   DRAG_THRESHOLD,
@@ -90,6 +91,7 @@ export function useMapInteractions({
   setPendingNewTerritoryRings,
   showSnackbar,
 }: UseMapInteractionsArgs) {
+  const { t } = useTranslation(['map', 'common']);
   const [draggingTerritoryPoint, setDraggingTerritoryPoint] = useState<TerritoryPointDragPayload | null>(null);
   const [drawPointerPercent, setDrawPointerPercent] = useState<{ x: number; y: number } | null>(null);
   const [edgeInsertPhantom, setEdgeInsertPhantom] = useState<EdgeInsertPhantom | null>(null);
@@ -262,7 +264,7 @@ export function useMapInteractions({
     if (mode !== 'select') return;
     if (editingTerritoryPoints) {
       if (territory.id === editingTerritoryPoints.id) return;
-      showSnackbar('Сначала завершите редактирование формы', 'warning');
+      showSnackbar(t('map:snackbar.finishShapeEditFirst'), 'warning');
       return;
     }
     if (e.shiftKey && imgRef.current) {
@@ -286,6 +288,7 @@ export function useMapInteractions({
     setSelectedMarker,
     setSelectedTerritory,
     showSnackbar,
+    t,
   ]);
 
   const handleMapClick = useCallback((e: React.MouseEvent) => {
@@ -316,7 +319,7 @@ export function useMapInteractions({
         for (let i = territories.length - 1; i >= 0; i -= 1) {
           if (isPointInTerritory(px, py, territories[i])) {
             if (territories[i].id === editingTerritoryPoints.id) return;
-            showSnackbar('Сначала завершите редактирование формы', 'warning');
+            showSnackbar(t('map:snackbar.finishShapeEditFirst'), 'warning');
             return;
           }
         }
@@ -353,6 +356,7 @@ export function useMapInteractions({
     setSelectedMarker,
     setSelectedTerritory,
     showSnackbar,
+    t,
     territories,
     transitioning,
     zoomDisplay,
@@ -373,12 +377,12 @@ export function useMapInteractions({
     (nextMode: MapMode) => {
       if (nextMode === 'draw_territory' && editingTerritoryPoints) {
         cancelEditingPoints();
-        showSnackbar('Редактирование формы отменено', 'info');
+        showSnackbar(t('map:snackbar.shapeEditCancelled'), 'info');
       }
       setMode(nextMode);
       clearDrawingDraft();
     },
-    [cancelEditingPoints, clearDrawingDraft, editingTerritoryPoints, setMode, showSnackbar],
+    [cancelEditingPoints, clearDrawingDraft, editingTerritoryPoints, setMode, showSnackbar, t],
   );
 
   const closePanel = useCallback(() => {

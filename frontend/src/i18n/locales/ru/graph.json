@@ -1,0 +1,193 @@
+{
+  "page": {
+    "title": "Граф проекта",
+    "loading": "Загрузка графа проекта…",
+    "emptyTitle": "Нет данных для графа",
+    "emptyDescription": "Добавьте персонажей, фракции, события или связи, чтобы увидеть граф проекта.",
+    "canvasDoubleClickHint": "Двойной клик по узлу открывает сущность"
+  },
+  "toolbar": {
+    "searchLabel": "Поиск узлов",
+    "searchPlaceholder": "Имя, название…",
+    "limitLabel": "Лимит",
+    "filtersShow": "Показать фильтры",
+    "filtersHide": "Скрыть фильтры",
+    "filtersAria": "Фильтры",
+    "filtersButton": "Фильтры",
+    "detailsShow": "Показать детали и легенду",
+    "detailsHide": "Скрыть детали и легенду",
+    "detailsAria": "Легенда и детали",
+    "detailsButton": "Детали",
+    "isolatedTooltip": "Показывать узлы без связей",
+    "isolatedLabel": "Изолированные",
+    "zoomOut": "Уменьшить масштаб",
+    "zoomOutAria": "Уменьшить масштаб",
+    "zoomIn": "Увеличить масштаб",
+    "zoomInAria": "Увеличить масштаб",
+    "fit": "Вписать граф в область",
+    "fitAria": "Вписать",
+    "resetView": "Сбросить вид камеры",
+    "resetViewAria": "Сбросить вид",
+    "layoutPause": "Зафиксировать раскладку",
+    "layoutResume": "Разморозить раскладку",
+    "layoutToggleAria": "Зафиксировать раскладку",
+    "layoutToggleTooltipPaused": "Разморозить раскладку",
+    "layoutToggleTooltipRunning": "Зафиксировать раскладку",
+    "relayout": "Перерасставить",
+    "zoomPercent": "{{value}}%"
+  },
+  "filters": {
+    "title": "Фильтры",
+    "nodeTypes": "Типы узлов",
+    "edgeKinds": "Типы связей",
+    "display": "Отображение",
+    "selectAll": "Все",
+    "selectNone": "Ни одного",
+    "nodeSize": "Размер узлов",
+    "nodeSizeSmall": "Маленький",
+    "nodeSizeMedium": "Средний",
+    "nodeSizeLarge": "Большой",
+    "nodeLabels": "Подписи узлов",
+    "nodeLabelsAlways": "Всегда",
+    "nodeLabelsOnHover": "При наведении",
+    "nodeLabelsOff": "Выключено",
+    "edgeLabels": "Подписи связей",
+    "edgeLabelsOnHover": "При наведении",
+    "edgeLabelsOff": "Выключено",
+    "edgeThickness": "Толщина связей",
+    "edgeThicknessThin": "Тонкие",
+    "edgeThicknessNormal": "Обычные",
+    "edgeThicknessThick": "Толстые",
+    "edgeOpacity": "Прозрачность связей",
+    "edgeOpacityLow": "Низкая",
+    "edgeOpacityMedium": "Средняя",
+    "edgeOpacityHigh": "Высокая",
+    "layoutIntensity": "Интенсивность layout",
+    "layoutCompact": "Компактно",
+    "layoutBalanced": "Сбалансировано",
+    "layoutLoose": "Свободно",
+    "focusNeighborhood": "Окружение выбранного"
+  },
+  "legend": {
+    "nodesSection": "Узлы",
+    "edgesSection": "Связи"
+  },
+  "details": {
+    "notSelectedTitle": "Узел не выбран",
+    "notSelectedHint": "Кликните по узлу на графе, чтобы увидеть детали.",
+    "legendTitle": "Легенда",
+    "nodeKind": {
+      "character": "Персонаж",
+      "faction": "Фракция или государство",
+      "dynasty": "Династия",
+      "dogma": "Догма",
+      "timeline": "Событие",
+      "note": "Заметка",
+      "wiki": "Вики"
+    },
+    "connections_zero": "На текущем наборе нет связей",
+    "connections_one": "{{count}} связь",
+    "connections_few": "{{count}} связи",
+    "connections_many": "{{count}} связей",
+    "connections_other": "{{count}} связей",
+    "openEntity": "Открыть сущность",
+    "nearestLinks": "Ближайшие связи",
+    "legendAccordion": "Легенда"
+  },
+  "nodeTypes": {
+    "character": "Персонажи",
+    "faction": "Фракции/государства",
+    "dynasty": "Династии",
+    "dogma": "Догмы",
+    "timeline": "События",
+    "note": "Заметки",
+    "wiki": "Вики"
+  },
+  "edgeKinds": {
+    "relationship": "Отношение",
+    "membership": "Принадлежность",
+    "dynasty-member": "Член династии",
+    "dogma-link": "Связь с догмой",
+    "timeline-link": "Событие",
+    "wiki-link": "Wiki-ссылка",
+    "note-link": "Связь заметок"
+  },
+  "metaLabels": {
+    "character": {
+      "title": "Титул / должность",
+      "race": "Раса",
+      "characterClass": "Класс / профессия",
+      "level": "Уровень"
+    },
+    "faction": {
+      "kind": "Категория",
+      "type": "Тип организации"
+    },
+    "dynasty": {
+      "motto": "Девиз"
+    },
+    "dogma": {
+      "category": "Категория",
+      "importance": "Важность"
+    },
+    "timeline": {
+      "era": "Эпоха",
+      "eventDate": "Дата"
+    },
+    "note": {
+      "noteType": "Тип заметки"
+    },
+    "wiki": {
+      "noteType": "Тип записи"
+    }
+  },
+  "metaValues": {
+    "noteType": {
+      "wiki": "Вики",
+      "note": "Заметка",
+      "marker_note": "Заметка маркера"
+    },
+    "factionKind": {
+      "state": "Государство",
+      "faction": "Фракция"
+    }
+  },
+  "relationshipTypes": {
+    "ally": "Союзник",
+    "enemy": "Враг",
+    "family": "Семья",
+    "friend": "Друг",
+    "rival": "Соперник",
+    "mentor": "Наставник",
+    "student": "Ученик",
+    "lover": "Возлюбленный",
+    "spouse": "Супруг",
+    "employer": "Работодатель",
+    "employee": "Работник",
+    "custom": "Другое"
+  },
+  "generatedEdgeLabels": {
+    "relationshipDefault": "Отношение",
+    "factionMember": "Участник",
+    "state": "Государство",
+    "dynastyMember": "Член династии",
+    "founder": "Основатель",
+    "leader": "Глава",
+    "heir": "Наследник",
+    "relatedFaction": "Связанная фракция",
+    "factionRelationFallback": "Связь",
+    "noteAttached": "Привязана заметка"
+  },
+  "statusBar": {
+    "nodeCount_one": "{{count}} узел",
+    "nodeCount_few": "{{count}} узла",
+    "nodeCount_many": "{{count}} узлов",
+    "nodeCount_other": "{{count}} узлов",
+    "edgeCount_one": "{{count}} связь",
+    "edgeCount_few": "{{count}} связи",
+    "edgeCount_many": "{{count}} связей",
+    "edgeCount_other": "{{count}} связей",
+    "zoomLabel": "Масштаб",
+    "hint": "Колесо — масштаб · Перетаскивание — панорама · Двойной клик — открыть"
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "page": {
+    "title": "Project graph",
+    "loading": "Loading project graph…",
+    "emptyTitle": "No graph data yet",
+    "emptyDescription": "Add characters, factions, events, or links to see your project graph.",
+    "canvasDoubleClickHint": "Double-click a node to open the entity"
+  },
+  "toolbar": {
+    "searchLabel": "Search nodes",
+    "searchPlaceholder": "Name or title…",
+    "limitLabel": "Limit",
+    "filtersShow": "Show filters",
+    "filtersHide": "Hide filters",
+    "filtersAria": "Filters",
+    "filtersButton": "Filters",
+    "detailsShow": "Show details and legend",
+    "detailsHide": "Hide details and legend",
+    "detailsAria": "Legend and details",
+    "detailsButton": "Details",
+    "isolatedTooltip": "Show nodes without links",
+    "isolatedLabel": "Isolated",
+    "zoomOut": "Zoom out",
+    "zoomOutAria": "Zoom out",
+    "zoomIn": "Zoom in",
+    "zoomInAria": "Zoom in",
+    "fit": "Fit to view",
+    "fitAria": "Fit to view",
+    "resetView": "Reset camera",
+    "resetViewAria": "Reset view",
+    "layoutPause": "Freeze layout",
+    "layoutResume": "Resume layout",
+    "layoutToggleAria": "Toggle layout freeze",
+    "layoutToggleTooltipPaused": "Resume layout simulation",
+    "layoutToggleTooltipRunning": "Freeze layout",
+    "relayout": "Re-layout",
+    "zoomPercent": "{{value}}%"
+  },
+  "filters": {
+    "title": "Filters",
+    "nodeTypes": "Node types",
+    "edgeKinds": "Link types",
+    "display": "Display",
+    "selectAll": "All",
+    "selectNone": "None",
+    "nodeSize": "Node size",
+    "nodeSizeSmall": "Small",
+    "nodeSizeMedium": "Medium",
+    "nodeSizeLarge": "Large",
+    "nodeLabels": "Node labels",
+    "nodeLabelsAlways": "Always",
+    "nodeLabelsOnHover": "On hover",
+    "nodeLabelsOff": "Off",
+    "edgeLabels": "Edge labels",
+    "edgeLabelsOnHover": "On hover",
+    "edgeLabelsOff": "Off",
+    "edgeThickness": "Edge thickness",
+    "edgeThicknessThin": "Thin",
+    "edgeThicknessNormal": "Normal",
+    "edgeThicknessThick": "Thick",
+    "edgeOpacity": "Edge opacity",
+    "edgeOpacityLow": "Low",
+    "edgeOpacityMedium": "Medium",
+    "edgeOpacityHigh": "High",
+    "layoutIntensity": "Layout density",
+    "layoutCompact": "Compact",
+    "layoutBalanced": "Balanced",
+    "layoutLoose": "Loose",
+    "focusNeighborhood": "Focus selected neighborhood"
+  },
+  "legend": {
+    "nodesSection": "Nodes",
+    "edgesSection": "Links"
+  },
+  "details": {
+    "notSelectedTitle": "No node selected",
+    "notSelectedHint": "Click a node on the graph to see details.",
+    "legendTitle": "Legend",
+    "nodeKind": {
+      "character": "Character",
+      "faction": "Faction or state",
+      "dynasty": "Dynasty",
+      "dogma": "Dogma",
+      "timeline": "Event",
+      "note": "Note",
+      "wiki": "Wiki"
+    },
+    "connections_zero": "No links in the current set",
+    "connections_zero": "No links in the current set",
+    "connections_one": "{{count}} link",
+    "connections_other": "{{count}} links",
+    "openEntity": "Open entity",
+    "nearestLinks": "Nearest links",
+    "legendAccordion": "Legend"
+  },
+  "nodeTypes": {
+    "character": "Characters",
+    "faction": "Factions / states",
+    "dynasty": "Dynasties",
+    "dogma": "Dogmas",
+    "timeline": "Events",
+    "note": "Notes",
+    "wiki": "Wiki"
+  },
+  "edgeKinds": {
+    "relationship": "Relationship",
+    "membership": "Membership",
+    "dynasty-member": "Dynasty member",
+    "dogma-link": "Dogma link",
+    "timeline-link": "Timeline",
+    "wiki-link": "Wiki link",
+    "note-link": "Note link"
+  },
+  "metaLabels": {
+    "character": {
+      "title": "Title / role",
+      "race": "Race",
+      "characterClass": "Class / profession",
+      "level": "Level"
+    },
+    "faction": {
+      "kind": "Category",
+      "type": "Organization type"
+    },
+    "dynasty": {
+      "motto": "Motto"
+    },
+    "dogma": {
+      "category": "Category",
+      "importance": "Importance"
+    },
+    "timeline": {
+      "era": "Era",
+      "eventDate": "Date"
+    },
+    "note": {
+      "noteType": "Note type"
+    },
+    "wiki": {
+      "noteType": "Entry type"
+    }
+  },
+  "metaValues": {
+    "noteType": {
+      "wiki": "Wiki",
+      "note": "Note",
+      "marker_note": "Map marker note"
+    },
+    "factionKind": {
+      "state": "State",
+      "faction": "Faction"
+    }
+  },
+  "relationshipTypes": {
+    "ally": "Ally",
+    "enemy": "Enemy",
+    "family": "Family",
+    "friend": "Friend",
+    "rival": "Rival",
+    "mentor": "Mentor",
+    "student": "Student",
+    "lover": "Partner",
+    "spouse": "Spouse",
+    "employer": "Employer",
+    "employee": "Employee",
+    "custom": "Other"
+  },
+  "generatedEdgeLabels": {
+    "relationshipDefault": "Relationship",
+    "factionMember": "Member",
+    "state": "State",
+    "dynastyMember": "Dynasty member",
+    "founder": "Founder",
+    "leader": "Leader",
+    "heir": "Heir",
+    "relatedFaction": "Linked faction",
+    "factionRelationFallback": "Link",
+    "noteAttached": "Linked note"
+  },
+  "statusBar": {
+    "nodeCount_one": "{{count}} node",
+    "nodeCount_other": "{{count}} nodes",
+    "edgeCount_one": "{{count}} link",
+    "edgeCount_other": "{{count}} links",
+    "zoomLabel": "Zoom",
+    "hint": "Scroll — zoom · Drag — pan · Double-click — open"
+  }
+}

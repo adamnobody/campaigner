@@ -1,0 +1,131 @@
+{
+  "appName": "Campaigner",
+  "language": "Language",
+  "english": "English",
+  "russian": "Russian",
+  "selectLanguage": "Select language",
+  "loading": "Loading...",
+  "error": "Error",
+  "save": "Save",
+  "cancel": "Cancel",
+  "create": "Create",
+  "delete": "Delete",
+  "edit": "Edit",
+  "close": "Close",
+  "add": "Add",
+  "reset": "Reset",
+  "open": "Open",
+  "search": "Search",
+  "confirm": "Confirm",
+  "import": "Import",
+  "export": "Export",
+  "back": "Back",
+  "next": "Next",
+  "skip": "Skip",
+  "done": "Done",
+  "splash": {
+    "tipsHeading": "Did you know?",
+    "tips": {
+      "t0": "Character relationships are easy to explore on the project graph.",
+      "t1": "You can link notes to timeline events to keep chronology clear.",
+      "t2": "Factions help track groups, tensions, and political friction.",
+      "t3": "Dynasties are great for family trees and succession stories.",
+      "t4": "Use the map for locations, territories, and geographic context.",
+      "t5": "Tags speed up search and keep long-term campaigns organized.",
+      "t6": "Project branches let you try alternate storylines without losing canon.",
+      "t7": "Export is useful for backups and sharing a snapshot of your world.",
+      "t8": "The global search (Ctrl+K) jumps to entities across the project.",
+      "t9": "Dogmas pin fundamental world rules so the table stays consistent.",
+      "t10": "Wiki articles can be linked together to build a knowledge web.",
+      "t11": "Custom themes and appearance settings apply only on this device."
+    }
+  },
+  "searchDialog": {
+    "placeholder": "Search characters, notes, map markers, events…",
+    "startTyping": "Start typing to search…",
+    "scopeHint": "Across characters, notes, map markers, timeline events, and tags",
+    "noResults": "Nothing found for \"{{query}}\"",
+    "resultsCount": "{{count}} results",
+    "navKeys": "↑↓ navigate",
+    "openKey": "↵ open",
+    "types": {
+      "character": "Character",
+      "note": "Note",
+      "marker": "Marker",
+      "event": "Event",
+      "tag": "Tag"
+    }
+  },
+  "tagField": {
+    "label": "Tags",
+    "placeholder": "Select or type…",
+    "noOptionsText": "Type to add a new tag"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Try reloading the page.",
+    "retry": "Try again",
+    "home": "Home"
+  },
+  "editExclusions": {
+    "valuesPlaceholder": "Select values"
+  },
+  "exclusionCatalog": {
+    "catalogTab": "Catalog",
+    "createTab": "Create your own",
+    "detailsLink": "Details",
+    "removePair": "Remove {{name}}",
+    "blockedTooltip": "Excluded: {{names}}",
+    "dialogTitle": "Exclusions: {{name}}",
+    "dialogTitleFallback": "Exclusions"
+  },
+  "styleCustomizer": {
+    "tooltip": "Style settings",
+    "title": "Customization",
+    "backgroundImage": "Background image",
+    "uploadFile": "Upload file",
+    "imageUrlPlaceholder": "Or paste an image URL",
+    "backgroundOpacity": "Background opacity: {{pct}}%",
+    "accentColor": "Accent color",
+    "headerFont": "Heading font",
+    "textBrightness": "Text brightness: {{pct}}%",
+    "cardBackground": "Card background",
+    "cardShade": {
+      "transparent": "Clear",
+      "light": "Light",
+      "medium": "Medium",
+      "solid": "Solid"
+    },
+    "accentNames": {
+      "blue": "Blue",
+      "gold": "Gold",
+      "green": "Green",
+      "red": "Red",
+      "teal": "Teal",
+      "violet": "Violet",
+      "orange": "Orange"
+    },
+    "fontNames": {
+      "cinzel": "Cinzel (DnD)",
+      "georgia": "Georgia",
+      "crimson": "Crimson Text",
+      "inter": "Inter",
+      "roboto": "Roboto",
+      "playfair": "Playfair Display"
+    },
+    "preview": "Preview",
+    "previewTitle": "Project name",
+    "previewDescription": "Project description will look like this",
+    "resetAll": "Reset all"
+  },
+  "storeErrors": {
+    "traitsLoad": "Could not load traits",
+    "traitsAssignedLoad": "Could not load assigned traits",
+    "traitToggle": "Could not update trait assignment",
+    "traitExclusions": "Could not update trait exclusions",
+    "ambitionsCatalogLoad": "Could not load ambitions catalog",
+    "factionAmbitionsLoad": "Could not load faction ambitions",
+    "ambitionToggle": "Could not update ambition assignment",
+    "ambitionExclusions": "Could not update ambition exclusions"
+  }
+}

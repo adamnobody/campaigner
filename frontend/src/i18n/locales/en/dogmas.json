@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "World dogmas",
+    "subtitle": "Fundamental laws and rules that shape your setting"
+  },
+  "list": {
+    "addDogma": "Add dogma",
+    "searchPlaceholder": "Search dogmas...",
+    "allCategories": "All categories",
+    "anyImportance": "Any importance",
+    "count": "{{shown}} of {{total}}",
+    "emptyFilteredTitle": "Nothing found",
+    "emptyFilteredDescription": "Try changing search or filters",
+    "emptyFilteredAction": "Reset filters",
+    "emptyNoDogmasTitle": "No dogmas yet",
+    "emptyNoDogmasDescription": "Define the fundamental laws of your world — how magic works, social rules, and what shapes reality",
+    "emptyNoDogmasAction": "Add dogma"
+  },
+  "categories": {
+    "cosmology": "Cosmology & world physics",
+    "magic": "Magic & supernatural",
+    "religion": "Religion & metaphysics",
+    "society": "Society & way of life",
+    "politics": "Politics & law",
+    "economy": "Economy & resources",
+    "history": "Historical axiom",
+    "nature": "Nature & geography",
+    "races": "Races & peoples",
+    "technology": "Technology & crafts",
+    "other": "Other"
+  },
+  "importance": {
+    "fundamental": "Fundamental",
+    "major": "Major",
+    "minor": "Minor"
+  },
+  "form": {
+    "createTitle": "New dogma",
+    "editTitle": "Edit dogma",
+    "fields": {
+      "title": "Statement *",
+      "category": "Category",
+      "importance": "Importance",
+      "icon": "Icon (emoji)",
+      "description": "Description",
+      "impact": "Impact on the world",
+      "exceptions": "Exceptions"
+    },
+    "placeholders": {
+      "title": "e.g. Magic is fueled by moonlight",
+      "icon": "e.g. ⚡ 🌙 ⚔️",
+      "description": "Detailed description of the rule and its nuances...",
+      "impact": "How this rule affects life, politics, wars...",
+      "exceptions": "Known exceptions to this rule..."
+    }
+  },
+  "visibility": {
+    "public": "Known to inhabitants",
+    "secret": "Hidden from inhabitants"
+  },
+  "listItem": {
+    "impactPrefix": "Impact:",
+    "exceptionsPrefix": "Exceptions:",
+    "tooltipHidden": "Hidden from world inhabitants",
+    "tooltipEdit": "Edit",
+    "tooltipDelete": "Delete"
+  },
+  "snackbar": {
+    "created": "Dogma \"{{name}}\" created",
+    "updated": "Dogma \"{{name}}\" updated",
+    "deleted": "Dogma \"{{name}}\" deleted",
+    "saveError": "Could not save",
+    "genericError": "Error"
+  },
+  "confirm": {
+    "deleteTitle": "Delete dogma",
+    "deleteMessage": "Delete \"{{name}}\"?"
+  },
+  "tagField": {
+    "label": "Tags",
+    "placeholder": "Select or type...",
+    "helperText": "You can pick existing tags or add new ones"
+  }
+}

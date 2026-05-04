@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog, Box, TextField, Typography, List, ListItemButton,
   ListItemIcon, ListItemText, Chip, InputAdornment, CircularProgress,
@@ -25,20 +26,13 @@ const TYPE_COLORS: Record<string, string> = {
   tag: '#BB8FCE',
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  character: 'Персонаж',
-  note: 'Заметка',
-  marker: 'Маркер',
-  event: 'Событие',
-  tag: 'Тег',
-};
-
 interface SearchDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
 export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => {
+  const { t } = useTranslation('common');
   const navigate = useNavigate();
   const { currentProject } = useProjectStore();
   const [query, setQuery] = useState('');
@@ -142,7 +136,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => 
         <TextField
           inputRef={inputRef}
           fullWidth
-          placeholder="Поиск персонажей, заметок, маркеров, событий..."
+          placeholder={t('searchDialog.placeholder')}
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -185,16 +179,16 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => 
         {!query.trim() ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography sx={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.85rem' }}>
-              Начните вводить для поиска...
+              {t('searchDialog.startTyping')}
             </Typography>
             <Typography sx={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.75rem', mt: 1 }}>
-              Поиск по персонажам, заметкам, маркерам карты, событиям таймлайна и тегам
+              {t('searchDialog.scopeHint')}
             </Typography>
           </Box>
         ) : results.length === 0 && !loading ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography sx={{ color: 'rgba(255,255,255,0.3)' }}>
-              Ничего не найдено по запросу "{query}"
+              {t('searchDialog.noResults', { query })}
             </Typography>
           </Box>
         ) : (
@@ -227,7 +221,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => 
                         {highlightMatch(result.title, query)}
                       </Typography>
                       <Chip
-                        label={TYPE_LABELS[result.type] || result.type}
+                        label={t(`searchDialog.types.${result.type}`, { defaultValue: result.type })}
                         size="small"
                         sx={{
                           height: 18,
@@ -284,14 +278,14 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => 
           alignItems: 'center',
         }}>
           <Typography sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.7rem' }}>
-            {results.length} результат{results.length > 1 ? (results.length < 5 ? 'а' : 'ов') : ''}
+            {t('searchDialog.resultsCount', { count: results.length })}
           </Typography>
           <Box display="flex" gap={1}>
             <Typography sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem' }}>
-              ↑↓ навигация
+              {t('searchDialog.navKeys')}
             </Typography>
             <Typography sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem' }}>
-              ↵ открыть
+              {t('searchDialog.openKey')}
             </Typography>
           </Box>
         </Box>

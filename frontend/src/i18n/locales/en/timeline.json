@@ -1,0 +1,63 @@
+{
+  "page": {
+    "title": "Timeline",
+    "addEvent": "Add event"
+  },
+  "empty": {
+    "title": "Timeline is empty",
+    "description": "Create your world's history — eras, wars, discoveries, and turning points",
+    "action": "Add event"
+  },
+  "filters": {
+    "searchPlaceholder": "Search events…",
+    "allEras": "All eras",
+    "countShown": "{{filtered}} of {{total}}"
+  },
+  "eventCard": {
+    "noteFallback": "Note #{{id}}",
+    "unlinkNote": "Unlink note",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "edit": "Edit",
+    "delete": "Delete",
+    "drag": "Drag to reorder"
+  },
+  "dialog": {
+    "editTitle": "Edit event",
+    "createTitle": "New event",
+    "titleLabel": "Title *",
+    "titlePlaceholder": "e.g. Fall of Neteril",
+    "dateLabel": "Date *",
+    "datePlaceholder": "e.g. Year 3520 of the Third Age",
+    "dateHelper": "Free-form text — use your world's calendar",
+    "eraLabel": "Era",
+    "eraPlaceholder": "Choose or type a new era",
+    "eraHelper": "Pick an existing era or enter a new name",
+    "eraNoOptions": "No eras yet — type a name",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What happened…",
+    "linkNoteLabel": "Link note",
+    "linkNotePlaceholder": "Start typing a note title…",
+    "noteNoOptions": "No notes",
+    "linkedPrefix": "Linked:",
+    "autocompleteClear": "Clear"
+  },
+  "tagField": {
+    "label": "Tags",
+    "placeholder": "Select or enter…",
+    "helperText": "Use existing tags or add new ones"
+  },
+  "snackbar": {
+    "eventUpdated": "Event updated: {{title}}",
+    "eventCreated": "Event created: {{title}}",
+    "saveError": "Could not save",
+    "eventDeleted": "Deleted: {{title}}",
+    "error": "Something went wrong",
+    "noteUnlinked": "Note unlinked",
+    "reorderError": "Could not reorder"
+  },
+  "confirm": {
+    "deleteTitle": "Delete event",
+    "deleteMessage": "Delete \"{{title}}\"?"
+  }
+}

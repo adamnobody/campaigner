@@ -23,21 +23,20 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import CastleIcon from '@mui/icons-material/Castle';
 import PeopleIcon from '@mui/icons-material/People';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useFactionStore } from '@/store/useFactionStore';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
+import { routes } from '@/utils/routes';
 import {
   FACTION_KIND_ICONS,
-  FACTION_STATUS_LABELS,
   FACTION_STATUS_ICONS,
   FACTION_STATUSES,
   FACTION_TYPE_ICONS,
-  FACTION_TYPE_LABELS,
   STATE_TYPE_ICONS,
-  STATE_TYPE_LABELS,
 } from '@campaigner/shared';
 import type { Faction } from '@campaigner/shared';
 
@@ -50,6 +49,7 @@ interface FactionsPageProps {
 }
 
 export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'faction' }) => {
+  const { t } = useTranslation(['factions', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -65,12 +65,8 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
   const isStatePage = entityType === 'state';
-  const entityLabel = isStatePage ? 'государство' : 'фракция';
-  const entityLabelPlural = isStatePage ? 'Государства' : 'Фракции';
-  const deletedMessage = isStatePage ? 'Государство удалено' : 'Фракция удалена';
-  const createLabel = isStatePage ? 'Создать государство' : 'Создать фракцию';
-  const listBasePath = isStatePage ? 'states' : 'factions';
-
+  const listTitle = isStatePage ? t('factions:list.titleStates') : t('factions:list.titleFactions');
+  const createLabel = isStatePage ? t('factions:list.createState') : t('factions:list.createFaction');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [filterStatus, setFilterStatus] = useState('');
@@ -151,15 +147,15 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
 
   const handleDelete = (id: number, name: string) => {
     showConfirmDialog(
-      `Удалить ${entityLabel}`,
-      `Удалить "${name}"? Связанные записи участия и связи тоже будут удалены.`,
+      isStatePage ? t('factions:list.confirmDeleteTitleState') : t('factions:list.confirmDeleteTitleFaction'),
+      t('factions:list.confirmDeleteMessage', { name }),
       async () => {
         try {
           await deleteFaction(id);
-          showSnackbar(deletedMessage, 'success');
+          showSnackbar(t('factions:snackbar.entityDeleted'), 'success');
           setTotalUnfiltered((prev) => Math.max(0, prev - 1));
         } catch {
-          showSnackbar('Ошибка удаления', 'error');
+          showSnackbar(t('factions:snackbar.deleteFailed'), 'error');
         }
       }
     );
@@ -168,9 +164,12 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   const getSubtitle = (entity: Faction): string => {
     const parts: string[] = [];
     if (entity.type) {
-      const labels = entity.kind === 'state' ? STATE_TYPE_LABELS : FACTION_TYPE_LABELS;
+      const typeLabel =
+        entity.kind === 'state'
+          ? t(`factions:stateTypes.${entity.type}`)
+          : t(`factions:factionTypes.${entity.type}`);
       const icons = entity.kind === 'state' ? STATE_TYPE_ICONS : FACTION_TYPE_ICONS;
-      parts.push(`${icons[entity.type] || ''} ${labels[entity.type] || entity.type}`.trim());
+      parts.push(`${icons[entity.type] || ''} ${typeLabel}`.trim());
     }
     if (entity.motto) parts.push(`«${entity.motto}»`);
     if (entity.headquarters) parts.push(`📍 ${entity.headquarters}`);
@@ -180,7 +179,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   if (!initialized && loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
       </Box>
     );
   }
@@ -192,15 +191,13 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
           <Typography
             sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}
           >
-            {entityLabelPlural}
+            {listTitle}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {isStatePage
-              ? 'Государственные образования вашего мира'
-              : 'Внутренние объединения, организации и группировки'}
+            {isStatePage ? t('factions:list.subtitleStates') : t('factions:list.subtitleFactions')}
           </Typography>
         </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(`/project/${pid}/${listBasePath}/new`)}>
+        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(routes.factionDetail(pid, entityType, 'new'))}>
           {createLabel}
         </DndButton>
       </Box>
@@ -208,7 +205,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
       {(totalUnfiltered > 0 || hasFilters) && (
         <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
-            placeholder={isStatePage ? 'Поиск государств...' : 'Поиск фракций...'}
+            placeholder={isStatePage ? t('factions:list.searchStates') : t('factions:list.searchFactions')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             sx={{ flexGrow: 1, maxWidth: 400 }}
@@ -224,10 +221,10 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
 
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <Select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} displayEmpty>
-              <MenuItem value="">Любой статус</MenuItem>
+              <MenuItem value="">{t('factions:list.anyStatus')}</MenuItem>
               {FACTION_STATUSES.map((status) => (
                 <MenuItem key={status} value={status}>
-                  {FACTION_STATUS_ICONS[status]} {FACTION_STATUS_LABELS[status]}
+                  {FACTION_STATUS_ICONS[status]} {t(`factions:factionStatuses.${status}`)}
                 </MenuItem>
               ))}
             </Select>
@@ -240,12 +237,12 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
               size="small"
               sx={{ borderColor: alpha(theme.palette.primary.main, 0.5), textTransform: 'none' }}
             >
-              Сброс
+              {t('common:reset')}
             </Button>
           )}
 
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
-            {factions.length} из {total}
+            {t('factions:list.count', { shown: factions.length, total })}
           </Typography>
         </GlassCard>
       )}
@@ -254,22 +251,20 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
         hasFilters ? (
           <EmptyState
             icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title="Ничего не найдено"
-            description="Попробуйте изменить параметры поиска или фильтры"
-            actionLabel="Сбросить фильтры"
+            title={t('factions:list.emptyFilteredTitle')}
+            description={t('factions:list.emptyFilteredDescription')}
+            actionLabel={t('factions:list.resetFilters')}
             onAction={clearFilters}
           />
         ) : (
           <EmptyState
             icon={isStatePage ? <CastleIcon sx={{ fontSize: 64 }} /> : <GroupsIcon sx={{ fontSize: 64 }} />}
-            title={isStatePage ? 'Государств пока нет' : 'Фракций пока нет'}
+            title={isStatePage ? t('factions:list.emptyNoStatesTitle') : t('factions:list.emptyNoFactionsTitle')}
             description={
-              isStatePage
-                ? 'Создайте первое государство для вашего мира'
-                : 'Создайте первую фракцию или внутреннюю группировку'
+              isStatePage ? t('factions:list.emptyNoStatesDescription') : t('factions:list.emptyNoFactionsDescription')
             }
             actionLabel={createLabel}
-            onAction={() => navigate(`/project/${pid}/${listBasePath}/new`)}
+            onAction={() => navigate(routes.factionDetail(pid, entityType, 'new'))}
           />
         )
       ) : (
@@ -294,7 +289,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                 <GlassCard
                   interactive
                   key={entity.id}
-                  onClick={() => navigate(`/project/${pid}/${listBasePath}/${entity.id}`)}
+                  onClick={() => navigate(routes.factionDetail(pid, entity.kind, entity.id))}
                   sx={{
                     p: 0,
                     '&:hover': {
@@ -363,7 +358,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
 
                         <Box display="flex" gap={0.5} mt={1} flexWrap="wrap" alignItems="center">
                           <Chip
-                            label={`${FACTION_STATUS_ICONS[entity.status] || ''} ${FACTION_STATUS_LABELS[entity.status] || entity.status}`}
+                            label={`${FACTION_STATUS_ICONS[entity.status] || ''} ${t(`factions:factionStatuses.${entity.status}`)}`.trim()}
                             size="small"
                             sx={{
                               height: 20,
@@ -412,12 +407,12 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                         gap={0}
                         sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0 }}
                       >
-                        <Tooltip title="Открыть">
+                        <Tooltip title={t('factions:list.tooltipOpen')}>
                           <IconButton size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
                             <VisibilityIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Удалить">
+                        <Tooltip title={t('factions:list.tooltipDelete')}>
                           <IconButton
                             size="small"
                             onClick={(event) => {
@@ -460,7 +455,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
 
           {factions.length < total && (
             <Box ref={sentinelRef} sx={{ py: 3, textAlign: 'center' }}>
-              {loadingMore && <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>}
+              {loadingMore && <Typography sx={{ color: 'text.secondary' }}>{t('factions:list.loadingMore')}</Typography>}
             </Box>
           )}
         </>

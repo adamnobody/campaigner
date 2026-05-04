@@ -1,0 +1,133 @@
+{
+  "list": {
+    "title": "Заметки",
+    "subtitle": "Свободные записи, идеи и черновики",
+    "newNote": "Новая заметка",
+    "searchPlaceholder": "Поиск заметок...",
+    "tabAll": "Все ({{count}})",
+    "tabNotes": "Заметки",
+    "tabWiki": "Вики",
+    "tabMarkers": "Маркеры",
+    "emptyFilteredTitle": "Ничего не найдено",
+    "emptyFilteredDescription": "Попробуйте изменить параметры поиска или выбрать другую вкладку",
+    "emptyFilteredAction": "Сбросить фильтры",
+    "emptyNoNotesTitle": "Заметок пока нет",
+    "emptyNoNotesDescription": "Создавайте заметки, идеи и черновики для вашего мира",
+    "emptyNoNotesAction": "Создать заметку",
+    "tooltipEditTags": "Редактировать теги",
+    "tooltipDelete": "Удалить",
+    "addTagsHint": "+ добавить теги"
+  },
+  "noteTypes": {
+    "note": "Заметка",
+    "wiki": "Вики",
+    "marker_note": "Маркер"
+  },
+  "dialogs": {
+    "createTitle": "Новая заметка",
+    "createFieldTitle": "Название *",
+    "createFieldFormat": "Формат",
+    "tagsDialogTitle": "Теги: {{title}}",
+    "newTagHint": "Введите новый тег"
+  },
+  "tagField": {
+    "label": "Теги",
+    "placeholder": "Выберите или введите..."
+  },
+  "confirm": {
+    "deleteNoteTitle": "Удалить заметку",
+    "deleteNoteMessage": "Удалить «{{title}}»?"
+  },
+  "snackbar": {
+    "created": "Заметка «{{title}}» создана",
+    "createError": "Ошибка создания",
+    "deleted": "Удалено",
+    "deleteError": "Ошибка",
+    "tagsUpdated": "Теги обновлены",
+    "saved": "Заметка «{{title}}» сохранена",
+    "saveError": "Ошибка сохранения",
+    "linkCreated": "Связь создана",
+    "linkDuplicate": "Связь уже существует",
+    "linkDeleted": "Связь удалена",
+    "pinned": "Закреплено",
+    "unpinned": "Откреплено",
+    "togglePinError": "Ошибка"
+  },
+  "editor": {
+    "placeholder": "Начните писать...",
+    "wikiChip": "WIKI",
+    "tooltipHideLinks": "Скрыть связи",
+    "tooltipShowLinks": "Показать связи",
+    "backAria": "Назад",
+    "pinAria": "Закрепить",
+    "saveStatusSaved": "Сохранено {{time}}",
+    "saveStatusUnsaved": "● Несохранённые изменения",
+    "saveStatusSaving": "Сохранение...",
+    "saveStatusError": "Ошибка сохранения",
+    "modeEdit": "Код",
+    "modeSplit": "Сплит",
+    "modePreview": "Превью",
+    "hintBar": "Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить{{wikiHint}}",
+    "hintBarWikiSuffix": " · [Текст ссылки](/__note__/ID) — внутренняя вики-ссылка",
+    "wordCount": "{{words}} слов · {{chars}} символов",
+    "saved": {
+      "justNow": "только что",
+      "secondsAgo": "{{count}} сек. назад",
+      "minutesAgo": "{{count}} мин. назад"
+    }
+  },
+  "markdown": {
+    "placeholders": {
+      "bold": "жирный текст",
+      "italic": "курсив",
+      "heading": "Заголовок",
+      "linkText": "текст",
+      "wikiTitle": "Название статьи",
+      "code": "код",
+      "listItem": "элемент списка",
+      "quote": "цитата"
+    }
+  },
+  "toolbar": {
+    "undo": "Отменить (Ctrl+Z)",
+    "redo": "Повторить (Ctrl+Shift+Z)",
+    "heading": "Заголовок",
+    "bold": "Жирный (Ctrl+B)",
+    "italic": "Курсив (Ctrl+I)",
+    "list": "Список",
+    "quote": "Цитата",
+    "code": "Код",
+    "link": "Ссылка",
+    "hr": "Разделитель",
+    "wikiLink": "Внутренняя вики-ссылка"
+  },
+  "preview": {
+    "empty": "Пусто...",
+    "emptyMarkdown": "Пусто..."
+  },
+  "wikiSidebar": {
+    "title": "Связи ({{count}})",
+    "addLink": "Добавить связь",
+    "emptyTitle": "Нет связей",
+    "emptyHint": "Свяжите с другими вики-статьями",
+    "footerHint": "Используйте [Текст ссылки](/__note__/ID)",
+    "deleteLinkAria": "Удалить связь"
+  },
+  "wikiDialogs": {
+    "createTitle": "Добавить связь",
+    "createArticleLabel": "Вики-статья *",
+    "createArticlePlaceholder": "Выберите статью...",
+    "createNoOptions": "Нет статей",
+    "createLabelField": "Описание связи (опционально)",
+    "createLabelPlaceholder": "напр. столица, союзник, часть...",
+    "createSubmit": "Создать связь",
+    "insertTitle": "Вставить вики-ссылку",
+    "insertArticleLabel": "Вики-статья *",
+    "insertArticlePlaceholder": "Выберите статью...",
+    "insertNoOptions": "Нет статей",
+    "insertLinkTextLabel": "Текст ссылки",
+    "insertLinkTextPlaceholder": "Текст, который будет показан в статье",
+    "insertLinkTextHelper": "В текст будет вставлена markdown-ссылка на внутреннюю статью",
+    "insertSubmit": "Вставить"
+  }
+}

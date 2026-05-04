@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -65,10 +66,12 @@ import {
   INTERFACE_STYLE_ORDER,
   INTERFACE_STYLE_PROFILES,
   getPaletteCompatibility,
+  type InterfaceStyleId,
 } from '@/theme/interfaceStyles';
 
 export const AppearanceSettingsPage: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation(['appearance', 'common']);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredPreset, setHoveredPreset] = useState<string | null>(null);
   const [customThemeName, setCustomThemeName] = useState('');
@@ -207,7 +210,16 @@ export const AppearanceSettingsPage: React.FC = () => {
   );
   const currentPreset = allThemePresets[themePreset] || THEME_PRESETS['obsidian-gold'];
   const currentStyleProfile = INTERFACE_STYLE_PROFILES[interfaceStyle];
-  const currentPaletteCompatibility = getPaletteCompatibility(interfaceStyle, themePreset);
+  const currentPaletteCompatibilityRaw = getPaletteCompatibility(interfaceStyle, themePreset);
+  const currentPaletteCompatibility = {
+    level: currentPaletteCompatibilityRaw.level,
+    label: t(`appearance:paletteCompatibility.${currentPaletteCompatibilityRaw.level}.label`),
+    hint: t(`appearance:paletteCompatibility.${currentPaletteCompatibilityRaw.level}.hint`),
+  };
+  const themePresetLabel = (id: string, fallback: string) =>
+    t(`appearance:themePresets.${id}.label`, { defaultValue: fallback });
+  const interfaceStyleLabel = (id: InterfaceStyleId) =>
+    t(`appearance:interfaceStyles.${id}.label`, { defaultValue: INTERFACE_STYLE_PROFILES[id].label });
   const compatibilityColor: Record<'ideal' | 'good' | 'experimental', 'success' | 'info' | 'warning'> = {
     ideal: 'success',
     good: 'info',
@@ -277,7 +289,7 @@ export const AppearanceSettingsPage: React.FC = () => {
         visibility: isPending ? 'visible' : 'hidden',
       }}
     >
-      Применяется...
+      {t('appearance:applying')}
     </Typography>
   );
 
@@ -531,7 +543,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       letterSpacing: '0.02em',
                     }}
                   >
-                    Настройки внешнего вида
+                    {t('appearance:page.title')}
                   </Typography>
                   
                   <Typography
@@ -545,7 +557,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     }}
                   >
                     <AutoAwesomeIcon sx={{ fontSize: '1rem', color: 'primary.main' }} />
-                    Управляйте темой, прозрачностью, анимациями и фоном
+                    {t('appearance:page.subtitle')}
                   </Typography>
                 </Box>
               </Box>
@@ -567,7 +579,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                 },
               }}
             >
-              Сбросить стиль
+              {t('appearance:actions.resetStyle')}
             </DndButton>
           </Box>
         </Fade>
@@ -591,8 +603,8 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<AutoAwesomeIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Тип интерфейса"
-                  subtitle="12 направлений: от Dark Fantasy до Scholar"
+                  title={t('appearance:sections.interfaceType.title')}
+                  subtitle={t('appearance:sections.interfaceType.subtitle')}
                 />
 
                 <Box
@@ -608,10 +620,10 @@ export const AppearanceSettingsPage: React.FC = () => {
                     alignItems: 'center',
                   }}
                 >
-                  <Chip size="small" label={`Активный стиль: ${currentStyleProfile.label}`} color="primary" />
+                  <Chip size="small" label={t('appearance:chips.activeStyle', { name: interfaceStyleLabel(interfaceStyle) })} color="primary" />
                   <Chip
                     size="small"
-                    label={`Палитра: ${currentPaletteCompatibility.label}`}
+                    label={t('appearance:chips.palettePrefix', { label: currentPaletteCompatibility.label })}
                     color={compatibilityColor[currentPaletteCompatibility.level]}
                     variant={currentPaletteCompatibility.level === 'ideal' ? 'filled' : 'outlined'}
                   />
@@ -629,7 +641,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     }
                     label={
                       <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
-                        Автоприменять рекомендуемую палитру
+                        {t('appearance:autoPalette.label')}
                       </Typography>
                     }
                   />
@@ -646,7 +658,8 @@ export const AppearanceSettingsPage: React.FC = () => {
                     const profile = INTERFACE_STYLE_PROFILES[styleId];
                     const selected = styleId === interfaceStyle;
                     const compatibility = getPaletteCompatibility(styleId, themePreset);
-                    const recommendedPaletteName = THEME_PRESETS[profile.recommendedPalettes[0]]?.label || profile.recommendedPalettes[0];
+                    const recId = profile.recommendedPalettes[0];
+                    const recommendedPaletteName = themePresetLabel(recId, THEME_PRESETS[recId]?.label ?? recId);
 
                     return (
                       <Box
@@ -673,25 +686,25 @@ export const AppearanceSettingsPage: React.FC = () => {
                         }}
                       >
                         <Box display="flex" justifyContent="space-between" alignItems="center" gap={1} mb={0.75}>
-                          <Typography sx={{ fontWeight: 800, fontSize: '0.86rem' }}>{profile.label}</Typography>
+                          <Typography sx={{ fontWeight: 800, fontSize: '0.86rem' }}>{interfaceStyleLabel(styleId)}</Typography>
                           <Chip
                             size="small"
-                            label={compatibility.label}
+                            label={t(`appearance:paletteCompatibility.${compatibility.level}.label`)}
                             color={compatibilityColor[compatibility.level]}
                             variant={compatibility.level === 'ideal' ? 'filled' : 'outlined'}
                           />
                         </Box>
 
                         <Typography sx={{ color: 'text.secondary', fontSize: '0.76rem', lineHeight: 1.45, mb: 0.75 }}>
-                          {profile.shortDescription}
+                          {t(`appearance:interfaceStyles.${styleId}.shortDescription`)}
                         </Typography>
                         <Typography sx={{ color: 'text.secondary', fontSize: '0.72rem', lineHeight: 1.45, mb: 1 }}>
-                          {profile.spotlight}
+                          {t(`appearance:interfaceStyles.${styleId}.spotlight`)}
                         </Typography>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
                           <Typography sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
-                            Рекомендовано: {recommendedPaletteName}
+                            {t('appearance:recommendedPalette', { name: recommendedPaletteName })}
                           </Typography>
                           <Button
                             size="small"
@@ -700,7 +713,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                               applyInterfaceStyle(styleId);
                             }}
                           >
-                            Только стиль
+                            {t('appearance:styleOnly')}
                           </Button>
                         </Box>
                       </Box>
@@ -713,8 +726,8 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<PaletteIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Цветовая тема"
-                  subtitle={`${paletteOrder.length} уникальных палитр`}
+                  title={t('appearance:sections.colorTheme.title')}
+                  subtitle={t('appearance:sections.colorTheme.subtitle', { count: paletteOrder.length })}
                 />
 
                 <Box
@@ -734,7 +747,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     return (
                       <Tooltip
                         key={preset.id}
-                        title={preset.label}
+                        title={themePresetLabel(preset.id, preset.label)}
                         arrow
                         placement="top"
                       >
@@ -853,7 +866,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                                 lineHeight: 1.2,
                               }}
                             >
-                              {preset.label}
+                              {themePresetLabel(preset.id, preset.label)}
                             </Typography>
                             
                             {selected && (
@@ -872,7 +885,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                                   letterSpacing: '0.05em',
                                 }}
                               >
-                                АКТИВНА
+                                {t('appearance:sections.colorTheme.activeBadge')}
                               </Box>
                             )}
                           </Box>
@@ -903,7 +916,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                   >
                     <AddIcon sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
                     <Typography sx={{ fontWeight: 700, fontSize: '0.82rem', color: 'primary.main' }}>
-                      Добавить
+                      {t('appearance:sections.addPalette')}
                     </Typography>
                   </Box>
                 </Box>
@@ -913,21 +926,21 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<WallpaperIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Фон главной страницы"
-                  subtitle="Персонализируйте стартовый экран"
+                  title={t('appearance:sections.background.title')}
+                  subtitle={t('appearance:sections.background.subtitle')}
                 />
 
                 <Stack spacing={2.5}>
                   <TextField
                     fullWidth
-                    label="Ссылка на изображение"
+                    label={t('appearance:sections.background.imageUrl')}
                     value={homeBackgroundImageDraft}
                     onChange={(e) => setHomeBackgroundImageDraft(e.target.value)}
                     onBlur={() => flushHomeBackgroundImageDraft()}
-                    placeholder="https://example.com/background.jpg"
+                    placeholder={t('appearance:sections.background.imageUrlPlaceholder')}
                     helperText={
                       <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Можно вставить URL или загрузить файл ниже</span>
+                        <span>{t('appearance:sections.background.imageHelper')}</span>
                         {renderApplyingHint(isHomeBackgroundImagePending)}
                       </Box>
                     }
@@ -951,7 +964,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                         },
                       }}
                     >
-                      Загрузить файл
+                      {t('appearance:sections.background.uploadFile')}
                     </DndButton>
 
                     <Button
@@ -975,12 +988,12 @@ export const AppearanceSettingsPage: React.FC = () => {
                         },
                       }}
                     >
-                      Убрать фон
+                      {t('appearance:sections.background.clearBackground')}
                     </Button>
                   </Box>
 
                   <AnimatedSlider
-                    label="Прозрачность фона"
+                    label={t('appearance:sections.background.opacity')}
                     value={homeBackgroundOpacity}
                     min={0.1}
                     max={1}
@@ -1041,7 +1054,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       >
                         <ImageIcon sx={{ fontSize: 48, color: 'divider', mb: 1, opacity: 0.5 }} />
                         <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
-                          Перетащите изображение или используйте кнопку выше
+                          {t('appearance:sections.background.dropHint')}
                         </Typography>
                       </Box>
                     )}
@@ -1061,11 +1074,11 @@ export const AppearanceSettingsPage: React.FC = () => {
                     >
                       <ImageIcon fontSize="small" sx={{ color: 'primary.main' }} />
                       <Typography sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.9rem' }}>
-                        Главная страница Campaigner
+                        {t('appearance:sections.background.previewTitle')}
                       </Typography>
                       <Chip
                         size="small"
-                        label={homeBackgroundImageDraft ? '✓ Фон установлен' : 'Не выбран'}
+                        label={homeBackgroundImageDraft ? t('appearance:sections.background.chipSet') : t('appearance:sections.background.chipUnset')}
                         color={homeBackgroundImageDraft ? 'success' : 'default'}
                         sx={{ ml: 'auto', fontWeight: 700 }}
                       />
@@ -1078,8 +1091,8 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<LayersIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Поверхности и материалы"
-                  subtitle="Настройте текстуру интерфейса"
+                  title={t('appearance:sections.surfaces.title')}
+                  subtitle={t('appearance:sections.surfaces.subtitle')}
                 />
 
                 <FormControl fullWidth sx={{ mb: 3 }}>
@@ -1095,7 +1108,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     }}
                   >
                     <DragIndicatorIcon sx={{ fontSize: '1rem' }} />
-                    Стиль панелей
+                    {t('appearance:sections.surfaces.panelStyle')}
                   </FormLabel>
                   <ToggleButtonGroup
                     exclusive
@@ -1125,13 +1138,13 @@ export const AppearanceSettingsPage: React.FC = () => {
                       },
                     }}
                   >
-                    <ToggleButton value="glass">🪟 Стекло</ToggleButton>
-                    <ToggleButton value="solid">🧱 Плотный</ToggleButton>
+                    <ToggleButton value="glass">{t('appearance:sections.surfaces.glass')}</ToggleButton>
+                    <ToggleButton value="solid">{t('appearance:sections.surfaces.solid')}</ToggleButton>
                   </ToggleButtonGroup>
                 </FormControl>
 
                 <AnimatedSlider
-                  label="Прозрачность"
+                  label={t('appearance:sections.surfaces.transparency')}
                   value={transparency}
                   min={0.35}
                   max={0.95}
@@ -1142,7 +1155,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                 />
 
                 <AnimatedSlider
-                  label="Размытие (Blur)"
+                  label={t('appearance:sections.surfaces.blur')}
                   value={blur}
                   min={0}
                   max={24}
@@ -1154,7 +1167,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                 />
 
                 <AnimatedSlider
-                  label="Радиус углов"
+                  label={t('appearance:sections.surfaces.cornerRadius')}
                   value={borderRadius}
                   min={6}
                   max={24}
@@ -1170,8 +1183,8 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<TextFieldsIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Типографика и ритм"
-                  subtitle="Шрифты, плотность и движение"
+                  title={t('appearance:sections.typography.title')}
+                  subtitle={t('appearance:sections.typography.subtitle')}
                 />
 
                 <Stack spacing={3}>
@@ -1188,7 +1201,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       }}
                     >
                       <TextFieldsIcon sx={{ fontSize: '1rem' }} />
-                      Основной шрифт
+                      {t('appearance:sections.typography.bodyFont')}
                     </FormLabel>
                     <ToggleButtonGroup
                       exclusive
@@ -1220,9 +1233,9 @@ export const AppearanceSettingsPage: React.FC = () => {
                         },
                       }}
                     >
-                      <ToggleButton value="serif">Serif</ToggleButton>
-                      <ToggleButton value="sans">Sans-Serif</ToggleButton>
-                      <ToggleButton value="custom">Custom</ToggleButton>
+                      <ToggleButton value="serif">{t('appearance:sections.typography.serif')}</ToggleButton>
+                      <ToggleButton value="sans">{t('appearance:sections.typography.sans')}</ToggleButton>
+                      <ToggleButton value="custom">{t('appearance:sections.typography.custom')}</ToggleButton>
                     </ToggleButtonGroup>
                   </FormControl>
 
@@ -1239,7 +1252,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       }}
                     >
                       <LayersIcon sx={{ fontSize: '1rem' }} />
-                      Плотность интерфейса
+                      {t('appearance:sections.typography.uiDensity')}
                     </FormLabel>
                     <ToggleButtonGroup
                       exclusive
@@ -1267,9 +1280,9 @@ export const AppearanceSettingsPage: React.FC = () => {
                         },
                       }}
                     >
-                      <ToggleButton value="compact">Компактно</ToggleButton>
-                      <ToggleButton value="comfortable">Обычно</ToggleButton>
-                      <ToggleButton value="spacious">Свободно</ToggleButton>
+                      <ToggleButton value="compact">{t('appearance:sections.typography.compact')}</ToggleButton>
+                      <ToggleButton value="comfortable">{t('appearance:sections.typography.comfortable')}</ToggleButton>
+                      <ToggleButton value="spacious">{t('appearance:sections.typography.spacious')}</ToggleButton>
                     </ToggleButtonGroup>
                   </FormControl>
 
@@ -1286,7 +1299,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       }}
                     >
                       <AnimationIcon sx={{ fontSize: '1rem' }} />
-                      Анимации
+                      {t('appearance:sections.typography.animations')}
                     </FormLabel>
                     <ToggleButtonGroup
                       exclusive
@@ -1313,8 +1326,8 @@ export const AppearanceSettingsPage: React.FC = () => {
                         },
                       }}
                     >
-                      <ToggleButton value="full">✨ Плавные</ToggleButton>
-                      <ToggleButton value="reduced">⚡ Минимальные</ToggleButton>
+                      <ToggleButton value="full">{t('appearance:sections.typography.motionFull')}</ToggleButton>
+                      <ToggleButton value="reduced">{t('appearance:sections.typography.motionReduced')}</ToggleButton>
                     </ToggleButtonGroup>
                   </FormControl>
                 </Stack>
@@ -1323,22 +1336,22 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<FontDownloadIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Кастомные шрифты"
-                  subtitle="Подключайте свои font-family и CSS URL"
+                  title={t('appearance:sections.customFonts.title')}
+                  subtitle={t('appearance:sections.customFonts.subtitle')}
                 />
 
                 <Stack spacing={2.5}>
                   <FormControl fullWidth>
-                    <InputLabel id="font-preset-select-label">Готовый пресет шрифта</InputLabel>
+                    <InputLabel id="font-preset-select-label">{t('appearance:sections.customFonts.presetLabel')}</InputLabel>
                     <Select
                       labelId="font-preset-select-label"
                       value={selectedFontPresetId}
-                      label="Готовый пресет шрифта"
+                      label={t('appearance:sections.customFonts.presetLabel')}
                       onChange={(e) => applyFontPreset(e.target.value)}
                     >
                       {FONT_PRESET_OPTIONS.map((preset) => (
                         <MenuItem key={preset.id} value={preset.id}>
-                          {preset.label}
+                          {t(`appearance:fontPresets.${preset.id}.label`, { defaultValue: preset.label })}
                         </MenuItem>
                       ))}
                     </Select>
@@ -1346,14 +1359,14 @@ export const AppearanceSettingsPage: React.FC = () => {
 
                   <TextField
                     fullWidth
-                    label="CSS URL шрифта (Google Fonts / свой CDN)"
+                    label={t('appearance:sections.customFonts.cssUrl')}
                     value={customFontCssUrlDraft}
                     onChange={(e) => setCustomFontCssUrlDraft(e.target.value)}
                     onBlur={() => flushCustomFontCssUrlDraft()}
-                    placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap"
+                    placeholder={t('appearance:sections.customFonts.cssUrlPlaceholder')}
                     helperText={
                       <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Ссылка будет подключена как &lt;link rel='stylesheet'&gt;</span>
+                        <span>{t('appearance:sections.customFonts.cssHelper')}</span>
                         {renderApplyingHint(isCustomFontCssUrlPending)}
                       </Box>
                     }
@@ -1361,32 +1374,26 @@ export const AppearanceSettingsPage: React.FC = () => {
 
                   <TextField
                     fullWidth
-                    label="font-family для основного текста"
+                    label={t('appearance:sections.customFonts.bodyFamily')}
                     value={customBodyFontFamilyDraft}
                     onChange={(e) => setCustomBodyFontFamilyDraft(e.target.value)}
                     onBlur={() => flushCustomBodyFontFamilyDraft()}
-                    placeholder={'"Inter", "Roboto", sans-serif'}
+                    placeholder={t('appearance:sections.customFonts.bodyPlaceholder')}
                     helperText={renderApplyingHint(isCustomBodyFontFamilyPending)}
                   />
 
                   <TextField
                     fullWidth
-                    label="font-family для заголовков"
+                    label={t('appearance:sections.customFonts.headingFamily')}
                     value={customHeadingFontFamilyDraft}
                     onChange={(e) => setCustomHeadingFontFamilyDraft(e.target.value)}
                     onBlur={() => flushCustomHeadingFontFamilyDraft()}
-                    placeholder={'"Cinzel", serif'}
+                    placeholder={t('appearance:sections.customFonts.headingPlaceholder')}
                     helperText={renderApplyingHint(isCustomHeadingFontFamilyPending)}
                   />
 
                   <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.08) }}>
-                    <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
-                      Для локальных шрифтов положи файлы в <b>frontend/public/fonts</b>, затем укажи CSS, например:
-                      <br />
-                      <code>/fonts/my-local-font.css</code> и family вроде <code>"MyLocalFont", serif</code>.
-                      <br />
-                      При вводе значений режим автоматически переключается на <b>Custom</b>.
-                    </Typography>
+                    <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }} dangerouslySetInnerHTML={{ __html: t('appearance:sections.customFonts.localHint') }} />
                   </Box>
                 </Stack>
               </GlassCard>
@@ -1394,27 +1401,27 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<TextureIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Паттерны панелей и карточек"
-                  subtitle="Сетка, точки, диагональ или ваш texture"
+                  title={t('appearance:sections.patterns.title')}
+                  subtitle={t('appearance:sections.patterns.subtitle')}
                 />
 
                 <Stack spacing={3}>
                   <Box>
-                    <FormLabel sx={{ mb: 1.2, display: 'block', fontWeight: 600 }}>Паттерн панелей (Paper)</FormLabel>
+                    <FormLabel sx={{ mb: 1.2, display: 'block', fontWeight: 600 }}>{t('appearance:sections.patterns.panelLabel')}</FormLabel>
                     <ToggleButtonGroup
                       exclusive
                       value={panelPatternMode}
                       onChange={(_, value) => value && setPanelPatternMode(value)}
                       fullWidth
                     >
-                      <ToggleButton value="none">Нет</ToggleButton>
-                      <ToggleButton value="dots">Точки</ToggleButton>
-                      <ToggleButton value="grid">Сетка</ToggleButton>
-                      <ToggleButton value="diagonal">Диагональ</ToggleButton>
-                      <ToggleButton value="custom">Custom</ToggleButton>
+                      <ToggleButton value="none">{t('appearance:patternModes.none')}</ToggleButton>
+                      <ToggleButton value="dots">{t('appearance:patternModes.dots')}</ToggleButton>
+                      <ToggleButton value="grid">{t('appearance:patternModes.grid')}</ToggleButton>
+                      <ToggleButton value="diagonal">{t('appearance:patternModes.diagonal')}</ToggleButton>
+                      <ToggleButton value="custom">{t('appearance:patternModes.custom')}</ToggleButton>
                     </ToggleButtonGroup>
                     <AnimatedSlider
-                      label="Плотность/размер паттерна"
+                      label={t('appearance:sections.patterns.density')}
                       value={panelPatternSize}
                       min={8}
                       max={64}
@@ -1424,7 +1431,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       icon={<TextureIcon sx={{ fontSize: '1rem' }} />}
                     />
                     <AnimatedSlider
-                      label="Прозрачность паттерна"
+                      label={t('appearance:sections.patterns.opacity')}
                       value={panelPatternOpacity}
                       min={0.03}
                       max={0.5}
@@ -1437,15 +1444,15 @@ export const AppearanceSettingsPage: React.FC = () => {
                       <Stack spacing={1.2}>
                         <TextField
                           fullWidth
-                          label="URL паттерна для панелей"
+                          label={t('appearance:sections.patterns.panelUrl')}
                           value={panelPatternUrlDraft}
                           onChange={(e) => setPanelPatternUrlDraft(e.target.value)}
                           onBlur={() => flushPanelPatternUrlDraft()}
-                          placeholder="https://example.com/pattern.png"
+                          placeholder={t('appearance:sections.background.imageUrlPlaceholder')}
                           helperText={renderApplyingHint(isPanelPatternUrlPending)}
                         />
                         <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => handlePatternFileUpload('panel')}>
-                          Загрузить паттерн панелей
+                          {t('appearance:sections.patterns.uploadPanel')}
                         </Button>
                       </Stack>
                     )}
@@ -1466,7 +1473,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       }}
                     >
                       <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', mb: 1 }}>
-                        Предпросмотр панелей (Paper)
+                        {t('appearance:sections.patterns.previewPanel')}
                       </Typography>
                       <Box
                         sx={{
@@ -1479,8 +1486,8 @@ export const AppearanceSettingsPage: React.FC = () => {
                           alignItems: 'center',
                         }}
                       >
-                        <Typography sx={{ fontWeight: 600 }}>Panel Sample</Typography>
-                        <Chip size="small" label={panelPatternMode} />
+                        <Typography sx={{ fontWeight: 600 }}>{t('appearance:sections.patterns.panelSample')}</Typography>
+                        <Chip size="small" label={t(`appearance:patternModes.${panelPatternMode}`)} />
                       </Box>
                     </Box>
                   </Box>
@@ -1488,21 +1495,21 @@ export const AppearanceSettingsPage: React.FC = () => {
                   <Divider />
 
                   <Box>
-                    <FormLabel sx={{ mb: 1.2, display: 'block', fontWeight: 600 }}>Паттерн карточек (Card)</FormLabel>
+                    <FormLabel sx={{ mb: 1.2, display: 'block', fontWeight: 600 }}>{t('appearance:sections.patterns.cardLabel')}</FormLabel>
                     <ToggleButtonGroup
                       exclusive
                       value={cardPatternMode}
                       onChange={(_, value) => value && setCardPatternMode(value)}
                       fullWidth
                     >
-                      <ToggleButton value="none">Нет</ToggleButton>
-                      <ToggleButton value="dots">Точки</ToggleButton>
-                      <ToggleButton value="grid">Сетка</ToggleButton>
-                      <ToggleButton value="diagonal">Диагональ</ToggleButton>
-                      <ToggleButton value="custom">Custom</ToggleButton>
+                      <ToggleButton value="none">{t('appearance:patternModes.none')}</ToggleButton>
+                      <ToggleButton value="dots">{t('appearance:patternModes.dots')}</ToggleButton>
+                      <ToggleButton value="grid">{t('appearance:patternModes.grid')}</ToggleButton>
+                      <ToggleButton value="diagonal">{t('appearance:patternModes.diagonal')}</ToggleButton>
+                      <ToggleButton value="custom">{t('appearance:patternModes.custom')}</ToggleButton>
                     </ToggleButtonGroup>
                     <AnimatedSlider
-                      label="Плотность/размер паттерна"
+                      label={t('appearance:sections.patterns.density')}
                       value={cardPatternSize}
                       min={8}
                       max={64}
@@ -1512,7 +1519,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       icon={<TextureIcon sx={{ fontSize: '1rem' }} />}
                     />
                     <AnimatedSlider
-                      label="Прозрачность паттерна"
+                      label={t('appearance:sections.patterns.opacity')}
                       value={cardPatternOpacity}
                       min={0.03}
                       max={0.5}
@@ -1525,15 +1532,15 @@ export const AppearanceSettingsPage: React.FC = () => {
                       <Stack spacing={1.2}>
                         <TextField
                           fullWidth
-                          label="URL паттерна для карточек"
+                          label={t('appearance:sections.patterns.cardUrl')}
                           value={cardPatternUrlDraft}
                           onChange={(e) => setCardPatternUrlDraft(e.target.value)}
                           onBlur={() => flushCardPatternUrlDraft()}
-                          placeholder="https://example.com/pattern.png"
+                          placeholder={t('appearance:sections.background.imageUrlPlaceholder')}
                           helperText={renderApplyingHint(isCardPatternUrlPending)}
                         />
                         <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => handlePatternFileUpload('card')}>
-                          Загрузить паттерн карточек
+                          {t('appearance:sections.patterns.uploadCard')}
                         </Button>
                       </Stack>
                     )}
@@ -1554,7 +1561,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       }}
                     >
                       <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', mb: 1 }}>
-                        Предпросмотр карточек (Card)
+                        {t('appearance:sections.patterns.previewCard')}
                       </Typography>
                       <Box
                         sx={{
@@ -1565,9 +1572,9 @@ export const AppearanceSettingsPage: React.FC = () => {
                           boxShadow: '0 6px 14px rgba(0,0,0,0.18)',
                         }}
                       >
-                        <Typography sx={{ fontWeight: 700, mb: 0.5 }}>Card Sample</Typography>
+                        <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('appearance:sections.patterns.cardSample')}</Typography>
                         <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem' }}>
-                          Так будет выглядеть фон карточек с текущим паттерном.
+                          {t('appearance:sections.patterns.cardSampleDesc')}
                         </Typography>
                       </Box>
                     </Box>
@@ -1578,18 +1585,18 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<SaveIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Пользовательские темы"
-                  subtitle="Сохраняйте и быстро переключайте свои настройки"
+                  title={t('appearance:sections.customThemes.title')}
+                  subtitle={t('appearance:sections.customThemes.subtitle')}
                 />
 
                 <Stack spacing={2}>
                   <Box display="flex" gap={1.2}>
                     <TextField
                       fullWidth
-                      label="Название вашей темы"
+                      label={t('appearance:sections.customThemes.nameLabel')}
                       value={customThemeName}
                       onChange={(e) => setCustomThemeName(e.target.value)}
-                      placeholder="Например: Ночная карта с текстурой"
+                      placeholder={t('appearance:sections.customThemes.namePlaceholder')}
                     />
                     <DndButton
                       variant="contained"
@@ -1597,14 +1604,14 @@ export const AppearanceSettingsPage: React.FC = () => {
                       onClick={handleSaveCustomTheme}
                       disabled={!customThemeName.trim()}
                     >
-                      Сохранить
+                      {t('common:save')}
                     </DndButton>
                   </Box>
 
                   <Stack spacing={1}>
                     {customThemes.length === 0 && (
                       <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
-                        Пока нет сохраненных тем. Настройте стиль и нажмите «Сохранить».
+                        {t('appearance:sections.customThemes.empty')}
                       </Typography>
                     )}
                     {customThemes.map((customTheme) => {
@@ -1631,7 +1638,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                             </Typography>
                           </Box>
                           <Button size="small" variant={active ? 'contained' : 'outlined'} onClick={() => applyCustomTheme(customTheme.id)}>
-                            {active ? 'Активна' : 'Применить'}
+                            {active ? t('appearance:sections.customThemes.active') : t('appearance:sections.customThemes.apply')}
                           </Button>
                           <IconButton size="small" onClick={() => deleteCustomTheme(customTheme.id)} sx={{ color: 'error.main' }}>
                             <DeleteForeverIcon fontSize="small" />
@@ -1663,32 +1670,32 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<TuneIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Текущие параметры"
-                  subtitle="Все активные настройки"
+                  title={t('appearance:sections.currentParams.title')}
+                  subtitle={t('appearance:sections.currentParams.subtitle')}
                 />
 
                 <Stack spacing={1.5}>
                   {[
-                    { label: 'Тип интерфейса', value: currentStyleProfile.label, color: theme.palette.secondary.main },
-                    { label: 'Автопалитра', value: autoApplyRecommendedPalette ? 'Вкл' : 'Выкл', color: theme.palette.info.main },
-                    { label: 'Совм. палитры', value: currentPaletteCompatibility.label, color: theme.palette.info.main },
-                    { label: 'Пресет', value: currentPreset.label, color: theme.palette.primary.main },
-                    { label: 'Поверхность', value: surfaceMode === 'glass' ? '🪟 Стекло' : '🧱 Плотный', color: theme.palette.info.main },
-                    { label: 'Шрифт', value: fontMode === 'serif' ? 'Serif' : 'Sans-Serif', color: theme.palette.text.primary },
-                    { label: 'Плотность', value: uiDensity === 'compact' ? 'Компактно' : uiDensity === 'comfortable' ? 'Обычно' : 'Свободно', color: theme.palette.success.main },
-                    { label: 'Анимации', value: motionMode === 'full' ? '✨ Плавные' : '⚡ Минимальные', color: theme.palette.warning.main },
-                    { label: 'Прозрачность', value: `${Math.round(transparency * 100)}%`, color: theme.palette.secondary.main },
-                    { label: 'Blur', value: `${blur}px`, color: theme.palette.secondary.main },
-                    { label: 'Радиус углов', value: `${borderRadius}px`, color: theme.palette.text.secondary },
-                    { label: 'Шрифт custom', value: fontMode === 'custom' ? 'Да' : 'Нет', color: fontMode === 'custom' ? theme.palette.success.main : theme.palette.text.disabled },
-                    { label: 'Паттерн Paper', value: panelPatternMode, color: theme.palette.info.main },
-                    { label: 'Паттерн Card', value: cardPatternMode, color: theme.palette.info.main },
-                    { label: 'Сохраненных тем', value: String(customThemes.length), color: theme.palette.primary.main },
-                    { label: 'Фон главной', value: homeBackgroundImage ? '✓ Установлен' : '○ Не выбран', color: homeBackgroundImage ? theme.palette.success.main : theme.palette.text.disabled },
-                    { label: 'Прозрачность фона', value: `${Math.round(homeBackgroundOpacity * 100)}%`, color: theme.palette.text.secondary },
+                    { id: 'interfaceType', label: t('appearance:summary.labels.interfaceType'), value: interfaceStyleLabel(interfaceStyle), color: theme.palette.secondary.main },
+                    { id: 'autoPalette', label: t('appearance:summary.labels.autoPalette'), value: autoApplyRecommendedPalette ? t('appearance:summary.on') : t('appearance:summary.off'), color: theme.palette.info.main },
+                    { id: 'paletteMatch', label: t('appearance:summary.labels.paletteMatch'), value: currentPaletteCompatibility.label, color: theme.palette.info.main },
+                    { id: 'preset', label: t('appearance:summary.labels.preset'), value: themePresetLabel(themePreset, currentPreset.label), color: theme.palette.primary.main },
+                    { id: 'surface', label: t('appearance:summary.labels.surface'), value: surfaceMode === 'glass' ? t('appearance:sections.surfaces.glass') : t('appearance:sections.surfaces.solid'), color: theme.palette.info.main },
+                    { id: 'font', label: t('appearance:summary.labels.font'), value: fontMode === 'serif' ? t('appearance:sections.typography.serif') : fontMode === 'sans' ? t('appearance:sections.typography.sans') : t('appearance:sections.typography.custom'), color: theme.palette.text.primary },
+                    { id: 'density', label: t('appearance:summary.labels.density'), value: uiDensity === 'compact' ? t('appearance:sections.typography.compact') : uiDensity === 'comfortable' ? t('appearance:sections.typography.comfortable') : t('appearance:sections.typography.spacious'), color: theme.palette.success.main },
+                    { id: 'animations', label: t('appearance:summary.labels.animations'), value: motionMode === 'full' ? t('appearance:sections.typography.motionFull') : t('appearance:sections.typography.motionReduced'), color: theme.palette.warning.main },
+                    { id: 'transparency', label: t('appearance:summary.labels.transparency'), value: `${Math.round(transparency * 100)}%`, color: theme.palette.secondary.main },
+                    { id: 'blur', label: t('appearance:summary.labels.blur'), value: `${blur}px`, color: theme.palette.secondary.main },
+                    { id: 'cornerRadius', label: t('appearance:summary.labels.cornerRadius'), value: `${borderRadius}px`, color: theme.palette.text.secondary },
+                    { id: 'customFont', label: t('appearance:summary.labels.customFont'), value: fontMode === 'custom' ? t('appearance:summary.yes') : t('appearance:summary.no'), color: fontMode === 'custom' ? theme.palette.success.main : theme.palette.text.disabled },
+                    { id: 'patternPaper', label: t('appearance:summary.labels.patternPaper'), value: t(`appearance:patternModes.${panelPatternMode}`), color: theme.palette.info.main },
+                    { id: 'patternCard', label: t('appearance:summary.labels.patternCard'), value: t(`appearance:patternModes.${cardPatternMode}`), color: theme.palette.info.main },
+                    { id: 'savedThemes', label: t('appearance:summary.labels.savedThemes'), value: String(customThemes.length), color: theme.palette.primary.main },
+                    { id: 'homeBg', label: t('appearance:summary.labels.homeBg'), value: homeBackgroundImage ? t('appearance:sections.background.chipSet') : t('appearance:sections.background.chipUnset'), color: homeBackgroundImage ? theme.palette.success.main : theme.palette.text.disabled },
+                    { id: 'homeBgOpacity', label: t('appearance:summary.labels.homeBgOpacity'), value: `${Math.round(homeBackgroundOpacity * 100)}%`, color: theme.palette.text.secondary },
                   ].map((param) => (
                     <Box
-                      key={param.label}
+                      key={param.id}
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -1748,7 +1755,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     }}
                   >
                     <AutoAwesomeIcon sx={{ color: 'info.main', fontSize: '1.1rem', flexShrink: 0, mt: 0.2 }} />
-                    <span>Эти настройки применяются ко всему приложению и сохраняются локально в браузере.</span>
+                    <span>{t('appearance:sections.currentParams.footerNote')}</span>
                   </Typography>
                 </Box>
               </GlassCard>
@@ -1757,34 +1764,34 @@ export const AppearanceSettingsPage: React.FC = () => {
               <GlassCard sx={{ p: 3 }}>
                 <SectionHeader
                   icon={<AutoAwesomeIcon sx={{ fontSize: '1.2rem' }} />}
-                  title="Рекомендации"
-                  subtitle="Советы от дизайнера"
+                  title={t('appearance:sections.recommendations.title')}
+                  subtitle={t('appearance:sections.recommendations.subtitle')}
                 />
 
                 <Stack spacing={2}>
                   {[
                     {
-                      tip: 'Для строгого интерфейса лучше подходят Obsidian Gold и Midnight Cyan.',
+                      tip: t('appearance:sections.recommendations.tips.palettes'),
                       icon: '🎯',
                       color: theme.palette.primary.main,
                     },
                     {
-                      tip: 'Если хочется меньше "стекла" — переключи режим поверхности на Плотный.',
+                      tip: t('appearance:sections.recommendations.tips.lessGlass'),
                       icon: '🧱',
                       color: theme.palette.info.main,
                     },
                     {
-                      tip: 'Для фонового изображения лучше использовать тёмные, не слишком контрастные арты.',
+                      tip: t('appearance:sections.recommendations.tips.darkArt'),
                       icon: '🖼️',
                       color: theme.palette.warning.main,
                     },
                     {
-                      tip: 'Если фон слишком активный — опусти его прозрачность до 20–45%.',
+                      tip: t('appearance:sections.recommendations.tips.busyBg'),
                       icon: '💧',
                       color: theme.palette.secondary.main,
                     },
                     {
-                      tip: 'Для более кинематографичного вида хорошо работает blur 10–16 и прозрачность 65–78%.',
+                      tip: t('appearance:sections.recommendations.tips.cinematic'),
                       icon: '✨',
                       color: theme.palette.success.main,
                     },

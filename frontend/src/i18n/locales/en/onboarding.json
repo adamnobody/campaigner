@@ -1,0 +1,66 @@
+{
+  "overlay": {
+    "title": "Tutorial · Step {{current}} / {{total}}"
+  },
+  "steps": {
+    "branch-selector": {
+      "title": "Active branch",
+      "description": "Switch the what-if branching context here: the main (canonical) branch or an alternative."
+    },
+    "branch-create": {
+      "title": "Create branch",
+      "description": "Create an alternative story branch to experiment without changing the canonical version."
+    },
+    "map-tools": {
+      "title": "Map toolbar",
+      "description": "Map modes, zoom, and primary actions live here."
+    },
+    "map-upload": {
+      "title": "Upload map",
+      "description": "Upload an image to start placing markers and territories."
+    },
+    "sidebar-characters": {
+      "title": "Characters",
+      "description": "Heroes, relationships, and character cards."
+    },
+    "sidebar-states": {
+      "title": "States",
+      "description": "World states: entities with ambitions and structure."
+    },
+    "sidebar-factions": {
+      "title": "Factions",
+      "description": "Groups, organizations, ranks, members, and links."
+    },
+    "sidebar-notes": {
+      "title": "Notes & wiki",
+      "description": "Create notes, link articles, and shape your world lore."
+    },
+    "sidebar-wiki": {
+      "title": "Wiki",
+      "description": "Knowledge graph: articles, links, and quick lore navigation."
+    },
+    "sidebar-timeline": {
+      "title": "Timeline",
+      "description": "Order events in time, build eras, and chronicle the campaign."
+    },
+    "sidebar-dogmas": {
+      "title": "Dogmas",
+      "description": "World rules: magic, cosmology, politics, and other fundamentals."
+    },
+    "sidebar-dynasties": {
+      "title": "Dynasties",
+      "description": "Family lines, key figures, and important dynastic events."
+    },
+    "sidebar-settings": {
+      "title": "Project settings",
+      "description": "Campaign parameters and project-level options."
+    },
+    "topbar-search": {
+      "title": "Global search",
+      "description": "Quick search across the project (Ctrl+K): characters, notes, events, and more."
+    }
+  },
+  "actions": {
+    "finish": "Finish"
+  }
+}

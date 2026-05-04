@@ -1,0 +1,319 @@
+{
+  "page": {
+    "title": "Appearance",
+    "subtitle": "Theme, transparency, motion, and background"
+  },
+  "actions": {
+    "resetStyle": "Reset appearance"
+  },
+  "applying": "Applying…",
+  "paletteCompatibility": {
+    "ideal": {
+      "label": "Perfect match",
+      "hint": "This palette fully fits the selected style."
+    },
+    "good": {
+      "label": "Good",
+      "hint": "Stable pairing; the style character is preserved."
+    },
+    "experimental": {
+      "label": "Experimental",
+      "hint": "Works, but the style will feel unconventional."
+    }
+  },
+  "chips": {
+    "activeStyle": "Active style: {{name}}",
+    "palettePrefix": "Palette: {{label}}"
+  },
+  "autoPalette": {
+    "label": "Auto-apply recommended palette"
+  },
+  "recommendedPalette": "Recommended: {{name}}",
+  "styleOnly": "Style only",
+  "sections": {
+    "interfaceType": {
+      "title": "Interface type",
+      "subtitle": "12 directions: from Dark Fantasy to Scholar"
+    },
+    "colorTheme": {
+      "title": "Color theme",
+      "subtitle": "{{count}} unique palettes",
+      "activeBadge": "ACTIVE"
+    },
+    "addPalette": "Add",
+    "background": {
+      "title": "Home page background",
+      "subtitle": "Personalize the start screen",
+      "imageUrl": "Image URL",
+      "imageUrlPlaceholder": "https://example.com/background.jpg",
+      "imageHelper": "Paste a URL or upload a file below",
+      "uploadFile": "Upload file",
+      "clearBackground": "Remove background",
+      "opacity": "Background opacity",
+      "dropHint": "Drop an image or use the button above",
+      "previewTitle": "Campaigner home",
+      "chipSet": "✓ Background set",
+      "chipUnset": "Not selected"
+    },
+    "surfaces": {
+      "title": "Surfaces & materials",
+      "subtitle": "Tune interface texture",
+      "panelStyle": "Panel style",
+      "glass": "🪟 Glass",
+      "solid": "🧱 Solid",
+      "transparency": "Transparency",
+      "blur": "Blur",
+      "cornerRadius": "Corner radius"
+    },
+    "typography": {
+      "title": "Typography & rhythm",
+      "subtitle": "Fonts, density, and motion",
+      "bodyFont": "Body font",
+      "serif": "Serif",
+      "sans": "Sans-Serif",
+      "custom": "Custom",
+      "uiDensity": "UI density",
+      "compact": "Compact",
+      "comfortable": "Comfortable",
+      "spacious": "Spacious",
+      "animations": "Animations",
+      "motionFull": "✨ Full",
+      "motionReduced": "⚡ Reduced"
+    },
+    "customFonts": {
+      "title": "Custom fonts",
+      "subtitle": "Connect your own font-family and CSS URL",
+      "presetLabel": "Font preset",
+      "cssUrl": "Font CSS URL (Google Fonts / your CDN)",
+      "cssUrlPlaceholder": "https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap",
+      "cssHelper": "The link will be injected as &lt;link rel=\"stylesheet\"&gt;",
+      "bodyFamily": "font-family for body text",
+      "bodyPlaceholder": "\"Inter\", \"Roboto\", sans-serif",
+      "headingFamily": "font-family for headings",
+      "headingPlaceholder": "\"Cinzel\", serif",
+      "localHint": "For local fonts place files in <b>frontend/public/fonts</b>, then point CSS e.g. <code>/fonts/my-local-font.css</code> and a family like <code>\"MyLocalFont\", serif</code>. Values switch mode to <b>Custom</b> automatically."
+    },
+    "patterns": {
+      "title": "Panel & card patterns",
+      "subtitle": "Grid, dots, diagonal, or your texture",
+      "panelLabel": "Panel pattern (Paper)",
+      "cardLabel": "Card pattern",
+      "density": "Pattern density / size",
+      "opacity": "Pattern opacity",
+      "panelUrl": "Panel pattern URL",
+      "cardUrl": "Card pattern URL",
+      "uploadPanel": "Upload panel pattern",
+      "uploadCard": "Upload card pattern",
+      "previewPanel": "Panel preview (Paper)",
+      "previewCard": "Card preview",
+      "panelSample": "Panel sample",
+      "cardSample": "Card sample",
+      "cardSampleDesc": "How card backgrounds look with the current pattern."
+    },
+    "customThemes": {
+      "title": "Custom themes",
+      "subtitle": "Save and quickly switch your own setups",
+      "nameLabel": "Your theme name",
+      "namePlaceholder": "e.g. Night map with texture",
+      "empty": "No saved themes yet. Tune the look and press Save.",
+      "active": "Active",
+      "apply": "Apply"
+    },
+    "currentParams": {
+      "title": "Current parameters",
+      "subtitle": "All active settings",
+      "footerNote": "These settings apply across the app and are stored locally in your browser."
+    },
+    "recommendations": {
+      "title": "Recommendations",
+      "subtitle": "Designer tips",
+      "tips": {
+        "palettes": "For a strict UI, **Obsidian Gold** and **Midnight Cyan** work best.",
+        "lessGlass": "Want less “glass”? Switch surface mode to **Solid**.",
+        "darkArt": "Prefer **dark, low-contrast** art for background images.",
+        "busyBg": "If the background is too busy, lower opacity to **20–45%**.",
+        "cinematic": "For a cinematic look, try **blur 10–16** and **transparency 65–78%**."
+      }
+    }
+  },
+  "patternModes": {
+    "none": "None",
+    "dots": "Dots",
+    "grid": "Grid",
+    "diagonal": "Diagonal",
+    "custom": "Custom"
+  },
+  "summary": {
+    "on": "On",
+    "off": "Off",
+    "yes": "Yes",
+    "no": "No",
+    "labels": {
+      "interfaceType": "Interface type",
+      "autoPalette": "Auto palette",
+      "paletteMatch": "Palette match",
+      "preset": "Preset",
+      "surface": "Surface",
+      "font": "Font",
+      "density": "Density",
+      "animations": "Animations",
+      "transparency": "Transparency",
+      "blur": "Blur",
+      "cornerRadius": "Corner radius",
+      "customFont": "Custom font",
+      "patternPaper": "Paper pattern",
+      "patternCard": "Card pattern",
+      "savedThemes": "Saved themes",
+      "homeBg": "Home background",
+      "homeBgOpacity": "Background opacity"
+    }
+  },
+  "themePresets": {
+    "obsidian-gold": { "label": "Obsidian Gold" },
+    "midnight-cyan": { "label": "Midnight Cyan" },
+    "royal-violet": { "label": "Royal Violet" },
+    "ember-crimson": { "label": "Ember Crimson" },
+    "forest-emerald": { "label": "Forest Emerald" },
+    "moonstone-silver": { "label": "Moonstone Silver" },
+    "sable-rose": { "label": "Sable Rose" },
+    "deep-amber": { "label": "Deep Amber" },
+    "storm-indigo": { "label": "Storm Indigo" },
+    "ashen-teal": { "label": "Ashen Teal" },
+    "neon-magenta": { "label": "Neon Magenta" },
+    "verdant-lime": { "label": "Verdant Lime" },
+    "brass-smoke": { "label": "Brass Smoke" },
+    "parchment-ivory": { "label": "Parchment Ivory" }
+  },
+  "fontPresets": {
+    "default-inter-cinzel": { "label": "Inter + Cinzel (default)" },
+    "kode-mono": { "label": "Kode Mono (Google Fonts)" },
+    "playfair": { "label": "Playfair Display + Inter" },
+    "cinzel-crimson": { "label": "Cinzel + Crimson Text" },
+    "gothic-noir": { "label": "Gothic Noir (UnifrakturCook + Cormorant)" },
+    "fantasy-realm": { "label": "Fantasy Realm (MedievalSharp + Marcellus)" },
+    "scifi-terminal": { "label": "Sci‑Fi Terminal (Orbitron + Rajdhani)" },
+    "handwritten-journal": { "label": "Handwritten Journal (Caveat + Patrick Hand)" },
+    "arcane-spectral": { "label": "Arcane Spectral (Philosopher + Spectral)" },
+    "imperial-serif": { "label": "Imperial Serif (Playfair Display + Source Serif 4)" },
+    "holo-tech": { "label": "Holo Tech (Chakra Petch + Sora)" },
+    "industrial-condensed": { "label": "Industrial Condensed (Space Grotesk + IBM Plex Sans Condensed)" },
+    "noir-print": { "label": "Noir Print (Libre Baskerville + Source Sans 3)" },
+    "solar-clean": { "label": "Solar Clean (Manrope + Nunito)" },
+    "local-template": { "label": "Local font from /public/fonts" }
+  },
+  "interfaceStyles": {
+    "dark-fantasy": {
+      "label": "Dark Fantasy",
+      "shortDescription": "Dark cinematic style tailored for lore and maps.",
+      "spotlight": "Deep shadows, serif headlines, and a soft gold accent."
+    },
+    "high-fantasy": {
+      "label": "High Fantasy",
+      "shortDescription": "Brighter epic look with a legendary atmosphere.",
+      "spotlight": "Airy panels, soft glows, and expressive typography."
+    },
+    "sci-fi": {
+      "label": "Sci-Fi",
+      "shortDescription": "Clean tech UI for analytics and data.",
+      "spotlight": "Geometry, crisp edges, and restrained motion."
+    },
+    "cyberpunk": {
+      "label": "Cyberpunk",
+      "shortDescription": "High contrast, neon, and aggressive accents.",
+      "spotlight": "Bright signals, tight grids, and tense visual rhythm."
+    },
+    "solarpunk": {
+      "label": "Solarpunk",
+      "shortDescription": "Optimistic eco-tech with gentle futurism.",
+      "spotlight": "Natural tones, airy grids, and calm dynamics."
+    },
+    "steampunk": {
+      "label": "Steampunk",
+      "shortDescription": "Industrial retro aesthetics and tactile textures.",
+      "spotlight": "Brass accents, dense panels, and clear outlines."
+    },
+    "noir-detective": {
+      "label": "Noir Detective",
+      "shortDescription": "Strict dark minimalism focused on content.",
+      "spotlight": "Near-monochrome, low noise, and firm contrast."
+    },
+    "arcane-mystic": {
+      "label": "Arcane Mystic",
+      "shortDescription": "Mystical look with glow and soft gradients.",
+      "spotlight": "Violet–azure glows and smooth highlights."
+    },
+    "imperial-chronicle": {
+      "label": "Imperial Chronicle",
+      "shortDescription": "Formal archival style for an in-world encyclopedia.",
+      "spotlight": "Readable, neat borders, and steady rhythm."
+    },
+    "industrial-brutal": {
+      "label": "Industrial Brutal",
+      "shortDescription": "Utilitarian dense UI without ornament.",
+      "spotlight": "Solid blocks, minimal rounding, and clear hierarchy."
+    },
+    "holographic": {
+      "label": "Holographic",
+      "shortDescription": "Glass panels with cool shimmer and depth.",
+      "spotlight": "Translucent layers and contour accents."
+    },
+    "scholar-manuscript": {
+      "label": "Scholar Manuscript",
+      "shortDescription": "Calm document style for reading and notes.",
+      "spotlight": "Warm tone, moderate contrast, and minimal motion."
+    }
+  },
+  "preview": {
+    "title": "Preview",
+    "liveBadge": "LIVE",
+    "sampleTitle": "Archmage Tower",
+    "sampleBody": "An ancient tower hidden among misty cliffs. Inside lie maps, expedition logs, and forgotten treatises on magic.",
+    "tag1": "Location",
+    "tag2": "Magic",
+    "tag3": "Mystery",
+    "open": "Open",
+    "details": "Details"
+  },
+  "createDialog": {
+    "titleCreate": "Create color theme",
+    "titleEdit": "Edit color theme",
+    "subtitle": "Set base colors, check the preview, and save the palette to the list.",
+    "themeName": "Theme name",
+    "namePlaceholder": "e.g. Royal Violet",
+    "nameError": "Name cannot be empty.",
+    "quickPresets": "Quick presets",
+    "quickPresetNames": {
+      "violet": "Royal Violet",
+      "emerald": "Emerald Grove",
+      "rose": "Rose Ember",
+      "amber": "Amber Forge",
+      "slate": "Slate Archive"
+    },
+    "fields": {
+      "background": {
+        "title": "Background",
+        "description": "Primary dark interface color."
+      },
+      "accent": {
+        "title": "Accent",
+        "description": "Color for active buttons and highlights."
+      },
+      "text": {
+        "title": "Text",
+        "description": "Primary color for headings and content."
+      }
+    },
+    "hexPlaceholder": "#RRGGBB",
+    "invalidHex": "Invalid HEX",
+    "livePreview": "Live preview",
+    "newThemeFallback": "New theme",
+    "previewCardLine": "Sample interface card with your palette.",
+    "previewProjectCard": "Project card",
+    "previewProjectDesc": "Short description and project status in your palette.",
+    "primaryButton": "Primary button",
+    "badgeSample": "Badge",
+    "lowContrast": "Low contrast: text may be hard to read.",
+    "saveCreate": "Save theme",
+    "saveEdit": "Save changes"
+  }
+}

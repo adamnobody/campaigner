@@ -9,7 +9,7 @@ export type FontPresetOption = {
 export const FONT_PRESET_OPTIONS: FontPresetOption[] = [
   {
     id: 'default-inter-cinzel',
-    label: 'Inter + Cinzel (по умолчанию)',
+    label: 'Inter + Cinzel (default)',
     bodyFamily: '"Inter", "Roboto", sans-serif',
     headingFamily: '"Cinzel", serif',
     cssUrl: '',
@@ -107,7 +107,7 @@ export const FONT_PRESET_OPTIONS: FontPresetOption[] = [
   },
   {
     id: 'local-template',
-    label: 'Локальный шрифт из /public/fonts',
+    label: 'Local font from /public/fonts',
     bodyFamily: '"MyLocalFont", serif',
     headingFamily: '"MyLocalFont", serif',
     cssUrl: '/fonts/my-local-font.css',

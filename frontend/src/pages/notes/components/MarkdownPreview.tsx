@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { SxProps, Theme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -38,6 +39,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   content, isMarkdown, wikiNotes, projectId, scrollRef,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation(['notes', 'common']);
   const wikiNotesMap = React.useMemo(() => {
     return new Map(wikiNotes.map((note) => [note.id, note.title]));
   }, [wikiNotes]);
@@ -117,7 +119,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           }}
           skipHtml={false}
         >
-          {content || '*Пусто...*'}
+          {content || `*${t('notes:preview.emptyMarkdown')}*`}
         </ReactMarkdown>
       ) : (
         <Typography
@@ -129,7 +131,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
             color: 'rgba(255,255,255,0.85)',
           }}
         >
-          {content || 'Пусто...'}
+          {content || t('notes:preview.empty')}
         </Typography>
       )}
     </Box>

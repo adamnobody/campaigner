@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Project } from '@campaigner/shared';
 import { mapApi } from '@/api/maps';
 import { projectsApi } from '@/api/projects';
@@ -34,6 +35,7 @@ export function useMapData({
   onBeforeMapLoad,
   onInitialMapResolved,
 }: UseMapDataArgs) {
+  const { t, i18n } = useTranslation(['map', 'common']);
   const onInitialMapResolvedRef = useRef(onInitialMapResolved);
 
   useEffect(() => {
@@ -83,10 +85,10 @@ export function useMapData({
       setImgSize(null);
       resetView();
     } catch {
-      showSnackbar('Ошибка загрузки карты', 'error');
+      showSnackbar(t('map:snackbar.mapLoadError'), 'error');
     }
     setTransitioning(false);
-  }, [projectId, onBeforeMapLoad, clearDrawingDraft, resetView, showSnackbar]);
+  }, [projectId, onBeforeMapLoad, clearDrawingDraft, resetView, showSnackbar, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +105,10 @@ export function useMapData({
           try {
             mapToLoad = normalizeMap(extractData(await mapApi.getRootMap(projectId)));
           } catch {
-            mapToLoad = normalizeMap(extractData(await mapApi.createMap({ projectId, name: 'Корневая карта' })));
+            mapToLoad = normalizeMap(extractData(await mapApi.createMap({
+              projectId,
+              name: i18n.t('map:defaults.rootMapName'),
+            })));
           }
         }
         if (cancelled) return;

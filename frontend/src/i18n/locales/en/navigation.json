@@ -1,0 +1,55 @@
+{
+  "menu": {
+    "map": "Map",
+    "graph": "Graph",
+    "characters": "Characters",
+    "states": "States",
+    "factions": "Factions",
+    "notes": "Notes",
+    "wiki": "Wiki",
+    "timeline": "Timeline",
+    "dogmas": "Dogmas",
+    "dynasties": "Dynasties"
+  },
+  "sidebar": {
+    "allCampaigns": "All campaigns",
+    "appearance": "Appearance",
+    "appearanceProjectsHint": "Quick jump to projects",
+    "projectsEmpty": "No projects found",
+    "selectCampaign": "Pick a campaign to start working with your world",
+    "projectSettings": "Project settings"
+  },
+  "topbar": {
+    "searchTooltip": "Search (Ctrl+K)",
+    "searchPlaceholder": "Search…",
+    "createBranchTooltip": "Create what-if branch",
+    "openSearchHotkeyDesc": "Open search"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "newEntity": "New",
+    "section": {
+      "map": "Map",
+      "characters": "Characters",
+      "states": "States",
+      "factions": "Factions",
+      "dynasties": "Dynasties",
+      "notes": "Notes",
+      "wiki": "Wiki",
+      "timeline": "Timeline",
+      "files": "Files",
+      "settings": "Settings",
+      "appearance": "Appearance",
+      "dogmas": "Dogmas",
+      "graph": "Relationship graph"
+    }
+  },
+  "branches": {
+    "dialogTitle": "New branch",
+    "nameLabel": "Branch name",
+    "loading": "Loading branches…",
+    "nonePlaceholder": "No branches",
+    "created": "Branch created",
+    "createFailedFallback": "Could not create branch"
+  }
+}

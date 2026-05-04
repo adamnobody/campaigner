@@ -17,6 +17,7 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import PaletteIcon from '@mui/icons-material/Palette';
 import SchoolIcon from '@mui/icons-material/School';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
 import { projectsApi } from '@/api/projects';
@@ -29,6 +30,7 @@ import { HomeBackground } from '@/pages/home/components/HomeBackground';
 import { CreateProjectDialog } from '@/pages/home/components/CreateProjectDialog';
 import { EmptyStateIllustration } from '@/pages/home/components/HomePrimitives';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 const HOME_PANEL_POSITION_STORAGE_KEY = 'campaigner.homePanelPosition.v1';
 const DEFAULT_PANEL_OFFSET = { x: 0, y: 0 };
@@ -50,6 +52,7 @@ const readStoredPanelOffset = () => {
 export const HomePage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation(['projects', 'common']);
   const { projects, loading, fetchProjects, createProject, deleteProject } = useProjectStore((state) => ({
     projects: state.projects,
     loading: state.loading,
@@ -180,21 +183,21 @@ export const HomePage: React.FC = () => {
   const handleCreateSubmit = async (name: string, description: string) => {
     const project = await createProject({ name, description });
     setCreateDialogOpen(false);
-    showSnackbar('✨ Проект создан!', 'success');
+    showSnackbar(t('projects:snackbar.created'), 'success');
     navigate(`/project/${project.id}/map`);
   };
 
   const handleDelete = (id: number, name: string, e: React.MouseEvent) => {
     e.stopPropagation();
     showConfirmDialog(
-      'Удалить проект',
-      `Вы уверены, что хотите удалить "${name}"? Это действие нельзя отменить.`,
+      t('projects:deleteConfirm.title'),
+      t('projects:deleteConfirm.message', { name }),
       async () => {
         try {
           await deleteProject(id);
-          showSnackbar('Проект удалён', 'success');
+          showSnackbar(t('projects:snackbar.deleted'), 'success');
         } catch {
-          showSnackbar('Не удалось удалить', 'error');
+          showSnackbar(t('projects:snackbar.deleteFailed'), 'error');
         }
       }
     );
@@ -216,19 +219,19 @@ export const HomePage: React.FC = () => {
         const importPayload = parsed?.data && parsed?.success ? parsed.data : parsed;
 
         if (!importPayload?.version || !importPayload?.project) {
-          showSnackbar('Неверный формат файла. Ожидается экспорт Campaigner.', 'error');
+          showSnackbar(t('projects:snackbar.importInvalidFormat'), 'error');
           return;
         }
 
         const res = await projectsApi.importProject(importPayload);
-        showSnackbar(`📥 Проект "${res.data.data.name}" импортирован!`, 'success');
+        showSnackbar(t('projects:snackbar.imported', { name: res.data.data.name }), 'success');
         fetchProjects();
         navigate(`/project/${res.data.data.id}/map`);
       } catch (err: any) {
         if (err instanceof SyntaxError) {
-          showSnackbar('Файл не является валидным JSON', 'error');
+          showSnackbar(t('projects:snackbar.importNotValidJson'), 'error');
         } else {
-          showSnackbar(err.message || 'Ошибка импорта', 'error');
+          showSnackbar(err.message || t('projects:snackbar.importError'), 'error');
         }
       }
     };
@@ -240,17 +243,17 @@ export const HomePage: React.FC = () => {
     try {
       const res = await projectsApi.createDemoProject();
       const project = res.data.data;
-      showSnackbar('Обучающая кампания создана', 'success');
+      showSnackbar(t('projects:snackbar.tutorialCreated'), 'success');
       startOnboarding(project.id);
       navigate(`/project/${project.id}/map`);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Не удалось создать обучающую кампанию';
+      const message = error instanceof Error ? error.message : t('projects:snackbar.tutorialFailed');
       showSnackbar(message, 'error');
     }
   };
 
   if (loading && projects.length === 0) {
-    return <LoadingScreen message="Загрузка кампаний..." />;
+    return <LoadingScreen message={t('projects:home.loadingCampaigns')} />;
   }
 
   return (
@@ -292,31 +295,39 @@ export const HomePage: React.FC = () => {
             opacity: isLoaded ? 1 : 0,
             transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
             transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'flex-start' },
+            justifyContent: 'space-between',
+            gap: 2,
           }}
         >
-          <Typography variant="h3" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
-            Campaigner
-          </Typography>
-          <Box
-            sx={{
-              mt: 1.5,
-              mb: 2,
-              width: 200,
-              height: 3,
-              borderRadius: 2,
-              background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.main, 0.25)} 100%)`,
-              backgroundSize: '220% 100%',
-              animation: 'campaignerLineShimmer 4.8s ease-in-out infinite',
-              '@keyframes campaignerLineShimmer': {
-                '0%': { backgroundPosition: '0% 50%' },
-                '50%': { backgroundPosition: '100% 50%' },
-                '100%': { backgroundPosition: '0% 50%' },
-              },
-            }}
-          />
-          <Typography sx={{ color: 'text.secondary', maxWidth: 560, lineHeight: 1.6 }}>
-            Среда для создания интерактивных карт, заметок, связей и истории вашего мира
-          </Typography>
+          <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Typography variant="h3" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+              Campaigner
+            </Typography>
+            <Box
+              sx={{
+                mt: 1.5,
+                mb: 2,
+                width: 200,
+                height: 3,
+                borderRadius: 2,
+                background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.main, 0.25)} 100%)`,
+                backgroundSize: '220% 100%',
+                animation: 'campaignerLineShimmer 4.8s ease-in-out infinite',
+                '@keyframes campaignerLineShimmer': {
+                  '0%': { backgroundPosition: '0% 50%' },
+                  '50%': { backgroundPosition: '100% 50%' },
+                  '100%': { backgroundPosition: '0% 50%' },
+                },
+              }}
+            />
+            <Typography sx={{ color: 'text.secondary', maxWidth: 560, lineHeight: 1.6 }}>
+              {t('projects:home.subtitle')}
+            </Typography>
+          </Box>
+          <LanguageSwitcher sx={{ flexShrink: 0, alignSelf: { xs: 'flex-end', sm: 'flex-start' }, mt: { sm: 0.25 } }} />
         </Box>
 
         {/* Central Unified Container */}
@@ -390,7 +401,7 @@ export const HomePage: React.FC = () => {
                   onClick={() => navigate('/appearance')}
                   sx={{ fontWeight: 600 }}
                 >
-                  Внешний вид
+                  {t('projects:home.actions.appearance')}
                 </DndButton>
 
                 <DndButton
@@ -399,7 +410,7 @@ export const HomePage: React.FC = () => {
                   onClick={handleImportClick}
                   sx={{ fontWeight: 600 }}
                 >
-                  Импорт
+                  {t('projects:home.actions.import')}
                 </DndButton>
 
                 <DndButton
@@ -408,7 +419,7 @@ export const HomePage: React.FC = () => {
                   onClick={handleCreateTutorialProject}
                   sx={{ fontWeight: 600 }}
                 >
-                  Обучение
+                  {t('projects:home.actions.tutorial')}
                 </DndButton>
 
                 <DndButton
@@ -422,14 +433,14 @@ export const HomePage: React.FC = () => {
                     boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.4)}`,
                   }}
                 >
-                  Создать проект
+                  {t('projects:home.actions.create')}
                 </DndButton>
               </Stack>
 
               <Divider sx={{ mb: 2 }} />
 
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                Проекты ({projects.length})
+                {t('projects:home.projectsHeading', { count: projects.length })}
               </Typography>
 
               {projects.length > 0 ? (
@@ -501,7 +512,7 @@ export const HomePage: React.FC = () => {
                             <Chip
                               label={
                                 project.status === 'active'
-                                  ? '⚡ Активный'
+                                  ? t('projects:home.projectCard.statusActive')
                                   : String(project.status)
                               }
                               size="small"
@@ -569,7 +580,7 @@ export const HomePage: React.FC = () => {
                       letterSpacing: '0.02em',
                     }}
                   >
-                    Ваш мир ждёт своего творца
+                    {t('projects:home.empty.title')}
                   </Typography>
 
                   <Typography
@@ -582,7 +593,7 @@ export const HomePage: React.FC = () => {
                       lineHeight: 1.6,
                     }}
                   >
-                    Создайте первый проект, чтобы начать увлекательное путешествие по построению вашей вселенной.
+                    {t('projects:home.empty.description')}
                   </Typography>
                 </Box>
               )}
@@ -643,7 +654,7 @@ export const HomePage: React.FC = () => {
                     Campaigner
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
-                    Среда для создания миров
+                    {t('projects:home.footer.tagline')}
                   </Typography>
                 </Box>
               </Box>
@@ -657,7 +668,7 @@ export const HomePage: React.FC = () => {
                     letterSpacing: '0.03em',
                   }}
                 >
-                  © {new Date().getFullYear()} · Сделано для творцов
+                  © {new Date().getFullYear()} · {t('projects:home.footer.madeFor')}
                 </Typography>
               </Box>
             </Container>

@@ -1,0 +1,87 @@
+{
+  "page": {
+    "title": "Wiki",
+    "subtitle": "Your world's knowledge base",
+    "graph": "Graph",
+    "linkArticles": "Link articles",
+    "newArticle": "New article",
+    "searchPlaceholder": "Search wiki…",
+    "chipAll": "All",
+    "countShown": "{{filtered}} of {{total}}",
+    "resetFilters": "Reset filters"
+  },
+  "empty": {
+    "filteredTitle": "Nothing found",
+    "filteredDescription": "Try changing search or filters",
+    "noWikiTitle": "Wiki is empty",
+    "noWikiDescription": "Build your world's knowledge base — locations, factions, items, magic, and more",
+    "createFirstArticle": "Create article"
+  },
+  "snackbar": {
+    "created": "Article created: {{title}}",
+    "createError": "Could not create article",
+    "deleted": "Deleted: {{title}}",
+    "deleteError": "Could not delete",
+    "tagsUpdated": "Tags updated",
+    "error": "Something went wrong",
+    "linkCreated": "Link created",
+    "linkErrorFallback": "This link may already exist"
+  },
+  "confirm": {
+    "deleteTitle": "Delete article",
+    "deleteArticleMessage": "Delete \"{{title}}\"?"
+  },
+  "articleCard": {
+    "tooltipEditTags": "Edit tags",
+    "tooltipDelete": "Delete",
+    "addTags": "+ add tags",
+    "linksHeading": "Links ({{count}})",
+    "moreLinks": "+{{count}} more",
+    "linkPrefix": "→ "
+  },
+  "dialogs": {
+    "create": {
+      "title": "New article",
+      "articleTitleLabel": "Article title *",
+      "articleTitlePlaceholder": "e.g. Kingdom of Eldoria"
+    },
+    "tags": {
+      "title": "Tags: {{articleTitle}}",
+      "articleTitleFallback": "Article"
+    },
+    "link": {
+      "title": "Link articles",
+      "sourceLabel": "First article *",
+      "targetLabel": "Second article *",
+      "selectArticlePlaceholder": "Choose an article…",
+      "noArticles": "No articles",
+      "relationLabel": "Link description (optional)",
+      "relationPlaceholder": "e.g. capital, ally, part of…",
+      "relationHelper": "Short label for the relationship between articles",
+      "createLink": "Create link"
+    }
+  },
+  "tagField": {
+    "categoriesLabel": "Tags (categories)",
+    "categoriesPlaceholder": "Select or enter new tags…",
+    "categoriesHelper": "Tags act as categories for filtering wiki articles",
+    "editLabel": "Tags",
+    "editPlaceholder": "Select or enter…"
+  },
+  "graph": {
+    "loading": "Loading wiki graph…",
+    "title": "Wiki graph",
+    "mouseHint": "Drag to move · Double-click to open · Scroll wheel to zoom",
+    "emptyTitle": "No wiki articles yet",
+    "emptyBackToWiki": "Back to wiki",
+    "categoriesLegend": "Categories",
+    "nodesCount": "{{count}} articles",
+    "edgesCount": "{{count}} links",
+    "zoomPercent": "{{value}}%",
+    "tooltips": {
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "fitView": "Fit to view"
+    }
+  }
+}

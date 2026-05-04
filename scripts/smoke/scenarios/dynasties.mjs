@@ -55,4 +55,68 @@ export async function smokeDynasties(ctx) {
 
   assertStatus(updateRes, 200, 'update dynasty');
   logOk('Dynasty updated');
+
+  const evA = await api(`/dynasties/${dynastyId}/events`, {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Smoke Dynasty Event A ${Date.now()}`,
+      eventDate: 'Year 1',
+      importance: 'normal',
+      sortOrder: 0,
+    }),
+  });
+  assertStatus(evA, 201, 'create dynasty event A');
+  const idA = getEntityId(evA);
+  if (!idA) {
+    throw new Error(`create dynasty event A: missing id ${JSON.stringify(evA.data, null, 2)}`);
+  }
+
+  const evB = await api(`/dynasties/${dynastyId}/events`, {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Smoke Dynasty Event B ${Date.now()}`,
+      eventDate: 'Year 2',
+      importance: 'normal',
+      sortOrder: 1,
+    }),
+  });
+  assertStatus(evB, 201, 'create dynasty event B');
+  const idB = getEntityId(evB);
+  if (!idB) {
+    throw new Error(`create dynasty event B: missing id ${JSON.stringify(evB.data, null, 2)}`);
+  }
+
+  const evC = await api(`/dynasties/${dynastyId}/events`, {
+    method: 'POST',
+    body: JSON.stringify({
+      title: `Smoke Dynasty Event C ${Date.now()}`,
+      eventDate: 'Year 3',
+      importance: 'normal',
+      sortOrder: 2,
+    }),
+  });
+  assertStatus(evC, 201, 'create dynasty event C');
+  const idC = getEntityId(evC);
+  if (!idC) {
+    throw new Error(`create dynasty event C: missing id ${JSON.stringify(evC.data, null, 2)}`);
+  }
+
+  const reorderRes = await api(`/dynasties/${dynastyId}/events/reorder`, {
+    method: 'POST',
+    body: JSON.stringify({ orderedIds: [idC, idA, idB] }),
+  });
+  assertStatus(reorderRes, 200, 'dynasty events reorder');
+  logOk('dynasty events reorder');
+
+  const getDynastyRes = await api(`/dynasties/${dynastyId}`);
+  assertStatus(getDynastyRes, 200, 'get dynasty after events reorder');
+  const eventsOrdered = getDynastyRes.data?.data?.events;
+  if (!Array.isArray(eventsOrdered)) {
+    throw new Error(`expected events array ${JSON.stringify(getDynastyRes.data, null, 2)}`);
+  }
+  const ids = eventsOrdered.map((e) => e.id);
+  if (ids[0] !== idC || ids[1] !== idA || ids[2] !== idB) {
+    throw new Error(`dynasty events reorder: expected order [${idC},${idA},${idB}], got [${ids.join(',')}]`);
+  }
+  logOk('dynasty events order verified');
 }

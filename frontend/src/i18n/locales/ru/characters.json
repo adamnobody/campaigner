@@ -1,0 +1,160 @@
+{
+  "page": {
+    "title": "Персонажи",
+    "subtitle": "Действующие лица вашей истории",
+    "relationshipGraph": "Граф связей",
+    "searchPlaceholder": "Поиск по имени...",
+    "allTags": "Все теги",
+    "count": "{{filtered}} из {{total}}",
+    "empty": {
+      "noCharacters": {
+        "title": "Персонажи не найдены",
+        "description": "Создайте первого персонажа вашей истории",
+        "action": "Создать персонажа"
+      },
+      "noMatch": {
+        "title": "Ничего не найдено",
+        "description": "Попробуйте изменить параметры поиска или фильтры",
+        "action": "Сбросить фильтры"
+      }
+    }
+  },
+  "detail": {
+    "backToList": "К списку персонажей",
+    "newCharacter": "Новый персонаж",
+    "fallbackName": "Персонаж",
+    "loading": "Загрузка...",
+    "tabs": {
+      "overview": "Обзор",
+      "traits": "Характер",
+      "relations": "Связи"
+    },
+    "summary": {
+      "title": "Сводка",
+      "uploadPhoto": "Загрузить фото",
+      "titleLabel": "Титул",
+      "descriptionLabel": "Описание",
+      "tagsLabel": "Теги"
+    },
+    "sections": {
+      "basics": "Основное",
+      "appearance": "Внешность",
+      "historyNotes": "История и заметки",
+      "relationships": "Связи"
+    },
+    "fields": {
+      "name": "Имя *",
+      "title": "Титул / прозвище",
+      "bio": "Краткое описание",
+      "state": "Государство",
+      "factions": "Фракции",
+      "appearance": "Внешность",
+      "backstory": "Предыстория",
+      "notes": "Заметки",
+      "relationshipDescription": "Описание связи"
+    },
+    "placeholders": {
+      "titleExample": "напр. Король Севера",
+      "bio": "Кто этот персонаж...",
+      "factions": "Выберите фракции",
+      "appearance": "Опишите внешний вид персонажа...",
+      "backstory": "Откуда пришёл этот персонаж...",
+      "notes": "Секреты, планы, идеи...",
+      "relationship": "Подробности отношений...",
+      "tags": "Выберите или введите...",
+      "tagNewOption": "Введите новый тег"
+    },
+    "stateNotSpecified": "Не указано",
+    "relationships": {
+      "addLink": "Добавить связь",
+      "emptyTitle": "Нет связей",
+      "emptyDescription": "Добавьте связи с другими персонажами",
+      "dialogTitle": "Добавить связь",
+      "withWhom": "С кем",
+      "type": "Тип связи",
+      "addButton": "Добавить"
+    },
+    "confirmDeleteRelationship": {
+      "title": "Удалить связь",
+      "message": "Удалить?"
+    }
+  },
+  "graph": {
+    "loading": "Загрузка графа...",
+    "title": "Граф связей",
+    "hint": "Перетаскивание узла — переместить · Двойной клик — открыть · Фон — панорамирование · Колёсико — зум",
+    "empty": "Нет персонажей для отображения",
+    "backToList": "К списку",
+    "legendTitle": "Связи",
+    "characterCount": "{{count}} персонажей",
+    "edgeCount": "{{count}} связей",
+    "open": "Открыть",
+    "closePanel": "Закрыть"
+  },
+  "relationshipTypes": {
+    "ally": "Союзник",
+    "enemy": "Враг",
+    "family": "Семья",
+    "friend": "Друг",
+    "rival": "Соперник",
+    "mentor": "Наставник",
+    "student": "Ученик",
+    "lover": "Возлюбленный",
+    "spouse": "Супруг",
+    "employer": "Работодатель",
+    "employee": "Работник",
+    "custom": "Другое"
+  },
+  "traits": {
+    "tabTitle": "Черты характера",
+    "addTrait": "Добавить черту",
+    "catalogTitle": "Каталог черт характера",
+    "createTabDescription": "Создайте пользовательскую черту для текущего проекта. После сохранения она сразу появится в каталоге.",
+    "createTrait": "Создать черту",
+    "emptyNotSavedTitle": "Сначала сохраните персонажа",
+    "emptyNotSavedDescription": "После сохранения можно выбирать и настраивать черты характера.",
+    "emptyNoAssignedTitle": "Черты пока не выбраны",
+    "emptyNoAssignedDescription": "Откройте каталог, чтобы прикрепить встроенные или пользовательские черты.",
+    "openCatalog": "Открыть каталог",
+    "conflictAlert": "Обнаружены конфликтующие черты. Удалите лишние для корректной работы.",
+    "exclusionsLabel": "Исключает черты:",
+    "exclusionsSaved": "Исключения черты обновлены",
+    "confirmDeleteTitle": "Удалить черту",
+    "confirmDeleteMessage": "Удалить черту «{{name}}»?\nОна будет убрана у всех персонажей проекта.\nЭто действие нельзя отменить.",
+    "deleted": "Черта удалена",
+    "deleteFailed": "Не удалось удалить черту",
+    "tooltipConfigureExclusions": "Настроить исключения",
+    "detach": "Открепить",
+    "attach": "Прикрепить",
+    "createDialogTitle": "Новая черта характера",
+    "fieldName": "Название",
+    "fieldDescription": "Описание",
+    "exclusionsAutocompletePlaceholder": "Выберите черты",
+    "uploadImage": "Загрузить изображение",
+    "imageFormatsHint": "Допустимые форматы: jpg, png, webp. Максимум: {{maxMb}} MB",
+    "noImageHint": "Без изображения будет использован буквенный аватар",
+    "fileInvalidType": "Допустимые форматы: jpg, png, webp",
+    "fileTooLarge": "Максимальный размер файла: {{maxMb}} MB",
+    "created": "Черта создана",
+    "createFailed": "Не удалось создать черту",
+    "previewAlt": "Превью черты"
+  },
+  "snackbar": {
+    "loadError": "Ошибка загрузки",
+    "nameRequired": "Введите имя",
+    "characterCreated": "Персонаж создан!",
+    "characterUpdated": "Персонаж обновлён!",
+    "genericError": "Ошибка",
+    "deleted": "Удалён",
+    "photoUploaded": "Фото загружено!",
+    "relationshipAdded": "Связь добавлена!",
+    "relationshipRemoved": "Удалена",
+    "characterDeleted": "Персонаж удалён",
+    "deleteFailed": "Ошибка удаления"
+  },
+  "confirm": {
+    "deleteCharacterTitle": "Удалить персонажа",
+    "deleteCharacterMessage": "Удалить «{{name}}»? Все связи тоже будут удалены.",
+    "deleteCharacterListMessage": "Удалить «{{name}}»?"
+  }
+}

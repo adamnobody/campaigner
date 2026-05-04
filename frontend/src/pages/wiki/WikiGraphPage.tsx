@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Box, Typography, Button, Paper, IconButton, Chip, useTheme, alpha,
+  Box, Typography, Button, IconButton, Chip, useTheme, alpha,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -39,6 +40,7 @@ const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 5;
 
 export const WikiGraphPage: React.FC = () => {
+  const { t } = useTranslation(['wiki', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -229,19 +231,19 @@ export const WikiGraphPage: React.FC = () => {
       // Edges
       for (const e of es) {
         const s = ns.find(n => n.id === e.source);
-        const t = ns.find(n => n.id === e.target);
-        if (!s || !t) continue;
+        const tgt = ns.find(n => n.id === e.target);
+        if (!s || !tgt) continue;
 
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
-        ctx.lineTo(t.x, t.y);
+        ctx.lineTo(tgt.x, tgt.y);
         ctx.strokeStyle = 'rgba(78,205,196,0.25)';
         ctx.lineWidth = 2;
         ctx.stroke();
 
         if (e.label) {
-          const mx = (s.x + t.x) / 2;
-          const my = (s.y + t.y) / 2;
+          const mx = (s.x + tgt.x) / 2;
+          const my = (s.y + tgt.y) / 2;
           ctx.font = '9px system-ui,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -398,7 +400,7 @@ export const WikiGraphPage: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка графа вики...</Typography>
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>{t('wiki:graph.loading')}</Typography>
       </Box>
     );
   }
@@ -412,30 +414,30 @@ export const WikiGraphPage: React.FC = () => {
           <DndButton variant="outlined" startIcon={<ArrowBackIcon />} size="small"
             onClick={() => navigate(`/project/${pid}/wiki`)}
             sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>
-            Назад
+            {t('common:back')}
           </DndButton>
           <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
-            Граф вики
+            {t('wiki:graph.title')}
           </Typography>
         </Box>
         <Box display="flex" gap={0.5} sx={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 1, p: 0.5 }}>
-          <IconButton size="small" onClick={() => zoomBtn(-0.2)} sx={{ color: '#fff' }}><ZoomOutIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={() => zoomBtn(-0.2)} sx={{ color: '#fff' }} title={t('wiki:graph.tooltips.zoomOut')} aria-label={t('wiki:graph.tooltips.zoomOut')}><ZoomOutIcon fontSize="small" /></IconButton>
           <Typography sx={{ color: '#fff', fontSize: '0.8rem', lineHeight: '30px', px: 1, minWidth: 45, textAlign: 'center' }}>
-            {zoomDisplay}%
+            {t('wiki:graph.zoomPercent', { value: zoomDisplay })}
           </Typography>
-          <IconButton size="small" onClick={() => zoomBtn(0.2)} sx={{ color: '#fff' }}><ZoomInIcon fontSize="small" /></IconButton>
-          <IconButton size="small" onClick={fitCamera} sx={{ color: '#fff' }}><CenterFocusStrongIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={() => zoomBtn(0.2)} sx={{ color: '#fff' }} title={t('wiki:graph.tooltips.zoomIn')} aria-label={t('wiki:graph.tooltips.zoomIn')}><ZoomInIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={fitCamera} sx={{ color: '#fff' }} title={t('wiki:graph.tooltips.fitView')} aria-label={t('wiki:graph.tooltips.fitView')}><CenterFocusStrongIcon fontSize="small" /></IconButton>
         </Box>
       </Box>
 
       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mb: 1, display: 'block' }}>
-        Перетаскивание — переместить · Двойной клик — открыть статью · Колёсико — зум
+        {t('wiki:graph.mouseHint')}
       </Typography>
 
       {nodeCount === 0 ? (
         <GlassCard sx={{ p: 6, textAlign: 'center', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-          <Typography sx={{ color: 'text.secondary', mb: 2 }}>Нет вики-статей</Typography>
-          <Button variant="outlined" onClick={() => navigate(`/project/${pid}/wiki`)}>К вики</Button>
+          <Typography sx={{ color: 'text.secondary', mb: 2 }}>{t('wiki:graph.emptyTitle')}</Typography>
+          <Button variant="outlined" onClick={() => navigate(`/project/${pid}/wiki`)}>{t('wiki:graph.emptyBackToWiki')}</Button>
         </GlassCard>
       ) : (
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
@@ -450,9 +452,9 @@ export const WikiGraphPage: React.FC = () => {
               <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>{selectedNode.name}</Typography>
               {selectedNode.tags.length > 0 && (
                 <Box display="flex" gap={0.5} mt={0.5} flexWrap="wrap">
-                  {selectedNode.tags.map(t => (
-                    <Chip key={t} label={t} size="small"
-                      sx={{ height: 18, fontSize: '0.6rem', backgroundColor: tagColorMapRef.current[t] || '#8282FF', color: '#fff' }} />
+                  {selectedNode.tags.map((tagName) => (
+                    <Chip key={tagName} label={tagName} size="small"
+                      sx={{ height: 18, fontSize: '0.6rem', backgroundColor: tagColorMapRef.current[tagName] || '#8282FF', color: '#fff' }} />
                   ))}
                 </Box>
               )}
@@ -460,11 +462,11 @@ export const WikiGraphPage: React.FC = () => {
                 <Button size="small" variant="outlined"
                   onClick={() => navigate(`/project/${pid}/notes/${selectedNode.id}`)}
                   sx={{ borderColor: alpha(theme.palette.primary.main, 0.3), color: theme.palette.primary.main, textTransform: 'none', fontSize: '0.75rem' }}>
-                  Открыть
+                  {t('common:open')}
                 </Button>
                 <Button size="small" onClick={() => { selectedIdRef.current = null; setSelectedNode(null); }}
                   sx={{ color: 'text.secondary', textTransform: 'none', fontSize: '0.75rem' }}>
-                  Закрыть
+                  {t('common:close')}
                 </Button>
               </Box>
             </GlassCard>
@@ -472,20 +474,20 @@ export const WikiGraphPage: React.FC = () => {
 
           {allTagsUsed.length > 0 && (
             <GlassCard sx={{ position: 'absolute', top: 12, right: 12, p: 1.5, maxHeight: '40vh', overflow: 'auto' }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Категории</Typography>
-              {allTagsUsed.map(t => (
-                <Box key={t} display="flex" alignItems="center" gap={1} sx={{ mb: 0.3 }}>
-                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: tagColorMapRef.current[t] || '#8282FF' }} />
-                  <Typography variant="caption" sx={{ color: 'text.primary', fontSize: '0.7rem' }}>{t}</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>{t('wiki:graph.categoriesLegend')}</Typography>
+              {allTagsUsed.map((tagName) => (
+                <Box key={tagName} display="flex" alignItems="center" gap={1} sx={{ mb: 0.3 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: tagColorMapRef.current[tagName] || '#8282FF' }} />
+                  <Typography variant="caption" sx={{ color: 'text.primary', fontSize: '0.7rem' }}>{tagName}</Typography>
                 </Box>
               ))}
             </GlassCard>
           )}
 
           <Box sx={{ position: 'absolute', bottom: 12, right: 12, display: 'flex', gap: 1 }}>
-            <Chip label={`${nodeCount} статей`} size="small" variant="outlined"
+            <Chip label={t('wiki:graph.nodesCount', { count: nodeCount })} size="small" variant="outlined"
               sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }} />
-            <Chip label={`${edgeCount} связей`} size="small" variant="outlined"
+            <Chip label={t('wiki:graph.edgesCount', { count: edgeCount })} size="small" variant="outlined"
               sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }} />
           </Box>
         </Box>

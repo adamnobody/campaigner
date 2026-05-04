@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Drawer,
   List,
@@ -18,6 +18,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import PaletteIcon from '@mui/icons-material/Palette';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useUIStore } from '@/store/useUIStore';
 import { useProjectStore } from '@/store/useProjectStore';
 import { shallow } from 'zustand/shallow';
@@ -25,19 +26,73 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import CastleIcon from '@mui/icons-material/Castle';
-const projectMenuItems = [
-  { label: 'Карта', icon: <MapIcon />, path: 'map' },
-  { label: 'Персонажи', icon: <PeopleIcon />, path: 'characters' },
-  { label: 'Государства', icon: <CastleIcon />, path: 'states' },
-  { label: 'Фракции', icon: <GroupsIcon />, path: 'factions' },
-  { label: 'Заметки', icon: <DescriptionIcon />, path: 'notes' },
-  { label: 'Вики', icon: <MenuBookIcon />, path: 'wiki' },
-  { label: 'Хронология', icon: <TimelineIcon />, path: 'timeline' },
-  { label: 'Догмы', icon: <GavelIcon />, path: 'dogmas' },
-  { label: 'Династии', icon: <AccountTreeIcon />, path: 'dynasties' },
-];
+import HubIcon from '@mui/icons-material/Hub';
+
+type ProjectRoutePath =
+  | 'map'
+  | 'graph'
+  | 'characters'
+  | 'states'
+  | 'factions'
+  | 'notes'
+  | 'wiki'
+  | 'timeline'
+  | 'dogmas'
+  | 'dynasties';
+
+const PROJECT_MENU_ICONS = {
+  map: MapIcon,
+  graph: HubIcon,
+  characters: PeopleIcon,
+  states: CastleIcon,
+  factions: GroupsIcon,
+  notes: DescriptionIcon,
+  wiki: MenuBookIcon,
+  timeline: TimelineIcon,
+  dogmas: GavelIcon,
+  dynasties: AccountTreeIcon,
+};
+
+const PROJECT_MENU_PATHS: readonly ProjectRoutePath[] = [
+  'map',
+  'graph',
+  'characters',
+  'states',
+  'factions',
+  'notes',
+  'wiki',
+  'timeline',
+  'dogmas',
+  'dynasties',
+] as const;
+
+function tourAttrForSidebarPath(path: ProjectRoutePath): string | undefined {
+  switch (path) {
+    case 'characters':
+      return 'sidebar-characters';
+    case 'graph':
+      return 'sidebar-graph';
+    case 'states':
+      return 'sidebar-states';
+    case 'factions':
+      return 'sidebar-factions';
+    case 'notes':
+      return 'sidebar-notes';
+    case 'wiki':
+      return 'sidebar-wiki';
+    case 'timeline':
+      return 'sidebar-timeline';
+    case 'dogmas':
+      return 'sidebar-dogmas';
+    case 'dynasties':
+      return 'sidebar-dynasties';
+    default:
+      return undefined;
+  }
+}
 
 export const Sidebar: React.FC = () => {
+  const { t } = useTranslation('navigation');
   const { sidebarOpen, sidebarWidth } = useUIStore((state) => ({
     sidebarOpen: state.sidebarOpen,
     sidebarWidth: state.sidebarWidth,
@@ -54,6 +109,15 @@ export const Sidebar: React.FC = () => {
 
   const isProjectPage = !!projectId;
   const isAppearancePage = location.pathname === '/appearance';
+
+  const projectMenuItems = useMemo(
+    () =>
+      PROJECT_MENU_PATHS.map((path) => ({
+        path,
+        Icon: PROJECT_MENU_ICONS[path],
+      })),
+    []
+  );
 
   useEffect(() => {
     if (projectId && (!currentProject || currentProject.id !== parseInt(projectId, 10))) {
@@ -95,7 +159,7 @@ export const Sidebar: React.FC = () => {
           <ListItemIcon>
             <HomeIcon color="primary" />
           </ListItemIcon>
-          <ListItemText primary="Все кампании" />
+          <ListItemText primary={t('sidebar.allCampaigns')} />
         </ListItemButton>
 
         <ListItemButton
@@ -112,7 +176,7 @@ export const Sidebar: React.FC = () => {
           <ListItemIcon sx={{ color: isAppearancePage ? 'primary.main' : 'text.secondary' }}>
             <PaletteIcon />
           </ListItemIcon>
-          <ListItemText primary="Внешний вид" />
+          <ListItemText primary={t('sidebar.appearance')} />
         </ListItemButton>
       </List>
 
@@ -122,7 +186,7 @@ export const Sidebar: React.FC = () => {
         <>
           <Box sx={{ p: 2 }}>
             <Typography variant="subtitle2" color="text.secondary">
-              Быстрый переход к проектам
+              {t('sidebar.appearanceProjectsHint')}
             </Typography>
           </Box>
 
@@ -157,7 +221,7 @@ export const Sidebar: React.FC = () => {
           {projects.length === 0 && (
             <Box sx={{ p: 2, pt: 0 }}>
               <Typography variant="body2" color="text.secondary">
-                Проекты не найдены
+                {t('sidebar.projectsEmpty')}
               </Typography>
             </Box>
           )}
@@ -190,29 +254,13 @@ export const Sidebar: React.FC = () => {
             {projectMenuItems.map((item) => {
               const fullPath = `/project/${projectId}/${item.path}`;
               const isActive = location.pathname.startsWith(fullPath);
+              const Icon = item.Icon;
+              const dataTour = tourAttrForSidebarPath(item.path);
 
               return (
                 <ListItemButton
                   key={item.path}
-                  data-tour={
-                    item.path === 'characters'
-                      ? 'sidebar-characters'
-                      : item.path === 'states'
-                      ? 'sidebar-states'
-                      : item.path === 'factions'
-                      ? 'sidebar-factions'
-                      : item.path === 'notes'
-                      ? 'sidebar-notes'
-                      : item.path === 'wiki'
-                      ? 'sidebar-wiki'
-                      : item.path === 'timeline'
-                      ? 'sidebar-timeline'
-                      : item.path === 'dogmas'
-                      ? 'sidebar-dogmas'
-                      : item.path === 'dynasties'
-                      ? 'sidebar-dynasties'
-                      : undefined
-                  }
+                  data-tour={dataTour}
                   selected={isActive}
                   onClick={() => navigate(fullPath)}
                   sx={{
@@ -224,9 +272,9 @@ export const Sidebar: React.FC = () => {
                   }}
                 >
                   <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary' }}>
-                    {item.icon}
+                    <Icon />
                   </ListItemIcon>
-                  <ListItemText primary={item.label} />
+                  <ListItemText primary={t(`menu.${item.path}`)} />
                 </ListItemButton>
               );
             })}
@@ -257,14 +305,14 @@ export const Sidebar: React.FC = () => {
               >
                 <SettingsIcon />
               </ListItemIcon>
-              <ListItemText primary="Настройки проекта" />
+              <ListItemText primary={t('sidebar.projectSettings')} />
             </ListItemButton>
           </List>
         </>
       ) : (
         <Box sx={{ p: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Выберите кампанию, чтобы начать работу с миром
+            {t('sidebar.selectCampaign')}
           </Typography>
         </Box>
       )}

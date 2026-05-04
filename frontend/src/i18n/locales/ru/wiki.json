@@ -1,0 +1,87 @@
+{
+  "page": {
+    "title": "Вики",
+    "subtitle": "База знаний вашего мира",
+    "graph": "Граф",
+    "linkArticles": "Связать статьи",
+    "newArticle": "Новая статья",
+    "searchPlaceholder": "Поиск в вики…",
+    "chipAll": "Все",
+    "countShown": "{{filtered}} из {{total}}",
+    "resetFilters": "Сбросить фильтры"
+  },
+  "empty": {
+    "filteredTitle": "Ничего не найдено",
+    "filteredDescription": "Попробуйте изменить параметры поиска или фильтры",
+    "noWikiTitle": "Вики пуста",
+    "noWikiDescription": "Создайте базу знаний вашего мира — локации, фракции, предметы, магия и многое другое",
+    "createFirstArticle": "Создать статью"
+  },
+  "snackbar": {
+    "created": "Статья создана: {{title}}",
+    "createError": "Не удалось создать статью",
+    "deleted": "Удалено: {{title}}",
+    "deleteError": "Не удалось удалить",
+    "tagsUpdated": "Теги обновлены",
+    "error": "Произошла ошибка",
+    "linkCreated": "Связь создана",
+    "linkErrorFallback": "Такая связь уже может существовать"
+  },
+  "confirm": {
+    "deleteTitle": "Удалить статью",
+    "deleteArticleMessage": "Удалить «{{title}}»?"
+  },
+  "articleCard": {
+    "tooltipEditTags": "Редактировать теги",
+    "tooltipDelete": "Удалить",
+    "addTags": "+ добавить теги",
+    "linksHeading": "Связи ({{count}})",
+    "moreLinks": "+{{count}} ещё",
+    "linkPrefix": "→ "
+  },
+  "dialogs": {
+    "create": {
+      "title": "Новая статья",
+      "articleTitleLabel": "Название статьи *",
+      "articleTitlePlaceholder": "напр. Королевство Элдория"
+    },
+    "tags": {
+      "title": "Теги: {{articleTitle}}",
+      "articleTitleFallback": "Статья"
+    },
+    "link": {
+      "title": "Связать статьи",
+      "sourceLabel": "Первая статья *",
+      "targetLabel": "Вторая статья *",
+      "selectArticlePlaceholder": "Выберите статью…",
+      "noArticles": "Нет статей",
+      "relationLabel": "Описание связи (опционально)",
+      "relationPlaceholder": "напр. столица, союзник, часть…",
+      "relationHelper": "Краткое описание отношения между статьями",
+      "createLink": "Создать связь"
+    }
+  },
+  "tagField": {
+    "categoriesLabel": "Теги (категории)",
+    "categoriesPlaceholder": "Выберите или введите новые теги…",
+    "categoriesHelper": "Теги используются как категории для фильтрации вики-статей",
+    "editLabel": "Теги",
+    "editPlaceholder": "Выберите или введите…"
+  },
+  "graph": {
+    "loading": "Загрузка графа вики…",
+    "title": "Граф вики",
+    "mouseHint": "Перетаскивание — переместить · Двойной клик — открыть статью · Колёсико — зум",
+    "emptyTitle": "Нет вики-статей",
+    "emptyBackToWiki": "К вики",
+    "categoriesLegend": "Категории",
+    "nodesCount": "Статей: {{count}}",
+    "edgesCount": "Связей: {{count}}",
+    "zoomPercent": "{{value}}%",
+    "tooltips": {
+      "zoomOut": "Уменьшить",
+      "zoomIn": "Увеличить",
+      "fitView": "Подогнать в вид"
+    }
+  }
+}

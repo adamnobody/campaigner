@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, TextField, Button,
-  FormControl, InputLabel, Select, MenuItem, Divider,
+  FormControl, InputLabel, Select, MenuItem,
   useTheme, alpha,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
@@ -10,6 +10,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import SettingsIcon from '@mui/icons-material/Settings';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useUIStore } from '@/store/useUIStore';
 import { PROJECT_STATUSES } from '@campaigner/shared';
@@ -20,6 +21,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export const ProjectSettingsPage: React.FC = () => {
+  const { t } = useTranslation(['projectSettings', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -49,9 +51,9 @@ export const ProjectSettingsPage: React.FC = () => {
     setSaving(true);
     try {
       await updateProject(pid, { name, description, status: status as any });
-      showSnackbar('Настройки сохранены', 'success');
+      showSnackbar(t('projectSettings:snackbar.saved'), 'success');
     } catch {
-      showSnackbar('Ошибка сохранения', 'error');
+      showSnackbar(t('projectSettings:snackbar.saveError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -71,31 +73,34 @@ export const ProjectSettingsPage: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showSnackbar('Проект экспортирован!', 'success');
+      showSnackbar(t('projectSettings:snackbar.exported'), 'success');
     } catch {
-      showSnackbar('Ошибка экспорта', 'error');
+      showSnackbar(t('projectSettings:snackbar.exportError'), 'error');
     } finally {
       setExporting(false);
     }
   };
 
   const handleDelete = () => {
+    const projectName = currentProject?.name ?? '';
     showConfirmDialog(
-      'Удалить проект',
-      `Вы уверены, что хотите удалить "${currentProject?.name}"? Будут удалены ВСЕ данные: персонажи, заметки, карты и таймлайн. Это действие НЕЛЬЗЯ отменить.`,
+      t('projectSettings:confirm.deleteTitle'),
+      t('projectSettings:confirm.deleteMessage', { name: projectName }),
       async () => {
         try {
           await deleteProject(pid);
-          showSnackbar('Проект удалён', 'success');
+          showSnackbar(t('projectSettings:snackbar.deleted'), 'success');
           navigate('/');
         } catch {
-          showSnackbar('Ошибка удаления', 'error');
+          showSnackbar(t('projectSettings:snackbar.deleteError'), 'error');
         }
-      }
+      },
     );
   };
 
   if (!currentProject) return <LoadingScreen />;
+
+  const statusLabel = t('projectSettings:fields.status');
 
   return (
     <Box maxWidth={700}>
@@ -103,25 +108,25 @@ export const ProjectSettingsPage: React.FC = () => {
         variant="h4"
         sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, color: 'text.primary', mb: 3 }}
       >
-        Настройки проекта
+        {t('projectSettings:page.title')}
       </Typography>
 
       {/* General */}
       <GlassCard sx={{ p: 3, mb: 3 }}>
         <SectionHeader
           icon={<SettingsIcon sx={{ fontSize: '1.2rem' }} />}
-          title="Основное"
+          title={t('projectSettings:sections.general')}
         />
         <TextField
           fullWidth
-          label="Название проекта"
+          label={t('projectSettings:fields.projectName')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           margin="normal"
         />
         <TextField
           fullWidth
-          label="Описание"
+          label={t('projectSettings:fields.description')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           margin="normal"
@@ -129,11 +134,11 @@ export const ProjectSettingsPage: React.FC = () => {
           rows={3}
         />
         <FormControl fullWidth margin="normal">
-          <InputLabel>Статус</InputLabel>
-          <Select value={status} label="Статус" onChange={(e) => setStatus(e.target.value)}>
-            {PROJECT_STATUSES.map(s => (
+          <InputLabel>{statusLabel}</InputLabel>
+          <Select value={status} label={statusLabel} onChange={(e) => setStatus(e.target.value)}>
+            {PROJECT_STATUSES.map((s) => (
               <MenuItem key={s} value={s}>
-                {s === 'active' ? 'Активный' : 'Архив'}
+                {t(`projectSettings:status.${s}`)}
               </MenuItem>
             ))}
           </Select>
@@ -146,7 +151,7 @@ export const ProjectSettingsPage: React.FC = () => {
             onClick={handleSave}
             loading={saving}
           >
-            Сохранить
+            {t('common:save')}
           </DndButton>
         </Box>
       </GlassCard>
@@ -155,11 +160,10 @@ export const ProjectSettingsPage: React.FC = () => {
       <GlassCard sx={{ p: 3, mb: 3 }}>
         <SectionHeader
           icon={<FileDownloadIcon sx={{ fontSize: '1.2rem' }} />}
-          title="Экспорт данных"
+          title={t('projectSettings:sections.export')}
         />
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-          Скачайте полную копию проекта в формате JSON. Включает все персонажи, заметки,
-          маркеры карты, таймлайн, теги и связи. Файл можно импортировать обратно на главной странице.
+          {t('projectSettings:export.description')}
         </Typography>
         <DndButton
           variant="outlined"
@@ -168,7 +172,7 @@ export const ProjectSettingsPage: React.FC = () => {
           loading={exporting}
           sx={{ borderColor: alpha(theme.palette.info.main, 0.4), color: theme.palette.info.main }}
         >
-          Экспортировать в JSON
+          {t('projectSettings:export.button')}
         </DndButton>
       </GlassCard>
 
@@ -188,19 +192,20 @@ export const ProjectSettingsPage: React.FC = () => {
             <WarningIcon sx={{ fontSize: '1.2rem' }} />
           </Box>
           <Typography variant="h6" sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: theme.palette.error.main }}>
-            Опасная зона
+            {t('projectSettings:sections.dangerZone')}
           </Typography>
         </Box>
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-          Удаление проекта необратимо. Рекомендуем сначала сделать экспорт.
+          {t('projectSettings:dangerZone.hint')}
         </Typography>
         <Button
           variant="outlined"
           color="error"
           startIcon={<DeleteForeverIcon />}
           onClick={handleDelete}
+          aria-label={t('projectSettings:dangerZone.deleteProject')}
         >
-          Удалить проект
+          {t('projectSettings:dangerZone.deleteProject')}
         </Button>
       </GlassCard>
     </Box>

@@ -1,0 +1,161 @@
+{
+  "markerIcons": {
+    "castle": "Castle",
+    "city": "City",
+    "village": "Village",
+    "tavern": "Tavern",
+    "dungeon": "Dungeon",
+    "forest": "Forest",
+    "mountain": "Mountain",
+    "river": "River",
+    "cave": "Cave",
+    "temple": "Temple",
+    "ruins": "Ruins",
+    "port": "Port",
+    "bridge": "Bridge",
+    "tower": "Tower",
+    "camp": "Camp",
+    "battlefield": "Battlefield",
+    "mine": "Mine",
+    "farm": "Farm",
+    "graveyard": "Graveyard",
+    "custom": "Custom"
+  },
+  "defaults": {
+    "rootMapName": "Root map"
+  },
+  "page": {
+    "loading": "Loading map…",
+    "loadingOverlay": "Loading map…",
+    "noMapImage": "No map image loaded",
+    "uploadMapImage": "Upload map image",
+    "mapImageAlt": "Map",
+    "hintEditingPoints": "Drag points to reshape · Right-click — delete vertex · Double-click — add vertex on edge",
+    "hintDrawTerritory": "Click — polygon vertices · Close: hover the first point (ring) and click, or R / «Complete ring» · «Save» — name and create",
+    "hintSelectMode": "Click — marker · Shift+click territory — marker on top · Click territory — settings · Drag marker · Double-click — nested map · Alt+drag / middle mouse — pan · Wheel — zoom"
+  },
+  "confirm": {
+    "cancelDrawingTitle": "Cancel drawing?",
+    "cancelDrawingMessage": "Discard the current territory sketch?",
+    "deleteMarkerTitle": "Delete marker",
+    "deleteMarkerMessage": "Delete “{{name}}”?",
+    "deleteTerritoryTitle": "Delete territory",
+    "deleteTerritoryMessage": "Delete “{{name}}”?"
+  },
+  "toolbar": {
+    "tooltipSelectMode": "Select mode",
+    "tooltipDrawTerritory": "Draw territory",
+    "drawingChip": "{{rings}} closed · {{points}} pts",
+    "completeContour": "Complete ring",
+    "statsChip": "{{markers}} markers · {{territories}} territories",
+    "uploadMap": "Upload map",
+    "zoomPercent": "{{value}}%",
+    "backParentAria": "Back to parent map"
+  },
+  "markerPanel": {
+    "positionLabel": "X: {{x}}% · Y: {{y}}%",
+    "sectionDescription": "Description",
+    "sectionLinkedNote": "Linked note",
+    "noteTypeWiki": "Wiki article",
+    "noteTypeNote": "Note",
+    "notLinked": "None linked",
+    "sectionChildMap": "Nested map",
+    "openChildMap": "Open nested map",
+    "uploadImage": "Upload image",
+    "createChildMap": "Create nested map"
+  },
+  "territoryPanel": {
+    "subtitle": "Territory · rings: {{rings}}, points: {{points}}",
+    "sectionDescription": "Description",
+    "sectionOwnership": "Ownership",
+    "factionKindState": "State",
+    "factionKindFaction": "Faction",
+    "notLinkedFaction": "Not linked to a state or faction",
+    "sectionVisual": "Appearance",
+    "fillColor": "Fill color",
+    "opacity": "Opacity",
+    "borderColor": "Border color",
+    "borderWidth": "Border width",
+    "settings": "Settings",
+    "editShape": "Edit shape"
+  },
+  "markerDialog": {
+    "editTitle": "Edit marker",
+    "createTitle": "Add marker",
+    "fieldTitle": "Marker title",
+    "fieldDescription": "Description",
+    "linkedNoteLabel": "Linked note",
+    "linkedNotePlaceholder": "Start typing…",
+    "noNotes": "No notes",
+    "clear": "Clear",
+    "createNestedMapTitle": "Create nested map",
+    "createNestedMapHint": "The marker becomes an entrance to a separate map",
+    "uploadChildMapImage": "Upload map image",
+    "removeAttachment": "Remove",
+    "fieldIcon": "Icon",
+    "colorLabel": "Color",
+    "previewFallback": "Marker preview"
+  },
+  "territoryDialog": {
+    "editTitle": "Edit territory",
+    "createTitle": "New territory",
+    "fieldName": "Territory name",
+    "fieldDescription": "Description",
+    "factionLabel": "Ownership (state / faction)",
+    "factionPlaceholder": "Choose an entity…",
+    "noFactions": "No entities available",
+    "clear": "Clear",
+    "fillSwatches": "Fill color",
+    "opacitySlider": "Opacity: {{percent}}%",
+    "borderColorSwatches": "Border color",
+    "borderWidthSlider": "Border width: {{width}}px",
+    "smoothingSlider": "Corner smoothing: {{percent}}%",
+    "previewLabel": "Preview",
+    "previewNameFallback": "Territory"
+  },
+  "editingPoints": {
+    "banner": "✏️ {{name}} — {{ringCount}} rings · {{pointCount}} vertices",
+    "escHint": "Esc — cancel"
+  },
+  "childMap": {
+    "autoName": "Map: {{title}}"
+  },
+  "noteTypes": {
+    "wiki": "Wiki",
+    "lore": "Lore",
+    "note": "Note"
+  },
+  "snackbar": {
+    "mapLoadError": "Could not load map",
+    "markerMoved": "Marker moved",
+    "markerMoveError": "Could not move marker",
+    "markerUpdated": "Marker “{{name}}” updated",
+    "markerCreated": "Marker “{{name}}” created",
+    "markerDeleted": "Marker “{{name}}” deleted",
+    "markerDeleteError": "Could not delete marker",
+    "markerSaveError": "Could not save marker",
+    "mapUploaded": "Map image uploaded",
+    "mapUploadError": "Upload failed",
+    "territoryUpdated": "Territory “{{name}}” updated",
+    "territoryCreated": "Territory “{{name}}” created",
+    "territoryDeleted": "Territory “{{name}}” deleted",
+    "territoryDeleteError": "Could not delete territory",
+    "territorySaveError": "Could not save territory",
+    "territoryShapeSaved": "Territory shape updated",
+    "territoryPointsSaveError": "Could not save vertices",
+    "deleteRingMinVertices": "Cannot delete: a ring must keep at least 3 vertices",
+    "finishShapeEditFirst": "Finish editing the shape first",
+    "shapeEditCancelled": "Shape editing cancelled",
+    "nestedMapCreated": "Nested map created",
+    "nestedMapCreateError": "Could not create nested map",
+    "childMapImageUploaded": "Image uploaded",
+    "childMapImageError": "Could not upload image",
+    "markerChildMapUploadWarning": "Map created, but image upload failed",
+    "markerChildMapWarning": "Marker created, but nested map failed"
+  },
+  "drawing": {
+    "minThreePoints": "At least 3 points per ring",
+    "needClosedContour": "Need at least one closed ring (3+ points). Use «Complete ring» to finish a ring.",
+    "minThreePerRing": "Each ring must have at least 3 points"
+  }
+}

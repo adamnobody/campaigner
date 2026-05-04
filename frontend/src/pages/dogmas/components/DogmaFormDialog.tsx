@@ -1,17 +1,17 @@
 import React from 'react';
 import {
   TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-  Box, FormControl, InputLabel, Select, MenuItem, Chip, Switch, FormControlLabel, Typography,
+  Box, FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel, Typography,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import { useTranslation } from 'react-i18next';
 import { DndButton } from '@/components/ui/DndButton';
+import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import {
   DOGMA_CATEGORIES,
   DOGMA_IMPORTANCE,
-  DOGMA_CATEGORY_LABELS,
   DOGMA_CATEGORY_ICONS,
-  DOGMA_IMPORTANCE_LABELS,
 } from '@campaigner/shared';
 import type { Dogma } from '@campaigner/shared';
 
@@ -37,6 +37,9 @@ type Props = {
   setIcon: (v: string) => void;
   tagsStr: string;
   setTagsStr: (v: string) => void;
+  tagsInput: string;
+  setTagsInput: (v: string) => void;
+  existingTagNames: string[];
   onSave: () => void;
 };
 
@@ -62,103 +65,106 @@ export const DogmaFormDialog: React.FC<Props> = ({
   setIcon,
   tagsStr,
   setTagsStr,
+  tagsInput,
+  setTagsInput,
+  existingTagNames,
   onSave,
-}) => (
-  <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
-    PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-    <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-      {editingDogma ? 'Редактировать догму' : 'Новая догма'}
-    </DialogTitle>
-    <DialogContent>
-      <TextField autoFocus fullWidth label="Формулировка *" value={title}
-        onChange={e => setTitle(e.target.value)} margin="normal"
-        placeholder="напр. Магия питается лунным светом" />
+}) => {
+  const { t } = useTranslation(['dogmas', 'common']);
 
-      <Box display="flex" gap={2} mt={1}>
-        <FormControl fullWidth margin="normal">
-          <InputLabel>Категория</InputLabel>
-          <Select value={category} onChange={e => setCategory(e.target.value)} label="Категория">
-            {DOGMA_CATEGORIES.map(cat => (
-              <MenuItem key={cat} value={cat}>
-                {DOGMA_CATEGORY_ICONS[cat]} {DOGMA_CATEGORY_LABELS[cat]}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
+      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
+      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+        {editingDogma ? t('dogmas:form.editTitle') : t('dogmas:form.createTitle')}
+      </DialogTitle>
+      <DialogContent>
+        <TextField autoFocus fullWidth label={t('dogmas:form.fields.title')} value={title}
+          onChange={e => setTitle(e.target.value)} margin="normal"
+          placeholder={t('dogmas:form.placeholders.title')} />
 
-        <FormControl fullWidth margin="normal">
-          <InputLabel>Важность</InputLabel>
-          <Select value={importance} onChange={e => setImportance(e.target.value)} label="Важность">
-            {DOGMA_IMPORTANCE.map(imp => (
-              <MenuItem key={imp} value={imp}>{DOGMA_IMPORTANCE_LABELS[imp]}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+        <Box display="flex" gap={2} mt={1}>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>{t('dogmas:form.fields.category')}</InputLabel>
+            <Select value={category} onChange={e => setCategory(e.target.value)} label={t('dogmas:form.fields.category')}>
+              {DOGMA_CATEGORIES.map(cat => (
+                <MenuItem key={cat} value={cat}>
+                  {DOGMA_CATEGORY_ICONS[cat]} {t(`dogmas:categories.${cat}`)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-      <TextField fullWidth label="Иконка (эмодзи)" value={icon}
-        onChange={e => setIcon(e.target.value)} margin="normal"
-        placeholder="напр. ⚡ 🌙 ⚔️"
-        sx={{ maxWidth: 200 }} />
-
-      <TextField fullWidth label="Описание" value={description}
-        onChange={e => setDescription(e.target.value)} margin="normal"
-        multiline rows={4}
-        placeholder="Подробное описание правила, его нюансы..." />
-
-      <TextField fullWidth label="Влияние на мир" value={impact}
-        onChange={e => setImpact(e.target.value)} margin="normal"
-        multiline rows={3}
-        placeholder="Как это правило влияет на жизнь, политику, войны..." />
-
-      <TextField fullWidth label="Исключения" value={exceptions}
-        onChange={e => setExceptions(e.target.value)} margin="normal"
-        multiline rows={2}
-        placeholder="Известные исключения из этого правила..." />
-
-      <Box display="flex" alignItems="center" gap={2} mt={2}>
-        <FormControlLabel
-          control={
-            <Switch checked={isPublic} onChange={e => setIsPublic(e.target.checked)}
-              sx={{
-                '& .MuiSwitch-switchBase.Mui-checked': { color: 'rgba(78,205,196,0.9)' },
-                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: 'rgba(78,205,196,0.5)' },
-              }} />
-          }
-          label={
-            <Box display="flex" alignItems="center" gap={0.5}>
-              {isPublic
-                ? <VisibilityIcon sx={{ fontSize: 18, color: 'rgba(78,205,196,0.8)' }} />
-                : <VisibilityOffIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.3)' }} />}
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                {isPublic ? 'Известна жителям мира' : 'Скрыта от жителей мира'}
-              </Typography>
-            </Box>
-          }
-        />
-      </Box>
-
-      <TextField fullWidth label="Теги (через запятую)" value={tagsStr}
-        onChange={e => setTagsStr(e.target.value)} margin="normal"
-        placeholder="напр. магия, луна, ограничения" />
-
-      {tagsStr.trim() && (
-        <Box display="flex" gap={0.5} flexWrap="wrap" mt={1}>
-          {tagsStr.split(',').map((t, i) => {
-            const trimmed = t.trim();
-            return trimmed ? (
-              <Chip key={i} label={trimmed} size="small"
-                sx={{ backgroundColor: 'rgba(130,130,255,0.2)', color: '#fff', fontSize: '0.75rem' }} />
-            ) : null;
-          })}
+          <FormControl fullWidth margin="normal">
+            <InputLabel>{t('dogmas:form.fields.importance')}</InputLabel>
+            <Select value={importance} onChange={e => setImportance(e.target.value)} label={t('dogmas:form.fields.importance')}>
+              {DOGMA_IMPORTANCE.map(imp => (
+                <MenuItem key={imp} value={imp}>{t(`dogmas:importance.${imp}`)}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
-      )}
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2 }}>
-      <Button onClick={onClose} color="inherit">Отмена</Button>
-      <DndButton variant="contained" onClick={onSave} disabled={!title.trim()}>
-        {editingDogma ? 'Сохранить' : 'Создать'}
-      </DndButton>
-    </DialogActions>
-  </Dialog>
-);
+
+        <TextField fullWidth label={t('dogmas:form.fields.icon')} value={icon}
+          onChange={e => setIcon(e.target.value)} margin="normal"
+          placeholder={t('dogmas:form.placeholders.icon')}
+          sx={{ maxWidth: 200 }} />
+
+        <TextField fullWidth label={t('dogmas:form.fields.description')} value={description}
+          onChange={e => setDescription(e.target.value)} margin="normal"
+          multiline rows={4}
+          placeholder={t('dogmas:form.placeholders.description')} />
+
+        <TextField fullWidth label={t('dogmas:form.fields.impact')} value={impact}
+          onChange={e => setImpact(e.target.value)} margin="normal"
+          multiline rows={3}
+          placeholder={t('dogmas:form.placeholders.impact')} />
+
+        <TextField fullWidth label={t('dogmas:form.fields.exceptions')} value={exceptions}
+          onChange={e => setExceptions(e.target.value)} margin="normal"
+          multiline rows={2}
+          placeholder={t('dogmas:form.placeholders.exceptions')} />
+
+        <Box display="flex" alignItems="center" gap={2} mt={2}>
+          <FormControlLabel
+            control={
+              <Switch checked={isPublic} onChange={e => setIsPublic(e.target.checked)}
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: 'rgba(78,205,196,0.9)' },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: 'rgba(78,205,196,0.5)' },
+                }} />
+            }
+            label={
+              <Box display="flex" alignItems="center" gap={0.5}>
+                {isPublic
+                  ? <VisibilityIcon sx={{ fontSize: 18, color: 'rgba(78,205,196,0.8)' }} />
+                  : <VisibilityOffIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.3)' }} />}
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  {isPublic ? t('dogmas:visibility.public') : t('dogmas:visibility.secret')}
+                </Typography>
+              </Box>
+            }
+          />
+        </Box>
+
+        <TagAutocompleteField
+          options={existingTagNames}
+          value={tagsStr}
+          pendingInput={tagsInput}
+          label={t('dogmas:tagField.label')}
+          placeholder={t('dogmas:tagField.placeholder')}
+          helperText={t('dogmas:tagField.helperText')}
+          margin="normal"
+          onValueChange={setTagsStr}
+          onPendingInputChange={setTagsInput}
+        />
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} color="inherit">{t('common:cancel')}</Button>
+        <DndButton variant="contained" onClick={onSave} disabled={!title.trim()}>
+          {editingDogma ? t('common:save') : t('common:create')}
+        </DndButton>
+      </DialogActions>
+    </Dialog>
+  );
+};

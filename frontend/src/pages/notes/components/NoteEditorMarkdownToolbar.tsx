@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, IconButton, Divider, Tooltip, useTheme, alpha } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 import FormatBoldIcon from '@mui/icons-material/FormatBold';
@@ -31,9 +32,10 @@ export const NoteEditorMarkdownToolbar: React.FC<Props> = ({
   isWiki,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['notes', 'common']);
   return (
     <Box sx={{ display: 'flex', gap: 0.5, p: 1, borderBottom: `1px solid ${theme.palette.divider}`, flexWrap: 'wrap', alignItems: 'center' }}>
-      <Tooltip title="Отменить (Ctrl+Z)">
+      <Tooltip title={t('notes:toolbar.undo')}>
         <span>
           <IconButton size="small" onClick={onUndo} disabled={!canUndo}
             sx={{ color: 'text.secondary', '&.Mui-disabled': { color: 'text.disabled' }, borderRadius: 1, width: 30, height: 30 }}>
@@ -41,7 +43,7 @@ export const NoteEditorMarkdownToolbar: React.FC<Props> = ({
           </IconButton>
         </span>
       </Tooltip>
-      <Tooltip title="Повторить (Ctrl+Shift+Z)">
+      <Tooltip title={t('notes:toolbar.redo')}>
         <span>
           <IconButton size="small" onClick={onRedo} disabled={!canRedo}
             sx={{ color: 'text.secondary', '&.Mui-disabled': { color: 'text.disabled' }, borderRadius: 1, width: 30, height: 30 }}>
@@ -50,19 +52,19 @@ export const NoteEditorMarkdownToolbar: React.FC<Props> = ({
         </span>
       </Tooltip>
       <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: theme.palette.divider }} />
-      <ToolbarButton icon={<TitleIcon />} tooltip="Заголовок" onClick={() => onInsertMarkdown('heading')} />
-      <ToolbarButton icon={<FormatBoldIcon />} tooltip="Жирный (Ctrl+B)" onClick={() => onInsertMarkdown('bold')} />
-      <ToolbarButton icon={<FormatItalicIcon />} tooltip="Курсив (Ctrl+I)" onClick={() => onInsertMarkdown('italic')} />
+      <ToolbarButton icon={<TitleIcon />} tooltip={t('notes:toolbar.heading')} onClick={() => onInsertMarkdown('heading')} />
+      <ToolbarButton icon={<FormatBoldIcon />} tooltip={t('notes:toolbar.bold')} onClick={() => onInsertMarkdown('bold')} />
+      <ToolbarButton icon={<FormatItalicIcon />} tooltip={t('notes:toolbar.italic')} onClick={() => onInsertMarkdown('italic')} />
       <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: theme.palette.divider }} />
-      <ToolbarButton icon={<FormatListBulletedIcon />} tooltip="Список" onClick={() => onInsertMarkdown('list')} />
-      <ToolbarButton icon={<FormatQuoteIcon />} tooltip="Цитата" onClick={() => onInsertMarkdown('quote')} />
-      <ToolbarButton icon={<CodeIcon />} tooltip="Код" onClick={() => onInsertMarkdown('code')} />
-      <ToolbarButton icon={<LinkIcon />} tooltip="Ссылка" onClick={() => onInsertMarkdown('link')} />
-      <ToolbarButton icon={<HorizontalRuleIcon />} tooltip="Разделитель" onClick={() => onInsertMarkdown('hr')} />
+      <ToolbarButton icon={<FormatListBulletedIcon />} tooltip={t('notes:toolbar.list')} onClick={() => onInsertMarkdown('list')} />
+      <ToolbarButton icon={<FormatQuoteIcon />} tooltip={t('notes:toolbar.quote')} onClick={() => onInsertMarkdown('quote')} />
+      <ToolbarButton icon={<CodeIcon />} tooltip={t('notes:toolbar.code')} onClick={() => onInsertMarkdown('code')} />
+      <ToolbarButton icon={<LinkIcon />} tooltip={t('notes:toolbar.link')} onClick={() => onInsertMarkdown('link')} />
+      <ToolbarButton icon={<HorizontalRuleIcon />} tooltip={t('notes:toolbar.hr')} onClick={() => onInsertMarkdown('hr')} />
       {isWiki && (
         <>
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: theme.palette.divider }} />
-          <Tooltip title="Внутренняя вики-ссылка">
+          <Tooltip title={t('notes:toolbar.wikiLink')}>
             <IconButton size="small" onClick={() => onInsertMarkdown('wikilink')}
               sx={{ color: alpha(theme.palette.info.main, 0.8), borderRadius: 1, width: 30, height: 30,
                 '&:hover': { color: theme.palette.info.main, backgroundColor: alpha(theme.palette.info.main, 0.1) } }}>

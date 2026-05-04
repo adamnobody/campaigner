@@ -52,6 +52,12 @@ export const createDynastyEventSchema = z.object({
 
 export const updateDynastyEventSchema = createDynastyEventSchema.partial().omit({ dynastyId: true });
 
+export const reorderDynastyEventsSchema = z.object({
+  orderedIds: z.array(z.number().int().positive()).min(1),
+});
+
+export type ReorderDynastyEvents = z.infer<typeof reorderDynastyEventsSchema>;
+
 export const dynastySchema = z.object({
   id: z.number(),
   projectId: z.number(),

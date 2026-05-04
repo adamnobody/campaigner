@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, IconButton, Chip, Tooltip, useTheme, alpha,
 } from '@mui/material';
@@ -27,6 +28,7 @@ export const WikiArticleCard: React.FC<Props> = ({
   onDelete,
 }) => {
   const theme = useTheme();
+  const { t, i18n } = useTranslation(['wiki', 'common']);
 
   return (
     <GlassCard
@@ -61,7 +63,7 @@ export const WikiArticleCard: React.FC<Props> = ({
         </Typography>
 
         <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0 }}>
-          <Tooltip title="Редактировать теги">
+          <Tooltip title={t('wiki:articleCard.tooltipEditTags')}>
             <IconButton
               size="small"
               onClick={onEditTags}
@@ -70,7 +72,7 @@ export const WikiArticleCard: React.FC<Props> = ({
               <LocalOfferIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Удалить">
+          <Tooltip title={t('wiki:articleCard.tooltipDelete')}>
             <IconButton
               size="small"
               onClick={onDelete}
@@ -152,7 +154,7 @@ export const WikiArticleCard: React.FC<Props> = ({
               variant="caption"
               sx={{ color: 'text.secondary', transition: 'color 0.15s' }}
             >
-              + добавить теги
+              {t('wiki:articleCard.addTags')}
             </Typography>
           </Box>
         )}
@@ -162,7 +164,7 @@ export const WikiArticleCard: React.FC<Props> = ({
             <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
               <AccountTreeIcon sx={{ fontSize: 14, color: theme.palette.primary.main }} />
               <Typography variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 600 }}>
-                Связи ({noteLinks.length})
+                {t('wiki:articleCard.linksHeading', { count: noteLinks.length })}
               </Typography>
             </Box>
             <Box display="flex" flexDirection="column" gap={0.3}>
@@ -182,13 +184,13 @@ export const WikiArticleCard: React.FC<Props> = ({
                       minWidth: 0,
                     }}
                   >
-                    → {otherTitle}{label}
+                    {t('wiki:articleCard.linkPrefix')}{otherTitle}{label}
                   </Typography>
                 );
               })}
               {noteLinks.length > 3 && (
                 <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
-                  +{noteLinks.length - 3} ещё
+                  {t('wiki:articleCard.moreLinks', { count: noteLinks.length - 3 })}
                 </Typography>
               )}
             </Box>
@@ -196,7 +198,7 @@ export const WikiArticleCard: React.FC<Props> = ({
         )}
 
         <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 1 }}>
-          {new Date(note.updatedAt).toLocaleDateString('ru-RU')}
+          {new Date(note.updatedAt).toLocaleDateString(i18n.language)}
         </Typography>
       </Box>
     </GlassCard>

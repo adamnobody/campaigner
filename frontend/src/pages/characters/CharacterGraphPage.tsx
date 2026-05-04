@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Button, Paper, IconButton, Chip, useTheme, alpha,
 } from '@mui/material';
@@ -7,20 +7,23 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { GlassCard } from '@/components/ui/GlassCard';
 import {
   type GNode,
   type GEdge,
-  REL_LABELS,
+  RELATIONSHIP_TYPE_KEYS,
   REL_COLORS,
   R,
   MIN_ZOOM,
   MAX_ZOOM,
 } from '@/pages/characters/graph/graphConstants';
+import { routes } from '@/utils/routes';
 
 export const CharacterGraphPage: React.FC = () => {
+  const { t, i18n } = useTranslation(['characters', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -50,6 +53,14 @@ export const CharacterGraphPage: React.FC = () => {
   const panStartRef = useRef({ mx: 0, my: 0, cx: 0, cy: 0 });
 
   const [selectedNode, setSelectedNode] = useState<GNode | null>(null);
+
+  const relLabels = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const key of RELATIONSHIP_TYPE_KEYS) {
+      m[key] = t(`relationshipTypes.${key}`);
+    }
+    return m;
+  }, [t, i18n.resolvedLanguage]);
 
   const s2w = useCallback((sx: number, sy: number) => {
     const c = camRef.current;
@@ -286,7 +297,7 @@ export const CharacterGraphPage: React.FC = () => {
         ctx.fillStyle = `${col}88`;
         ctx.fill();
 
-        const label = REL_LABELS[e.type] || e.type;
+        const label = relLabels[e.type] || e.type;
         const mx = (s.x + t.x) / 2;
         const my = (s.y + t.y) / 2;
 
@@ -359,7 +370,7 @@ export const CharacterGraphPage: React.FC = () => {
       running = false;
       cancelAnimationFrame(rafRef.current);
     };
-  }, [loading]);
+  }, [loading, relLabels]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -437,7 +448,7 @@ export const CharacterGraphPage: React.FC = () => {
   const onDblClick = useCallback((e: React.MouseEvent) => {
     const { sx, sy } = canvasXY(e);
     const node = hitTest(sx, sy);
-    if (node) navigate(`/project/${pid}/characters/${node.id}`);
+    if (node) navigate(routes.characterDetail(pid, node.id));
   }, [canvasXY, hitTest, navigate, pid]);
 
   const zoomBtn = useCallback((delta: number) => {
@@ -460,7 +471,7 @@ export const CharacterGraphPage: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка графа...</Typography>
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>{t('graph.loading')}</Typography>
       </Box>
     );
   }
@@ -475,14 +486,14 @@ export const CharacterGraphPage: React.FC = () => {
             variant="outlined"
             startIcon={<ArrowBackIcon />}
             size="small"
-            onClick={() => navigate(`/project/${pid}/characters`)}
+            onClick={() => navigate(routes.characters(pid))}
             sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
           >
-            Назад
+            {t('common:back')}
           </DndButton>
 
           <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
-            Граф связей
+            {t('graph.title')}
           </Typography>
         </Box>
 
@@ -503,7 +514,7 @@ export const CharacterGraphPage: React.FC = () => {
       </Box>
 
       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mb: 1, display: 'block' }}>
-        Перетаскивание узла — переместить · Двойной клик — открыть · Фон — панорамирование · Колёсико — зум
+        {t('graph.hint')}
       </Typography>
 
       {nodeCount === 0 ? (
@@ -519,10 +530,10 @@ export const CharacterGraphPage: React.FC = () => {
           }}
         >
           <Typography sx={{ color: 'text.secondary', mb: 2 }}>
-            Нет персонажей для отображения
+            {t('graph.empty')}
           </Typography>
-          <Button variant="outlined" onClick={() => navigate(`/project/${pid}/characters`)}>
-            К списку
+          <Button variant="outlined" onClick={() => navigate(routes.characters(pid))}>
+            {t('graph.backToList')}
           </Button>
         </GlassCard>
       ) : (
@@ -573,7 +584,7 @@ export const CharacterGraphPage: React.FC = () => {
                 <Button
                   size="small"
                   variant="outlined"
-                  onClick={() => navigate(`/project/${pid}/characters/${selectedNode.id}`)}
+                  onClick={() => navigate(routes.characterDetail(pid, selectedNode.id))}
                   sx={{
                     borderColor: alpha(theme.palette.primary.main, 0.3),
                     color: theme.palette.primary.main,
@@ -581,7 +592,7 @@ export const CharacterGraphPage: React.FC = () => {
                     fontSize: '0.75rem',
                   }}
                 >
-                  Открыть
+                  {t('graph.open')}
                 </Button>
                 <Button
                   size="small"
@@ -591,7 +602,7 @@ export const CharacterGraphPage: React.FC = () => {
                   }}
                   sx={{ color: 'text.secondary', textTransform: 'none', fontSize: '0.75rem' }}
                 >
-                  Закрыть
+                  {t('graph.closePanel')}
                 </Button>
               </Box>
             </GlassCard>
@@ -607,13 +618,13 @@ export const CharacterGraphPage: React.FC = () => {
               }}
             >
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
-                Связи
+                {t('graph.legendTitle')}
               </Typography>
-              {usedTypes.map((t) => (
-                <Box key={t} display="flex" alignItems="center" gap={1} sx={{ mb: 0.3 }}>
-                  <Box sx={{ width: 14, height: 3, borderRadius: 1, backgroundColor: REL_COLORS[t] || REL_COLORS.custom }} />
+              {usedTypes.map((relType) => (
+                <Box key={relType} display="flex" alignItems="center" gap={1} sx={{ mb: 0.3 }}>
+                  <Box sx={{ width: 14, height: 3, borderRadius: 1, backgroundColor: REL_COLORS[relType] || REL_COLORS.custom }} />
                   <Typography variant="caption" sx={{ color: 'text.primary', fontSize: '0.7rem' }}>
-                    {REL_LABELS[t] || t}
+                    {relLabels[relType] || relType}
                   </Typography>
                 </Box>
               ))}
@@ -622,13 +633,13 @@ export const CharacterGraphPage: React.FC = () => {
 
           <Box sx={{ position: 'absolute', bottom: 12, right: 12, display: 'flex', gap: 1 }}>
             <Chip
-              label={`${nodeCount} персонажей`}
+              label={t('graph.characterCount', { count: nodeCount })}
               size="small"
               variant="outlined"
               sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }}
             />
             <Chip
-              label={`${edgeCount} связей`}
+              label={t('graph.edgeCount', { count: edgeCount })}
               size="small"
               variant="outlined"
               sx={{ borderColor: theme.palette.divider, color: 'text.secondary', fontSize: '0.7rem' }}

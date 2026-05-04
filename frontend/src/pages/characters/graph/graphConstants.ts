@@ -15,12 +15,23 @@ export interface GEdge {
   description: string;
 }
 
-export const REL_LABELS: Record<string, string> = {
-  ally: 'Союзник', enemy: 'Враг', family: 'Семья', friend: 'Друг',
-  rival: 'Соперник', mentor: 'Наставник', student: 'Ученик',
-  lover: 'Возлюбленный', spouse: 'Супруг', employer: 'Работодатель',
-  employee: 'Работник', custom: 'Другое',
-};
+/** Keys aligned with `characters.json` → `relationshipTypes` and API `relationshipType`. */
+export const RELATIONSHIP_TYPE_KEYS = [
+  'ally',
+  'enemy',
+  'family',
+  'friend',
+  'rival',
+  'mentor',
+  'student',
+  'lover',
+  'spouse',
+  'employer',
+  'employee',
+  'custom',
+] as const;
+
+export type RelationshipTypeKey = (typeof RELATIONSHIP_TYPE_KEYS)[number];
 
 export const REL_COLORS: Record<string, string> = {
   ally: '#4ECDC4', enemy: '#FF6B6B', family: '#BB8FCE',

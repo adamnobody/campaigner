@@ -1,0 +1,55 @@
+{
+  "menu": {
+    "map": "Карта",
+    "graph": "Граф",
+    "characters": "Персонажи",
+    "states": "Государства",
+    "factions": "Фракции",
+    "notes": "Заметки",
+    "wiki": "Вики",
+    "timeline": "Хронология",
+    "dogmas": "Догмы",
+    "dynasties": "Династии"
+  },
+  "sidebar": {
+    "allCampaigns": "Все кампании",
+    "appearance": "Внешний вид",
+    "appearanceProjectsHint": "Быстрый переход к проектам",
+    "projectsEmpty": "Проекты не найдены",
+    "selectCampaign": "Выберите кампанию, чтобы начать работу с миром",
+    "projectSettings": "Настройки проекта"
+  },
+  "topbar": {
+    "searchTooltip": "Поиск (Ctrl+K)",
+    "searchPlaceholder": "Поиск...",
+    "createBranchTooltip": "Создать ветку what-if",
+    "openSearchHotkeyDesc": "Открыть поиск"
+  },
+  "breadcrumbs": {
+    "home": "Главная",
+    "newEntity": "Создание",
+    "section": {
+      "map": "Карта",
+      "characters": "Персонажи",
+      "states": "Государства",
+      "factions": "Фракции",
+      "dynasties": "Династии",
+      "notes": "Заметки",
+      "wiki": "Вики",
+      "timeline": "Хронология",
+      "files": "Файлы",
+      "settings": "Настройки",
+      "appearance": "Внешний вид",
+      "dogmas": "Догмы",
+      "graph": "Граф связей"
+    }
+  },
+  "branches": {
+    "dialogTitle": "Новая ветка",
+    "nameLabel": "Название ветки",
+    "loading": "Загрузка веток...",
+    "nonePlaceholder": "Без веток",
+    "created": "Ветка создана",
+    "createFailedFallback": "Не удалось создать ветку"
+  }
+}

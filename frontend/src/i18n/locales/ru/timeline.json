@@ -1,0 +1,63 @@
+{
+  "page": {
+    "title": "Хронология",
+    "addEvent": "Добавить событие"
+  },
+  "empty": {
+    "title": "Хронология пуста",
+    "description": "Создайте хронологию вашего мира — эпохи, войны, открытия и поворотные моменты",
+    "action": "Добавить событие"
+  },
+  "filters": {
+    "searchPlaceholder": "Поиск событий…",
+    "allEras": "Все эпохи",
+    "countShown": "{{filtered}} из {{total}}"
+  },
+  "eventCard": {
+    "noteFallback": "Заметка #{{id}}",
+    "unlinkNote": "Открепить заметку",
+    "moveUp": "Вверх",
+    "moveDown": "Вниз",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "drag": "Перетащить"
+  },
+  "dialog": {
+    "editTitle": "Редактировать событие",
+    "createTitle": "Новое событие",
+    "titleLabel": "Название *",
+    "titlePlaceholder": "напр. Падение Нетерила",
+    "dateLabel": "Дата *",
+    "datePlaceholder": "напр. 3520 год Третьей Эпохи",
+    "dateHelper": "Свободный формат — используйте календарь вашего мира",
+    "eraLabel": "Эпоха",
+    "eraPlaceholder": "Выберите или введите новую эпоху",
+    "eraHelper": "Выберите существующую или введите название новой",
+    "eraNoOptions": "Нет эпох — введите название",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "Что произошло…",
+    "linkNoteLabel": "Привязать заметку",
+    "linkNotePlaceholder": "Начните вводить название заметки…",
+    "noteNoOptions": "Нет заметок",
+    "linkedPrefix": "Привязана:",
+    "autocompleteClear": "Очистить"
+  },
+  "tagField": {
+    "label": "Теги",
+    "placeholder": "Выберите или введите…",
+    "helperText": "Можно выбрать существующие теги или добавить новые"
+  },
+  "snackbar": {
+    "eventUpdated": "Событие обновлено: {{title}}",
+    "eventCreated": "Событие создано: {{title}}",
+    "saveError": "Ошибка сохранения",
+    "eventDeleted": "Удалено: {{title}}",
+    "error": "Ошибка",
+    "noteUnlinked": "Заметка откреплена",
+    "reorderError": "Ошибка сортировки"
+  },
+  "confirm": {
+    "deleteTitle": "Удалить событие",
+    "deleteMessage": "Удалить «{{title}}»?"
+  }
+}

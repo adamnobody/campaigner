@@ -15,6 +15,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SyncIcon from '@mui/icons-material/Sync';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
@@ -35,6 +36,7 @@ const AUTOSAVE_DELAY = 3000;
 type EditorMode = 'edit' | 'preview' | 'split';
 
 export const NoteEditorPage: React.FC = () => {
+  const { t, i18n } = useTranslation(['notes', 'common']);
   const { projectId, noteId } = useParams<{ projectId: string; noteId: string }>();
   const pid = parseInt(projectId!);
   const nid = parseInt(noteId!);
@@ -156,14 +158,14 @@ export const NoteEditorPage: React.FC = () => {
       hasChangesRef.current = false;
       setSaveStatus('saved');
       setLastSaved(new Date());
-      if (!isAuto) showSnackbar('Заметка сохранена', 'success');
+      if (!isAuto) showSnackbar(t('notes:snackbar.saved', { title: titleRef.current.trim() }), 'success');
     } catch {
       setSaveStatus('error');
-      if (!isAuto) showSnackbar('Ошибка сохранения', 'error');
+      if (!isAuto) showSnackbar(t('notes:snackbar.saveError'), 'error');
     } finally {
       setSaving(false);
     }
-  }, [nid, updateNote, showSnackbar]);
+  }, [nid, updateNote, showSnackbar, t]);
 
   const scheduleAutosave = useCallback(() => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
@@ -239,18 +241,20 @@ export const NoteEditorPage: React.FC = () => {
     let insertion = '';
     let cursorOffset = 0;
 
+    const ph = (key: string) => t(`notes:markdown.placeholders.${key}`);
+
     switch (type) {
-      case 'bold': insertion = `**${selected || 'жирный текст'}**`; cursorOffset = selected ? insertion.length : 2; break;
-      case 'italic': insertion = `*${selected || 'курсив'}*`; cursorOffset = selected ? insertion.length : 1; break;
-      case 'heading': insertion = `## ${selected || 'Заголовок'}`; cursorOffset = insertion.length; break;
-      case 'link': insertion = `[${selected || 'текст'}](url)`; cursorOffset = selected ? insertion.length - 1 : 1; break;
-      case 'wikilink': insertion = `[[${selected || 'Название статьи'}]]`; cursorOffset = selected ? insertion.length : 2; break;
+      case 'bold': insertion = `**${selected || ph('bold')}**`; cursorOffset = selected ? insertion.length : 2; break;
+      case 'italic': insertion = `*${selected || ph('italic')}*`; cursorOffset = selected ? insertion.length : 1; break;
+      case 'heading': insertion = `## ${selected || ph('heading')}`; cursorOffset = insertion.length; break;
+      case 'link': insertion = `[${selected || ph('linkText')}](url)`; cursorOffset = selected ? insertion.length - 1 : 1; break;
+      case 'wikilink': insertion = `[[${selected || ph('wikiTitle')}]]`; cursorOffset = selected ? insertion.length : 2; break;
       case 'code':
-        if (selected.includes('\n')) { insertion = `\`\`\`\n${selected || 'код'}\n\`\`\``; }
-        else { insertion = `\`${selected || 'код'}\``; }
+        if (selected.includes('\n')) { insertion = `\`\`\`\n${selected || ph('code')}\n\`\`\``; }
+        else { insertion = `\`${selected || ph('code')}\``; }
         cursorOffset = selected ? insertion.length : 1; break;
-      case 'list': insertion = selected ? selected.split('\n').map(line => `- ${line}`).join('\n') : '- элемент списка'; cursorOffset = insertion.length; break;
-      case 'quote': insertion = selected ? selected.split('\n').map(line => `> ${line}`).join('\n') : '> цитата'; cursorOffset = insertion.length; break;
+      case 'list': insertion = selected ? selected.split('\n').map(line => `- ${line}`).join('\n') : `- ${ph('listItem')}`; cursorOffset = insertion.length; break;
+      case 'quote': insertion = selected ? selected.split('\n').map(line => `> ${line}`).join('\n') : `> ${ph('quote')}`; cursorOffset = insertion.length; break;
       case 'hr': insertion = '\n---\n'; cursorOffset = insertion.length; break;
       default: return;
     }
@@ -261,17 +265,17 @@ export const NoteEditorPage: React.FC = () => {
     isUndoRedoRef.current = true;
     handleContentChange(newContent);
     setTimeout(() => { textarea.focus(); textarea.setSelectionRange(newCursorPos, newCursorPos); }, 0);
-  }, [content, history]);
+  }, [content, history, t]);
 
   // ==================== Wiki links ====================
   const handleCreateLink = async (target: { id: number; title: string }, label: string) => {
     try {
       await wikiApi.createLink({ projectId: pid, sourceNoteId: nid, targetNoteId: target.id, label: label.trim() });
       setLinkDialogOpen(false);
-      showSnackbar('Связь создана', 'success');
+      showSnackbar(t('notes:snackbar.linkCreated'), 'success');
       loadWikiData();
     } catch (err: any) {
-      showSnackbar(err.response?.data?.message || 'Связь уже существует', 'error');
+      showSnackbar(err.response?.data?.message || t('notes:snackbar.linkDuplicate'), 'error');
     }
   };
 
@@ -302,10 +306,10 @@ export const NoteEditorPage: React.FC = () => {
   const handleDeleteLink = async (linkId: number) => {
     try {
       await wikiApi.deleteLink(linkId);
-      showSnackbar('Связь удалена', 'success');
+      showSnackbar(t('notes:snackbar.linkDeleted'), 'success');
       loadWikiData();
     } catch {
-      showSnackbar('Ошибка', 'error');
+      showSnackbar(t('notes:snackbar.deleteError'), 'error');
     }
   };
 
@@ -348,17 +352,17 @@ export const NoteEditorPage: React.FC = () => {
     if (!currentNote) return;
     try {
       await updateNote(nid, { isPinned: !currentNote.isPinned });
-      showSnackbar(currentNote.isPinned ? 'Откреплено' : 'Закреплено', 'success');
-    } catch { showSnackbar('Ошибка', 'error'); }
+      showSnackbar(currentNote.isPinned ? t('notes:snackbar.unpinned') : t('notes:snackbar.pinned'), 'success');
+    } catch { showSnackbar(t('notes:snackbar.togglePinError'), 'error'); }
   };
 
   const formatLastSaved = () => {
     if (!lastSaved) return '';
     const diff = Math.floor((Date.now() - lastSaved.getTime()) / 1000);
-    if (diff < 10) return 'только что';
-    if (diff < 60) return `${diff} сек. назад`;
-    if (diff < 3600) return `${Math.floor(diff / 60)} мин. назад`;
-    return lastSaved.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    if (diff < 10) return t('notes:editor.saved.justNow');
+    if (diff < 60) return t('notes:editor.saved.secondsAgo', { count: diff });
+    if (diff < 3600) return t('notes:editor.saved.minutesAgo', { count: Math.floor(diff / 60) });
+    return lastSaved.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
   };
   
   const wordCount = useMemo(() => {
@@ -400,7 +404,7 @@ export const NoteEditorPage: React.FC = () => {
           },
           minHeight: '100%',
         }}
-        placeholder="Начните писать..."
+        placeholder={t('notes:editor.placeholder')}
       />
     </Box>
   );
@@ -410,18 +414,18 @@ export const NoteEditorPage: React.FC = () => {
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate(-1)}>
+          <IconButton onClick={() => navigate(-1)} aria-label={t('notes:editor.backAria')}>
             <ArrowBackIcon />
           </IconButton>
           <TextField value={title} onChange={e => handleTitleChange(e.target.value)} variant="standard"
             sx={{ '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600, color: 'text.primary' }, minWidth: 300 }} />
           <Chip label={currentNote.format.toUpperCase()} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: theme.palette.divider }} />
-          {isWiki && <Chip label="WIKI" size="small" sx={{ backgroundColor: alpha(theme.palette.info.main, 0.2), color: theme.palette.info.main, fontWeight: 600 }} />}
-          <IconButton onClick={handleTogglePin} color={currentNote.isPinned ? 'primary' : 'default'}>
+          {isWiki && <Chip label={t('notes:editor.wikiChip')} size="small" sx={{ backgroundColor: alpha(theme.palette.info.main, 0.2), color: theme.palette.info.main, fontWeight: 600 }} />}
+          <IconButton onClick={handleTogglePin} color={currentNote.isPinned ? 'primary' : 'default'} aria-label={t('notes:editor.pinAria')}>
             {currentNote.isPinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
           </IconButton>
           {isWiki && (
-            <Tooltip title={showLinks ? 'Скрыть связи' : 'Показать связи'}>
+            <Tooltip title={showLinks ? t('notes:editor.tooltipHideLinks') : t('notes:editor.tooltipShowLinks')}>
               <IconButton onClick={() => setShowLinks(!showLinks)}
                 sx={{ color: showLinks ? theme.palette.info.main : 'text.disabled' }}>
                 <AccountTreeIcon />
@@ -433,19 +437,19 @@ export const NoteEditorPage: React.FC = () => {
           <Box display="flex" alignItems="center" gap={0.5}>
             {saveStatus === 'saved' && (
               <><CloudDoneIcon sx={{ fontSize: 16, color: alpha(theme.palette.success.main, 0.6) }} />
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.success.main, 0.6) }}>Сохранено {formatLastSaved()}</Typography></>
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.success.main, 0.6) }}>{t('notes:editor.saveStatusSaved', { time: formatLastSaved() })}</Typography></>
             )}
             {saveStatus === 'unsaved' && (
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.warning.main, 0.8) }}>● Несохранённые изменения</Typography>
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.warning.main, 0.8) }}>{t('notes:editor.saveStatusUnsaved')}</Typography>
             )}
             {saveStatus === 'saving' && (
               <><SyncIcon sx={{ fontSize: 16, color: alpha(theme.palette.info.main, 0.6), animation: 'spin 1s linear infinite',
                 '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.info.main, 0.6) }}>Сохранение...</Typography></>
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.info.main, 0.6) }}>{t('notes:editor.saveStatusSaving')}</Typography></>
             )}
             {saveStatus === 'error' && (
               <><CloudOffIcon sx={{ fontSize: 16, color: alpha(theme.palette.error.main, 0.6) }} />
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.error.main, 0.6) }}>Ошибка сохранения</Typography></>
+              <Typography variant="caption" sx={{ color: alpha(theme.palette.error.main, 0.6) }}>{t('notes:editor.saveStatusError')}</Typography></>
             )}
           </Box>
           <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => { if (v) setMode(v); }} size="small"
@@ -459,23 +463,22 @@ export const NoteEditorPage: React.FC = () => {
                 },
               },
             }}>
-            <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> Код</ToggleButton>
-            <ToggleButton value="split"><VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> Сплит</ToggleButton>
-            <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> Превью</ToggleButton>
+            <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> {t('notes:editor.modeEdit')}</ToggleButton>
+            <ToggleButton value="split"><VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> {t('notes:editor.modeSplit')}</ToggleButton>
+            <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> {t('notes:editor.modePreview')}</ToggleButton>
           </ToggleButtonGroup>
           <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!hasChanges} size="small">
-            Сохранить
+            {t('common:save')}
           </DndButton>
         </Box>
       </Box>
 
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить
-          {isWiki && ' · [Текст ссылки](/__note__/ID) — внутренняя вики-ссылка'}
+          {t('notes:editor.hintBar', { wikiHint: isWiki ? t('notes:editor.hintBarWikiSuffix') : '' })}
         </Typography>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          {wordCount.words} слов · {wordCount.chars} символов
+          {t('notes:editor.wordCount', { words: wordCount.words, chars: wordCount.chars })}
         </Typography>
       </Box>
 

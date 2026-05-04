@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, TextField,
   InputAdornment, Button, Chip,
@@ -29,6 +30,7 @@ import {
 } from '@/pages/wiki/components/WikiDialogs';
 
 export const WikiPage: React.FC = () => {
+  const { t } = useTranslation(['wiki', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -121,30 +123,34 @@ export const WikiPage: React.FC = () => {
       setNewTitle('');
       setNewTagsStr('');
       setNewTagsInput('');
-      showSnackbar('Статья создана', 'success');
+      showSnackbar(t('wiki:snackbar.created', { title: newTitle.trim() }), 'success');
       navigate(`/project/${pid}/notes/${note.id}`);
     } catch {
-      showSnackbar('Ошибка создания', 'error');
+      showSnackbar(t('wiki:snackbar.createError'), 'error');
     }
   };
 
   const handleDelete = (id: number, title: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    showConfirmDialog('Удалить статью', `Удалить "${title}"?`, async () => {
-      try {
-        await deleteNote(id);
-        showSnackbar('Удалено', 'success');
-        await Promise.all([fetchLinks(pid), fetchCategories(pid)]);
-      } catch {
-        showSnackbar('Ошибка', 'error');
-      }
-    });
+    showConfirmDialog(
+      t('wiki:confirm.deleteTitle'),
+      t('wiki:confirm.deleteArticleMessage', { title }),
+      async () => {
+        try {
+          await deleteNote(id);
+          showSnackbar(t('wiki:snackbar.deleted', { title }), 'success');
+          await Promise.all([fetchLinks(pid), fetchCategories(pid)]);
+        } catch {
+          showSnackbar(t('wiki:snackbar.deleteError'), 'error');
+        }
+      },
+    );
   };
 
   const handleOpenTagsEdit = (note: Note, e: React.MouseEvent) => {
     e.stopPropagation();
     setTagsEditNote(note);
-    setEditTagsStr((note.tags || []).map((t: any) => t.name).join(', '));
+    setEditTagsStr((note.tags || []).map((tag) => tag.name).join(', '));
     setEditTagsInput('');
     setTagsDialogOpen(true);
   };
@@ -160,10 +166,10 @@ export const WikiPage: React.FC = () => {
       setTagsEditNote(null);
       setEditTagsStr('');
       setEditTagsInput('');
-      showSnackbar('Теги обновлены', 'success');
+      showSnackbar(t('wiki:snackbar.tagsUpdated'), 'success');
       await reload();
     } catch {
-      showSnackbar('Ошибка', 'error');
+      showSnackbar(t('wiki:snackbar.error'), 'error');
     }
   };
 
@@ -182,10 +188,10 @@ export const WikiPage: React.FC = () => {
       setLinkSource(null);
       setLinkTarget(null);
       setLinkLabel('');
-      showSnackbar('Связь создана', 'success');
+      showSnackbar(t('wiki:snackbar.linkCreated'), 'success');
       await fetchLinks(pid);
     } catch (err: any) {
-      showSnackbar(err.message || 'Такая связь уже существует', 'error');
+      showSnackbar(err.message || t('wiki:snackbar.linkErrorFallback'), 'error');
     }
   };
 
@@ -199,7 +205,7 @@ export const WikiPage: React.FC = () => {
     let result = notes;
     if (selectedCategory) {
       result = result.filter((n) =>
-        n.tags?.some((t: any) => t.name === selectedCategory)
+        n.tags?.some((tag) => tag.name === selectedCategory)
       );
     }
     return result;
@@ -222,22 +228,22 @@ export const WikiPage: React.FC = () => {
       >
         <Box>
           <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            Вики
+            {t('wiki:page.title')}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            База знаний вашего мира
+            {t('wiki:page.subtitle')}
           </Typography>
         </Box>
 
         <Box display="flex" gap={1} flexWrap="wrap" sx={{ minWidth: 0 }}>
           <DndButton variant="outlined" startIcon={<AccountTreeIcon />} onClick={() => navigate(`/project/${pid}/wiki/graph`)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
-            Граф
+            {t('wiki:page.graph')}
           </DndButton>
           <DndButton variant="outlined" startIcon={<LinkIcon />} onClick={() => setLinkDialogOpen(true)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
-            Связать статьи
+            {t('wiki:page.linkArticles')}
           </DndButton>
           <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-            Новая статья
+            {t('wiki:page.newArticle')}
           </DndButton>
         </Box>
       </Box>
@@ -269,7 +275,7 @@ export const WikiPage: React.FC = () => {
             <Box sx={{ gridArea: 'search', minWidth: 0, maxWidth: '100%' }}>
               <TextField
                 fullWidth
-                placeholder="Поиск в вики..."
+                placeholder={t('wiki:page.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 size="small"
@@ -300,7 +306,7 @@ export const WikiPage: React.FC = () => {
                     }}
                   >
                     <Chip
-                      label="Все"
+                      label={t('wiki:page.chipAll')}
                       size="small"
                       onClick={() => setSelectedCategory('')}
                       sx={{
@@ -358,7 +364,7 @@ export const WikiPage: React.FC = () => {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {filteredNotes.length} из {notes.length}
+                {t('wiki:page.countShown', { filtered: filteredNotes.length, total: notes.length })}
               </Typography>
 
               {hasFilters && (
@@ -375,7 +381,7 @@ export const WikiPage: React.FC = () => {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  Сброс
+                  {t('common:reset')}
                 </Button>
               )}
             </Box>
@@ -388,17 +394,17 @@ export const WikiPage: React.FC = () => {
         hasFilters ? (
           <EmptyState
             icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title="Ничего не найдено"
-            description="Попробуйте изменить параметры поиска или фильтры"
-            actionLabel="Сбросить фильтры"
+            title={t('wiki:empty.filteredTitle')}
+            description={t('wiki:empty.filteredDescription')}
+            actionLabel={t('wiki:page.resetFilters')}
             onAction={() => { setSearch(''); setSelectedCategory(''); }}
           />
         ) : (
           <EmptyState
             icon={<MenuBookIcon sx={{ fontSize: 64 }} />}
-            title="Вики пуста"
-            description="Создайте базу знаний вашего мира — локации, фракции, предметы, магия и многое другое"
-            actionLabel="Создать статью"
+            title={t('wiki:empty.noWikiTitle')}
+            description={t('wiki:empty.noWikiDescription')}
+            actionLabel={t('wiki:empty.createFirstArticle')}
             onAction={() => setCreateOpen(true)}
           />
         )

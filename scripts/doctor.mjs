@@ -268,11 +268,57 @@ function checkBackend() {
   if (allOk) ok('Все ключевые файлы backend на месте');
 
   // Check controllers match services match routes
-  const entities = ['character', 'note', 'map', 'project', 'timeline', 'tag', 'faction', 'dogma'];
+  // Service files may be flat (services/x.service.ts) or nested (services/x/x.service.ts).
+  const entities = [
+    'character',
+    'note',
+    'map',
+    'project',
+    'timeline',
+    'tag',
+    'faction',
+    'dogma',
+    'dynasty',
+    'branch',
+    'ambition',
+    'wiki',
+    'search',
+    'political-scale',
+    'character-traits',
+  ];
+
+  const kebabToControllerName = (entity) => {
+    if (entity === 'character-traits') return 'character-traits';
+    return entity;
+  };
+
+  const buildServiceCandidates = (entity) => {
+    const normalized = entity.toLowerCase();
+    const candidates = new Set([normalized]);
+
+    if (normalized.endsWith('ies')) {
+      candidates.add(`${normalized.slice(0, -3)}y`);
+    }
+    if (normalized.endsWith('s')) {
+      candidates.add(normalized.slice(0, -1));
+    }
+
+    return Array.from(candidates).filter(Boolean);
+  };
+
+  const hasServiceForEntity = (entity) => {
+    const serviceCandidates = buildServiceCandidates(entity);
+    return serviceCandidates.some(serviceName =>
+      fileExists(`backend/src/services/${serviceName}.service.ts`) ||
+      fileExists(`backend/src/services/${serviceName}/${serviceName}.service.ts`)
+    );
+  };
+
   let mismatch = [];
   for (const e of entities) {
-    const hasController = fileExists(`backend/src/controllers/${e}.controller.ts`);
-    const hasService = fileExists(`backend/src/services/${e}.service.ts`);
+    const controllerName = kebabToControllerName(e);
+    const hasController = fileExists(`backend/src/controllers/${controllerName}.controller.ts`);
+    const hasService = hasServiceForEntity(e);
     const hasRoute = fileExists(`backend/src/routes/${e}.routes.ts`);
     if (!hasController || !hasService || !hasRoute) {
       const missing = [];

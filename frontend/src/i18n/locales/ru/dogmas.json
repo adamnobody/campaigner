@@ -1,0 +1,84 @@
+{
+  "page": {
+    "title": "Догмы мира",
+    "subtitle": "Фундаментальные законы и правила мироустройства"
+  },
+  "list": {
+    "addDogma": "Добавить догму",
+    "searchPlaceholder": "Поиск догм...",
+    "allCategories": "Все категории",
+    "anyImportance": "Любая важность",
+    "count": "{{shown}} из {{total}}",
+    "emptyFilteredTitle": "Ничего не найдено",
+    "emptyFilteredDescription": "Попробуйте изменить параметры поиска или фильтры",
+    "emptyFilteredAction": "Сбросить фильтры",
+    "emptyNoDogmasTitle": "Догм пока нет",
+    "emptyNoDogmasDescription": "Определите фундаментальные законы вашего мира — как работает магия, какие правила общества, что определяет реальность",
+    "emptyNoDogmasAction": "Добавить догму"
+  },
+  "categories": {
+    "cosmology": "Космология и физика мира",
+    "magic": "Магия и сверхъестественное",
+    "religion": "Религия и метафизика",
+    "society": "Общество и уклад жизни",
+    "politics": "Политика и законы",
+    "economy": "Экономика и ресурсы",
+    "history": "Историческая аксиома",
+    "nature": "Природа и география",
+    "races": "Расы и народы",
+    "technology": "Технологии и ремёсла",
+    "other": "Другое"
+  },
+  "importance": {
+    "fundamental": "Фундаментальная",
+    "major": "Важная",
+    "minor": "Второстепенная"
+  },
+  "form": {
+    "createTitle": "Новая догма",
+    "editTitle": "Редактировать догму",
+    "fields": {
+      "title": "Формулировка *",
+      "category": "Категория",
+      "importance": "Важность",
+      "icon": "Иконка (эмодзи)",
+      "description": "Описание",
+      "impact": "Влияние на мир",
+      "exceptions": "Исключения"
+    },
+    "placeholders": {
+      "title": "напр. Магия питается лунным светом",
+      "icon": "напр. ⚡ 🌙 ⚔️",
+      "description": "Подробное описание правила, его нюансы...",
+      "impact": "Как это правило влияет на жизнь, политику, войны...",
+      "exceptions": "Известные исключения из этого правила..."
+    }
+  },
+  "visibility": {
+    "public": "Известна жителям мира",
+    "secret": "Скрыта от жителей мира"
+  },
+  "listItem": {
+    "impactPrefix": "Влияние:",
+    "exceptionsPrefix": "Исключения:",
+    "tooltipHidden": "Скрыта от жителей мира",
+    "tooltipEdit": "Редактировать",
+    "tooltipDelete": "Удалить"
+  },
+  "snackbar": {
+    "created": "Догма «{{name}}» создана",
+    "updated": "Догма «{{name}}» обновлена",
+    "deleted": "Догма «{{name}}» удалена",
+    "saveError": "Ошибка сохранения",
+    "genericError": "Ошибка"
+  },
+  "confirm": {
+    "deleteTitle": "Удалить догму",
+    "deleteMessage": "Удалить «{{name}}»?"
+  },
+  "tagField": {
+    "label": "Теги",
+    "placeholder": "Выберите или введите...",
+    "helperText": "Можно выбрать существующие теги или добавить новые"
+  }
+}

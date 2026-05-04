@@ -3,6 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Autocomplete,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { DndButton } from '@/components/ui/DndButton';
 
 interface WikiNoteOption {
@@ -22,6 +23,7 @@ interface InsertWikiLinkDialogProps {
 export const InsertWikiLinkDialog: React.FC<InsertWikiLinkDialogProps> = ({
   open, onClose, wikiNotes, currentNoteId, initialLabel, onInsert,
 }) => {
+  const { t } = useTranslation(['notes', 'common']);
   const [target, setTarget] = useState<WikiNoteOption | null>(null);
   const [label, setLabel] = useState('');
 
@@ -50,7 +52,7 @@ export const InsertWikiLinkDialog: React.FC<InsertWikiLinkDialogProps> = ({
       PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
     >
       <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-        Вставить вики-ссылку
+        {t('notes:wikiDialogs.insertTitle')}
       </DialogTitle>
       <DialogContent>
         <Autocomplete
@@ -67,30 +69,30 @@ export const InsertWikiLinkDialog: React.FC<InsertWikiLinkDialogProps> = ({
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Вики-статья *"
+              label={t('notes:wikiDialogs.insertArticleLabel')}
               margin="normal"
-              placeholder="Выберите статью..."
+              placeholder={t('notes:wikiDialogs.insertArticlePlaceholder')}
             />
           )}
-          noOptionsText="Нет статей"
+          noOptionsText={t('notes:wikiDialogs.insertNoOptions')}
         />
 
         <TextField
           fullWidth
-          label="Текст ссылки"
+          label={t('notes:wikiDialogs.insertLinkTextLabel')}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           margin="normal"
-          placeholder="Текст, который будет показан в статье"
-          helperText="В текст будет вставлена markdown-ссылка на внутреннюю статью"
+          placeholder={t('notes:wikiDialogs.insertLinkTextPlaceholder')}
+          helperText={t('notes:wikiDialogs.insertLinkTextHelper')}
         />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={handleClose} color="inherit">
-          Отмена
+          {t('common:cancel')}
         </Button>
         <DndButton variant="contained" onClick={handleInsert} disabled={!target}>
-          Вставить
+          {t('notes:wikiDialogs.insertSubmit')}
         </DndButton>
       </DialogActions>
     </Dialog>

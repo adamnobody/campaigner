@@ -51,4 +51,6 @@ export const dynastiesApi = {
     apiClient.put<ApiResponse<DynastyEvent>>(`/dynasties/${dynastyId}/events/${eventId}`, data),
   deleteEvent: (dynastyId: number, eventId: number) =>
     apiClient.delete<VoidResponse>(`/dynasties/${dynastyId}/events/${eventId}`),
+  reorderEvents: (dynastyId: number, orderedIds: number[]) =>
+    apiClient.post<ApiResponse<Dynasty>>(`/dynasties/${dynastyId}/events/reorder`, { orderedIds }),
 };

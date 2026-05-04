@@ -6,6 +6,7 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { DndButton } from '@/components/ui/DndButton';
 import { safeRgba } from '@/pages/appearance/components/AppearancePrimitives';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -23,6 +24,7 @@ export interface LivePreviewProps {
 
 export const AppearanceLivePreview: React.FC<LivePreviewProps> = ({ currentPreset }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['appearance']);
 
   return (
     <GlassCard sx={{ p: 3 }} interactive>
@@ -60,11 +62,11 @@ export const AppearanceLivePreview: React.FC<LivePreviewProps> = ({ currentPrese
               },
             }}
           />
-          Превью
+          {t('appearance:preview.title')}
         </Typography>
         <Chip
           size="small"
-          label="LIVE"
+          label={t('appearance:preview.liveBadge')}
           sx={{
             backgroundColor: alpha(theme.palette.success.main, 0.15),
             color: theme.palette.success.main,
@@ -107,7 +109,7 @@ export const AppearanceLivePreview: React.FC<LivePreviewProps> = ({ currentPrese
             zIndex: 1,
           }}
         >
-          Башня Архимага
+          {t('appearance:preview.sampleTitle')}
         </Typography>
 
         <Typography
@@ -120,13 +122,13 @@ export const AppearanceLivePreview: React.FC<LivePreviewProps> = ({ currentPrese
             zIndex: 1,
           }}
         >
-          Древняя башня, скрытая среди туманных скал. Внутри хранятся карты, записи экспедиций и забытые трактаты о магии.
+          {t('appearance:preview.sampleBody')}
         </Typography>
 
         <Box display="flex" gap={1} flexWrap="wrap" mb={2.5} sx={{ position: 'relative', zIndex: 1 }}>
-          {['Локация', 'Магия', 'Тайна'].map((tag) => (
+          {[t('appearance:preview.tag1'), t('appearance:preview.tag2'), t('appearance:preview.tag3')].map((tag, i) => (
             <Chip
-              key={tag}
+              key={i}
               label={tag}
               size="small"
               sx={{
@@ -151,7 +153,7 @@ export const AppearanceLivePreview: React.FC<LivePreviewProps> = ({ currentPrese
               boxShadow: `0 4px 12px ${alpha(currentPreset.accentMain, 0.4)}`,
             }}
           >
-            Открыть
+            {t('appearance:preview.open')}
           </DndButton>
           <DndButton
             variant="outlined"
@@ -163,7 +165,7 @@ export const AppearanceLivePreview: React.FC<LivePreviewProps> = ({ currentPrese
               color: currentPreset.textSecondary,
             }}
           >
-            Подробнее
+            {t('appearance:preview.details')}
           </DndButton>
         </Box>
       </Box>

@@ -112,6 +112,23 @@ campaigner
 │  ├─ .env.example
 │  ├─ package.json
 │  └─ tsconfig.json
+├─ chunks
+│  ├─ chunk_backend_api.txt
+│  ├─ chunk_backend_db.txt
+│  ├─ chunk_backend_services.txt
+│  ├─ chunk_backend_utils.txt
+│  ├─ chunk_frontend_api.txt
+│  ├─ chunk_frontend_components_ui.txt
+│  ├─ chunk_frontend_entry.txt
+│  ├─ chunk_frontend_hooks.txt
+│  ├─ chunk_frontend_pages_content.txt
+│  ├─ chunk_frontend_pages_entities.txt
+│  ├─ chunk_frontend_pages_system.txt
+│  ├─ chunk_frontend_pages_visualization.txt
+│  ├─ chunk_frontend_store.txt
+│  ├─ chunk_frontend_theme.txt
+│  ├─ chunk_shared.txt
+│  └─ chunk_uncategorized.txt
 ├─ docs
 │  ├─ architecture
 │  │  └─ conventions.md
@@ -212,6 +229,8 @@ campaigner
 │  │  ├─ components
 │  │  │  ├─ detail
 │  │  │  │  └─ CollapsibleSection.tsx
+│  │  │  ├─ exclusions
+│  │  │  │  └─ ExclusionCatalogTab.tsx
 │  │  │  ├─ forms
 │  │  │  │  └─ TagAutocompleteField.tsx
 │  │  │  ├─ Layout
@@ -234,9 +253,11 @@ campaigner
 │  │  │     ├─ EntityTabs.tsx
 │  │  │     ├─ ErrorBoundary.tsx
 │  │  │     ├─ ExclusionOverlay.tsx
+│  │  │     ├─ FlipCard.tsx
 │  │  │     ├─ FloatingOrb.tsx
 │  │  │     ├─ GlassCard.tsx
 │  │  │     ├─ GlobalSnackbar.tsx
+│  │  │     ├─ LanguageSwitcher.tsx
 │  │  │     ├─ LoadingScreen.tsx
 │  │  │     ├─ SearchDialog.tsx
 │  │  │     ├─ SectionHeader.tsx
@@ -247,11 +268,51 @@ campaigner
 │  │  │  ├─ useHistory.ts
 │  │  │  ├─ useHotkeys.ts
 │  │  │  └─ useProjectScope.ts
+│  │  ├─ i18n
+│  │  │  ├─ locales
+│  │  │  │  ├─ en
+│  │  │  │  │  ├─ ambitions.json
+│  │  │  │  │  ├─ appearance.json
+│  │  │  │  │  ├─ characters.json
+│  │  │  │  │  ├─ common.json
+│  │  │  │  │  ├─ dogmas.json
+│  │  │  │  │  ├─ dynasties.json
+│  │  │  │  │  ├─ factions.json
+│  │  │  │  │  ├─ graph.json
+│  │  │  │  │  ├─ map.json
+│  │  │  │  │  ├─ navigation.json
+│  │  │  │  │  ├─ notes.json
+│  │  │  │  │  ├─ policies.json
+│  │  │  │  │  ├─ projects.json
+│  │  │  │  │  ├─ settings.json
+│  │  │  │  │  ├─ timeline.json
+│  │  │  │  │  └─ wiki.json
+│  │  │  │  └─ ru
+│  │  │  │     ├─ ambitions.json
+│  │  │  │     ├─ appearance.json
+│  │  │  │     ├─ characters.json
+│  │  │  │     ├─ common.json
+│  │  │  │     ├─ dogmas.json
+│  │  │  │     ├─ dynasties.json
+│  │  │  │     ├─ factions.json
+│  │  │  │     ├─ graph.json
+│  │  │  │     ├─ map.json
+│  │  │  │     ├─ navigation.json
+│  │  │  │     ├─ notes.json
+│  │  │  │     ├─ policies.json
+│  │  │  │     ├─ projects.json
+│  │  │  │     ├─ settings.json
+│  │  │  │     ├─ timeline.json
+│  │  │  │     └─ wiki.json
+│  │  │  ├─ index.ts
+│  │  │  ├─ language.ts
+│  │  │  └─ types.ts
 │  │  ├─ pages
 │  │  │  ├─ appearance
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ AppearanceLivePreview.tsx
 │  │  │  │  │  ├─ AppearancePrimitives.tsx
+│  │  │  │  │  ├─ CreateColorThemeDialog.tsx
 │  │  │  │  │  ├─ fontPresets.ts
 │  │  │  │  │  └─ useDebouncedDraft.ts
 │  │  │  │  └─ AppearanceSettingsPage.tsx
@@ -290,6 +351,18 @@ campaigner
 │  │  │  │  │  └─ MetricInput.tsx
 │  │  │  │  ├─ FactionDetailPage.tsx
 │  │  │  │  └─ FactionsPage.tsx
+│  │  │  ├─ graph
+│  │  │  │  ├─ components
+│  │  │  │  │  ├─ AnimatedGraphSidePanel.tsx
+│  │  │  │  │  ├─ GraphCanvasShell.tsx
+│  │  │  │  │  ├─ GraphDetailsPanel.tsx
+│  │  │  │  │  ├─ GraphFiltersPanel.tsx
+│  │  │  │  │  ├─ GraphLegend.tsx
+│  │  │  │  │  ├─ GraphStatusBar.tsx
+│  │  │  │  │  └─ GraphToolbar.tsx
+│  │  │  │  ├─ formatNodeMeta.ts
+│  │  │  │  ├─ ProjectGraphPage.tsx
+│  │  │  │  └─ types.ts
 │  │  │  ├─ home
 │  │  │  │  ├─ components
 │  │  │  │  │  ├─ CreateProjectDialog.tsx
@@ -369,6 +442,7 @@ campaigner
 │  │  │  ├─ error.ts
 │  │  │  ├─ exclusions.ts
 │  │  │  ├─ mapGeometry.ts
+│  │  │  ├─ routes.ts
 │  │  │  └─ uploadAssetUrl.ts
 │  │  ├─ App.tsx
 │  │  └─ main.tsx
@@ -444,6 +518,7 @@ campaigner
 ├─ package-lock.json
 ├─ package.json
 ├─ PLAN_EXECUTION.md
+├─ PLAN_LOCALIZATION.md
 ├─ PLAN.md
 ├─ README.md
 ├─ start.bat

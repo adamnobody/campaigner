@@ -9,15 +9,16 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Box, Typography, Paper, IconButton, Chip } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EventIcon from '@mui/icons-material/Event';
 import {
-  DYNASTY_EVENT_IMPORTANCE_LABELS,
   DYNASTY_EVENT_IMPORTANCE_COLORS,
 } from '@campaigner/shared';
 import type { DynastyEvent } from '@campaigner/shared';
+import { useTranslation } from 'react-i18next';
 
 // ==================== Sortable Event Item ====================
 
@@ -28,6 +29,8 @@ interface SortableEventProps {
 }
 
 const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }) => {
+  const theme = useTheme();
+  const { t } = useTranslation(['dynasties', 'common']);
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: event.id });
@@ -39,7 +42,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
     opacity: isDragging ? 0.8 : 1,
   };
 
-  const impColor = DYNASTY_EVENT_IMPORTANCE_COLORS[event.importance] || '#82E0AA';
+  const impColor = DYNASTY_EVENT_IMPORTANCE_COLORS[event.importance] || theme.palette.success.main;
 
   return (
     <Box ref={setNodeRef} style={style} sx={{ position: 'relative', mb: 2.5, '&:hover .evt-actions': { opacity: 1 } }}>
@@ -48,7 +51,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
         position: 'absolute', left: -21, top: 8,
         width: 12, height: 12, borderRadius: '50%',
         backgroundColor: impColor,
-        border: '2px solid rgba(15,15,25,0.9)',
+        border: `2px solid ${alpha(theme.palette.background.paper, 0.9)}`,
         boxShadow: `0 0 8px ${impColor}60`,
       }} />
 
@@ -57,7 +60,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
         backgroundColor: `${impColor}08`,
         border: `1px solid ${impColor}20`,
         borderRadius: 2,
-        boxShadow: isDragging ? '0 8px 30px rgba(0,0,0,0.4)' : 'none',
+        boxShadow: isDragging ? `0 8px 30px ${alpha(theme.palette.common.black, 0.4)}` : 'none',
         transition: 'box-shadow 0.2s',
       }}>
         <Box display="flex" alignItems="stretch">
@@ -74,7 +77,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
               '&:active': { cursor: 'grabbing' },
             }}
           >
-            <DragIndicatorIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.25)' }} />
+            <DragIndicatorIcon sx={{ fontSize: 18, color: alpha(theme.palette.common.white, 0.25) }} />
           </Box>
 
           {/* Content */}
@@ -82,11 +85,11 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
             <Box display="flex" justifyContent="space-between" alignItems="flex-start">
               <Box sx={{ minWidth: 0 }}>
                 <Box display="flex" alignItems="center" gap={1} mb={0.5} flexWrap="wrap">
-                  <Typography sx={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>
+                  <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.95rem' }}>
                     {event.title}
                   </Typography>
                   <Chip
-                    label={DYNASTY_EVENT_IMPORTANCE_LABELS[event.importance] || event.importance}
+                    label={t(`dynasties:eventImportance.${event.importance}`, { defaultValue: event.importance })}
                     size="small"
                     sx={{
                       height: 20, fontSize: '0.6rem',
@@ -95,11 +98,11 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
                     }}
                   />
                 </Box>
-                <Typography sx={{ color: 'rgba(201,169,89,0.7)', fontSize: '0.8rem' }}>
+                <Typography sx={{ color: alpha(theme.palette.primary.main, 0.7), fontSize: '0.8rem' }}>
                   📅 {event.eventDate}
                 </Typography>
                 {event.description && (
-                  <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', mt: 0.5 }}>
+                  <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.8), fontSize: '0.85rem', mt: 0.5 }}>
                     {event.description}
                   </Typography>
                 )}
@@ -108,10 +111,10 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
               {/* Actions */}
               <Box className="evt-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0 }}>
                 <IconButton size="small" onClick={() => onEdit(event)}>
-                  <EditIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.4)' }} />
+                  <EditIcon fontSize="small" sx={{ color: alpha(theme.palette.text.secondary, 0.85) }} />
                 </IconButton>
                 <IconButton size="small" onClick={() => onDelete(event.id, event.title)}>
-                  <DeleteIcon fontSize="small" sx={{ color: 'rgba(255,100,100,0.5)' }} />
+                  <DeleteIcon fontSize="small" sx={{ color: alpha(theme.palette.error.main, 0.5) }} />
                 </IconButton>
               </Box>
             </Box>
@@ -121,8 +124,6 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
     </Box>
   );
 };
-
-// ==================== Timeline Component ====================
 
 interface DynastyEventsTimelineProps {
   events: DynastyEvent[];
@@ -134,6 +135,8 @@ interface DynastyEventsTimelineProps {
 export const DynastyEventsTimeline: React.FC<DynastyEventsTimelineProps> = ({
   events, onEdit, onDelete, onReorder,
 }) => {
+  const theme = useTheme();
+  const { t } = useTranslation(['dynasties', 'common']);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
@@ -153,9 +156,9 @@ export const DynastyEventsTimeline: React.FC<DynastyEventsTimelineProps> = ({
   if (events.length === 0) {
     return (
       <Box sx={{ textAlign: 'center', py: 3 }}>
-        <EventIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.08)', mb: 1 }} />
-        <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>
-          Добавьте ключевые события династии
+        <EventIcon sx={{ fontSize: 40, color: alpha(theme.palette.text.secondary, 0.25), mb: 1 }} />
+        <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.65), fontSize: '0.9rem' }}>
+          {t('dynasties:timeline.emptyHint')}
         </Typography>
       </Box>
     );
@@ -168,7 +171,7 @@ export const DynastyEventsTimeline: React.FC<DynastyEventsTimelineProps> = ({
           {/* Timeline line */}
           <Box sx={{
             position: 'absolute', left: 11, top: 0, bottom: 0,
-            width: 2, backgroundColor: 'rgba(201,169,89,0.15)',
+            width: 2, backgroundColor: alpha(theme.palette.primary.main, 0.15),
           }} />
 
           {events.map(evt => (

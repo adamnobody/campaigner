@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, Button, Divider, IconButton, useTheme, alpha } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,6 +37,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
 }) => {
   const hasChildMap = !!selectedMarker.childMapId;
   const theme = useTheme();
+  const { t } = useTranslation(['map', 'common']);
 
   return (
     <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.paper, 0.95), backdropFilter: 'blur(20px)' }}>
@@ -54,10 +56,10 @@ export const MapMarkerPanel: React.FC<Props> = ({
             {selectedMarker.title}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            X: {selectedMarker.x.toFixed(1)}% · Y: {selectedMarker.y.toFixed(1)}%
+            {t('map:markerPanel.positionLabel', { x: selectedMarker.x.toFixed(1), y: selectedMarker.y.toFixed(1) })}
           </Typography>
         </Box>
-        <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
+        <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }} aria-label={t('common:close')}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
@@ -65,7 +67,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {selectedMarker.description && (
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={sxSectionLabel(theme)}>Описание</Typography>
+            <Typography variant="caption" sx={sxSectionLabel(theme)}>{t('map:markerPanel.sectionDescription')}</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, lineHeight: 1.6 }}>
               {selectedMarker.description}
             </Typography>
@@ -73,7 +75,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
         )}
         <Divider sx={sxDivider(theme)} />
         <Box sx={{ mb: 2 }}>
-          <Typography variant="caption" sx={sxSectionLabel(theme)}>Привязанная заметка</Typography>
+          <Typography variant="caption" sx={sxSectionLabel(theme)}>{t('map:markerPanel.sectionLinkedNote')}</Typography>
           {linkedNote ? (
             <Box
               onClick={() => onNavigateToNote(linkedNote.id)}
@@ -91,31 +93,31 @@ export const MapMarkerPanel: React.FC<Props> = ({
                   {linkedNote.title}
                 </Typography>
                 <Typography variant="caption" sx={{ color: alpha(theme.palette.primary.main, 0.6) }}>
-                  {linkedNote.noteType === 'wiki' ? 'Вики-статья' : 'Заметка'}
+                  {t(`map:noteTypes.${linkedNote.noteType}`, { defaultValue: linkedNote.noteType })}
                 </Typography>
               </Box>
               <OpenInNewIcon sx={{ fontSize: 16, color: alpha(theme.palette.primary.main, 0.5) }} />
             </Box>
           ) : (
             <Typography variant="body2" sx={{ color: 'text.disabled', mt: 0.5, fontStyle: 'italic' }}>
-              Не привязана
+              {t('map:markerPanel.notLinked')}
             </Typography>
           )}
         </Box>
         <Divider sx={sxDivider(theme)} />
         <Box sx={{ mb: 2 }}>
-          <Typography variant="caption" sx={sxSectionLabel(theme)}>Вложенная карта</Typography>
+          <Typography variant="caption" sx={sxSectionLabel(theme)}>{t('map:markerPanel.sectionChildMap')}</Typography>
           {hasChildMap ? (
             <Box sx={{ mt: 1 }}>
               <Button fullWidth variant="outlined" startIcon={<MapIcon />}
                 onClick={() => onNavigateToChildMap(selectedMarker.childMapId!)}
                 sx={{ borderColor: alpha(theme.palette.secondary.main, 0.3), color: theme.palette.secondary.main, justifyContent: 'flex-start',
                   '&:hover': { borderColor: alpha(theme.palette.secondary.main, 0.5), backgroundColor: alpha(theme.palette.secondary.main, 0.08) } }}>
-                Открыть вложенную карту
+                {t('map:markerPanel.openChildMap')}
               </Button>
               <Button component="label" fullWidth variant="text" startIcon={<ImageIcon />} size="small"
                 sx={{ mt: 0.5, color: 'text.secondary', justifyContent: 'flex-start' }}>
-                Загрузить изображение
+                {t('map:markerPanel.uploadImage')}
                 <input type="file" hidden accept="image/*"
                   onChange={e => { const f = e.target.files?.[0]; if (f) onUploadChildMapImage(selectedMarker, f); }} />
               </Button>
@@ -126,7 +128,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
                 onClick={() => onCreateChildMap(selectedMarker)}
                 sx={{ borderColor: theme.palette.divider, color: 'text.secondary', borderStyle: 'dashed', justifyContent: 'flex-start',
                   '&:hover': { borderColor: alpha(theme.palette.secondary.main, 0.4), color: theme.palette.secondary.main } }}>
-                Создать вложенную карту
+                {t('map:markerPanel.createChildMap')}
               </Button>
             </Box>
           )}
@@ -137,10 +139,11 @@ export const MapMarkerPanel: React.FC<Props> = ({
         <Button fullWidth variant="outlined" startIcon={<EditIcon />} size="small"
           onClick={() => onEditMarker(selectedMarker)}
           sx={{ borderColor: theme.palette.divider, color: 'text.secondary' }}>
-          Редактировать
+          {t('common:edit')}
         </Button>
         <Button variant="outlined" size="small"
           onClick={() => onDeleteMarker(selectedMarker)}
+          aria-label={t('common:delete')}
           sx={{ borderColor: alpha(theme.palette.error.main, 0.2), color: alpha(theme.palette.error.main, 0.6), minWidth: 'auto', px: 1.5,
             '&:hover': { borderColor: alpha(theme.palette.error.main, 0.4), backgroundColor: alpha(theme.palette.error.main, 0.05) } }}>
           <DeleteIcon fontSize="small" />

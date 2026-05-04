@@ -22,6 +22,7 @@ const FactionsPage = React.lazy(() => import('./pages/factions/FactionsPage').th
 const FactionDetailPage = React.lazy(() => import('./pages/factions/FactionDetailPage').then(m => ({ default: m.FactionDetailPage })));
 const DynastiesPage = React.lazy(() => import('./pages/dynasties/DynastiesPage').then(m => ({ default: m.DynastiesPage })));
 const DynastyDetailPage = React.lazy(() => import('./pages/dynasties/DynastyDetailPage').then(m => ({ default: m.DynastyDetailPage })));
+const ProjectGraphPage = React.lazy(() => import('./pages/graph/ProjectGraphPage').then(m => ({ default: m.ProjectGraphPage })));
 const PageLoader = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
     <CircularProgress />
@@ -56,6 +57,7 @@ const App: React.FC = () => {
               <Route path="wiki" element={<ErrorBoundary><WikiPage /></ErrorBoundary>} />
               <Route path="timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
               <Route path="dogmas" element={<ErrorBoundary><DogmasPage /></ErrorBoundary>} />
+              <Route path="graph" element={<ErrorBoundary><ProjectGraphPage /></ErrorBoundary>} />
               <Route path="states" element={<ErrorBoundary><FactionsPage entityType="state" /></ErrorBoundary>} />
               <Route path="states/new" element={<ErrorBoundary><FactionDetailPage entityType="state" /></ErrorBoundary>} />
               <Route path="states/:factionId" element={<ErrorBoundary><FactionDetailPage entityType="state" /></ErrorBoundary>} />

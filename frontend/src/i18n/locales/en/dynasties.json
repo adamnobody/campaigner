@@ -1,0 +1,189 @@
+{
+  "list": {
+    "title": "Dynasties",
+    "subtitle": "Bloodlines and ruling houses of your world",
+    "create": "Create dynasty",
+    "searchPlaceholder": "Search dynasties...",
+    "anyStatus": "Any status",
+    "resetFilters": "Reset",
+    "count": "{{shown}} of {{total}}",
+    "tooltipOpen": "Open",
+    "tooltipDelete": "Delete",
+    "confirmDeleteTitle": "Delete dynasty",
+    "confirmDeleteMessage": "Delete \"{{name}}\"? All members and events will also be removed.",
+    "emptyFilteredTitle": "Nothing found",
+    "emptyFilteredDescription": "Try changing search or filters",
+    "emptyFilteredAction": "Reset filters",
+    "emptyNoDynastiesTitle": "No dynasties yet",
+    "emptyNoDynastiesDescription": "Create bloodlines — ruling houses, noble families, and ancient clans",
+    "emptyNoDynastiesAction": "Create dynasty"
+  },
+  "statuses": {
+    "active": "Ruling",
+    "extinct": "Extinct",
+    "exiled": "In exile",
+    "declining": "Declining",
+    "rising": "Rising"
+  },
+  "familyRelationTypes": {
+    "parent": "Parent",
+    "child": "Child",
+    "spouse": "Spouse",
+    "sibling": "Sibling"
+  },
+  "eventImportance": {
+    "critical": "Turning point",
+    "major": "Major",
+    "normal": "Normal",
+    "minor": "Minor"
+  },
+  "detail": {
+    "backToList": "Back to dynasties",
+    "newTitle": "New dynasty",
+    "fallbackName": "Dynasty",
+    "uploadCoatTooltip": "Upload coat of arms",
+    "tabs": {
+      "overview": "Overview",
+      "family": "Family & tree",
+      "events": "Events"
+    },
+    "summary": {
+      "title": "Summary",
+      "status": "Status",
+      "founder": "Founder",
+      "head": "Head",
+      "heir": "Heir",
+      "linkedFaction": "Linked faction",
+      "tags": "Tags"
+    },
+    "sections": {
+      "basics": "Basics",
+      "description": "Description & history",
+      "tree": "Family tree",
+      "members": "Dynasty members",
+      "familyLinks": "Family ties",
+      "events": "Key events"
+    },
+    "fields": {
+      "name": "Name *",
+      "motto": "Motto",
+      "status": "Status",
+      "linkedFaction": "Linked faction",
+      "foundedDate": "Founded",
+      "extinctDate": "Extinction date",
+      "founder": "Founder",
+      "head": "Head",
+      "heir": "Heir",
+      "primaryColor": "Primary color",
+      "secondaryColor": "Secondary color",
+      "description": "Description",
+      "history": "House history",
+      "eventTitle": "Title *",
+      "eventDate": "Date *",
+      "eventImportance": "Importance",
+      "eventDescription": "Description"
+    },
+    "placeholders": {
+      "motto": "e.g. Fire and Blood",
+      "description": "General description of the dynasty...",
+      "history": "How the house was founded, milestones...",
+      "eventDate": "e.g. 3rd age, year 2941"
+    },
+    "factionNone": "None",
+    "characterNotSet": "Not set",
+    "generationFounders": "Founders",
+    "generationN": "Generation {{n}}",
+    "mainLineChip": "Main line",
+    "members": {
+      "emptyTitle": "No members",
+      "emptyDescription": "Add characters to the dynasty",
+      "addCharacter": "Add character",
+      "add": "Add",
+      "confirmRemove": "Remove \"{{name}}\" from the dynasty?"
+    },
+    "familyLinks": {
+      "emptyTitle": "No ties",
+      "emptyNeedMembers": "Add at least two members to create ties",
+      "emptyDescription": "Set family relationships between members",
+      "addLink": "Add tie",
+      "add": "Add",
+      "confirmDeleteTitle": "Remove tie",
+      "confirmDeleteMessage": "Remove this family tie?",
+      "confirmDeleteGeneric": "Delete"
+    },
+    "events": {
+      "emptyTitle": "No events",
+      "emptyDescription": "Add key events to the dynasty's history",
+      "addEvent": "Add event",
+      "add": "Add",
+      "confirmDeleteTitle": "Delete event",
+      "confirmDeleteMessage": "Delete \"{{title}}\"?"
+    }
+  },
+  "dialogs": {
+    "member": {
+      "title": "Add dynasty member",
+      "character": "Character *",
+      "generation": "Generation",
+      "generationHelper": "0 = founders, 1 = children, 2 = grandchildren...",
+      "role": "Role in dynasty",
+      "rolePlaceholder": "e.g. Founder, Head, Heir, younger son",
+      "birthDate": "Birth date",
+      "deathDate": "Death date",
+      "line": "Line",
+      "lineMain": "Main line",
+      "lineBranch": "Side branch",
+      "notes": "Notes",
+      "add": "Add"
+    },
+    "familyLink": {
+      "title": "Add family tie",
+      "from": "From *",
+      "to": "To *",
+      "relationType": "Relationship type",
+      "customLabel": "Custom label",
+      "customLabelPlaceholder": "e.g. Adopted son",
+      "add": "Add"
+    },
+    "event": {
+      "titleNew": "New event",
+      "titleEdit": "Edit event",
+      "add": "Add"
+    }
+  },
+  "tree": {
+    "legendParent": "Parent",
+    "legendSpouse": "Spouse",
+    "legendSibling": "Siblings"
+  },
+  "timeline": {
+    "emptyHint": "Add key events for the dynasty"
+  },
+  "snackbar": {
+    "loadError": "Failed to load",
+    "nameRequired": "Enter a name",
+    "created": "Dynasty created!",
+    "saved": "Saved!",
+    "genericError": "Error",
+    "deleted": "Deleted",
+    "deleteFailed": "Delete failed",
+    "coatUploaded": "Coat of arms uploaded!",
+    "memberAdded": "Member added",
+    "linkAdded": "Tie added",
+    "linkRemoved": "Removed",
+    "memberRemoved": "Removed",
+    "eventUpdated": "Event updated",
+    "eventAdded": "Event added",
+    "eventRemoved": "Removed",
+    "reorderError": "Could not reorder",
+    "memberRemoveFailed": "Error"
+  },
+  "confirm": {
+    "deleteDynastyDetail": "Delete \"{{name}}\"?"
+  },
+  "tagField": {
+    "label": "Tags",
+    "placeholder": "Select or type...",
+    "noOptions": "Type a new tag"
+  }
+}

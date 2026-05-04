@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { mapApi } from '@/api/maps';
 import { extractData, normalizeTerritory } from '../components/mapUtils';
 import type { MapData, Territory, TerritoryPointDragPayload, MapMode } from '../components/mapUtils';
@@ -45,6 +46,7 @@ export function useMapTerritoryCrud({
   showSnackbar,
   showConfirmDialog,
 }: UseMapTerritoryCrudArgs) {
+  const { t } = useTranslation(['map', 'common']);
   const [territoryDialogOpen, setTerritoryDialogOpen] = useState(false);
   const [editingTerritory, setEditingTerritory] = useState<Territory | null>(null);
   const [editingTerritoryPoints, setEditingTerritoryPoints] = useState<Territory | null>(null);
@@ -90,9 +92,9 @@ export function useMapTerritoryCrud({
           factionId: territoryForm.factionId,
         });
         const updated = normalizeTerritory(extractData(res));
-        setTerritories(prev => prev.map(t => t.id === editingTerritory.id ? updated : t));
+        setTerritories(prev => prev.map(terr => terr.id === editingTerritory.id ? updated : terr));
         if (selectedTerritory?.id === editingTerritory.id) setSelectedTerritory(updated);
-        showSnackbar('Территория обновлена', 'success');
+        showSnackbar(t('map:snackbar.territoryUpdated', { name: territoryForm.name.trim() }), 'success');
       } else if (currentMap && pendingNewTerritoryRings?.length) {
         const apiRings = pendingNewTerritoryRings.map(ring => ring.map(p => ({ x: p.x / 100, y: p.y / 100 })));
         const res = await mapApi.createTerritory(currentMap.id, {
@@ -108,16 +110,16 @@ export function useMapTerritoryCrud({
         });
         const newTerritory = normalizeTerritory(extractData(res));
         setTerritories(prev => [...prev, newTerritory]);
-        showSnackbar('Территория создана', 'success');
+        showSnackbar(t('map:snackbar.territoryCreated', { name: territoryForm.name.trim() }), 'success');
       }
       setTerritoryDialogOpen(false);
       clearDrawingDraft();
       setMode('select');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка сохранения территории';
+      const message = error instanceof Error ? error.message : t('map:snackbar.territorySaveError');
       showSnackbar(message, 'error');
     }
-  }, [territoryForm, editingTerritory, currentMap, pendingNewTerritoryRings, selectedTerritory?.id, setTerritories, setSelectedTerritory, clearDrawingDraft, setMode, showSnackbar]);
+  }, [territoryForm, editingTerritory, currentMap, pendingNewTerritoryRings, selectedTerritory?.id, setTerritories, setSelectedTerritory, clearDrawingDraft, setMode, showSnackbar, t]);
 
   const startEditingPoints = useCallback((territory: Territory) => {
     setEditingTerritoryPoints(territory);
@@ -129,14 +131,14 @@ export function useMapTerritoryCrud({
       const apiRings = editingTerritoryPoints.rings.map(ring => ring.map(p => ({ x: p.x / 100, y: p.y / 100 })));
       const res = await mapApi.updateTerritory(editingTerritoryPoints.id, { rings: apiRings });
       const updated = normalizeTerritory(extractData(res));
-      setTerritories(prev => prev.map(t => t.id === editingTerritoryPoints.id ? updated : t));
+      setTerritories(prev => prev.map(terr => terr.id === editingTerritoryPoints.id ? updated : terr));
       if (selectedTerritory?.id === editingTerritoryPoints.id) setSelectedTerritory(updated);
       setEditingTerritoryPoints(null);
-      showSnackbar('Точки территории обновлены', 'success');
+      showSnackbar(t('map:snackbar.territoryShapeSaved'), 'success');
     } catch {
-      showSnackbar('Ошибка сохранения точек', 'error');
+      showSnackbar(t('map:snackbar.territoryPointsSaveError'), 'error');
     }
-  }, [editingTerritoryPoints, selectedTerritory?.id, setTerritories, setSelectedTerritory, showSnackbar]);
+  }, [editingTerritoryPoints, selectedTerritory?.id, setTerritories, setSelectedTerritory, showSnackbar, t]);
 
   const cancelEditingPoints = useCallback(() => {
     setEditingTerritoryPoints(null);
@@ -166,7 +168,7 @@ export function useMapTerritoryCrud({
         const ring = prev.rings[payload.ringIndex];
         if (!ring || ring.length <= 3) {
           Promise.resolve().then(() =>
-            showSnackbar('Нельзя удалить: в контуре должно остаться минимум 3 вершины', 'warning'),
+            showSnackbar(t('map:snackbar.deleteRingMinVertices'), 'warning'),
           );
           return prev;
         }
@@ -176,7 +178,7 @@ export function useMapTerritoryCrud({
         return { ...prev, rings: newRings };
       });
     }
-  }, [setDrawingPoints, showSnackbar]);
+  }, [setDrawingPoints, showSnackbar, t]);
 
   const addPointOnEdge = useCallback((payload: TerritoryPointDragPayload) => {
     if (payload.mode === 'draw') {
@@ -219,18 +221,18 @@ export function useMapTerritoryCrud({
   }, []);
 
   const handleDeleteTerritory = useCallback((territory: Territory) => {
-    showConfirmDialog('Удалить территорию', `Удалить "${territory.name}"?`, async () => {
+    showConfirmDialog(t('map:confirm.deleteTerritoryTitle'), t('map:confirm.deleteTerritoryMessage', { name: territory.name }), async () => {
       try {
         await mapApi.deleteTerritory(territory.id);
-        setTerritories(prev => prev.filter(t => t.id !== territory.id));
+        setTerritories(prev => prev.filter(terr => terr.id !== territory.id));
         setSelectedTerritory(null);
         setPanelOpen(false);
-        showSnackbar('Территория удалена', 'success');
+        showSnackbar(t('map:snackbar.territoryDeleted', { name: territory.name }), 'success');
       } catch {
-        showSnackbar('Ошибка удаления', 'error');
+        showSnackbar(t('map:snackbar.territoryDeleteError'), 'error');
       }
     });
-  }, [setPanelOpen, setSelectedTerritory, setTerritories, showConfirmDialog, showSnackbar]);
+  }, [setPanelOpen, setSelectedTerritory, setTerritories, showConfirmDialog, showSnackbar, t]);
 
   const closeTerritoryDialog = useCallback(() => {
     setTerritoryDialogOpen(false);

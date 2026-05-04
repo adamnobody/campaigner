@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, Button, IconButton,
   Chip, Tooltip, ToggleButton, ToggleButtonGroup,
@@ -60,12 +61,14 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
   onUploadMap,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['map', 'common']);
 
   return (
     <Box data-tour="map-toolbar" display="flex" justifyContent="space-between" alignItems="center" mb={1}>
       <Box display="flex" alignItems="center" gap={1}>
         {mapBreadcrumbs.length > 1 && (
-          <IconButton size="small" onClick={onNavigateToParent} sx={{ color: 'text.secondary' }}>
+          <IconButton size="small" onClick={onNavigateToParent} sx={{ color: 'text.secondary' }}
+            aria-label={t('map:toolbar.backParentAria')}>
             <ArrowBackIcon fontSize="small" />
           </IconButton>
         )}
@@ -116,12 +119,12 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
           }}
         >
           <ToggleButton value="select">
-            <Tooltip title="Режим выбора">
+            <Tooltip title={t('map:toolbar.tooltipSelectMode')}>
               <MouseIcon fontSize="small" />
             </Tooltip>
           </ToggleButton>
           <ToggleButton value="draw_territory">
-            <Tooltip title="Рисовать территорию">
+            <Tooltip title={t('map:toolbar.tooltipDrawTerritory')}>
               <PentagonIcon fontSize="small" />
             </Tooltip>
           </ToggleButton>
@@ -130,7 +133,7 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
         {mode === 'draw_territory' && (
           <Box display="flex" gap={0.5} alignItems="center">
             <Chip
-              label={`${drawingCompletedRingsCount} конт. · ${drawingPointsCount} т.к.`}
+              label={t('map:toolbar.drawingChip', { rings: drawingCompletedRingsCount, points: drawingPointsCount })}
               size="small" variant="outlined"
               sx={{ borderColor: alpha(theme.palette.primary.main, 0.3), color: theme.palette.primary.main }}
             />
@@ -143,7 +146,7 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
               sx={{ borderColor: alpha(theme.palette.primary.main, 0.45), color: theme.palette.primary.main, fontWeight: 600,
                 '&:hover': { borderColor: theme.palette.primary.main, backgroundColor: alpha(theme.palette.primary.main, 0.08) },
                 '&.Mui-disabled': { borderColor: alpha(theme.palette.primary.main, 0.15), color: alpha(theme.palette.primary.main, 0.25) } }}>
-              Контур готов
+              {t('map:toolbar.completeContour')}
             </Button>
             <Button size="small" variant="contained" startIcon={<CheckIcon />}
               onClick={onFinishDrawing}
@@ -151,11 +154,11 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
               sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.primary.contrastText, fontWeight: 600,
                 '&:hover': { backgroundColor: theme.palette.primary.dark },
                 '&.Mui-disabled': { backgroundColor: alpha(theme.palette.primary.main, 0.2), color: alpha(theme.palette.text.primary, 0.3) } }}>
-              Сохранить
+              {t('common:save')}
             </Button>
             <Button size="small" variant="outlined" onClick={onCancelDrawing}
               sx={{ borderColor: alpha(theme.palette.error.main, 0.3), color: alpha(theme.palette.error.main, 0.7) }}>
-              Отмена
+              {t('common:cancel')}
             </Button>
           </Box>
         )}
@@ -163,14 +166,14 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
         <Box display="flex" gap={0.5} sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.6), borderRadius: 1, p: 0.5 }}>
           <IconButton size="small" onClick={onZoomOut} sx={{ color: 'text.secondary' }}><ZoomOutIcon fontSize="small" /></IconButton>
           <Typography sx={{ color: 'text.primary', fontSize: '0.9rem', lineHeight: '30px', px: 1, minWidth: 40, textAlign: 'center' }}>
-            {Math.round(zoomDisplay * 100)}%
+            {t('map:toolbar.zoomPercent', { value: Math.round(zoomDisplay * 100) })}
           </Typography>
           <IconButton size="small" onClick={onZoomIn} sx={{ color: 'text.secondary' }}><ZoomInIcon fontSize="small" /></IconButton>
           <IconButton size="small" onClick={onResetView} sx={{ color: 'text.secondary' }}><CenterFocusStrongIcon fontSize="small" /></IconButton>
         </Box>
 
         <Chip icon={<DragIndicatorIcon sx={{ fontSize: 14 }} />}
-          label={`${markersCount} маркеров · ${territoriesCount} территорий`}
+          label={t('map:toolbar.statsChip', { markers: markersCount, territories: territoriesCount })}
           size="small" variant="outlined"
           sx={{
             borderColor: theme.palette.divider, color: 'text.secondary',
@@ -180,7 +183,7 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
         <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small"
           data-tour="map-upload"
           sx={{ borderColor: theme.palette.divider, color: 'text.secondary' }}>
-          Загрузить карту
+          {t('map:toolbar.uploadMap')}
           <input type="file" hidden accept="image/*" onChange={onUploadMap} />
         </Button>
       </Box>

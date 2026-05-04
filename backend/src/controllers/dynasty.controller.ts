@@ -127,6 +127,14 @@ export class DynastyController {
     return created(res, event);
   });
 
+  static reorderEvents = asyncHandler(async (req: Request, res: Response) => {
+    const dynastyId = parseId(req.params.id, 'dynasty id');
+    const { orderedIds } = req.body as { orderedIds: number[] };
+    DynastyService.reorderEvents(dynastyId, orderedIds);
+    const dynasty = DynastyService.getById(dynastyId);
+    return ok(res, dynasty);
+  });
+
   static updateEvent = asyncHandler(async (req: Request, res: Response) => {
     const eventId = parseId(req.params.eventId, 'event id');
     const event = DynastyService.updateEvent(eventId, req.body);
