@@ -1,1 +1,53 @@
-{}
+{
+  "home": {
+    "subtitle": "A worldbuilding environment for creating interactive maps, notes, connections, and the history of your world",
+    "loadingCampaigns": "Loading campaigns...",
+    "actions": {
+      "appearance": "Appearance",
+      "import": "Import",
+      "tutorial": "Tutorial",
+      "create": "Create project"
+    },
+    "projectsHeading": "Projects ({{count}})",
+    "empty": {
+      "title": "Your world awaits its creator",
+      "description": "Create your first project to begin an exciting journey of building your universe."
+    },
+    "projectCard": {
+      "statusActive": "⚡ Active"
+    },
+    "footer": {
+      "tagline": "A worldbuilding environment",
+      "madeFor": "Made for creators"
+    }
+  },
+  "deleteConfirm": {
+    "title": "Delete project",
+    "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+  },
+  "snackbar": {
+    "created": "✨ Project created!",
+    "deleted": "Project deleted",
+    "deleteFailed": "Failed to delete",
+    "importInvalidFormat": "Invalid file format. Campaigner export expected.",
+    "imported": "📥 Project \"{{name}}\" imported!",
+    "importNotValidJson": "File is not valid JSON",
+    "importError": "Import error",
+    "tutorialCreated": "Tutorial campaign created",
+    "tutorialFailed": "Failed to create tutorial campaign"
+  },
+  "createDialog": {
+    "title": "Create new project",
+    "fields": {
+      "nameLabel": "Campaign name",
+      "namePlaceholder": "e.g., Lost Mine of Phandelver",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Brief campaign description..."
+    },
+    "tipPrefix": "Tip:",
+    "tipText": "A good name sets the tone for your entire world. Think about the genre, atmosphere, and main idea of your story.",
+    "cancel": "Cancel",
+    "submit": "✨ Create",
+    "creating": "Creating..."
+  }
+}

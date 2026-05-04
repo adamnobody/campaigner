@@ -11,5 +11,10 @@
   "create": "Create",
   "delete": "Delete",
   "edit": "Edit",
-  "close": "Close"
+  "close": "Close",
+  "confirm": "Confirm",
+  "import": "Import",
+  "export": "Export",
+  "back": "Back",
+  "next": "Next"
 }
