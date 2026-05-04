@@ -25,6 +25,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useFactionStore } from '@/store/useFactionStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -63,6 +64,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
     deleteFaction,
   } = useFactionStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const isStatePage = entityType === 'state';
   const listTitle = isStatePage ? t('factions:list.titleStates') : t('factions:list.titleFactions');
@@ -100,14 +102,14 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
       });
       setInitialized(true);
     },
-    [debouncedSearch, entityType, fetchFactions, filterStatus, pid]
+    [debouncedSearch, entityType, fetchFactions, filterStatus, pid, activeBranchId]
   );
 
   useEffect(() => {
     fetchFactions(pid, { kind: entityType, limit: 1, offset: 0 }).then(() => {
       setTotalUnfiltered(useFactionStore.getState().total);
     });
-  }, [entityType, fetchFactions, pid]);
+  }, [entityType, fetchFactions, pid, activeBranchId]);
 
   useEffect(() => {
     setInitialized(false);

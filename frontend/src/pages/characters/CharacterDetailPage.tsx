@@ -26,6 +26,7 @@ import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { factionsApi } from '@/api/factions';
 import { useUIStore } from '@/store/useUIStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useTagStore } from '@/store/useTagStore';
 import { shallow } from 'zustand/shallow';
 import { DndButton } from '@/components/ui/DndButton';
@@ -108,6 +109,8 @@ export const CharacterDetailPage: React.FC = () => {
     showConfirmDialog: state.showConfirmDialog,
   }), shallow);
 
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
+
   const {
     characters, currentCharacter, relationships, loading,
     fetchCharacter, fetchCharacters, createCharacter, updateCharacter,
@@ -184,12 +187,12 @@ export const CharacterDetailPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [pid]);
+  }, [pid, activeBranchId, fetchTags, fetchCharacters, fetchRelationships]);
 
   useEffect(() => {
     if (isNew) { setForm(EMPTY_FORM); setCurrentCharacter(null); setTagsInput(''); return; }
     fetchCharacter(pid, parseInt(characterId!)).catch(() => showSnackbar(t('snackbar.loadError'), 'error'));
-  }, [characterId, isNew, fetchCharacter, showSnackbar, t, pid]);
+  }, [characterId, isNew, fetchCharacter, showSnackbar, t, pid, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !currentCharacter || currentCharacter.id !== parseInt(characterId!)) return;

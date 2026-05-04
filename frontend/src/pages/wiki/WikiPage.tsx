@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, TextField,
@@ -14,6 +14,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useWikiStore } from '@/store/useWikiStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useTagStore } from '@/store/useTagStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -40,6 +41,7 @@ export const WikiPage: React.FC = () => {
   const { links, categories, fetchLinks, fetchCategories, createLink } = useWikiStore();
   const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -60,18 +62,18 @@ export const WikiPage: React.FC = () => {
 
   const debouncedSearch = useDebounce(search, 300);
 
-  const reload = async () => {
+  const reload = useCallback(async () => {
     await Promise.all([
       fetchNotes(pid, { noteType: 'wiki', search: debouncedSearch || undefined, limit: 500 }),
       fetchCategories(pid),
       fetchLinks(pid),
       fetchTags(pid),
     ]);
-  };
+  }, [pid, debouncedSearch, fetchNotes, fetchCategories, fetchLinks, fetchTags, activeBranchId]);
 
   useEffect(() => {
-    reload();
-  }, [pid, debouncedSearch]);
+    void reload();
+  }, [reload]);
 
   const resolveTagIds = async (tagsString: string): Promise<number[]> => {
     const tagNames = tagsString

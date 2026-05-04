@@ -13,6 +13,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
@@ -41,6 +42,7 @@ export const CharactersPage: React.FC = () => {
   } = useTagStore();
 
   const { showSnackbar, showConfirmDialog } = useUIStore();
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const [search, setSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -48,7 +50,7 @@ export const CharactersPage: React.FC = () => {
 
   useEffect(() => {
     fetchCharacters(pid, { search: debouncedSearch || undefined, limit: 200 });
-  }, [pid, debouncedSearch, fetchCharacters]);
+  }, [pid, debouncedSearch, fetchCharacters, activeBranchId]);
 
   useEffect(() => {
     fetchTags(pid).catch(() => {});

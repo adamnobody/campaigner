@@ -28,6 +28,7 @@ import { dynastiesApi } from '@/api/dynasties';
 import { mapApi } from '@/api/maps';
 import { charactersApi } from '@/api/characters';
 import { useUIStore } from '@/store/useUIStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useMapTerritoriesRefreshStore } from '@/store/useMapTerritoriesRefreshStore';
 import { useFactionStore } from '@/store/useFactionStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
@@ -155,6 +156,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     showConfirmDialog: state.showConfirmDialog,
   }), shallow);
   const bumpMapTerritories = useMapTerritoriesRefreshStore((s) => s.bump);
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const {
     factions, currentFaction, relations, loading,
@@ -250,7 +252,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     fetchCharacters(pid, { limit: 500 }).catch(() => {});
     fetchFactions(pid, { limit: 500 }).catch(() => {});
     fetchRelations(pid).catch(() => {});
-  }, [pid]);
+  }, [pid, activeBranchId, fetchTags, fetchCharacters, fetchFactions, fetchRelations]);
 
   useEffect(() => {
     if (normalizedEntityType !== 'state') return;
@@ -275,7 +277,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     return () => {
       cancelled = true;
     };
-  }, [pid, normalizedEntityType]);
+  }, [pid, normalizedEntityType, activeBranchId]);
 
   useEffect(() => {
     if (isNew) {
@@ -289,7 +291,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       return;
     }
     fetchFaction(pid, parseInt(factionId!)).catch(() => showSnackbar(t('factions:snackbar.loadError'), 'error'));
-  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, t, pid]);
+  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, t, pid, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !fid) {
@@ -312,7 +314,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     return () => {
       cancelled = true;
     };
-  }, [fid, isNew, pid, showSnackbar, t]);
+  }, [fid, isNew, pid, showSnackbar, t, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;

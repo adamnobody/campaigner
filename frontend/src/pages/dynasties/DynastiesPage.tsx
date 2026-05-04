@@ -12,6 +12,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDynastyStore } from '@/store/useDynastyStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -32,6 +33,7 @@ export const DynastiesPage: React.FC = () => {
   const theme = useTheme();
   const { dynasties, total, loading, fetchDynasties, deleteDynasty } = useDynastyStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
@@ -52,7 +54,7 @@ export const DynastiesPage: React.FC = () => {
       search: debouncedSearch || undefined,
     });
     setInitialized(true);
-  }, [pid, filterStatus, debouncedSearch, fetchDynasties]);
+  }, [pid, filterStatus, debouncedSearch, fetchDynasties, activeBranchId]);
 
   useEffect(() => {
     setInitialized(false);
