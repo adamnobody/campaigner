@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -25,6 +26,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -181,7 +183,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
             },
           }}
         >
-          Отмена
+          {t('common:cancel')}
         </Button>
 
         <DndButton
