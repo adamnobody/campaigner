@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete,
 } from '@mui/material';
@@ -30,48 +31,51 @@ export const WikiCreateArticleDialog: React.FC<CreateProps> = ({
   setNewTagsInput,
   existingTagNames,
   onCreate,
-}) => (
-  <Dialog
-    open={open}
-    onClose={onClose}
-    maxWidth="sm"
-    fullWidth
-    PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
-  >
-    <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Новая статья</DialogTitle>
-    <DialogContent>
-      <TextField
-        autoFocus
-        fullWidth
-        label="Название статьи *"
-        value={newTitle}
-        onChange={(e) => setNewTitle(e.target.value)}
-        margin="normal"
-        placeholder="напр. Королевство Элдория"
-      />
+}) => {
+  const { t } = useTranslation(['wiki', 'common']);
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+    >
+      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('wiki:dialogs.create.title')}</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          fullWidth
+          label={t('wiki:dialogs.create.articleTitleLabel')}
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          margin="normal"
+          placeholder={t('wiki:dialogs.create.articleTitlePlaceholder')}
+        />
 
-      <TagAutocompleteField
-        options={existingTagNames}
-        value={newTagsStr}
-        pendingInput={newTagsInput}
-        label="Теги (категории)"
-        placeholder="Выберите или введите новые теги..."
-        helperText="Теги используются как категории для фильтрации вики-статей"
-        margin="normal"
-        onValueChange={setNewTagsStr}
-        onPendingInputChange={setNewTagsInput}
-      />
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2 }}>
-      <Button onClick={onClose} color="inherit">
-        Отмена
-      </Button>
-      <DndButton variant="contained" onClick={onCreate} disabled={!newTitle.trim()}>
-        Создать
-      </DndButton>
-    </DialogActions>
-  </Dialog>
-);
+        <TagAutocompleteField
+          options={existingTagNames}
+          value={newTagsStr}
+          pendingInput={newTagsInput}
+          label={t('wiki:tagField.categoriesLabel')}
+          placeholder={t('wiki:tagField.categoriesPlaceholder')}
+          helperText={t('wiki:tagField.categoriesHelper')}
+          margin="normal"
+          onValueChange={setNewTagsStr}
+          onPendingInputChange={setNewTagsInput}
+        />
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} color="inherit">
+          {t('common:cancel')}
+        </Button>
+        <DndButton variant="contained" onClick={onCreate} disabled={!newTitle.trim()}>
+          {t('common:create')}
+        </DndButton>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 type TagsProps = {
   open: boolean;
@@ -95,39 +99,44 @@ export const WikiTagsDialog: React.FC<TagsProps> = ({
   setEditTagsInput,
   existingTagNames,
   onSave,
-}) => (
-  <Dialog
-    open={open}
-    onClose={onClose}
-    maxWidth="sm"
-    fullWidth
-    PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
-  >
-    <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-      Теги: {tagsEditNote?.title}
-    </DialogTitle>
-    <DialogContent>
-      <TagAutocompleteField
-        options={existingTagNames}
-        value={editTagsStr}
-        pendingInput={editTagsInput}
-        label="Теги"
-        placeholder="Выберите или введите..."
-        margin="normal"
-        onValueChange={setEditTagsStr}
-        onPendingInputChange={setEditTagsInput}
-      />
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2 }}>
-      <Button onClick={onClose} color="inherit">
-        Отмена
-      </Button>
-      <DndButton variant="contained" onClick={onSave}>
-        Сохранить
-      </DndButton>
-    </DialogActions>
-  </Dialog>
-);
+}) => {
+  const { t } = useTranslation(['wiki', 'common']);
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+    >
+      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+        {t('wiki:dialogs.tags.title', {
+          articleTitle: tagsEditNote?.title || t('wiki:dialogs.tags.articleTitleFallback'),
+        })}
+      </DialogTitle>
+      <DialogContent>
+        <TagAutocompleteField
+          options={existingTagNames}
+          value={editTagsStr}
+          pendingInput={editTagsInput}
+          label={t('wiki:tagField.editLabel')}
+          placeholder={t('wiki:tagField.editPlaceholder')}
+          margin="normal"
+          onValueChange={setEditTagsStr}
+          onPendingInputChange={setEditTagsInput}
+        />
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} color="inherit">
+          {t('common:cancel')}
+        </Button>
+        <DndButton variant="contained" onClick={onSave}>
+          {t('common:save')}
+        </DndButton>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 type LinkProps = {
   open: boolean;
@@ -153,57 +162,60 @@ export const WikiLinkArticlesDialog: React.FC<LinkProps> = ({
   linkLabel,
   setLinkLabel,
   onCreateLink,
-}) => (
-  <Dialog
-    open={open}
-    onClose={onClose}
-    maxWidth="sm"
-    fullWidth
-    PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
-  >
-    <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Связать статьи</DialogTitle>
-    <DialogContent>
-      <Autocomplete
-        options={notes}
-        getOptionLabel={(opt) => opt.title}
-        value={linkSource}
-        onChange={(_, val) => setLinkSource(val)}
-        isOptionEqualToValue={(opt, val) => opt.id === val.id}
-        renderInput={(params) => (
-          <TextField {...params} label="Первая статья *" margin="normal" placeholder="Выберите статью..." />
-        )}
-        noOptionsText="Нет статей"
-      />
+}) => {
+  const { t } = useTranslation(['wiki', 'common']);
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+    >
+      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('wiki:dialogs.link.title')}</DialogTitle>
+      <DialogContent>
+        <Autocomplete
+          options={notes}
+          getOptionLabel={(opt) => opt.title}
+          value={linkSource}
+          onChange={(_, val) => setLinkSource(val)}
+          isOptionEqualToValue={(opt, val) => opt.id === val.id}
+          renderInput={(params) => (
+            <TextField {...params} label={t('wiki:dialogs.link.sourceLabel')} margin="normal" placeholder={t('wiki:dialogs.link.selectArticlePlaceholder')} />
+          )}
+          noOptionsText={t('wiki:dialogs.link.noArticles')}
+        />
 
-      <Autocomplete
-        options={notes.filter((n) => n.id !== linkSource?.id)}
-        getOptionLabel={(opt) => opt.title}
-        value={linkTarget}
-        onChange={(_, val) => setLinkTarget(val)}
-        isOptionEqualToValue={(opt, val) => opt.id === val.id}
-        renderInput={(params) => (
-          <TextField {...params} label="Вторая статья *" margin="normal" placeholder="Выберите статью..." />
-        )}
-        noOptionsText="Нет статей"
-      />
+        <Autocomplete
+          options={notes.filter((n) => n.id !== linkSource?.id)}
+          getOptionLabel={(opt) => opt.title}
+          value={linkTarget}
+          onChange={(_, val) => setLinkTarget(val)}
+          isOptionEqualToValue={(opt, val) => opt.id === val.id}
+          renderInput={(params) => (
+            <TextField {...params} label={t('wiki:dialogs.link.targetLabel')} margin="normal" placeholder={t('wiki:dialogs.link.selectArticlePlaceholder')} />
+          )}
+          noOptionsText={t('wiki:dialogs.link.noArticles')}
+        />
 
-      <TextField
-        fullWidth
-        label="Описание связи (опционально)"
-        value={linkLabel}
-        onChange={(e) => setLinkLabel(e.target.value)}
-        margin="normal"
-        placeholder="напр. столица, союзник, часть..."
-        helperText="Краткое описание отношения между статьями"
-      />
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2 }}>
-      <Button onClick={onClose} color="inherit">
-        Отмена
-      </Button>
-      <DndButton variant="contained" onClick={onCreateLink} disabled={!linkSource || !linkTarget}>
-        Создать связь
-      </DndButton>
-    </DialogActions>
-  </Dialog>
-);
+        <TextField
+          fullWidth
+          label={t('wiki:dialogs.link.relationLabel')}
+          value={linkLabel}
+          onChange={(e) => setLinkLabel(e.target.value)}
+          margin="normal"
+          placeholder={t('wiki:dialogs.link.relationPlaceholder')}
+          helperText={t('wiki:dialogs.link.relationHelper')}
+        />
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} color="inherit">
+          {t('common:cancel')}
+        </Button>
+        <DndButton variant="contained" onClick={onCreateLink} disabled={!linkSource || !linkTarget}>
+          {t('wiki:dialogs.link.createLink')}
+        </DndButton>
+      </DialogActions>
+    </Dialog>
+  );
+};
