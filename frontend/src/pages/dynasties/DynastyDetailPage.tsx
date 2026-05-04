@@ -21,6 +21,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '@/store/useUIStore';
 import { useDynastyStore } from '@/store/useDynastyStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useFactionStore } from '@/store/useFactionStore';
 import { useTagStore } from '@/store/useTagStore';
@@ -83,6 +84,8 @@ export const DynastyDetailPage: React.FC = () => {
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
   }), shallow);
+
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const {
     currentDynasty, loading,
@@ -151,12 +154,12 @@ export const DynastyDetailPage: React.FC = () => {
     fetchTags(pid).catch(() => {});
     fetchCharacters(pid, { limit: 500 }).catch(() => {});
     fetchFactions(pid, { limit: 500 }).catch(() => {});
-  }, [pid]);
+  }, [pid, activeBranchId, fetchTags, fetchCharacters, fetchFactions]);
 
   useEffect(() => {
     if (isNew) { setForm(EMPTY_FORM); setCurrentDynasty(null); setTagsInput(''); return; }
-    fetchDynasty(parseInt(dynastyId!)).catch(() => showSnackbar(t('dynasties:snackbar.loadError'), 'error'));
-  }, [dynastyId, isNew, fetchDynasty, showSnackbar, t]);
+    fetchDynasty(pid, parseInt(dynastyId!)).catch(() => showSnackbar(t('dynasties:snackbar.loadError'), 'error'));
+  }, [dynastyId, isNew, fetchDynasty, showSnackbar, t, pid, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !currentDynasty || currentDynasty.id !== did) return;
@@ -338,7 +341,7 @@ export const DynastyDetailPage: React.FC = () => {
   };
   const handleReorderEvents = async (reordered: DynastyEvent[]) => {
     try {
-      await reorderEvents(did, reordered.map((e) => e.id));
+      await reorderEvents(did, reordered.map((e) => e.id), pid);
     } catch {
       showSnackbar(t('dynasties:snackbar.reorderError'), 'error');
     }
@@ -599,7 +602,7 @@ export const DynastyDetailPage: React.FC = () => {
                 dynastyId={currentDynasty?.id}
                 onSavePositions={(positions) => {
                   if (currentDynasty?.id) {
-                    saveGraphPositions(currentDynasty.id, positions);
+                    saveGraphPositions(currentDynasty.id, positions, pid);
                   }
                 }}
               />

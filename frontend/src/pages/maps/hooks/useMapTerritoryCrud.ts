@@ -18,6 +18,7 @@ type TerritoryForm = {
 };
 
 type UseMapTerritoryCrudArgs = {
+  projectId: number;
   currentMap: MapData | null;
   pendingNewTerritoryRings: Array<Array<{ x: number; y: number }>> | null;
   setPendingNewTerritoryRings: React.Dispatch<React.SetStateAction<Array<Array<{ x: number; y: number }>> | null>>;
@@ -33,6 +34,7 @@ type UseMapTerritoryCrudArgs = {
 };
 
 export function useMapTerritoryCrud({
+  projectId,
   currentMap,
   pendingNewTerritoryRings,
   setPendingNewTerritoryRings,
@@ -90,7 +92,7 @@ export function useMapTerritoryCrud({
           borderWidth: territoryForm.borderWidth,
           smoothing: territoryForm.smoothing,
           factionId: territoryForm.factionId,
-        });
+        }, projectId);
         const updated = normalizeTerritory(extractData(res));
         setTerritories(prev => prev.map(terr => terr.id === editingTerritory.id ? updated : terr));
         if (selectedTerritory?.id === editingTerritory.id) setSelectedTerritory(updated);
@@ -107,7 +109,7 @@ export function useMapTerritoryCrud({
           smoothing: territoryForm.smoothing,
           factionId: territoryForm.factionId,
           rings: apiRings,
-        });
+        }, projectId);
         const newTerritory = normalizeTerritory(extractData(res));
         setTerritories(prev => [...prev, newTerritory]);
         showSnackbar(t('map:snackbar.territoryCreated', { name: territoryForm.name.trim() }), 'success');
@@ -119,7 +121,7 @@ export function useMapTerritoryCrud({
       const message = error instanceof Error ? error.message : t('map:snackbar.territorySaveError');
       showSnackbar(message, 'error');
     }
-  }, [territoryForm, editingTerritory, currentMap, pendingNewTerritoryRings, selectedTerritory?.id, setTerritories, setSelectedTerritory, clearDrawingDraft, setMode, showSnackbar, t]);
+  }, [territoryForm, editingTerritory, currentMap, pendingNewTerritoryRings, selectedTerritory?.id, setTerritories, setSelectedTerritory, clearDrawingDraft, setMode, showSnackbar, t, projectId]);
 
   const startEditingPoints = useCallback((territory: Territory) => {
     setEditingTerritoryPoints(territory);
@@ -129,7 +131,7 @@ export function useMapTerritoryCrud({
     if (!editingTerritoryPoints) return;
     try {
       const apiRings = editingTerritoryPoints.rings.map(ring => ring.map(p => ({ x: p.x / 100, y: p.y / 100 })));
-      const res = await mapApi.updateTerritory(editingTerritoryPoints.id, { rings: apiRings });
+      const res = await mapApi.updateTerritory(editingTerritoryPoints.id, { rings: apiRings }, projectId);
       const updated = normalizeTerritory(extractData(res));
       setTerritories(prev => prev.map(terr => terr.id === editingTerritoryPoints.id ? updated : terr));
       if (selectedTerritory?.id === editingTerritoryPoints.id) setSelectedTerritory(updated);
@@ -138,7 +140,7 @@ export function useMapTerritoryCrud({
     } catch {
       showSnackbar(t('map:snackbar.territoryPointsSaveError'), 'error');
     }
-  }, [editingTerritoryPoints, selectedTerritory?.id, setTerritories, setSelectedTerritory, showSnackbar, t]);
+  }, [editingTerritoryPoints, selectedTerritory?.id, setTerritories, setSelectedTerritory, showSnackbar, t, projectId]);
 
   const cancelEditingPoints = useCallback(() => {
     setEditingTerritoryPoints(null);
@@ -223,7 +225,7 @@ export function useMapTerritoryCrud({
   const handleDeleteTerritory = useCallback((territory: Territory) => {
     showConfirmDialog(t('map:confirm.deleteTerritoryTitle'), t('map:confirm.deleteTerritoryMessage', { name: territory.name }), async () => {
       try {
-        await mapApi.deleteTerritory(territory.id);
+        await mapApi.deleteTerritory(territory.id, projectId);
         setTerritories(prev => prev.filter(terr => terr.id !== territory.id));
         setSelectedTerritory(null);
         setPanelOpen(false);
@@ -232,7 +234,7 @@ export function useMapTerritoryCrud({
         showSnackbar(t('map:snackbar.territoryDeleteError'), 'error');
       }
     });
-  }, [setPanelOpen, setSelectedTerritory, setTerritories, showConfirmDialog, showSnackbar, t]);
+  }, [setPanelOpen, setSelectedTerritory, setTerritories, showConfirmDialog, showSnackbar, t, projectId]);
 
   const closeTerritoryDialog = useCallback(() => {
     setTerritoryDialogOpen(false);

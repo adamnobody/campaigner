@@ -5,6 +5,7 @@ import { mapApi } from '@/api/maps';
 import { projectsApi } from '@/api/projects';
 import { notesApi } from '@/api/notes';
 import { factionsApi } from '@/api/factions';
+import { useBranchStore } from '@/store/useBranchStore';
 import {
   extractData,
   normalizeMap,
@@ -36,6 +37,7 @@ export function useMapData({
   onInitialMapResolved,
 }: UseMapDataArgs) {
   const { t, i18n } = useTranslation(['map', 'common']);
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const onInitialMapResolvedRef = useRef(onInitialMapResolved);
 
   useEffect(() => {
@@ -58,12 +60,12 @@ export function useMapData({
     clearDrawingDraft();
 
     try {
-      const mapRes = await mapApi.getMapById(loadMapId);
+      const mapRes = await mapApi.getMapById(loadMapId, projectId);
       const mapData = normalizeMap(extractData(mapRes));
 
       const [markersRes, territoriesRes, notesRes, factionsRes] = await Promise.all([
-        mapApi.getMarkersByMapId(mapData.id),
-        mapApi.getTerritoriesByMapId(mapData.id),
+        mapApi.getMarkersByMapId(mapData.id, projectId),
+        mapApi.getTerritoriesByMapId(mapData.id, projectId),
         notesApi.getAll(projectId),
         factionsApi.getAll(projectId),
       ]);
@@ -88,7 +90,7 @@ export function useMapData({
       showSnackbar(t('map:snackbar.mapLoadError'), 'error');
     }
     setTransitioning(false);
-  }, [projectId, onBeforeMapLoad, clearDrawingDraft, resetView, showSnackbar, t]);
+  }, [projectId, activeBranchId, onBeforeMapLoad, clearDrawingDraft, resetView, showSnackbar, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,7 +102,7 @@ export function useMapData({
 
         let mapToLoad: MapData;
         if (mapId) {
-          mapToLoad = normalizeMap(extractData(await mapApi.getMapById(mapId)));
+          mapToLoad = normalizeMap(extractData(await mapApi.getMapById(mapId, projectId)));
         } else {
           try {
             mapToLoad = normalizeMap(extractData(await mapApi.getRootMap(projectId)));
@@ -117,8 +119,8 @@ export function useMapData({
         onInitialMapResolvedRef.current?.(mapToLoad);
 
         const [markersRes, territoriesRes, notesRes, factionsRes] = await Promise.all([
-          mapApi.getMarkersByMapId(mapToLoad.id),
-          mapApi.getTerritoriesByMapId(mapToLoad.id),
+          mapApi.getMarkersByMapId(mapToLoad.id, projectId),
+          mapApi.getTerritoriesByMapId(mapToLoad.id, projectId),
           notesApi.getAll(projectId),
           factionsApi.getAll(projectId),
         ]);
@@ -136,7 +138,7 @@ export function useMapData({
 
     init();
     return () => { cancelled = true; };
-  }, [projectId, mapId]);
+  }, [projectId, mapId, activeBranchId, i18n]);
 
   return {
     project,

@@ -18,7 +18,7 @@ interface WikiState {
   fetchLinks: (projectId: number, noteId?: number) => Promise<void>;
   fetchCategories: (projectId: number) => Promise<void>;
   createLink: (data: CreateWikiLink) => Promise<WikiLink>;
-  deleteLink: (id: number) => Promise<void>;
+  deleteLink: (id: number, projectId: number) => Promise<void>;
 
   clearError: () => void;
   reset: () => void;
@@ -76,10 +76,10 @@ export const useWikiStore = create<WikiState>((set) => ({
     }
   },
 
-  deleteLink: async (id) => {
+  deleteLink: async (id, projectId) => {
     set({ error: null });
     try {
-      await wikiApi.deleteLink(id);
+      await wikiApi.deleteLink(id, projectId);
       set((state) => ({
         links: state.links.filter((link) => link.id !== id),
       }));

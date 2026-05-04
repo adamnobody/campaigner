@@ -1,6 +1,7 @@
 import { getDb } from '../../db/connection.js';
 import { ProjectService } from './project.service.js';
 import { readFileAsBase64 } from './assetHelpers.js';
+import { GraphLayoutService } from '../graphLayout.service.js';
 import type {
   ImportedProjectPayload,
   ExportCharacterRow,
@@ -243,8 +244,44 @@ export function exportProject(id: number): ImportedProjectPayload & {
     imageBase64: readFileAsBase64(character.imagePath),
   }));
 
+  const scenarioBranches = db.prepare(`
+    SELECT
+      id,
+      project_id as projectId,
+      name,
+      parent_branch_id as parentBranchId,
+      base_revision as baseRevision,
+      is_main as isMain,
+      created_at as createdAt,
+      updated_at as updatedAt
+    FROM scenario_branches
+    WHERE project_id = ?
+    ORDER BY is_main DESC, id ASC
+  `).all(id) as Array<{
+    id: number;
+    projectId: number;
+    name: string;
+    parentBranchId: number | null;
+    baseRevision: number;
+    isMain: number;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+
+  const scenarioBranchesNormalized = scenarioBranches.map((b) => ({
+    ...b,
+    isMain: Boolean(b.isMain),
+  }));
+
+  const graphLayoutRows = GraphLayoutService.listForExport(id);
+  const graphLayouts = graphLayoutRows.map((row) => ({
+    branchId: row.branchId,
+    graphType: row.graphType,
+    layoutData: row.layoutData,
+  }));
+
   return {
-    version: '2.0',
+    version: '2.1',
     exportedAt: new Date().toISOString(),
     project: {
       name: project.name,
@@ -273,5 +310,7 @@ export function exportProject(id: number): ImportedProjectPayload & {
     dynastyMembers,
     dynastyFamilyLinks,
     dynastyEvents,
+    scenarioBranches: scenarioBranchesNormalized,
+    graphLayouts,
   };
 }

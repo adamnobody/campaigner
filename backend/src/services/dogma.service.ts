@@ -4,6 +4,13 @@ import { NotFoundError } from '../middleware/errorHandler.js';
 import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers.js';
 import { BranchOverlayService } from './branchOverlay.service.js';
+import {
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
+  resolveCreatedBranchId,
+  assertBranchBelongsToProject,
+} from './branchScope.js';
 
 type DogmaCategory = Dogma['category'];
 type DogmaImportance = Dogma['importance'];
@@ -25,6 +32,7 @@ interface DogmaRow {
   color: string;
   createdAt: string;
   updatedAt: string;
+  createdBranchId?: number | null;
 }
 
 interface CountRow {
@@ -61,7 +69,8 @@ const SELECT_FIELDS = `
   description, impact, exceptions,
   is_public as isPublic, importance, status,
   sort_order as sortOrder, icon, color,
-  created_at as createdAt, updated_at as updatedAt
+  created_at as createdAt, updated_at as updatedAt,
+  created_branch_id as createdBranchId
 `;
 
 const UPDATE_FIELD_MAP: Record<string, string> = {
@@ -124,6 +133,11 @@ export class DogmaService {
       queryParams.push(searchTerm, searchTerm);
     }
 
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
+    whereClause += scope.sql;
+    queryParams.push(...scope.params);
+
     const query = `
       SELECT ${SELECT_FIELDS} FROM dogmas ${whereClause}
       ORDER BY sort_order ASC, created_at DESC
@@ -178,9 +192,18 @@ export class DogmaService {
       SELECT ${SELECT_FIELDS} FROM dogmas WHERE id = ?
     `).get(id) as DogmaRow | undefined;
 
-    const projectedRow = branchId
-      ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'dogma'))
-      : row ?? null;
+    if (!row) {
+      throw new NotFoundError('Dogma');
+    }
+
+    const viewBranch = effectiveBranchIdForRead(row.projectId, branchId);
+    if (!isEntityVisibleInBranch(row.projectId, viewBranch, row.createdBranchId, row.createdAt)) {
+      throw new NotFoundError('Dogma');
+    }
+
+    const projectedRow = viewBranch
+      ? BranchOverlayService.applyItemOverlay(row, BranchOverlayService.getOverrides(viewBranch, 'dogma'))
+      : row;
 
     if (!projectedRow) {
       throw new NotFoundError('Dogma');
@@ -191,8 +214,13 @@ export class DogmaService {
     return dogma;
   }
 
-  static create(data: CreateDogma): Dogma {
+  static create(data: CreateDogma, requestBranchId?: number): Dogma {
     const db = getDb();
+
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, data.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
 
     let sortOrder = data.sortOrder;
 
@@ -207,9 +235,9 @@ export class DogmaService {
     const result = db.prepare(`
       INSERT INTO dogmas (
         project_id, title, category, description, impact, exceptions,
-        is_public, importance, status, sort_order, icon, color
+        is_public, importance, status, sort_order, icon, color, created_branch_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.projectId,
       data.title,
@@ -222,14 +250,16 @@ export class DogmaService {
       data.status || 'active',
       sortOrder,
       data.icon || '',
-      data.color || ''
+      data.color || '',
+      createdBranchId,
     );
 
-    return this.getById(result.lastInsertRowid as number);
+    const viewBranch = requestBranchId ?? effectiveBranchIdForRead(data.projectId, undefined);
+    return this.getById(result.lastInsertRowid as number, viewBranch);
   }
 
   static update(id: number, data: UpdateDogma, branchId?: number): Dogma {
-    this.getById(id);
+    this.getById(id, branchId);
     if (branchId) {
       BranchOverlayService.saveUpsertOverride(branchId, 'dogma', id, pickDogmaPatch(data));
       return this.getById(id, branchId);
@@ -242,7 +272,7 @@ export class DogmaService {
   }
 
   static delete(id: number, branchId?: number): void {
-    this.getById(id);
+    this.getById(id, branchId);
     if (branchId) {
       BranchOverlayService.saveDeleteOverride(branchId, 'dogma', id);
       return;

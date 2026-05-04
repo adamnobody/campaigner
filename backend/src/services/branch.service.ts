@@ -1,6 +1,7 @@
 import { getDb } from '../db/connection.js';
 import type { CreateScenarioBranch, ScenarioBranch, UpdateScenarioBranch } from '@campaigner/shared';
 import { NotFoundError } from '../middleware/errorHandler.js';
+import { GraphLayoutService } from './graphLayout.service.js';
 
 export class BranchService {
   static getAll(projectId: number): ScenarioBranch[] {
@@ -27,7 +28,11 @@ export class BranchService {
       INSERT INTO scenario_branches (project_id, name, parent_branch_id, base_revision, is_main)
       VALUES (?, ?, ?, ?, 0)
     `).run(data.projectId, data.name, data.parentBranchId ?? null, data.baseRevision ?? 0);
-    return this.getById(result.lastInsertRowid as number);
+    const created = this.getById(result.lastInsertRowid as number);
+    if (data.parentBranchId != null) {
+      GraphLayoutService.copyLayoutsFromParent(data.projectId, data.parentBranchId, created.id);
+    }
+    return created;
   }
 
   static update(id: number, data: UpdateScenarioBranch): ScenarioBranch {
@@ -67,5 +72,17 @@ export class BranchService {
     `).get(id) as ScenarioBranch | undefined;
     if (!row) throw new NotFoundError('Scenario branch');
     return { ...row, isMain: Boolean(row.isMain) };
+  }
+
+  /** Active branch first, then each parent up to root (main). Max depth guarded. */
+  static getAncestryToRoot(branchId: number): ScenarioBranch[] {
+    const chain: ScenarioBranch[] = [];
+    let currentId: number | null = branchId;
+    for (let depth = 0; depth < 64 && currentId != null; depth++) {
+      const b = this.getById(currentId);
+      chain.push(b);
+      currentId = b.parentBranchId ?? null;
+    }
+    return chain;
   }
 }

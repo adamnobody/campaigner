@@ -48,6 +48,7 @@ export interface FactionRow {
   ruling_dynasty_id: number | null;
   ruler_character_id: number | null;
   sort_order: number | null;
+  created_branch_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -102,6 +103,7 @@ export interface RelationRow {
   started_date: string | null;
   is_bidirectional: number | boolean;
   created_at: string;
+  created_branch_id?: number | null;
   source_faction_name?: string | null;
   target_faction_name?: string | null;
 }

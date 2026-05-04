@@ -17,6 +17,10 @@ export const useProjectScope = (): number | null => {
   const projectId = projectIdParam ? Number(projectIdParam) : null;
   const currentProjectId = Number.isFinite(projectId) ? projectId : null;
   const previousProjectIdRef = useRef<number | null>(null);
+  const previousBranchScopeRef = useRef<string | null>(null);
+
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const branchStoreProjectId = useBranchStore((s) => s.activeProjectId);
 
   useEffect(() => {
     const previousProjectId = previousProjectIdRef.current;
@@ -37,10 +41,40 @@ export const useProjectScope = (): number | null => {
       useDogmaStore.getState().reset();
       useTagStore.getState().reset();
       useBranchStore.getState().reset();
+      previousBranchScopeRef.current = null;
     }
 
     previousProjectIdRef.current = currentProjectId;
   }, [currentProjectId]);
+
+  useEffect(() => {
+    if (currentProjectId === null) {
+      previousBranchScopeRef.current = null;
+      return;
+    }
+
+    if (branchStoreProjectId !== currentProjectId) {
+      return;
+    }
+
+    const key = `${currentProjectId}:${activeBranchId ?? 'none'}`;
+    const prev = previousBranchScopeRef.current;
+
+    if (prev !== null && prev !== key) {
+      useMapStore.getState().reset();
+      useCharacterStore.getState().reset();
+      useCharacterTraitsStore.getState().reset();
+      useFactionStore.getState().reset();
+      useDynastyStore.getState().reset();
+      useNoteStore.getState().reset();
+      useWikiStore.getState().reset();
+      useTimelineStore.getState().reset();
+      useDogmaStore.getState().reset();
+      useTagStore.getState().reset();
+    }
+
+    previousBranchScopeRef.current = key;
+  }, [currentProjectId, activeBranchId, branchStoreProjectId]);
 
   return currentProjectId;
 };

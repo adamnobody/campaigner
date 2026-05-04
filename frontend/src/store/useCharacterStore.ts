@@ -8,6 +8,17 @@ import { charactersApi } from '@/api/characters';
 import type { CharacterListParams } from '@/api/types';
 import { getErrorMessage } from '@/utils/error';
 
+function characterProjectId(get: () => CharacterState, characterId: number): number {
+  const st = get();
+  const pid =
+    st.characters.find((c) => c.id === characterId)?.projectId ??
+    (st.currentCharacter?.id === characterId ? st.currentCharacter.projectId : undefined);
+  if (!pid) {
+    throw new Error('Missing project context for character request');
+  }
+  return pid;
+}
+
 interface CharacterState {
   characters: Character[];
   currentCharacter: Character | null;
@@ -19,7 +30,7 @@ interface CharacterState {
   error: string | null;
 
   fetchCharacters: (projectId: number, params?: CharacterListParams) => Promise<void>;
-  fetchCharacter: (id: number) => Promise<void>;
+  fetchCharacter: (projectId: number, id: number) => Promise<void>;
   createCharacter: (data: CreateCharacter) => Promise<Character>;
   updateCharacter: (id: number, data: UpdateCharacter) => Promise<void>;
   deleteCharacter: (id: number) => Promise<void>;
@@ -28,7 +39,7 @@ interface CharacterState {
 
   fetchRelationships: (projectId: number) => Promise<void>;
   createRelationship: (data: CreateRelationship) => Promise<void>;
-  deleteRelationship: (id: number) => Promise<void>;
+  deleteRelationship: (id: number, projectId: number) => Promise<void>;
 
   fetchGraph: (projectId: number) => Promise<void>;
 
@@ -37,7 +48,7 @@ interface CharacterState {
   reset: () => void;
 }
 
-export const useCharacterStore = create<CharacterState>((set) => ({
+export const useCharacterStore = create<CharacterState>((set, get) => ({
   characters: [],
   currentCharacter: null,
   relationships: [],
@@ -62,10 +73,10 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     }
   },
 
-  fetchCharacter: async (id) => {
+  fetchCharacter: async (projectId, id) => {
     set({ loading: true, error: null });
     try {
-      const res = await charactersApi.getById(id);
+      const res = await charactersApi.getById(id, projectId);
       set({ currentCharacter: res.data.data, loading: false });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to fetch character'), loading: false });
@@ -77,7 +88,7 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     try {
       const res = await charactersApi.create(data);
       const character = res.data.data;
-      set(state => ({
+      set((state) => ({
         characters: [character, ...state.characters],
         total: state.total + 1,
         loading: false,
@@ -92,10 +103,11 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   updateCharacter: async (id, data) => {
     set({ error: null });
     try {
-      const res = await charactersApi.update(id, data);
+      const projectId = characterProjectId(get, id);
+      const res = await charactersApi.update(id, data, projectId);
       const updated = res.data.data;
-      set(state => ({
-        characters: state.characters.map(c => c.id === id ? updated : c),
+      set((state) => ({
+        characters: state.characters.map((c) => (c.id === id ? updated : c)),
         currentCharacter: state.currentCharacter?.id === id ? updated : state.currentCharacter,
       }));
     } catch (error: unknown) {
@@ -107,9 +119,10 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   deleteCharacter: async (id) => {
     set({ error: null });
     try {
-      await charactersApi.delete(id);
-      set(state => ({
-        characters: state.characters.filter(c => c.id !== id),
+      const projectId = characterProjectId(get, id);
+      await charactersApi.delete(id, projectId);
+      set((state) => ({
+        characters: state.characters.filter((c) => c.id !== id),
         total: state.total - 1,
         currentCharacter: state.currentCharacter?.id === id ? null : state.currentCharacter,
       }));
@@ -122,10 +135,11 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   uploadImage: async (id, file) => {
     set({ error: null });
     try {
-      const res = await charactersApi.uploadImage(id, file);
+      const projectId = characterProjectId(get, id);
+      const res = await charactersApi.uploadImage(id, file, projectId);
       const updated = res.data.data;
-      set(state => ({
-        characters: state.characters.map(c => c.id === id ? updated : c),
+      set((state) => ({
+        characters: state.characters.map((c) => (c.id === id ? updated : c)),
         currentCharacter: state.currentCharacter?.id === id ? updated : state.currentCharacter,
       }));
     } catch (error: unknown) {
@@ -137,11 +151,12 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   setTags: async (id, tagIds) => {
     set({ error: null });
     try {
-      await charactersApi.setTags(id, tagIds);
-      const res = await charactersApi.getById(id);
+      const projectId = characterProjectId(get, id);
+      await charactersApi.setTags(id, tagIds, projectId);
+      const res = await charactersApi.getById(id, projectId);
       const updated = res.data.data;
-      set(state => ({
-        characters: state.characters.map(c => c.id === id ? updated : c),
+      set((state) => ({
+        characters: state.characters.map((c) => (c.id === id ? updated : c)),
         currentCharacter: state.currentCharacter?.id === id ? updated : state.currentCharacter,
       }));
     } catch (error: unknown) {
@@ -164,7 +179,7 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     set({ error: null });
     try {
       const res = await charactersApi.createRelationship(data);
-      set(state => ({
+      set((state) => ({
         relationships: [...state.relationships, res.data.data],
       }));
     } catch (error: unknown) {
@@ -173,12 +188,12 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     }
   },
 
-  deleteRelationship: async (id) => {
+  deleteRelationship: async (id, projectId) => {
     set({ error: null });
     try {
-      await charactersApi.deleteRelationship(id);
-      set(state => ({
-        relationships: state.relationships.filter(r => r.id !== id),
+      await charactersApi.deleteRelationship(id, projectId);
+      set((state) => ({
+        relationships: state.relationships.filter((r) => r.id !== id),
       }));
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to delete relationship') });
@@ -199,8 +214,15 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   setCurrentCharacter: (character) => set({ currentCharacter: character }),
   clearError: () => set({ error: null }),
 
-  reset: () => set({
-    characters: [], currentCharacter: null, relationships: [],
-    graph: null, total: 0, loading: false, initialized: false, error: null,
-  }),
+  reset: () =>
+    set({
+      characters: [],
+      currentCharacter: null,
+      relationships: [],
+      graph: null,
+      total: 0,
+      loading: false,
+      initialized: false,
+      error: null,
+    }),
 }));

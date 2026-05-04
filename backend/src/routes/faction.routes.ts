@@ -18,7 +18,7 @@ import {
   updateFactionPolicySchema,
   factionEntityTypeSchema,
 } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema, projectIdQuerySchema } from './commonSchemas.js';
+import { idParamsSchema, setTagsBodySchema, projectIdWithBranchQuerySchema, optionalBranchIdQuerySchema } from './commonSchemas.js';
 
 const router = Router();
 const upload = createDiskUpload({
@@ -48,6 +48,7 @@ const factionPolicyParamsSchema = z.object({
 
 const getAllQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
   kind: factionEntityTypeSchema.optional(),
   type: factionEntityTypeSchema.optional(),
   status: z.string().optional(),
@@ -66,19 +67,19 @@ router.get(
 
 router.get(
   '/relations',
-  validateRequest({ query: projectIdQuerySchema }),
+  validateRequest({ query: projectIdWithBranchQuerySchema }),
   FactionController.getRelations
 );
 
 router.get(
   '/graph',
-  validateRequest({ query: projectIdQuerySchema }),
+  validateRequest({ query: projectIdWithBranchQuerySchema }),
   FactionController.getGraph
 );
 
 router.get(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.getById
 );
 
@@ -86,7 +87,7 @@ router.get(
 
 router.get(
   '/:id/policies',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.getPolicies
 );
 
@@ -94,6 +95,7 @@ router.post(
   '/:id/policies',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: createFactionPolicyBodySchema,
   }),
   FactionController.createPolicy
@@ -103,6 +105,7 @@ router.put(
   '/:id/policies/:policyId',
   validateRequest({
     params: factionPolicyParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: updateFactionPolicySchema,
   }),
   FactionController.updatePolicy
@@ -110,13 +113,15 @@ router.put(
 
 router.delete(
   '/:id/policies/:policyId',
-  validateRequest({ params: factionPolicyParamsSchema }),
+  validateRequest({ params: factionPolicyParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.deletePolicy
 );
 
 router.post(
   '/',
-  validateRequest({ body: createFactionSchema }),
+  validateRequest({
+    body: createFactionSchema.extend({ branchId: z.number().int().positive().optional() }),
+  }),
   FactionController.create
 );
 
@@ -124,14 +129,14 @@ router.put(
   '/:id',
   validateRequest({
     params: idParamsSchema,
-    body: updateFactionSchema,
+    body: updateFactionSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   FactionController.update
 );
 
 router.delete(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.delete
 );
 
@@ -139,14 +144,14 @@ router.delete(
 
 router.post(
   '/:id/image',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   upload.single('image'),
   FactionController.uploadImage
 );
 
 router.post(
   '/:id/banner',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   upload.single('banner'),
   FactionController.uploadBanner
 );
@@ -157,6 +162,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: setTagsBodySchema,
   }),
   FactionController.setTags
@@ -166,7 +172,7 @@ router.put(
 
 router.get(
   '/:id/ranks',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.getRanks
 );
 
@@ -174,6 +180,7 @@ router.post(
   '/:id/ranks',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: createFactionRankSchema.omit({ factionId: true }),
   }),
   FactionController.createRank
@@ -183,6 +190,7 @@ router.put(
   '/:id/ranks/:rankId',
   validateRequest({
     params: rankParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: updateFactionRankSchema,
   }),
   FactionController.updateRank
@@ -190,7 +198,7 @@ router.put(
 
 router.delete(
   '/:id/ranks/:rankId',
-  validateRequest({ params: rankParamsSchema }),
+  validateRequest({ params: rankParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.deleteRank
 );
 
@@ -198,7 +206,7 @@ router.delete(
 
 router.get(
   '/:id/members',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.getMembers
 );
 
@@ -206,6 +214,7 @@ router.post(
   '/:id/members',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: createFactionMemberSchema.omit({ factionId: true }),
   }),
   FactionController.addMember
@@ -215,6 +224,7 @@ router.put(
   '/:id/members/:memberId',
   validateRequest({
     params: memberParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: updateFactionMemberSchema,
   }),
   FactionController.updateMember
@@ -222,7 +232,7 @@ router.put(
 
 router.delete(
   '/:id/members/:memberId',
-  validateRequest({ params: memberParamsSchema }),
+  validateRequest({ params: memberParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.removeMember
 );
 
@@ -230,6 +240,7 @@ router.put(
   '/:id/custom-metrics',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: replaceFactionCustomMetricsSchema,
   }),
   FactionController.replaceCustomMetrics
@@ -245,7 +256,9 @@ router.post(
 
 router.post(
   '/relations',
-  validateRequest({ body: createFactionRelationSchema }),
+  validateRequest({
+    body: createFactionRelationSchema.extend({ branchId: z.number().int().positive().optional() }),
+  }),
   FactionController.createRelation
 );
 
@@ -253,14 +266,14 @@ router.put(
   '/relations/:relationId',
   validateRequest({
     params: relationParamsSchema,
-    body: updateFactionRelationSchema,
+    body: updateFactionRelationSchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   FactionController.updateRelation
 );
 
 router.delete(
   '/relations/:relationId',
-  validateRequest({ params: relationParamsSchema }),
+  validateRequest({ params: relationParamsSchema, query: optionalBranchIdQuerySchema }),
   FactionController.deleteRelation
 );
 

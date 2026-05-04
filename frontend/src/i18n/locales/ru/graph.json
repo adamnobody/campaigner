@@ -34,6 +34,8 @@
     "layoutToggleTooltipPaused": "Разморозить раскладку",
     "layoutToggleTooltipRunning": "Зафиксировать раскладку",
     "relayout": "Перерасставить",
+    "resetLayout": "Сбросить раскладку",
+    "resetLayoutTooltip": "Удалить сохранённые позиции узлов для этой ветки и вернуть автораскладку",
     "zoomPercent": "{{value}}%"
   },
   "filters": {

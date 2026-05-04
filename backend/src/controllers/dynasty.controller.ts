@@ -5,6 +5,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
 import { BadRequestError } from '../middleware/errorHandler.js';
+import { parseOptionalBranchId, parseBranchIdStrict } from '../utils/branchRequest.js';
+
+function branchFromReq(req: Request): number | undefined {
+  return parseOptionalBranchId(req.query.branchId ?? req.body?.branchId);
+}
 
 export class DynastyController {
   static getAll = asyncHandler(async (req: Request, res: Response) => {
@@ -13,12 +18,14 @@ export class DynastyController {
     const limit = Number(req.query.limit);
     const offset = Number(req.query.offset);
 
+    const branchId = parseOptionalBranchId(req.query.branchId);
+
     const result = DynastyService.getAll(projectId, {
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       status: typeof req.query.status === 'string' ? req.query.status : undefined,
       limit: Number.isFinite(limit) ? limit : 50,
       offset: Number.isFinite(offset) ? offset : 0,
-    });
+    }, branchId);
 
     return res.status(200).json({
       success: true,
@@ -29,24 +36,28 @@ export class DynastyController {
 
   static getById = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dynasty id');
-    const dynasty = DynastyService.getById(id);
+    const branchId = parseOptionalBranchId(req.query.branchId);
+    const dynasty = DynastyService.getById(id, branchId);
     return ok(res, dynasty);
   });
 
   static create = asyncHandler(async (req: Request, res: Response) => {
-    const dynasty = DynastyService.create(req.body);
+    const branchId = parseOptionalBranchId(req.body?.branchId);
+    const dynasty = DynastyService.create(req.body, branchId);
     return created(res, dynasty);
   });
 
   static update = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dynasty id');
-    const dynasty = DynastyService.update(id, req.body);
+    const branchId = parseOptionalBranchId(req.body?.branchId);
+    const dynasty = DynastyService.update(id, req.body, branchId);
     return ok(res, dynasty);
   });
 
   static delete = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dynasty id');
-    DynastyService.delete(id);
+    const branchId = parseBranchIdStrict(req.query.branchId);
+    DynastyService.delete(id, branchId);
     return ok(res, undefined, 'Dynasty deleted');
   });
 
@@ -57,29 +68,32 @@ export class DynastyController {
       throw new BadRequestError('No file uploaded');
     }
 
+    const branchId = parseOptionalBranchId(req.query.branchId);
     const imagePath = `/uploads/dynasties/${req.file.filename}`;
-    const dynasty = DynastyService.uploadImage(id, imagePath);
+    const dynasty = DynastyService.uploadImage(id, imagePath, branchId);
     return ok(res, dynasty);
   });
 
   static setTags = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dynasty id');
+    const branchId = parseOptionalBranchId(req.query.branchId);
+    const existing = DynastyService.getById(id, branchId);
     const tagIds = req.body?.tagIds;
 
     if (!Array.isArray(tagIds)) {
       throw new BadRequestError('tagIds must be an array');
     }
 
-    const existing = DynastyService.getById(id);
     TagService.setTagsForEntity(existing.projectId, 'dynasty', id, tagIds);
-    const dynasty = DynastyService.getById(id);
+    const dynasty = DynastyService.getById(id, branchId);
     return ok(res, dynasty);
   });
 
   // Members
   static addMember = asyncHandler(async (req: Request, res: Response) => {
     const dynastyId = parseId(req.params.id, 'dynasty id');
-    const member = DynastyService.addMember(dynastyId, req.body);
+    const branchId = branchFromReq(req);
+    const member = DynastyService.addMember(dynastyId, req.body, branchId);
     return created(res, member);
   });
 
@@ -103,14 +117,16 @@ export class DynastyController {
       throw new BadRequestError('positions must be an array');
     }
 
-    DynastyService.saveGraphPositions(dynastyId, positions);
+    const branchId = branchFromReq(req);
+    DynastyService.saveGraphPositions(dynastyId, positions, branchId);
     return ok(res, undefined, 'Positions saved');
   });
 
   // Family links
   static addFamilyLink = asyncHandler(async (req: Request, res: Response) => {
     const dynastyId = parseId(req.params.id, 'dynasty id');
-    const link = DynastyService.addFamilyLink(dynastyId, req.body);
+    const branchId = branchFromReq(req);
+    const link = DynastyService.addFamilyLink(dynastyId, req.body, branchId);
     return created(res, link);
   });
 
@@ -123,15 +139,17 @@ export class DynastyController {
   // Events
   static addEvent = asyncHandler(async (req: Request, res: Response) => {
     const dynastyId = parseId(req.params.id, 'dynasty id');
-    const event = DynastyService.addEvent(dynastyId, req.body);
+    const branchId = branchFromReq(req);
+    const event = DynastyService.addEvent(dynastyId, req.body, branchId);
     return created(res, event);
   });
 
   static reorderEvents = asyncHandler(async (req: Request, res: Response) => {
     const dynastyId = parseId(req.params.id, 'dynasty id');
     const { orderedIds } = req.body as { orderedIds: number[] };
-    DynastyService.reorderEvents(dynastyId, orderedIds);
-    const dynasty = DynastyService.getById(dynastyId);
+    const branchId = branchFromReq(req);
+    DynastyService.reorderEvents(dynastyId, orderedIds, branchId);
+    const dynasty = DynastyService.getById(dynastyId, branchId);
     return ok(res, dynasty);
   });
 

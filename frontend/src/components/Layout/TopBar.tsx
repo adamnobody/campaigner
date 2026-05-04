@@ -173,7 +173,7 @@ export const TopBar: React.FC = () => {
       const createdBranch = response.data.data;
       await fetchBranches(projectId);
       if (createdBranch?.id) {
-        setActiveBranchId(createdBranch.id);
+        setActiveBranchId(createdBranch.id, projectId);
       }
       showSnackbar(tNav('branches.created'), 'success');
       setCreateBranchOpen(false);
@@ -273,7 +273,7 @@ export const TopBar: React.FC = () => {
                   value={activeBranchId ?? ''}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setActiveBranchId(value === '' ? null : Number(value));
+                    setActiveBranchId(value === '' ? null : Number(value), currentProject.id);
                   }}
                   displayEmpty
                   renderValue={(selected) => {

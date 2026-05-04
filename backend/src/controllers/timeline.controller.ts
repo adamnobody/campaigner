@@ -40,10 +40,7 @@ export class TimelineController {
 
   static create = asyncHandler(async (req: Request, res: Response) => {
     const branchId = TimelineController.parseBranchId(req.body?.branchId);
-    if (branchId) {
-      throw new BadRequestError('Branch-local timeline create is not supported in MVP');
-    }
-    const event = TimelineService.create(req.body);
+    const event = TimelineService.create(req.body, branchId);
     return created(res, event);
   });
 
@@ -80,7 +77,8 @@ export class TimelineController {
 
   static setTags = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'timeline event id');
-    const event = TimelineService.getById(id);
+    const branchId = TimelineController.parseBranchId(req.query.branchId);
+    const event = TimelineService.getById(id, branchId);
     const tagIds = req.body?.tagIds;
 
     if (!Array.isArray(tagIds)) {

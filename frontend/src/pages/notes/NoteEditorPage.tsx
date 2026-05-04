@@ -18,6 +18,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { useHistory } from '@/hooks/useHistory';
 import { DndButton } from '@/components/ui/DndButton';
@@ -48,6 +49,7 @@ export const NoteEditorPage: React.FC = () => {
   }), shallow);
   const showSnackbar = useUIStore((state) => state.showSnackbar);
   const theme = useTheme();
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const [mode, setMode] = useState<EditorMode>('split');
   const [title, setTitle] = useState('');
@@ -97,7 +99,7 @@ export const NoteEditorPage: React.FC = () => {
 
   useEffect(() => {
     fetchNote(nid);
-  }, [nid, fetchNote]);
+  }, [nid, fetchNote, activeBranchId]);
 
   useEffect(() => {
     if (currentNote) {
@@ -305,7 +307,7 @@ export const NoteEditorPage: React.FC = () => {
 
   const handleDeleteLink = async (linkId: number) => {
     try {
-      await wikiApi.deleteLink(linkId);
+      await wikiApi.deleteLink(linkId, pid);
       showSnackbar(t('notes:snackbar.linkDeleted'), 'success');
       loadWikiData();
     } catch {

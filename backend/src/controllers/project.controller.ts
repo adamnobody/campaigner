@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
+import type { ImportedProjectPayload } from '@campaigner/shared';
 import { ProjectService } from '../services/project/index.js';
+import { mainBranchLabelForLocale } from '../services/project/demoProject.payload.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created, noContent } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
@@ -60,12 +62,18 @@ export class ProjectController {
   });
 
   static import = asyncHandler(async (req: Request, res: Response) => {
-    const project = ProjectService.importProject(req.body);
+    const { importLocale, ...payload } = req.body as ImportedProjectPayload & {
+      importLocale?: 'en' | 'ru';
+    };
+    const mainBranchName =
+      importLocale !== undefined ? mainBranchLabelForLocale(importLocale) : undefined;
+    const project = ProjectService.importProject(payload, { mainBranchName });
     return created(res, project);
   });
 
-  static createDemo = asyncHandler(async (_req: Request, res: Response) => {
-    const project = ProjectService.createDemoProject();
+  static createDemo = asyncHandler(async (req: Request, res: Response) => {
+    const locale = req.body?.locale === 'ru' ? 'ru' : 'en';
+    const project = ProjectService.createDemoProject(locale);
     return created(res, project);
   });
 }

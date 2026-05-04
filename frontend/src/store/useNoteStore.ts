@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { Note, CreateNote, UpdateNote, Pagination } from '@campaigner/shared';
 import { notesApi } from '@/api/notes';
 import { getErrorMessage } from '@/utils/error';
+import { useProjectStore } from '@/store/useProjectStore';
+
+function activeProjectId(): number | undefined {
+  const id = useProjectStore.getState().currentProject?.id;
+  return typeof id === 'number' && id > 0 ? id : undefined;
+}
 
 interface NoteListParams extends Partial<Pagination> {
   noteType?: string;
@@ -50,7 +56,7 @@ export const useNoteStore = create<NoteState>((set) => ({
   fetchNote: async (id) => {
     set({ loading: true, error: null });
     try {
-      const res = await notesApi.getById(id);
+      const res = await notesApi.getById(id, activeProjectId());
       set({ currentNote: res.data.data, loading: false });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to fetch note'), loading: false });
@@ -77,7 +83,7 @@ export const useNoteStore = create<NoteState>((set) => ({
   updateNote: async (id, data) => {
     set({ error: null });
     try {
-      const res = await notesApi.update(id, data);
+      const res = await notesApi.update(id, data, activeProjectId());
       const updated = res.data.data;
       set(state => ({
         notes: state.notes.map(n => n.id === id ? updated : n),
@@ -92,7 +98,7 @@ export const useNoteStore = create<NoteState>((set) => ({
   deleteNote: async (id) => {
     set({ error: null });
     try {
-      await notesApi.delete(id);
+      await notesApi.delete(id, activeProjectId());
       set(state => ({
         notes: state.notes.filter(n => n.id !== id),
         total: state.total - 1,
@@ -107,8 +113,8 @@ export const useNoteStore = create<NoteState>((set) => ({
   setTags: async (id, tagIds) => {
     set({ error: null });
     try {
-      await notesApi.setTags(id, tagIds);
-      const res = await notesApi.getById(id);
+      await notesApi.setTags(id, tagIds, activeProjectId());
+      const res = await notesApi.getById(id, activeProjectId());
       const updated = res.data.data;
       set(state => ({
         notes: state.notes.map(n => n.id === id ? updated : n),

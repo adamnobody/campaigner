@@ -12,21 +12,26 @@ import type {
   UpdateTerritory,
 } from '@campaigner/shared';
 import { apiClient, type VoidResponse } from './client';
-import { getActiveBranchId } from '@/store/branchStorage';
-
-function withBranch<T extends Record<string, unknown>>(payload: T): T & { branchId?: number } {
-  const branchId = getActiveBranchId();
-  return branchId ? { ...payload, branchId } : payload;
-}
+import { withBranchParams } from './withBranchParams';
 
 export const mapApi = {
-  getRootMap: (projectId: number) => apiClient.get<ApiResponse<Map | null>>(`/projects/${projectId}/maps/root`, { params: withBranch({}) }),
-  getMapById: (mapId: number) => apiClient.get<ApiResponse<Map>>(`/maps/${mapId}`, { params: withBranch({}) }),
-  getMapTree: (projectId: number) => apiClient.get<ApiResponse<Map[]>>(`/projects/${projectId}/maps/tree`, { params: withBranch({}) }),
+  getRootMap: (projectId: number) =>
+    apiClient.get<ApiResponse<Map | null>>(`/projects/${projectId}/maps/root`, {
+      params: withBranchParams({ projectId }),
+    }),
+  getMapById: (mapId: number, projectId?: number) =>
+    apiClient.get<ApiResponse<Map>>(`/maps/${mapId}`, { params: withBranchParams({}, projectId) }),
+  getMapTree: (projectId: number) =>
+    apiClient.get<ApiResponse<Map[]>>(`/projects/${projectId}/maps/tree`, {
+      params: withBranchParams({ projectId }),
+    }),
   getTerritorySummariesForProject: (projectId: number) =>
-    apiClient.get<ApiResponse<MapTerritorySummary[]>>(`/projects/${projectId}/territories/summary`),
-  createMap: (data: CreateMap) => apiClient.post<ApiResponse<Map>>('/maps', withBranch({ ...data })),
-  updateMap: (mapId: number, data: UpdateMap) => apiClient.put<ApiResponse<Map>>(`/maps/${mapId}`, withBranch({ ...data })),
+    apiClient.get<ApiResponse<MapTerritorySummary[]>>(`/projects/${projectId}/territories/summary`, {
+      params: withBranchParams({ projectId }),
+    }),
+  createMap: (data: CreateMap) => apiClient.post<ApiResponse<Map>>('/maps', withBranchParams({ ...data })),
+  updateMap: (mapId: number, data: UpdateMap, projectId?: number) =>
+    apiClient.put<ApiResponse<Map>>(`/maps/${mapId}`, withBranchParams({ ...data }, projectId)),
   deleteMap: (mapId: number) => apiClient.delete<VoidResponse>(`/maps/${mapId}`),
   uploadMapImage: (mapId: number, file: File) => {
     const formData = new FormData();
@@ -35,16 +40,24 @@ export const mapApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  getMarkersByMapId: (mapId: number) => apiClient.get<ApiResponse<MapMarker[]>>(`/maps/${mapId}/markers`, { params: withBranch({}) }),
-  createMarker: (mapId: number, data: CreateMarker) => apiClient.post<ApiResponse<MapMarker>>(`/maps/${mapId}/markers`, withBranch({ ...data })),
-  updateMarker: (markerId: number, data: UpdateMarker) => apiClient.put<ApiResponse<MapMarker>>(`/markers/${markerId}`, withBranch({ ...data })),
-  deleteMarker: (markerId: number) =>
-    apiClient.delete<VoidResponse>(`/markers/${markerId}`, { params: withBranch({}) }),
-  getTerritoriesByMapId: (mapId: number) => apiClient.get<ApiResponse<MapTerritory[]>>(`/maps/${mapId}/territories`, { params: withBranch({}) }),
-  createTerritory: (mapId: number, data: CreateTerritory) =>
-    apiClient.post<ApiResponse<MapTerritory>>(`/maps/${mapId}/territories`, withBranch(data as Record<string, unknown>)),
-  updateTerritory: (territoryId: number, data: UpdateTerritory) =>
-    apiClient.put<ApiResponse<MapTerritory>>(`/territories/${territoryId}`, withBranch(data as Record<string, unknown>)),
-  deleteTerritory: (territoryId: number) =>
-    apiClient.delete<VoidResponse>(`/territories/${territoryId}`, { params: withBranch({}) }),
+  getMarkersByMapId: (mapId: number, projectId?: number) =>
+    apiClient.get<ApiResponse<MapMarker[]>>(`/maps/${mapId}/markers`, {
+      params: withBranchParams({}, projectId),
+    }),
+  createMarker: (mapId: number, data: CreateMarker, projectId?: number) =>
+    apiClient.post<ApiResponse<MapMarker>>(`/maps/${mapId}/markers`, withBranchParams({ ...data }, projectId)),
+  updateMarker: (markerId: number, data: UpdateMarker, projectId?: number) =>
+    apiClient.put<ApiResponse<MapMarker>>(`/markers/${markerId}`, withBranchParams({ ...data }, projectId)),
+  deleteMarker: (markerId: number, projectId?: number) =>
+    apiClient.delete<VoidResponse>(`/markers/${markerId}`, { params: withBranchParams({}, projectId) }),
+  getTerritoriesByMapId: (mapId: number, projectId?: number) =>
+    apiClient.get<ApiResponse<MapTerritory[]>>(`/maps/${mapId}/territories`, {
+      params: withBranchParams({}, projectId),
+    }),
+  createTerritory: (mapId: number, data: CreateTerritory, projectId?: number) =>
+    apiClient.post<ApiResponse<MapTerritory>>(`/maps/${mapId}/territories`, withBranchParams(data as Record<string, unknown>, projectId)),
+  updateTerritory: (territoryId: number, data: UpdateTerritory, projectId?: number) =>
+    apiClient.put<ApiResponse<MapTerritory>>(`/territories/${territoryId}`, withBranchParams(data as Record<string, unknown>, projectId)),
+  deleteTerritory: (territoryId: number, projectId?: number) =>
+    apiClient.delete<VoidResponse>(`/territories/${territoryId}`, { params: withBranchParams({}, projectId) }),
 };

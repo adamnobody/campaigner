@@ -5,6 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ok, created } from '../utils/apiResponse.js';
 import { parseId } from '../utils/parseId.js';
 import { BadRequestError } from '../middleware/errorHandler.js';
+import { NOTE_LIST_MAX_LIMIT } from '../routes/querySchemas.js';
 
 export class NoteController {
   private static parseBranchId(input: unknown): number | undefined {
@@ -31,7 +32,7 @@ export class NoteController {
 
     const pagination = {
       page: Number.isFinite(page) ? page : 1,
-      limit: Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 200)) : 50,
+      limit: Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), NOTE_LIST_MAX_LIMIT)) : 50,
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       sortBy: typeof req.query.sortBy === 'string' ? req.query.sortBy : undefined,
       sortOrder: req.query.sortOrder === 'asc' ? 'asc' : 'desc' as 'asc' | 'desc',
@@ -67,10 +68,7 @@ export class NoteController {
 
   static create = asyncHandler(async (req: Request, res: Response) => {
     const branchId = NoteController.parseBranchId(req.body?.branchId);
-    if (branchId) {
-      throw new BadRequestError('Branch-local note create is not supported in MVP');
-    }
-    const note = NoteService.create(req.body);
+    const note = NoteService.create(req.body, branchId);
     return created(res, note);
   });
 
@@ -90,7 +88,8 @@ export class NoteController {
 
   static setTags = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'note id');
-    const note = NoteService.getById(id);
+    const branchId = NoteController.parseBranchId(req.query.branchId);
+    const note = NoteService.getById(id, branchId);
     const tagIds = req.body?.tagIds;
 
     if (!Array.isArray(tagIds)) {

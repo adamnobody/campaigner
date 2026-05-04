@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { createDiskUpload } from '../middleware/createUpload.js';
 import { ProjectController } from '../controllers/project.controller.js';
+import { GraphLayoutController } from '../controllers/graphLayout.controller.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import {
   createProjectSchema,
@@ -17,6 +18,15 @@ const upload = createDiskUpload({
 });
 
 const importArraySchema = z.array(z.record(z.string(), z.unknown())).optional();
+
+const createDemoProjectBodySchema = z.preprocess(
+  (val) => (val == null || typeof val !== 'object' ? {} : val),
+  z
+    .object({
+      locale: z.enum(['en', 'ru']).optional(),
+    })
+    .strict()
+);
 
 const importProjectSchema = z.object({
   version: z.string(),
@@ -46,16 +56,47 @@ const importProjectSchema = z.object({
   dynastyMembers: importArraySchema,
   dynastyFamilyLinks: importArraySchema,
   dynastyEvents: importArraySchema,
+  scenarioBranches: importArraySchema,
+  graphLayouts: importArraySchema,
+  importLocale: z.enum(['en', 'ru']).optional(),
 });
 
 router.get('/', ProjectController.getAll);
+
+const graphLayoutQuerySchema = z.object({
+  graphType: z.string().min(1).max(64),
+  branchId: z.coerce.number().int().positive().optional(),
+});
+
+const graphLayoutPutBodySchema = z.object({
+  graphType: z.string().min(1).max(64),
+  layoutData: z.record(z.unknown()),
+  branchId: z.number().int().positive().optional(),
+});
+
+router.get(
+  '/:id/graph-layout',
+  validateRequest({ params: idParamsSchema, query: graphLayoutQuerySchema }),
+  GraphLayoutController.get
+);
+
+router.put(
+  '/:id/graph-layout',
+  validateRequest({ params: idParamsSchema, body: graphLayoutPutBodySchema }),
+  GraphLayoutController.put
+);
+
+router.delete(
+  '/:id/graph-layout',
+  validateRequest({ params: idParamsSchema, query: graphLayoutQuerySchema }),
+  GraphLayoutController.delete
+);
 
 router.get(
   '/:id',
   validateRequest({ params: idParamsSchema }),
   ProjectController.getById
 );
-
 router.post(
   '/',
   validateRequest({ body: createProjectSchema }),
@@ -96,6 +137,10 @@ router.post(
   ProjectController.import
 );
 
-router.post('/demo', ProjectController.createDemo);
+router.post(
+  '/demo',
+  validateRequest({ body: createDemoProjectBodySchema }),
+  ProjectController.createDemo
+);
 
 export default router;

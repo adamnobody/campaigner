@@ -16,6 +16,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -36,6 +37,8 @@ export const NotesPage: React.FC = () => {
   const { notes, total, loading, fetchNotes, createNote, deleteNote, setTags } = useNoteStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
+
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
@@ -55,7 +58,7 @@ export const NotesPage: React.FC = () => {
   useEffect(() => {
     const noteType = tab === 0 ? undefined : noteTypes[tab];
     fetchNotes(pid, { search: debouncedSearch || undefined, noteType });
-  }, [pid, fetchNotes, debouncedSearch, tab]);
+  }, [pid, fetchNotes, debouncedSearch, tab, activeBranchId]);
 
   useEffect(() => {
     tagsApi.getAll(pid).then(res => {

@@ -9,6 +9,7 @@ import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '@/store/useCharacterStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { GlassCard } from '@/components/ui/GlassCard';
 import {
@@ -29,6 +30,7 @@ export const CharacterGraphPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const { characters, relationships, fetchCharacters, fetchRelationships } = useCharacterStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -145,7 +147,7 @@ export const CharacterGraphPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [pid, fetchCharacters, fetchRelationships]);
+  }, [pid, fetchCharacters, fetchRelationships, activeBranchId]);
 
   useEffect(() => {
     const chars = characters || [];

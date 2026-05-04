@@ -7,6 +7,13 @@ import { BadRequestError, NotFoundError } from '../../middleware/errorHandler.js
 import type { MapTerritory, CreateMapTerritoryData, UpdateMapTerritoryData, TerritoryRawRow } from './map.types.js';
 import { parseTerritoryRings, serializeTerritoryRings } from './map.types.js';
 import { BranchOverlayService } from '../branchOverlay.service.js';
+import {
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
+  resolveCreatedBranchId,
+  assertBranchBelongsToProject,
+} from '../branchScope.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,14 +52,16 @@ function pickTerritoryPatch(data: UpdateMapTerritoryData): Record<string, unknow
 export class MapService {
   // ==================== Maps ====================
 
-  getRootMap(projectId: number): Map | null {
+  getRootMap(projectId: number, branchId?: number): Map | null {
     const db = getDb();
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
     return (db.prepare(`
       SELECT id, project_id as projectId, parent_map_id as parentMapId,
         parent_marker_id as parentMarkerId, name, image_path as imagePath,
         created_at as createdAt, updated_at as updatedAt
-      FROM maps WHERE project_id = ? AND parent_map_id IS NULL LIMIT 1
-    `).get(projectId) as Map | undefined) || null;
+      FROM maps WHERE project_id = ? AND parent_map_id IS NULL${scope.sql} LIMIT 1
+    `).get(projectId, ...scope.params) as Map | undefined) || null;
   }
 
   getMapById(mapId: number): Map | null {
@@ -71,20 +80,23 @@ export class MapService {
     return map;
   }
 
-  getMapTree(projectId: number): Map[] {
+  getMapTree(projectId: number, branchId?: number): Map[] {
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'created_branch_id', 'created_at');
     return getDb().prepare(`
       SELECT id, project_id as projectId, parent_map_id as parentMapId,
         parent_marker_id as parentMarkerId, name, image_path as imagePath,
         created_at as createdAt, updated_at as updatedAt
-      FROM maps WHERE project_id = ? ORDER BY parent_map_id, name
-    `).all(projectId) as Map[];
+      FROM maps WHERE project_id = ?${scope.sql} ORDER BY parent_map_id, name
+    `).all(projectId, ...scope.params) as Map[];
   }
 
-  createMap(data: CreateMap): Map {
+  createMap(data: CreateMap, requestBranchId?: number): Map {
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
     const result = getDb().prepare(`
-      INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(data.projectId, data.parentMapId || null, data.parentMarkerId || null, data.name, data.imagePath || null);
+      INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path, created_branch_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(data.projectId, data.parentMapId || null, data.parentMarkerId || null, data.name, data.imagePath || null, createdBranchId);
     return this.getMapByIdOrThrow(result.lastInsertRowid as number);
   }
 
@@ -131,36 +143,48 @@ export class MapService {
     getDb().prepare('DELETE FROM maps WHERE id = ?').run(mapId);
   }
 
-  createRootMapForProject(projectId: number, imagePath?: string): Map {
+  createRootMapForProject(projectId: number, imagePath?: string, createdBranchId?: number | null): Map {
     const result = getDb().prepare(`
-      INSERT INTO maps (project_id, parent_map_id, name, image_path) VALUES (?, NULL, ?, ?)
-    `).run(projectId, 'Мир', imagePath || null);
+      INSERT INTO maps (project_id, parent_map_id, name, image_path, created_branch_id) VALUES (?, NULL, ?, ?, ?)
+    `).run(projectId, 'Мир', imagePath || null, createdBranchId ?? null);
     return this.getMapByIdOrThrow(result.lastInsertRowid as number);
   }
 
   // ==================== Markers ====================
 
   getMarkersByMapId(mapId: number, branchId?: number): MapMarker[] {
-    this.getMapByIdOrThrow(mapId);
+    const map = this.getMapByIdOrThrow(mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    const scope = branchEntityVisibilitySql(map.projectId, viewBranch, 'created_branch_id', 'created_at');
     const baseRows = getDb().prepare(`
       SELECT id, map_id as mapId, title, description,
         position_x as positionX, position_y as positionY,
         color, icon, linked_note_id as linkedNoteId, child_map_id as childMapId,
         created_at as createdAt, updated_at as updatedAt
-      FROM map_markers WHERE map_id = ? ORDER BY created_at
-    `).all(mapId) as MapMarker[];
+      FROM map_markers WHERE map_id = ?${scope.sql} ORDER BY created_at
+    `).all(mapId, ...scope.params) as MapMarker[];
     if (!branchId) return baseRows;
     return BranchOverlayService.applyListOverlay(baseRows, BranchOverlayService.getOverrides(branchId, 'map_marker'));
   }
 
   getMarkerById(markerId: number, branchId?: number): MapMarker | null {
-    const baseRow = (getDb().prepare(`
+    type MarkerRow = MapMarker & { createdBranchId?: number | null };
+    const raw = getDb().prepare(`
       SELECT id, map_id as mapId, title, description,
         position_x as positionX, position_y as positionY,
         color, icon, linked_note_id as linkedNoteId, child_map_id as childMapId,
-        created_at as createdAt, updated_at as updatedAt
+        created_at as createdAt, updated_at as updatedAt,
+        created_branch_id as createdBranchId
       FROM map_markers WHERE id = ?
-    `).get(markerId) as MapMarker | undefined) || null;
+    `).get(markerId) as MarkerRow | undefined;
+
+    if (!raw) return null;
+    const map = this.getMapByIdOrThrow(raw.mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    if (!isEntityVisibleInBranch(map.projectId, viewBranch, raw.createdBranchId, raw.createdAt)) return null;
+
+    const { createdBranchId: _cb, ...markerRest } = raw;
+    const baseRow = markerRest as MapMarker;
 
     if (!branchId) return baseRow;
     return BranchOverlayService.applyItemOverlay(baseRow, BranchOverlayService.getOverrides(branchId, 'map_marker'));
@@ -172,18 +196,27 @@ export class MapService {
     return marker;
   }
 
-  createMarker(mapId: number, data: CreateMarker): MapMarker {
-    this.getMapByIdOrThrow(mapId);
+  createMarker(mapId: number, data: CreateMarker, requestBranchId?: number): MapMarker {
+    const map = this.getMapByIdOrThrow(mapId);
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, map.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(map.projectId, requestBranchId);
+
     const result = getDb().prepare(`
-      INSERT INTO map_markers (map_id, title, description, position_x, position_y, color, icon, linked_note_id, child_map_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO map_markers (map_id, title, description, position_x, position_y, color, icon, linked_note_id, child_map_id, created_branch_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(mapId, data.title, data.description || '', data.positionX, data.positionY,
-      data.color || '#FF6B6B', data.icon || 'custom', data.linkedNoteId || null, data.childMapId || null);
-    return this.getMarkerByIdOrThrow(result.lastInsertRowid as number);
+      data.color || '#FF6B6B', data.icon || 'custom', data.linkedNoteId || null, data.childMapId || null,
+      createdBranchId);
+    return this.getMarkerByIdOrThrow(
+      result.lastInsertRowid as number,
+      requestBranchId ?? effectiveBranchIdForRead(map.projectId, undefined),
+    );
   }
 
   updateMarker(markerId: number, data: UpdateMarker, branchId?: number): MapMarker {
-    this.getMarkerByIdOrThrow(markerId);
+    this.getMarkerByIdOrThrow(markerId, branchId);
     if (branchId) {
       BranchOverlayService.saveUpsertOverride(
         branchId,
@@ -215,7 +248,7 @@ export class MapService {
   }
 
   deleteMarker(markerId: number, branchId?: number): void {
-    this.getMarkerByIdOrThrow(markerId);
+    this.getMarkerByIdOrThrow(markerId, branchId);
     if (branchId) {
       BranchOverlayService.saveDeleteOverride(branchId, 'map_marker', markerId);
       return;
@@ -237,18 +270,21 @@ export class MapService {
   // ==================== Territories ====================
 
   getTerritoriesByMapId(mapId: number, branchId?: number): MapTerritory[] {
-    this.getMapByIdOrThrow(mapId);
+    const map = this.getMapByIdOrThrow(mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    const scope = branchEntityVisibilitySql(map.projectId, viewBranch, 'created_branch_id', 'created_at');
     const rows = getDb().prepare(`
       SELECT id, map_id as mapId, name, description,
         color, opacity, border_color as borderColor,
         border_width as borderWidth, smoothing, points,
         faction_id as factionId, sort_order as sortOrder,
-        created_at as createdAt, updated_at as updatedAt
-      FROM map_territories WHERE map_id = ? ORDER BY sort_order, created_at
-    `).all(mapId) as TerritoryRawRow[];
+        created_at as createdAt, updated_at as updatedAt,
+        created_branch_id as createdBranchId
+      FROM map_territories WHERE map_id = ?${scope.sql} ORDER BY sort_order, created_at
+    `).all(mapId, ...scope.params) as TerritoryRawRow[];
 
     const baseRows = rows.map((row) => {
-      const { points: rawPoints, ...rest } = row;
+      const { points: rawPoints, createdBranchId: _cb, ...rest } = row;
       return { ...rest, rings: parseTerritoryRings(rawPoints) };
     });
     if (!branchId) return baseRows;
@@ -261,12 +297,17 @@ export class MapService {
         color, opacity, border_color as borderColor,
         border_width as borderWidth, smoothing, points,
         faction_id as factionId, sort_order as sortOrder,
-        created_at as createdAt, updated_at as updatedAt
+        created_at as createdAt, updated_at as updatedAt,
+        created_branch_id as createdBranchId
       FROM map_territories WHERE id = ?
     `).get(territoryId) as TerritoryRawRow | undefined;
 
     if (!row) return null;
-    const { points: rawPoints, ...rest } = row;
+    const map = this.getMapByIdOrThrow(row.mapId);
+    const viewBranch = effectiveBranchIdForRead(map.projectId, branchId);
+    if (!isEntityVisibleInBranch(map.projectId, viewBranch, row.createdBranchId, row.createdAt)) return null;
+
+    const { points: rawPoints, createdBranchId: _cb, ...rest } = row;
     const baseRow = { ...rest, rings: parseTerritoryRings(rawPoints) };
     if (!branchId) return baseRow;
     return BranchOverlayService.applyItemOverlay(baseRow, BranchOverlayService.getOverrides(branchId, 'map_territory'));
@@ -278,21 +319,29 @@ export class MapService {
     return territory;
   }
 
-  createTerritory(mapId: number, data: CreateMapTerritoryData): MapTerritory {
-    this.getMapByIdOrThrow(mapId);
+  createTerritory(mapId: number, data: CreateMapTerritoryData, requestBranchId?: number): MapTerritory {
+    const map = this.getMapByIdOrThrow(mapId);
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, map.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(map.projectId, requestBranchId);
+
     const rings = data.rings ?? [];
     const result = getDb().prepare(`
-      INSERT INTO map_territories (map_id, name, description, color, opacity, border_color, border_width, smoothing, points, faction_id, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO map_territories (map_id, name, description, color, opacity, border_color, border_width, smoothing, points, faction_id, sort_order, created_branch_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(mapId, data.name, data.description || '', data.color || '#4ECDC4',
       data.opacity ?? 0.25, data.borderColor || '#4ECDC4', data.borderWidth ?? 2,
       data.smoothing ?? 0, serializeTerritoryRings(rings),
-      data.factionId || null, data.sortOrder ?? 0);
-    return this.getTerritoryByIdOrThrow(result.lastInsertRowid as number);
+      data.factionId || null, data.sortOrder ?? 0, createdBranchId);
+    return this.getTerritoryByIdOrThrow(
+      result.lastInsertRowid as number,
+      requestBranchId ?? effectiveBranchIdForRead(map.projectId, undefined),
+    );
   }
 
   updateTerritory(territoryId: number, data: UpdateMapTerritoryData, branchId?: number): MapTerritory {
-    this.getTerritoryByIdOrThrow(territoryId);
+    this.getTerritoryByIdOrThrow(territoryId, branchId);
     if (branchId) {
       BranchOverlayService.saveUpsertOverride(
         branchId,
@@ -322,11 +371,11 @@ export class MapService {
       updates.push("updated_at = datetime('now')");
       db.prepare(`UPDATE map_territories SET ${updates.join(', ')} WHERE id = ?`).run(...values, territoryId);
     }
-    return this.getTerritoryByIdOrThrow(territoryId);
+    return this.getTerritoryByIdOrThrow(territoryId, branchId);
   }
 
   deleteTerritory(territoryId: number, branchId?: number): void {
-    this.getTerritoryByIdOrThrow(territoryId);
+    this.getTerritoryByIdOrThrow(territoryId, branchId);
     if (branchId) {
       BranchOverlayService.saveDeleteOverride(branchId, 'map_territory', territoryId);
       return;
@@ -336,7 +385,7 @@ export class MapService {
   }
 
   /** Все территории проекта с привязкой к фракции (для UI государства). */
-  listTerritorySummariesForProject(projectId: number): Array<{
+  listTerritorySummariesForProject(projectId: number, branchId?: number): Array<{
     id: number;
     name: string;
     mapId: number;
@@ -345,6 +394,9 @@ export class MapService {
     occupantName: string | null;
     occupantKind: 'state' | 'faction' | null;
   }> {
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'mt.created_branch_id', 'mt.created_at');
+    const params: Array<number | string> = [projectId, ...scope.params];
     return getDb().prepare(`
       SELECT mt.id, mt.name, mt.map_id as mapId, m.name as mapName,
         mt.faction_id as factionId,
@@ -353,9 +405,9 @@ export class MapService {
       FROM map_territories mt
       JOIN maps m ON mt.map_id = m.id
       LEFT JOIN factions f ON mt.faction_id = f.id
-      WHERE m.project_id = ?
+      WHERE m.project_id = ?${scope.sql}
       ORDER BY m.name COLLATE NOCASE, mt.name COLLATE NOCASE
-    `).all(projectId) as Array<{
+    `).all(...params) as Array<{
       id: number;
       name: string;
       mapId: number;

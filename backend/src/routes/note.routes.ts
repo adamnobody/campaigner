@@ -3,21 +3,10 @@ import { z } from 'zod';
 import { NoteController } from '../controllers/note.controller.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { createNoteSchema, updateNoteSchema } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
+import { idParamsSchema, setTagsBodySchema, optionalBranchIdQuerySchema } from './commonSchemas.js';
+import { noteListQuerySchema } from './querySchemas.js';
 
 const router = Router();
-
-const listQuerySchema = z.object({
-  projectId: z.coerce.number().int().positive(),
-  branchId: z.coerce.number().int().positive().optional(),
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(200).optional(),
-  search: z.string().optional(),
-  sortBy: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).optional(),
-  noteType: z.string().optional(),
-  folderId: z.union([z.coerce.number().int().positive(), z.literal('null')]).optional(),
-});
 
 const branchDeleteQuerySchema = z.object({
   branchId: z.coerce.number().int().positive().optional(),
@@ -25,7 +14,7 @@ const branchDeleteQuerySchema = z.object({
 
 router.get(
   '/',
-  validateRequest({ query: listQuerySchema }),
+  validateRequest({ query: noteListQuerySchema }),
   NoteController.getAll
 );
 
@@ -60,6 +49,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: setTagsBodySchema,
   }),
   NoteController.setTags

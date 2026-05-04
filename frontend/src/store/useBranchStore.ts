@@ -7,6 +7,7 @@ import {
   setActiveBranchId as setStoredActiveBranchId,
   clearActiveBranchId as clearStoredActiveBranchId,
 } from './branchStorage';
+import { useProjectStore } from './useProjectStore';
 
 interface BranchState {
   branches: ScenarioBranch[];
@@ -16,7 +17,8 @@ interface BranchState {
   initialized: boolean;
   error: string | null;
   fetchBranches: (projectId: number) => Promise<void>;
-  setActiveBranchId: (branchId: number | null) => void;
+  /** Persist to per-project storage using explicit projectId, activeProjectId from fetchBranches, or current project from project store. */
+  setActiveBranchId: (branchId: number | null, projectId?: number | null) => void;
   clearError: () => void;
   reset: () => void;
 }
@@ -55,15 +57,19 @@ export const useBranchStore = create<BranchState>((set) => ({
       });
     }
   },
-  setActiveBranchId: (branchId) => {
+  setActiveBranchId: (branchId, explicitProjectId) => {
     set((state) => {
-      const projectId = state.activeProjectId;
-      if (!projectId) return { activeBranchId: branchId };
+      const projectId =
+        explicitProjectId !== undefined && explicitProjectId !== null
+          ? explicitProjectId
+          : state.activeProjectId ?? useProjectStore.getState().currentProject?.id ?? null;
 
-      if (branchId) {
-        setStoredActiveBranchId(projectId, branchId);
-      } else {
-        clearStoredActiveBranchId(projectId);
+      if (typeof projectId === 'number' && projectId > 0) {
+        if (branchId) {
+          setStoredActiveBranchId(projectId, branchId);
+        } else {
+          clearStoredActiveBranchId(projectId);
+        }
       }
 
       return { activeBranchId: branchId };

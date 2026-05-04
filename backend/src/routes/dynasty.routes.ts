@@ -13,7 +13,7 @@ import {
   updateDynastyEventSchema,
   reorderDynastyEventsSchema,
 } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
+import { idParamsSchema, setTagsBodySchema, optionalBranchIdQuerySchema } from './commonSchemas.js';
 
 const router = Router();
 const upload = createDiskUpload({
@@ -39,6 +39,7 @@ const eventParamsSchema = z.object({
 
 const getAllQuerySchema = z.object({
   projectId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
   search: z.string().optional(),
   status: z.string().optional(),
   limit: z.coerce.number().int().positive().optional(),
@@ -64,13 +65,15 @@ router.get(
 
 router.get(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   DynastyController.getById
 );
 
 router.post(
   '/',
-  validateRequest({ body: createDynastySchema }),
+  validateRequest({
+    body: createDynastySchema.extend({ branchId: z.number().int().positive().optional() }),
+  }),
   DynastyController.create
 );
 
@@ -78,21 +81,21 @@ router.put(
   '/:id',
   validateRequest({
     params: idParamsSchema,
-    body: updateDynastySchema,
+    body: updateDynastySchema.extend({ branchId: z.number().int().positive().optional() }),
   }),
   DynastyController.update
 );
 
 router.delete(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   DynastyController.delete
 );
 
 // Image
 router.post(
   '/:id/image',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   upload.single('image'),
   DynastyController.uploadImage
 );
@@ -102,6 +105,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: setTagsBodySchema,
   }),
   DynastyController.setTags
@@ -112,6 +116,7 @@ router.post(
   '/:id/members',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: createDynastyMemberSchema.omit({ dynastyId: true }),
   }),
   DynastyController.addMember
@@ -121,6 +126,7 @@ router.put(
   '/:id/members/:memberId',
   validateRequest({
     params: memberParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: updateDynastyMemberSchema,
   }),
   DynastyController.updateMember
@@ -128,7 +134,7 @@ router.put(
 
 router.delete(
   '/:id/members/:memberId',
-  validateRequest({ params: memberParamsSchema }),
+  validateRequest({ params: memberParamsSchema, query: optionalBranchIdQuerySchema }),
   DynastyController.removeMember
 );
 
@@ -137,6 +143,7 @@ router.put(
   '/:id/graph-positions',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: saveGraphPositionsSchema,
   }),
   DynastyController.saveGraphPositions
@@ -147,6 +154,7 @@ router.post(
   '/:id/family-links',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: createDynastyRelationSchema.omit({ dynastyId: true }),
   }),
   DynastyController.addFamilyLink
@@ -154,7 +162,7 @@ router.post(
 
 router.delete(
   '/:id/family-links/:linkId',
-  validateRequest({ params: linkParamsSchema }),
+  validateRequest({ params: linkParamsSchema, query: optionalBranchIdQuerySchema }),
   DynastyController.deleteFamilyLink
 );
 
@@ -163,6 +171,7 @@ router.post(
   '/:id/events/reorder',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: reorderDynastyEventsSchema,
   }),
   DynastyController.reorderEvents
@@ -172,6 +181,7 @@ router.post(
   '/:id/events',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: createDynastyEventSchema.omit({ dynastyId: true }),
   }),
   DynastyController.addEvent
@@ -181,6 +191,7 @@ router.put(
   '/:id/events/:eventId',
   validateRequest({
     params: eventParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: updateDynastyEventSchema,
   }),
   DynastyController.updateEvent
@@ -188,7 +199,7 @@ router.put(
 
 router.delete(
   '/:id/events/:eventId',
-  validateRequest({ params: eventParamsSchema }),
+  validateRequest({ params: eventParamsSchema, query: optionalBranchIdQuerySchema }),
   DynastyController.deleteEvent
 );
 

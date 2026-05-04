@@ -90,6 +90,7 @@ import {
   politicalScaleAssignmentUpsertRowSchema,
   putPoliticalScaleAssignmentsBodySchema,
 } from '../schemas/political-scale.schema.js';
+import type { GraphLayoutDataV1 } from '../schemas/graphLayout.schema.js';
 import {
   createDynastySchema,
   updateDynastySchema,
@@ -532,6 +533,23 @@ export interface ImportedProjectPayload {
     importance: string;
     sortOrder: number;
     createdAt: string;
+  }>;
+  /** Present in export v2.1+. Used to restore scenario branches on import. */
+  scenarioBranches?: Array<{
+    id: number;
+    projectId: number;
+    name: string;
+    parentBranchId: number | null;
+    baseRevision: number;
+    isMain: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  /** Present in export v2.1+. Branch-local graph canvas layouts. */
+  graphLayouts?: Array<{
+    branchId: number;
+    graphType: string;
+    layoutData: GraphLayoutDataV1;
   }>;
 }
 

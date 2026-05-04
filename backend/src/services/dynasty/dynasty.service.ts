@@ -1,6 +1,13 @@
 import { getDb } from '../../db/connection.js';
 import { BadRequestError, NotFoundError } from '../../middleware/errorHandler.js';
 import { buildUpdateQuery, ensureEntityExists } from '../../utils/dbHelpers.js';
+import {
+  branchEntityVisibilitySql,
+  effectiveBranchIdForRead,
+  isEntityVisibleInBranch,
+  resolveCreatedBranchId,
+  assertBranchBelongsToProject,
+} from '../branchScope.js';
 import type {
   DynastyFilters,
   CountRow,
@@ -29,9 +36,12 @@ import {
 } from './dynasty.mappers.js';
 
 export class DynastyService {
-  static getAll(projectId: number, params: DynastyFilters = {}) {
+  static getAll(projectId: number, params: DynastyFilters = {}, branchId?: number) {
     const db = getDb();
     const { search, status, limit = 50, offset = 0 } = params;
+
+    const viewBranch = effectiveBranchIdForRead(projectId, branchId);
+    const scope = branchEntityVisibilitySql(projectId, viewBranch, 'd.created_branch_id', 'd.created_at');
 
     let where = 'WHERE d.project_id = ?';
     const args: Array<number | string> = [projectId];
@@ -44,6 +54,9 @@ export class DynastyService {
       where += ' AND (d.name LIKE ? OR d.motto LIKE ?)';
       args.push(`%${search}%`, `%${search}%`);
     }
+
+    where += scope.sql;
+    args.push(...scope.params);
 
     const totalRow = db.prepare(`SELECT COUNT(*) as count FROM dynasties d ${where}`).get(...args) as CountRow;
 
@@ -62,7 +75,7 @@ export class DynastyService {
     };
   }
 
-  static getById(id: number) {
+  static getById(id: number, branchId?: number) {
     const db = getDb();
 
     const row = db.prepare(`
@@ -72,6 +85,11 @@ export class DynastyService {
     `).get(id) as DynastyRow | undefined;
 
     if (!row) throw new NotFoundError('Dynasty');
+
+    const vb = effectiveBranchIdForRead(row.project_id, branchId);
+    if (!isEntityVisibleInBranch(row.project_id, vb, row.created_branch_id, row.created_at)) {
+      throw new NotFoundError('Dynasty');
+    }
 
     const dynasty = mapDynastyRow(row) as ReturnType<typeof mapDynastyRow> & {
       members?: ReturnType<typeof mapDynastyMember>[];
@@ -124,44 +142,50 @@ export class DynastyService {
     return dynasty;
   }
 
-  static create(data: DynastyCreateData) {
+  static create(data: DynastyCreateData, requestBranchId?: number) {
     const db = getDb();
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, data.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
     const result = db.prepare(`
       INSERT INTO dynasties (
         project_id, name, motto, description, history, status, color, secondary_color,
-        founded_date, extinct_date, founder_id, current_leader_id, heir_id, linked_faction_id, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        founded_date, extinct_date, founder_id, current_leader_id, heir_id, linked_faction_id, sort_order, created_branch_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.projectId, data.name, data.motto || '', data.description || '',
       data.history || '', data.status || 'active', data.color || '',
       data.secondaryColor || '', data.foundedDate || '', data.extinctDate || '',
       data.founderId || null, data.currentLeaderId || null,
-      data.heirId || null, data.linkedFactionId || null, data.sortOrder || 0
+      data.heirId || null, data.linkedFactionId || null, data.sortOrder || 0,
+      createdBranchId,
     );
-    return this.getById(result.lastInsertRowid as number);
+    const viewBranch = requestBranchId ?? effectiveBranchIdForRead(data.projectId, undefined);
+    return this.getById(result.lastInsertRowid as number, viewBranch);
   }
 
-  static update(id: number, data: DynastyUpdateData) {
-    this.getById(id);
+  static update(id: number, data: DynastyUpdateData, branchId?: number) {
+    this.getById(id, branchId);
     buildUpdateQuery('dynasties', DYNASTY_UPDATE_MAP, data as Record<string, unknown>, id);
-    return this.getById(id);
+    return this.getById(id, branchId);
   }
 
-  static delete(id: number) {
-    this.getById(id);
+  static delete(id: number, branchId?: number) {
+    this.getById(id, branchId);
     getDb().prepare('DELETE FROM dynasties WHERE id = ?').run(id);
   }
 
-  static uploadImage(id: number, imagePath: string) {
-    this.getById(id);
+  static uploadImage(id: number, imagePath: string, branchId?: number) {
+    this.getById(id, branchId);
     getDb().prepare(`UPDATE dynasties SET image_path = ?, updated_at = datetime('now') WHERE id = ?`).run(imagePath, id);
-    return this.getById(id);
+    return this.getById(id, branchId);
   }
 
   // ==================== Members ====================
 
-  static addMember(dynastyId: number, data: DynastyMemberCreateData) {
-    this.getById(dynastyId);
+  static addMember(dynastyId: number, data: DynastyMemberCreateData, branchId?: number) {
+    this.getById(dynastyId, branchId);
     const db = getDb();
     const result = db.prepare(`
       INSERT INTO dynasty_members (dynasty_id, character_id, generation, role, birth_date, death_date, is_main_line, notes)
@@ -193,8 +217,8 @@ export class DynastyService {
 
   // ==================== Family Links ====================
 
-  static addFamilyLink(dynastyId: number, data: DynastyFamilyLinkCreateData) {
-    this.getById(dynastyId);
+  static addFamilyLink(dynastyId: number, data: DynastyFamilyLinkCreateData, branchId?: number) {
+    this.getById(dynastyId, branchId);
     const result = getDb().prepare(`
       INSERT INTO dynasty_family_links (dynasty_id, source_character_id, target_character_id, relation_type, custom_label)
       VALUES (?, ?, ?, ?, ?)
@@ -220,8 +244,8 @@ export class DynastyService {
 
   // ==================== Events ====================
 
-  static addEvent(dynastyId: number, data: DynastyEventCreateData) {
-    this.getById(dynastyId);
+  static addEvent(dynastyId: number, data: DynastyEventCreateData, branchId?: number) {
+    this.getById(dynastyId, branchId);
     const result = getDb().prepare(`
       INSERT INTO dynasty_events (dynasty_id, title, description, event_date, importance, sort_order)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -246,8 +270,8 @@ export class DynastyService {
     return mapDynastyEvent(event);
   }
 
-  static reorderEvents(dynastyId: number, orderedIds: number[]): void {
-    this.getById(dynastyId);
+  static reorderEvents(dynastyId: number, orderedIds: number[], branchId?: number): void {
+    this.getById(dynastyId, branchId);
 
     const db = getDb();
     const placeholders = orderedIds.map(() => '?').join(',');
@@ -269,8 +293,12 @@ export class DynastyService {
 
   // ==================== Graph Layout ====================
 
-  static saveGraphPositions(dynastyId: number, positions: { characterId: number; graphX: number; graphY: number }[]) {
-    this.getById(dynastyId);
+  static saveGraphPositions(
+    dynastyId: number,
+    positions: { characterId: number; graphX: number; graphY: number }[],
+    branchId?: number,
+  ) {
+    this.getById(dynastyId, branchId);
     const db = getDb();
     const stmt = db.prepare(`UPDATE dynasty_members SET graph_x = ?, graph_y = ? WHERE dynasty_id = ? AND character_id = ?`);
     db.transaction(() => { for (const pos of positions) stmt.run(pos.graphX, pos.graphY, dynastyId, pos.characterId); })();

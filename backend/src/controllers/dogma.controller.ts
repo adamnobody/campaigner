@@ -50,10 +50,7 @@ export class DogmaController {
 
   static create = asyncHandler(async (req: Request, res: Response) => {
     const branchId = DogmaController.parseBranchId(req.body?.branchId);
-    if (branchId) {
-      throw new BadRequestError('Branch-local dogma create is not supported in MVP');
-    }
-    const dogma = DogmaService.create(req.body);
+    const dogma = DogmaService.create(req.body, branchId);
     return created(res, dogma);
   });
 
@@ -91,7 +88,8 @@ export class DogmaController {
 
   static setTags = asyncHandler(async (req: Request, res: Response) => {
     const id = parseId(req.params.id, 'dogma id');
-    const dogma = DogmaService.getById(id);
+    const branchId = DogmaController.parseBranchId(req.query.branchId);
+    const dogma = DogmaService.getById(id, branchId);
     const tagIds = req.body?.tagIds;
 
     if (!Array.isArray(tagIds)) {

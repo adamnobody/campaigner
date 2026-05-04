@@ -6,7 +6,7 @@ import {
   createTimelineEventSchema,
   updateTimelineEventSchema,
 } from '@campaigner/shared';
-import { idParamsSchema, setTagsBodySchema } from './commonSchemas.js';
+import { idParamsSchema, setTagsBodySchema, optionalBranchIdQuerySchema } from './commonSchemas.js';
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.get(
 
 router.get(
   '/:id',
-  validateRequest({ params: idParamsSchema }),
+  validateRequest({ params: idParamsSchema, query: optionalBranchIdQuerySchema }),
   TimelineController.getById
 );
 
@@ -69,6 +69,7 @@ router.put(
   '/:id/tags',
   validateRequest({
     params: idParamsSchema,
+    query: optionalBranchIdQuerySchema,
     body: setTagsBodySchema,
   }),
   TimelineController.setTags

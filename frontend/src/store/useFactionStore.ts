@@ -21,6 +21,17 @@ import type {
 import type { FactionsListParams } from '@/api/types';
 import { getErrorMessage } from '@/utils/error';
 
+function factionProjectId(get: () => FactionState, factionId: number): number {
+  const st = get();
+  const pid =
+    st.factions.find((f) => f.id === factionId)?.projectId ??
+    (st.currentFaction?.id === factionId ? st.currentFaction.projectId : undefined);
+  if (!pid) {
+    throw new Error('Missing project context for faction request');
+  }
+  return pid;
+}
+
 interface FactionState {
   factions: Faction[];
   total: number;
@@ -32,7 +43,7 @@ interface FactionState {
   relations: FactionRelation[];
 
   fetchFactions: (projectId: number, params?: FactionsListParams) => Promise<void>;
-  fetchFaction: (id: number) => Promise<Faction>;
+  fetchFaction: (projectId: number, id: number) => Promise<Faction>;
   createFaction: (data: CreateFaction) => Promise<Faction>;
   updateFaction: (id: number, data: UpdateFaction) => Promise<Faction>;
   deleteFaction: (id: number) => Promise<void>;
@@ -96,10 +107,10 @@ export const useFactionStore = create<FactionState>((set, get) => ({
     }
   },
 
-  fetchFaction: async (id) => {
+  fetchFaction: async (projectId, id) => {
     set({ loading: true, error: null });
     try {
-      const res = await factionsApi.getById(id);
+      const res = await factionsApi.getById(id, projectId);
       const faction = res.data.data;
       set({ currentFaction: faction });
       return faction;
@@ -130,7 +141,8 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   updateFaction: async (id, data) => {
     set({ error: null });
     try {
-      const res = await factionsApi.update(id, data);
+      const projectId = factionProjectId(get, id);
+      const res = await factionsApi.update(id, data, projectId);
       const updated = res.data.data;
       set(state => ({
         factions: state.factions.map(f => f.id === id ? updated : f),
@@ -146,7 +158,8 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   deleteFaction: async (id) => {
     set({ error: null });
     try {
-      await factionsApi.delete(id);
+      const projectId = factionProjectId(get, id);
+      await factionsApi.delete(id, projectId);
       set(state => ({
         factions: state.factions.filter(f => f.id !== id),
         total: state.total - 1,
@@ -161,7 +174,8 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   uploadImage: async (id, file) => {
     set({ error: null });
     try {
-      const res = await factionsApi.uploadImage(id, file);
+      const projectId = factionProjectId(get, id);
+      const res = await factionsApi.uploadImage(id, file, projectId);
       const updated = res.data.data;
       set(state => ({
         currentFaction: state.currentFaction?.id === id ? updated : state.currentFaction,
@@ -177,7 +191,8 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   uploadBanner: async (id, file) => {
     set({ error: null });
     try {
-      const res = await factionsApi.uploadBanner(id, file);
+      const projectId = factionProjectId(get, id);
+      const res = await factionsApi.uploadBanner(id, file, projectId);
       const updated = res.data.data;
       set(state => ({
         currentFaction: state.currentFaction?.id === id ? updated : state.currentFaction,
@@ -192,9 +207,10 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   setTags: async (id, tagIds) => {
     set({ error: null });
     try {
-      await factionsApi.setTags(id, tagIds);
+      const projectId = factionProjectId(get, id);
+      await factionsApi.setTags(id, tagIds, projectId);
       // Refetch to update tags
-      const res = await factionsApi.getById(id);
+      const res = await factionsApi.getById(id, projectId);
       const updated = res.data.data;
       set(state => ({
         currentFaction: state.currentFaction?.id === id ? updated : state.currentFaction,
@@ -210,9 +226,10 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   createRank: async (factionId, data) => {
     set({ error: null });
     try {
-      const res = await factionsApi.createRank(factionId, data);
+      const projectId = factionProjectId(get, factionId);
+      const res = await factionsApi.createRank(factionId, data, projectId);
       const rank = res.data.data;
-      const fRes = await factionsApi.getById(factionId);
+      const fRes = await factionsApi.getById(factionId, projectId);
       const refreshed = fRes.data.data;
       set(state => ({
         currentFaction: refreshed,
@@ -228,9 +245,10 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   updateRank: async (factionId, rankId, data) => {
     set({ error: null });
     try {
-      const res = await factionsApi.updateRank(factionId, rankId, data);
+      const projectId = factionProjectId(get, factionId);
+      const res = await factionsApi.updateRank(factionId, rankId, data, projectId);
       const rank = res.data.data;
-      const fRes = await factionsApi.getById(factionId);
+      const fRes = await factionsApi.getById(factionId, projectId);
       const refreshed = fRes.data.data;
       set(state => ({
         currentFaction: refreshed,
@@ -246,8 +264,9 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   deleteRank: async (factionId, rankId) => {
     set({ error: null });
     try {
-      await factionsApi.deleteRank(factionId, rankId);
-      const fRes = await factionsApi.getById(factionId);
+      const projectId = factionProjectId(get, factionId);
+      await factionsApi.deleteRank(factionId, rankId, projectId);
+      const fRes = await factionsApi.getById(factionId, projectId);
       const refreshed = fRes.data.data;
       set(state => ({
         currentFaction: refreshed,
@@ -263,9 +282,10 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   addMember: async (factionId, data) => {
     set({ error: null });
     try {
-      const res = await factionsApi.addMember(factionId, data);
+      const projectId = factionProjectId(get, factionId);
+      const res = await factionsApi.addMember(factionId, data, projectId);
       const member = res.data.data;
-      const fRes = await factionsApi.getById(factionId);
+      const fRes = await factionsApi.getById(factionId, projectId);
       const refreshed = fRes.data.data;
       set(state => ({
         currentFaction: refreshed,
@@ -281,9 +301,10 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   updateMember: async (factionId, memberId, data) => {
     set({ error: null });
     try {
+      const projectId = factionProjectId(get, factionId);
       const res = await factionsApi.updateMember(factionId, memberId, data);
       const member = res.data.data;
-      const fRes = await factionsApi.getById(factionId);
+      const fRes = await factionsApi.getById(factionId, projectId);
       const refreshed = fRes.data.data;
       set(state => ({
         currentFaction: refreshed,
@@ -299,8 +320,9 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   removeMember: async (factionId, memberId) => {
     set({ error: null });
     try {
+      const projectId = factionProjectId(get, factionId);
       await factionsApi.removeMember(factionId, memberId);
-      const fRes = await factionsApi.getById(factionId);
+      const fRes = await factionsApi.getById(factionId, projectId);
       const refreshed = fRes.data.data;
       set(state => ({
         currentFaction: refreshed,
@@ -315,7 +337,8 @@ export const useFactionStore = create<FactionState>((set, get) => ({
   replaceCustomMetrics: async (factionId, data) => {
     set({ error: null });
     try {
-      const res = await factionsApi.replaceCustomMetrics(factionId, data);
+      const projectId = factionProjectId(get, factionId);
+      const res = await factionsApi.replaceCustomMetrics(factionId, data, projectId);
       const metrics = res.data.data || [];
       set((state) => ({
         currentFaction: state.currentFaction?.id === factionId

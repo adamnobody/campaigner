@@ -31,6 +31,7 @@ import { CreateProjectDialog } from '@/pages/home/components/CreateProjectDialog
 import { EmptyStateIllustration } from '@/pages/home/components/HomePrimitives';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { isSupportedLanguage } from '@/i18n/language';
 
 const HOME_PANEL_POSITION_STORAGE_KEY = 'campaigner.homePanelPosition.v1';
 const DEFAULT_PANEL_OFFSET = { x: 0, y: 0 };
@@ -52,7 +53,7 @@ const readStoredPanelOffset = () => {
 export const HomePage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { t } = useTranslation(['projects', 'common']);
+  const { t, i18n } = useTranslation(['projects', 'common']);
   const { projects, loading, fetchProjects, createProject, deleteProject } = useProjectStore((state) => ({
     projects: state.projects,
     loading: state.loading,
@@ -181,7 +182,11 @@ export const HomePage: React.FC = () => {
   }, [panelOffset]);
 
   const handleCreateSubmit = async (name: string, description: string) => {
-    const project = await createProject({ name, description });
+    const project = await createProject({
+      name,
+      description,
+      mainBranchName: t('projects:defaultMainBranchName'),
+    });
     setCreateDialogOpen(false);
     showSnackbar(t('projects:snackbar.created'), 'success');
     navigate(`/project/${project.id}/map`);
@@ -223,7 +228,8 @@ export const HomePage: React.FC = () => {
           return;
         }
 
-        const res = await projectsApi.importProject(importPayload);
+        const locale = isSupportedLanguage(i18n.language) ? i18n.language : 'en';
+        const res = await projectsApi.importProject(importPayload, { locale });
         showSnackbar(t('projects:snackbar.imported', { name: res.data.data.name }), 'success');
         fetchProjects();
         navigate(`/project/${res.data.data.id}/map`);
@@ -241,7 +247,8 @@ export const HomePage: React.FC = () => {
 
   const handleCreateTutorialProject = async () => {
     try {
-      const res = await projectsApi.createDemoProject();
+      const locale = isSupportedLanguage(i18n.language) ? i18n.language : 'en';
+      const res = await projectsApi.createDemoProject({ locale });
       const project = res.data.data;
       showSnackbar(t('projects:snackbar.tutorialCreated'), 'success');
       startOnboarding(project.id);

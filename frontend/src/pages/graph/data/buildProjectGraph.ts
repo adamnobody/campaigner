@@ -64,7 +64,7 @@ export const buildProjectGraph = async (
   const dynastyDetails = await Promise.all(
     dynasties.slice(0, 80).map(async (dynasty: { id: number }) => {
       try {
-        const res = await dynastiesApi.getById(dynasty.id);
+        const res = await dynastiesApi.getById(dynasty.id, projectId);
         return res.data.data;
       } catch {
         return null;

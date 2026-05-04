@@ -5,6 +5,7 @@ import type {
   UpdateProject,
   ImportedProjectPayload,
 } from '@campaigner/shared';
+import type { AppLanguage } from '@/i18n/types';
 import { apiClient } from './client';
 
 export const projectsApi = {
@@ -21,6 +22,11 @@ export const projectsApi = {
     });
   },
   exportProject: (id: number) => apiClient.get<Blob>(`/projects/${id}/export`, { responseType: 'blob' }),
-  importProject: (data: ImportedProjectPayload) => apiClient.post<ApiResponse<Project>>('/projects/import', data),
-  createDemoProject: () => apiClient.post<ApiResponse<Project>>('/projects/demo'),
+  importProject: (data: ImportedProjectPayload, opts?: { locale?: AppLanguage }) =>
+    apiClient.post<ApiResponse<Project>>('/projects/import', {
+      ...data,
+      ...(opts?.locale ? { importLocale: opts.locale } : {}),
+    }),
+  createDemoProject: (body?: { locale?: AppLanguage }) =>
+    apiClient.post<ApiResponse<Project>>('/projects/demo', body ?? {}),
 };
