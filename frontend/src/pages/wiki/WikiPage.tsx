@@ -364,7 +364,7 @@ export const WikiPage: React.FC = () => {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {filteredNotes.length} из {notes.length}
+                {t('wiki:page.countShown', { filtered: filteredNotes.length, total: notes.length })}
               </Typography>
 
               {hasFilters && (

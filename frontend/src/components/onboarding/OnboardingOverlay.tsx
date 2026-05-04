@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Backdrop, Box, Button, Paper, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { onboardingSteps } from './onboardingSteps';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 
 export const OnboardingOverlay: React.FC = () => {
+  const { t } = useTranslation(['onboarding', 'common']);
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -49,8 +51,11 @@ export const OnboardingOverlay: React.FC = () => {
     };
   }, [activeProjectId, isActive, location.pathname, navigate, reducedMotion, step]);
 
-  const stepLabel = useMemo(
-    () => `${Math.min(stepIndex + 1, onboardingSteps.length)} / ${onboardingSteps.length}`,
+  const stepProgress = useMemo(
+    () => ({
+      current: Math.min(stepIndex + 1, onboardingSteps.length),
+      total: onboardingSteps.length,
+    }),
     [stepIndex]
   );
 
@@ -90,18 +95,20 @@ export const OnboardingOverlay: React.FC = () => {
         }}
       >
         <Typography variant="overline" color="text.secondary">
-          Обучение · Шаг {stepLabel}
+          {t('onboarding:overlay.title', stepProgress)}
         </Typography>
-        <Typography variant="h6" sx={{ mt: 0.5 }}>{step.title}</Typography>
+        <Typography variant="h6" sx={{ mt: 0.5 }}>
+          {t(`onboarding:steps.${step.id}.title`)}
+        </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.2 }}>
-          {step.description}
+          {t(`onboarding:steps.${step.id}.description`)}
         </Typography>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2.5 }}>
-          <Button color="inherit" onClick={stop}>Пропустить</Button>
+          <Button color="inherit" onClick={stop}>{t('common:skip')}</Button>
           {stepIndex >= onboardingSteps.length - 1 ? (
-            <Button variant="contained" onClick={finish}>Завершить</Button>
+            <Button variant="contained" onClick={finish}>{t('common:done')}</Button>
           ) : (
-            <Button variant="contained" onClick={nextStep}>Далее</Button>
+            <Button variant="contained" onClick={nextStep}>{t('common:next')}</Button>
           )}
         </Box>
       </Paper>

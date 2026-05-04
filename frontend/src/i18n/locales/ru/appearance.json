@@ -1,1 +1,319 @@
-{}
+{
+  "page": {
+    "title": "Настройки внешнего вида",
+    "subtitle": "Управляйте темой, прозрачностью, анимациями и фоном"
+  },
+  "actions": {
+    "resetStyle": "Сбросить стиль"
+  },
+  "applying": "Применяется…",
+  "paletteCompatibility": {
+    "ideal": {
+      "label": "Идеально",
+      "hint": "Палитра максимально раскрывает выбранный стиль."
+    },
+    "good": {
+      "label": "Хорошо",
+      "hint": "Сочетание стабильное, сохраняется характер стиля."
+    },
+    "experimental": {
+      "label": "Эксперимент",
+      "hint": "Работает, но стиль будет восприниматься нестандартно."
+    }
+  },
+  "chips": {
+    "activeStyle": "Активный стиль: {{name}}",
+    "palettePrefix": "Палитра: {{label}}"
+  },
+  "autoPalette": {
+    "label": "Автоприменять рекомендуемую палитру"
+  },
+  "recommendedPalette": "Рекомендовано: {{name}}",
+  "styleOnly": "Только стиль",
+  "sections": {
+    "interfaceType": {
+      "title": "Тип интерфейса",
+      "subtitle": "12 направлений: от Dark Fantasy до Scholar"
+    },
+    "colorTheme": {
+      "title": "Цветовая тема",
+      "subtitle": "{{count}} уникальных палитр",
+      "activeBadge": "АКТИВНА"
+    },
+    "addPalette": "Добавить",
+    "background": {
+      "title": "Фон главной страницы",
+      "subtitle": "Персонализируйте стартовый экран",
+      "imageUrl": "Ссылка на изображение",
+      "imageUrlPlaceholder": "https://example.com/background.jpg",
+      "imageHelper": "Можно вставить URL или загрузить файл ниже",
+      "uploadFile": "Загрузить файл",
+      "clearBackground": "Убрать фон",
+      "opacity": "Прозрачность фона",
+      "dropHint": "Перетащите изображение или используйте кнопку выше",
+      "previewTitle": "Главная страница Campaigner",
+      "chipSet": "✓ Фон установлен",
+      "chipUnset": "Не выбран"
+    },
+    "surfaces": {
+      "title": "Поверхности и материалы",
+      "subtitle": "Настройте текстуру интерфейса",
+      "panelStyle": "Стиль панелей",
+      "glass": "🪟 Стекло",
+      "solid": "🧱 Плотный",
+      "transparency": "Прозрачность",
+      "blur": "Размытие (Blur)",
+      "cornerRadius": "Радиус углов"
+    },
+    "typography": {
+      "title": "Типографика и ритм",
+      "subtitle": "Шрифты, плотность и движение",
+      "bodyFont": "Основной шрифт",
+      "serif": "Serif",
+      "sans": "Sans-Serif",
+      "custom": "Custom",
+      "uiDensity": "Плотность интерфейса",
+      "compact": "Компактно",
+      "comfortable": "Обычно",
+      "spacious": "Свободно",
+      "animations": "Анимации",
+      "motionFull": "✨ Плавные",
+      "motionReduced": "⚡ Минимальные"
+    },
+    "customFonts": {
+      "title": "Кастомные шрифты",
+      "subtitle": "Подключайте свои font-family и CSS URL",
+      "presetLabel": "Готовый пресет шрифта",
+      "cssUrl": "CSS URL шрифта (Google Fonts / свой CDN)",
+      "cssUrlPlaceholder": "https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap",
+      "cssHelper": "Ссылка будет подключена как &lt;link rel=\"stylesheet\"&gt;",
+      "bodyFamily": "font-family для основного текста",
+      "bodyPlaceholder": "\"Inter\", \"Roboto\", sans-serif",
+      "headingFamily": "font-family для заголовков",
+      "headingPlaceholder": "\"Cinzel\", serif",
+      "localHint": "Для локальных шрифтов положи файлы в <b>frontend/public/fonts</b>, затем укажи CSS, например: <code>/fonts/my-local-font.css</code> и family вроде <code>\"MyLocalFont\", serif</code>. При вводе значений режим автоматически переключается на <b>Custom</b>."
+    },
+    "patterns": {
+      "title": "Паттерны панелей и карточек",
+      "subtitle": "Сетка, точки, диагональ или ваш texture",
+      "panelLabel": "Паттерн панелей (Paper)",
+      "cardLabel": "Паттерн карточек (Card)",
+      "density": "Плотность/размер паттерна",
+      "opacity": "Прозрачность паттерна",
+      "panelUrl": "URL паттерна для панелей",
+      "cardUrl": "URL паттерна для карточек",
+      "uploadPanel": "Загрузить паттерн панелей",
+      "uploadCard": "Загрузить паттерн карточек",
+      "previewPanel": "Предпросмотр панелей (Paper)",
+      "previewCard": "Предпросмотр карточек",
+      "panelSample": "Panel Sample",
+      "cardSample": "Card Sample",
+      "cardSampleDesc": "Так будет выглядеть фон карточек с текущим паттерном."
+    },
+    "customThemes": {
+      "title": "Пользовательские темы",
+      "subtitle": "Сохраняйте и быстро переключайте свои настройки",
+      "nameLabel": "Название вашей темы",
+      "namePlaceholder": "Например: Ночная карта с текстурой",
+      "empty": "Пока нет сохраненных тем. Настройте стиль и нажмите «Сохранить».",
+      "active": "Активна",
+      "apply": "Применить"
+    },
+    "currentParams": {
+      "title": "Текущие параметры",
+      "subtitle": "Все активные настройки",
+      "footerNote": "Эти настройки применяются ко всему приложению и сохраняются локально в браузере."
+    },
+    "recommendations": {
+      "title": "Рекомендации",
+      "subtitle": "Советы от дизайнера",
+      "tips": {
+        "palettes": "Для строгого интерфейса лучше подходят **Obsidian Gold** и **Midnight Cyan**.",
+        "lessGlass": "Если хочется меньше «стекла» — переключи режим поверхности на **Плотный**.",
+        "darkArt": "Для фонового изображения лучше использовать **тёмные, не слишком контрастные** арты.",
+        "busyBg": "Если фон слишком активный — опусти его **прозрачность до 20–45%**.",
+        "cinematic": "Для более кинематографичного вида хорошо работает **blur 10–16** и **прозрачность 65–78%**."
+      }
+    }
+  },
+  "patternModes": {
+    "none": "Нет",
+    "dots": "Точки",
+    "grid": "Сетка",
+    "diagonal": "Диагональ",
+    "custom": "Custom"
+  },
+  "summary": {
+    "on": "Вкл",
+    "off": "Выкл",
+    "yes": "Да",
+    "no": "Нет",
+    "labels": {
+      "interfaceType": "Тип интерфейса",
+      "autoPalette": "Автопалитра",
+      "paletteMatch": "Совм. палитры",
+      "preset": "Пресет",
+      "surface": "Поверхность",
+      "font": "Шрифт",
+      "density": "Плотность",
+      "animations": "Анимации",
+      "transparency": "Прозрачность",
+      "blur": "Blur",
+      "cornerRadius": "Радиус углов",
+      "customFont": "Шрифт custom",
+      "patternPaper": "Паттерн Paper",
+      "patternCard": "Паттерн Card",
+      "savedThemes": "Сохраненных тем",
+      "homeBg": "Фон главной",
+      "homeBgOpacity": "Прозрачность фона"
+    }
+  },
+  "themePresets": {
+    "obsidian-gold": { "label": "Obsidian Gold" },
+    "midnight-cyan": { "label": "Midnight Cyan" },
+    "royal-violet": { "label": "Royal Violet" },
+    "ember-crimson": { "label": "Ember Crimson" },
+    "forest-emerald": { "label": "Forest Emerald" },
+    "moonstone-silver": { "label": "Moonstone Silver" },
+    "sable-rose": { "label": "Sable Rose" },
+    "deep-amber": { "label": "Deep Amber" },
+    "storm-indigo": { "label": "Storm Indigo" },
+    "ashen-teal": { "label": "Ashen Teal" },
+    "neon-magenta": { "label": "Neon Magenta" },
+    "verdant-lime": { "label": "Verdant Lime" },
+    "brass-smoke": { "label": "Brass Smoke" },
+    "parchment-ivory": { "label": "Parchment Ivory" }
+  },
+  "fontPresets": {
+    "default-inter-cinzel": { "label": "Inter + Cinzel (по умолчанию)" },
+    "kode-mono": { "label": "Kode Mono (Google Fonts)" },
+    "playfair": { "label": "Playfair Display + Inter" },
+    "cinzel-crimson": { "label": "Cinzel + Crimson Text" },
+    "gothic-noir": { "label": "Gothic Noir (UnifrakturCook + Cormorant)" },
+    "fantasy-realm": { "label": "Fantasy Realm (MedievalSharp + Marcellus)" },
+    "scifi-terminal": { "label": "Sci‑Fi Terminal (Orbitron + Rajdhani)" },
+    "handwritten-journal": { "label": "Handwritten Journal (Caveat + Patrick Hand)" },
+    "arcane-spectral": { "label": "Arcane Spectral (Philosopher + Spectral)" },
+    "imperial-serif": { "label": "Imperial Serif (Playfair Display + Source Serif 4)" },
+    "holo-tech": { "label": "Holo Tech (Chakra Petch + Sora)" },
+    "industrial-condensed": { "label": "Industrial Condensed (Space Grotesk + IBM Plex Sans Condensed)" },
+    "noir-print": { "label": "Noir Print (Libre Baskerville + Source Sans 3)" },
+    "solar-clean": { "label": "Solar Clean (Manrope + Nunito)" },
+    "local-template": { "label": "Локальный шрифт из /public/fonts" }
+  },
+  "interfaceStyles": {
+    "dark-fantasy": {
+      "label": "Dark Fantasy",
+      "shortDescription": "Мрачный кинематографичный стиль для лора и карт.",
+      "spotlight": "Глубокие тени, serif-заголовки и мягкий золотой акцент."
+    },
+    "high-fantasy": {
+      "label": "High Fantasy",
+      "shortDescription": "Более светлый эпичный стиль с акцентом на легендарность.",
+      "spotlight": "Воздушные панели, мягкие свечения и выразительная типографика."
+    },
+    "sci-fi": {
+      "label": "Sci-Fi",
+      "shortDescription": "Чистый технологичный интерфейс для аналитики и данных.",
+      "spotlight": "Геометрия, четкие границы и умеренная динамика."
+    },
+    "cyberpunk": {
+      "label": "Cyberpunk",
+      "shortDescription": "Высокий контраст, неон и агрессивные акцентные элементы.",
+      "spotlight": "Яркие сигналы, плотная сетка и напряженный визуальный ритм."
+    },
+    "solarpunk": {
+      "label": "Solarpunk",
+      "shortDescription": "Оптимистичный экологичный стиль с мягкой технологичностью.",
+      "spotlight": "Натуральные оттенки, воздушная сетка и спокойная динамика."
+    },
+    "steampunk": {
+      "label": "Steampunk",
+      "shortDescription": "Индустриальная ретро-эстетика и материальные фактуры.",
+      "spotlight": "Латунные акценты, плотные панели и отчетливые контуры."
+    },
+    "noir-detective": {
+      "label": "Noir Detective",
+      "shortDescription": "Строгий темный минимализм для фокуса на содержании.",
+      "spotlight": "Почти монохром, минимум шума и строгий контраст."
+    },
+    "arcane-mystic": {
+      "label": "Arcane Mystic",
+      "shortDescription": "Магический стиль с сиянием и мягкими градиентами.",
+      "spotlight": "Фиолетово-лазурные свечения и плавные акценты."
+    },
+    "imperial-chronicle": {
+      "label": "Imperial Chronicle",
+      "shortDescription": "Официальный архивный стиль для энциклопедии мира.",
+      "spotlight": "Стабильная читаемость, аккуратные границы и строгий ритм."
+    },
+    "industrial-brutal": {
+      "label": "Industrial Brutal",
+      "shortDescription": "Утилитарный и плотный интерфейс без декоративности.",
+      "spotlight": "Плотные блоки, минимум скруглений и четкая иерархия."
+    },
+    "holographic": {
+      "label": "Holographic",
+      "shortDescription": "Стеклянные панели с холодными переливами и глубиной.",
+      "spotlight": "Полупрозрачные слои и контурные акценты интерфейса."
+    },
+    "scholar-manuscript": {
+      "label": "Scholar Manuscript",
+      "shortDescription": "Спокойный документный стиль для чтения и заметок.",
+      "spotlight": "Теплый характер, умеренный контраст и минимум анимации."
+    }
+  },
+  "preview": {
+    "title": "Превью",
+    "liveBadge": "LIVE",
+    "sampleTitle": "Башня Архимага",
+    "sampleBody": "Древняя башня, скрытая среди туманных скал. Внутри хранятся карты, записи экспедиций и забытые трактаты о магии.",
+    "tag1": "Локация",
+    "tag2": "Магия",
+    "tag3": "Тайна",
+    "open": "Открыть",
+    "details": "Подробнее"
+  },
+  "createDialog": {
+    "titleCreate": "Создание цветовой темы",
+    "titleEdit": "Редактирование цветовой темы",
+    "subtitle": "Настройте базовые цвета, проверьте предпросмотр и сохраните палитру в общий список.",
+    "themeName": "Название темы",
+    "namePlaceholder": "Например, Royal Violet",
+    "nameError": "Название не может быть пустым.",
+    "quickPresets": "Быстрые пресеты",
+    "quickPresetNames": {
+      "violet": "Royal Violet",
+      "emerald": "Emerald Grove",
+      "rose": "Rose Ember",
+      "amber": "Amber Forge",
+      "slate": "Slate Archive"
+    },
+    "fields": {
+      "background": {
+        "title": "Фон",
+        "description": "Основной тёмный цвет интерфейса."
+      },
+      "accent": {
+        "title": "Акцент",
+        "description": "Цвет активных кнопок и выделений."
+      },
+      "text": {
+        "title": "Текст",
+        "description": "Основной цвет заголовков и контента."
+      }
+    },
+    "hexPlaceholder": "#RRGGBB",
+    "invalidHex": "Неверный HEX",
+    "livePreview": "Live Preview",
+    "newThemeFallback": "Новая тема",
+    "previewCardLine": "Пример карточки интерфейса с выбранными цветами темы.",
+    "previewProjectCard": "Карточка проекта",
+    "previewProjectDesc": "Краткое описание и статус проекта в вашей палитре.",
+    "primaryButton": "Основная кнопка",
+    "badgeSample": "Badge",
+    "lowContrast": "Низкий контраст: текст может быть плохо читаемым.",
+    "saveCreate": "Сохранить тему",
+    "saveEdit": "Сохранить изменения"
+  }
+}

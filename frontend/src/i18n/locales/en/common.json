@@ -20,5 +20,7 @@
   "import": "Import",
   "export": "Export",
   "back": "Back",
-  "next": "Next"
+  "next": "Next",
+  "skip": "Skip",
+  "done": "Done"
 }

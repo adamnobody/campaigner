@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Box,
@@ -103,6 +104,7 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
   mode = 'create',
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['appearance', 'common']);
   const [values, setValues] = React.useState<CreateColorThemeValues>(INITIAL_VALUES);
 
   React.useEffect(() => {
@@ -127,8 +129,9 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
   const isLowContrast = contrast !== null && contrast < 4.5;
 
   const applyPreset = (preset: PalettePreset) => {
+    const displayName = t(`appearance:createDialog.quickPresetNames.${preset.key}`);
     setValues((prev) => ({
-      name: prev.name.trim() ? prev.name : preset.name,
+      name: prev.name.trim() ? prev.name : displayName,
       background: preset.background,
       accent: preset.accent,
       text: preset.text,
@@ -166,10 +169,10 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
     >
       <DialogTitle sx={{ px: 3, pt: 3, pb: 1.5 }}>
         <Typography sx={{ fontSize: '1.15rem', fontWeight: 800, color: 'text.primary' }}>
-          {mode === 'edit' ? 'Редактирование цветовой темы' : 'Создание цветовой темы'}
+          {mode === 'edit' ? t('appearance:createDialog.titleEdit') : t('appearance:createDialog.titleCreate')}
         </Typography>
         <Typography sx={{ mt: 0.5, fontSize: '0.86rem', color: 'text.secondary' }}>
-          Настройте базовые цвета, проверьте предпросмотр и сохраните палитру в общий список.
+          {t('appearance:createDialog.subtitle')}
         </Typography>
       </DialogTitle>
       <DialogContent sx={{ px: 3, pb: 2 }}>
@@ -183,28 +186,28 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
           <Stack spacing={2.2}>
             <Box>
               <Typography sx={{ mb: 0.75, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
-                Название темы
+                {t('appearance:createDialog.themeName')}
               </Typography>
               <TextField
                 value={values.name}
                 onChange={(event) => updateField('name', event.target.value)}
                 fullWidth
-                placeholder="Например, Royal Violet"
+                placeholder={t('appearance:createDialog.namePlaceholder')}
                 error={!isNameValid && values.name.length > 0}
-                helperText={!isNameValid && values.name.length > 0 ? 'Название не может быть пустым.' : ' '}
+                helperText={!isNameValid && values.name.length > 0 ? t('appearance:createDialog.nameError') : ' '}
               />
             </Box>
 
             <Box>
               <Typography sx={{ mb: 1, fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
-                Быстрые пресеты
+                {t('appearance:createDialog.quickPresets')}
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {CUSTOM_PALETTE_PRESETS.map((preset) => (
                   <Chip
                     key={preset.key}
                     clickable
-                    label={preset.name.split(' ')[0]}
+                    label={t(`appearance:createDialog.quickPresetNames.${preset.key}`).split(' ')[0]}
                     onClick={() => applyPreset(preset)}
                     sx={{
                       border: `1px solid ${alpha(theme.palette.primary.main, 0.35)}`,
@@ -220,21 +223,15 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1.4 }}>
               {[
                 {
-                  key: 'background',
-                  title: 'Фон',
-                  description: 'Основной тёмный цвет интерфейса.',
+                  key: 'background' as const,
                   value: values.background,
                 },
                 {
-                  key: 'accent',
-                  title: 'Акцент',
-                  description: 'Цвет активных кнопок и выделений.',
+                  key: 'accent' as const,
                   value: values.accent,
                 },
                 {
-                  key: 'text',
-                  title: 'Текст',
-                  description: 'Основной цвет заголовков и контента.',
+                  key: 'text' as const,
                   value: values.text,
                 },
               ].map((item) => {
@@ -251,7 +248,7 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.86rem' }}>{item.title}</Typography>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.86rem' }}>{t(`appearance:createDialog.fields.${item.key}.title`)}</Typography>
                       <Box
                         sx={{
                           width: 22,
@@ -263,16 +260,16 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
                       />
                     </Box>
                     <Typography sx={{ fontSize: '0.76rem', color: 'text.secondary', mb: 1.1 }}>
-                      {item.description}
+                      {t(`appearance:createDialog.fields.${item.key}.description`)}
                     </Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 1 }}>
                       <TextField
                         size="small"
                         value={item.value}
                         onChange={(event) => updateField(item.key as keyof CreateColorThemeValues, event.target.value)}
-                        placeholder="#RRGGBB"
+                        placeholder={t('appearance:createDialog.hexPlaceholder')}
                         error={!isValid}
-                        helperText={!isValid ? 'Неверный HEX' : ' '}
+                        helperText={!isValid ? t('appearance:createDialog.invalidHex') : ' '}
                       />
                       <TextField
                         type="color"
@@ -290,7 +287,7 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
 
           <Stack spacing={1.4}>
             <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary', fontWeight: 600 }}>
-              Live Preview
+              {t('appearance:createDialog.livePreview')}
             </Typography>
             <Box
               sx={{
@@ -303,10 +300,10 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
               }}
             >
               <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: normalizedText }}>
-                {values.name.trim() || 'Новая тема'}
+                {values.name.trim() || t('appearance:createDialog.newThemeFallback')}
               </Typography>
               <Typography sx={{ mt: 0.75, color: alpha(normalizedText, 0.84), fontSize: '0.82rem' }}>
-                Пример карточки интерфейса с выбранными цветами темы.
+                {t('appearance:createDialog.previewCardLine')}
               </Typography>
               <Box
                 sx={{
@@ -318,10 +315,10 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
                 }}
               >
                 <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', color: normalizedText }}>
-                  Карточка проекта
+                  {t('appearance:createDialog.previewProjectCard')}
                 </Typography>
                 <Typography sx={{ mt: 0.5, fontSize: '0.78rem', color: alpha(normalizedText, 0.8) }}>
-                  Краткое описание и статус проекта в вашей палитре.
+                  {t('appearance:createDialog.previewProjectDesc')}
                 </Typography>
                 <Box sx={{ mt: 1.3, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
@@ -335,11 +332,11 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
                       fontWeight: 700,
                     }}
                   >
-                    Основная кнопка
+                    {t('appearance:createDialog.primaryButton')}
                   </Box>
                   <Chip
                     size="small"
-                    label="Badge"
+                    label={t('appearance:createDialog.badgeSample')}
                     sx={{
                       border: `1px solid ${alpha(normalizedAccent, 0.5)}`,
                       backgroundColor: alpha(normalizedAccent, 0.16),
@@ -358,7 +355,7 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
                   border: `1px solid ${alpha(theme.palette.warning.main, 0.32)}`,
                 }}
               >
-                Низкий контраст: текст может быть плохо читаемым.
+                {t('appearance:createDialog.lowContrast')}
               </Alert>
             )}
           </Stack>
@@ -378,7 +375,7 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
             },
           }}
         >
-          Отмена
+          {t('common:cancel')}
         </Button>
         <Button
           variant="contained"
@@ -391,7 +388,7 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
             },
           }}
         >
-          {mode === 'edit' ? 'Сохранить изменения' : 'Сохранить тему'}
+          {mode === 'edit' ? t('appearance:createDialog.saveEdit') : t('appearance:createDialog.saveCreate')}
         </Button>
       </DialogActions>
     </Dialog>
