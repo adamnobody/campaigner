@@ -3,7 +3,7 @@ import { Box, Typography, Chip, Tooltip, IconButton, alpha, useTheme } from '@mu
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import { DOGMA_IMPORTANCE_LABELS } from '@campaigner/shared';
+import { useTranslation } from 'react-i18next';
 import type { Dogma } from '@campaigner/shared';
 import { useImportanceColors } from './dogmaStyles';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -15,6 +15,7 @@ type Props = {
 };
 
 export const DogmaListItem: React.FC<Props> = ({ dogma, onEdit, onDelete }) => {
+  const { t } = useTranslation(['dogmas', 'common']);
   const theme = useTheme();
   const IMPORTANCE_COLORS = useImportanceColors();
   const importanceColor = IMPORTANCE_COLORS[dogma.importance] || theme.palette.primary.main;
@@ -40,7 +41,7 @@ export const DogmaListItem: React.FC<Props> = ({ dogma, onEdit, onDelete }) => {
               {dogma.title}
             </Typography>
             <Chip
-              label={DOGMA_IMPORTANCE_LABELS[dogma.importance]}
+              label={t(`dogmas:importance.${dogma.importance}`)}
               size="small"
               sx={{
                 height: 20, fontSize: '0.65rem', fontWeight: 600,
@@ -49,7 +50,7 @@ export const DogmaListItem: React.FC<Props> = ({ dogma, onEdit, onDelete }) => {
               }}
             />
             {!dogma.isPublic && (
-              <Tooltip title="Не известна жителям мира">
+              <Tooltip title={t('dogmas:listItem.tooltipHidden')}>
                 <VisibilityOffIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
               </Tooltip>
             )}
@@ -70,7 +71,7 @@ export const DogmaListItem: React.FC<Props> = ({ dogma, onEdit, onDelete }) => {
               <Typography variant="caption" sx={{
                 color: theme.palette.warning.main, fontWeight: 600, flexShrink: 0,
               }}>
-                Влияние:
+                {t('dogmas:listItem.impactPrefix')}
               </Typography>
               <Typography variant="caption" sx={{
                 color: 'text.secondary',
@@ -86,7 +87,7 @@ export const DogmaListItem: React.FC<Props> = ({ dogma, onEdit, onDelete }) => {
               <Typography variant="caption" sx={{
                 color: theme.palette.error.main, fontWeight: 600, flexShrink: 0,
               }}>
-                Исключения:
+                {t('dogmas:listItem.exceptionsPrefix')}
               </Typography>
               <Typography variant="caption" sx={{
                 color: 'text.secondary',
@@ -112,13 +113,13 @@ export const DogmaListItem: React.FC<Props> = ({ dogma, onEdit, onDelete }) => {
 
         <Box className="dogma-actions" display="flex" alignItems="center" gap={0}
           sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0, ml: 1 }}>
-          <Tooltip title="Редактировать">
+          <Tooltip title={t('dogmas:listItem.tooltipEdit')}>
             <IconButton size="small" onClick={() => onEdit(dogma)}
               sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
               <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Удалить">
+          <Tooltip title={t('dogmas:listItem.tooltipDelete')}>
             <IconButton size="small" onClick={() => onDelete(dogma.id, dogma.title)}
               sx={{ color: theme.palette.error.main, '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) } }}>
               <DeleteIcon fontSize="small" />

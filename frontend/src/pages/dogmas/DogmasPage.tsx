@@ -10,6 +10,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
 import GavelIcon from '@mui/icons-material/Gavel';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { useUIStore } from '@/store/useUIStore';
 import { tagsApi } from '@/api/tags';
@@ -20,9 +21,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import {
   DOGMA_CATEGORIES,
   DOGMA_IMPORTANCE,
-  DOGMA_CATEGORY_LABELS,
   DOGMA_CATEGORY_ICONS,
-  DOGMA_IMPORTANCE_LABELS,
 } from '@campaigner/shared';
 import type { Dogma } from '@campaigner/shared';
 import { DogmaFormDialog } from '@/pages/dogmas/components/DogmaFormDialog';
@@ -31,6 +30,7 @@ import { DogmaListItem } from '@/pages/dogmas/components/DogmaListItem';
 const PAGE_SIZE = 30;
 
 export const DogmasPage: React.FC = () => {
+  const { t } = useTranslation(['dogmas', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const theme = useTheme();
@@ -151,7 +151,7 @@ export const DogmasPage: React.FC = () => {
   for (const key of sortedKeys) {
     groupedCategories.push({
       key,
-      label: DOGMA_CATEGORY_LABELS[key] || key,
+      label: t(`dogmas:categories.${key}`),
       icon: DOGMA_CATEGORY_ICONS[key] || '📋',
       dogmas: categoryMap.get(key)!,
     });
@@ -199,7 +199,7 @@ export const DogmasPage: React.FC = () => {
     setIsPublic(dogma.isPublic);
     setImportance(dogma.importance);
     setIcon(dogma.icon || '');
-    setTagsStr((dogma.tags || []).map((t: any) => t.name).join(', '));
+    setTagsStr((dogma.tags || []).map((tag: { name: string }) => tag.name).join(', '));
     setDialogOpen(true);
   };
 
@@ -247,10 +247,10 @@ export const DogmasPage: React.FC = () => {
           title, category: category as any, description, impact, exceptions,
           isPublic, importance: importance as any, icon,
         });
-        if (finalTags !== (editingDogma.tags || []).map((t: any) => t.name).join(', ')) {
+        if (finalTags !== (editingDogma.tags || []).map((tag: { name: string }) => tag.name).join(', ')) {
           await saveTags(editingDogma.id, finalTags);
         }
-        showSnackbar('Догма обновлена', 'success');
+        showSnackbar(t('dogmas:snackbar.updated', { name: title.trim() }), 'success');
       } else {
         const created = await createDogma({
           projectId: pid, title, category: category as any,
@@ -259,7 +259,7 @@ export const DogmasPage: React.FC = () => {
           status: 'active', sortOrder: 0, color: '',
         });
         if (finalTags.trim()) await saveTags(created.id, finalTags);
-        showSnackbar('Догма создана', 'success');
+        showSnackbar(t('dogmas:snackbar.created', { name: title.trim() }), 'success');
         // Обновить totalUnfiltered
         setTotalUnfiltered(prev => prev + 1);
       }
@@ -267,17 +267,20 @@ export const DogmasPage: React.FC = () => {
       resetForm();
       loadDogmas(false);
     } catch {
-      showSnackbar('Ошибка сохранения', 'error');
+      showSnackbar(t('dogmas:snackbar.saveError'), 'error');
     }
   };
 
   const handleDelete = (id: number, name: string) => {
-    showConfirmDialog('Удалить догму', `Удалить "${name}"?`, async () => {
+    showConfirmDialog(
+      t('dogmas:confirm.deleteTitle'),
+      t('dogmas:confirm.deleteMessage', { name }),
+      async () => {
       try {
         await deleteDogma(id);
-        showSnackbar('Догма удалена', 'success');
+        showSnackbar(t('dogmas:snackbar.deleted', { name }), 'success');
         setTotalUnfiltered(prev => Math.max(0, prev - 1));
-      } catch { showSnackbar('Ошибка', 'error'); }
+      } catch { showSnackbar(t('dogmas:snackbar.genericError'), 'error'); }
     });
   };
 
@@ -287,7 +290,7 @@ export const DogmasPage: React.FC = () => {
   if (!initialized && loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
       </Box>
     );
   }
@@ -298,14 +301,14 @@ export const DogmasPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            Догмы мира
+            {t('dogmas:page.title')}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Фундаментальные законы и правила мироустройства
+            {t('dogmas:page.subtitle')}
           </Typography>
         </Box>
         <DndButton variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
-          Добавить догму
+          {t('dogmas:list.addDogma')}
         </DndButton>
       </Box>
 
@@ -313,7 +316,7 @@ export const DogmasPage: React.FC = () => {
       {(totalUnfiltered > 0 || hasFilters) && (
         <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
-            placeholder="Поиск догм..."
+            placeholder={t('dogmas:list.searchPlaceholder')}
             value={search} onChange={e => setSearch(e.target.value)}
             sx={{ flexGrow: 1, maxWidth: 400 }}
             InputProps={{
@@ -328,10 +331,10 @@ export const DogmasPage: React.FC = () => {
 
           <FormControl size="small" sx={{ minWidth: 200 }}>
             <Select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} displayEmpty>
-              <MenuItem value="">Все категории</MenuItem>
+              <MenuItem value="">{t('dogmas:list.allCategories')}</MenuItem>
               {DOGMA_CATEGORIES.map(cat => (
                 <MenuItem key={cat} value={cat}>
-                  {DOGMA_CATEGORY_ICONS[cat]} {DOGMA_CATEGORY_LABELS[cat]}
+                  {DOGMA_CATEGORY_ICONS[cat]} {t(`dogmas:categories.${cat}`)}
                 </MenuItem>
               ))}
             </Select>
@@ -339,9 +342,9 @@ export const DogmasPage: React.FC = () => {
 
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <Select value={filterImportance} onChange={e => setFilterImportance(e.target.value)} displayEmpty>
-              <MenuItem value="">Любая важность</MenuItem>
+              <MenuItem value="">{t('dogmas:list.anyImportance')}</MenuItem>
               {DOGMA_IMPORTANCE.map(imp => (
-                <MenuItem key={imp} value={imp}>{DOGMA_IMPORTANCE_LABELS[imp]}</MenuItem>
+                <MenuItem key={imp} value={imp}>{t(`dogmas:importance.${imp}`)}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -349,12 +352,12 @@ export const DogmasPage: React.FC = () => {
           {hasFilters && (
             <Button variant="outlined" onClick={clearFilters}
               size="small" sx={{ borderColor: alpha(theme.palette.primary.main, 0.5), textTransform: 'none' }}>
-              Сброс
+              {t('common:reset')}
             </Button>
           )}
 
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
-            {dogmas.length} из {total}
+            {t('dogmas:list.count', { shown: dogmas.length, total })}
           </Typography>
         </GlassCard>
       )}
@@ -365,18 +368,18 @@ export const DogmasPage: React.FC = () => {
           /* Пустой результат фильтрации */
           <EmptyState
             icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title="Ничего не найдено"
-            description="Попробуйте изменить параметры поиска или фильтры"
-            actionLabel="Сбросить фильтры"
+            title={t('dogmas:list.emptyFilteredTitle')}
+            description={t('dogmas:list.emptyFilteredDescription')}
+            actionLabel={t('dogmas:list.emptyFilteredAction')}
             onAction={clearFilters}
           />
         ) : (
           /* Вообще нет догм в проекте */
           <EmptyState
             icon={<GavelIcon sx={{ fontSize: 64 }} />}
-            title="Догм пока нет"
-            description="Определите фундаментальные законы вашего мира — как работает магия, какие правила общества, что определяет реальность"
-            actionLabel="Добавить догму"
+            title={t('dogmas:list.emptyNoDogmasTitle')}
+            description={t('dogmas:list.emptyNoDogmasDescription')}
+            actionLabel={t('dogmas:list.emptyNoDogmasAction')}
             onAction={handleOpenCreate}
           />
         )
@@ -442,7 +445,7 @@ export const DogmasPage: React.FC = () => {
           {dogmas.length < total && (
             <Box ref={sentinelRef} sx={{ py: 3, textAlign: 'center' }}>
               {loadingMore && (
-                <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
+                <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
               )}
             </Box>
           )}
