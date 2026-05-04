@@ -1,1 +1,391 @@
-{}
+{
+  "list": {
+    "titleStates": "States",
+    "titleFactions": "Factions",
+    "subtitleStates": "The nation-states of your world",
+    "subtitleFactions": "Organizations, groups, and internal factions",
+    "createState": "Create state",
+    "createFaction": "Create faction",
+    "searchStates": "Search states...",
+    "searchFactions": "Search factions...",
+    "anyStatus": "Any status",
+    "count": "{{shown}} of {{total}}",
+    "resetFilters": "Reset filters",
+    "loadingMore": "Loading...",
+    "tooltipOpen": "Open",
+    "tooltipDelete": "Delete",
+    "confirmDeleteTitleState": "Delete state",
+    "confirmDeleteTitleFaction": "Delete faction",
+    "confirmDeleteMessage": "Delete \"{{name}}\"? Related memberships and links will also be removed.",
+    "emptyFilteredTitle": "Nothing found",
+    "emptyFilteredDescription": "Try changing search or filters",
+    "emptyNoStatesTitle": "No states yet",
+    "emptyNoStatesDescription": "Create the first state for your world",
+    "emptyNoFactionsTitle": "No factions yet",
+    "emptyNoFactionsDescription": "Create the first faction or inner group"
+  },
+  "entityKinds": {
+    "state": "State",
+    "faction": "Faction"
+  },
+  "factionStatuses": {
+    "active": "Active",
+    "disbanded": "Disbanded",
+    "secret": "Secret",
+    "exiled": "Exiled",
+    "destroyed": "Destroyed"
+  },
+  "relationTypes": {
+    "alliance": "Alliance",
+    "war": "War",
+    "neutral": "Neutral",
+    "vassal": "Vassal",
+    "suzerain": "Suzerain",
+    "trade": "Trade",
+    "rivalry": "Rivalry",
+    "protectorate": "Protectorate",
+    "federation": "Federation",
+    "custom": "Other"
+  },
+  "factionTypes": {
+    "guild": "Guild",
+    "order": "Order",
+    "cult": "Cult",
+    "trade_house": "Trade house",
+    "company": "Company",
+    "military": "Military",
+    "academy": "Academy / school",
+    "tribe": "Tribe / clan",
+    "criminal": "Criminal organization",
+    "other": "Other"
+  },
+  "stateTypes": {
+    "empire": "Empire",
+    "kingdom": "Kingdom",
+    "republic": "Republic",
+    "federation": "Federation",
+    "principality": "Principality",
+    "theocracy": "Theocracy",
+    "city_state": "City-state",
+    "tribal_union": "Tribal union",
+    "other": "Other"
+  },
+  "decrees": {
+    "category": {
+      "economy": "Economy",
+      "military": "Military",
+      "social": "Social",
+      "religion": "Religion",
+      "foreign": "Foreign policy",
+      "other": "Other"
+    }
+  },
+  "policyTypes": {
+    "ambition": "Ambition",
+    "policy": "Policy"
+  },
+  "policyStatuses": {
+    "planned": "Planned",
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "metrics": {
+    "keys": {
+      "treasury": { "label": "Treasury", "unit": "" },
+      "population": { "label": "Population", "unit": "people" },
+      "army_size": { "label": "Army", "unit": "people" },
+      "navy_size": { "label": "Navy", "unit": "people" },
+      "territory_km2": { "label": "Territory", "unit": "sq km" },
+      "annual_income": { "label": "Annual income", "unit": "" },
+      "annual_expenses": { "label": "Annual expenses", "unit": "" },
+      "members_count": { "label": "Members", "unit": "people" },
+      "influence": { "label": "Influence", "unit": "" }
+    },
+    "baseSection": "Core",
+    "customSection": "Custom",
+    "compareWithOthers": "Compare with others",
+    "customNone": "No custom metrics added."
+  },
+  "politicalScaleGroups": {
+    "state": {
+      "power": "Power & government",
+      "society": "Society",
+      "economy": "Economy",
+      "foreign": "Foreign policy"
+    },
+    "faction": {
+      "authority": "Attitude toward authority",
+      "ideology": "Ideology",
+      "methods": "Methods",
+      "base": "Base"
+    }
+  },
+  "politicalScales": {
+    "loadError": "Could not load political scales",
+    "saveError": "Could not save scales",
+    "createFieldsError": "Enter code and name",
+    "createSuccess": "Custom scale created",
+    "createError": "Could not create scale",
+    "loading": "Loading political scales…",
+    "sectionTitle": "Political scales",
+    "addCustom": "Add custom scale",
+    "manage": "Manage scales",
+    "valueLabel": "Value: {{value}}",
+    "zoneValueLabel": "{{label}}: {{value}}",
+    "zoneTooltipBody": "{{label}}: {{description}}",
+    "enabledShort": "On",
+    "comment": "Comment",
+    "notePlaceholder": "Optional note for this scale",
+    "saving": "Saving…",
+    "manageDialogTitle": "All scales",
+    "manageDialogBody": "Enable or disable scales for this entity. Disabled scales are ignored in future visualizations (radar charts, etc.).",
+    "createDialogTitle": "New scale (world: {{projectId}})",
+    "codeLabel": "Code (Latin)",
+    "codeHelper": "Saved as p{world}_code",
+    "axisNameLabel": "Axis name",
+    "categoryLabel": "Category",
+    "leftPoleLabel": "Left pole",
+    "rightPoleLabel": "Right pole"
+  },
+  "dialogs": {
+    "rank": {
+      "titleNew": "New rank",
+      "titleEdit": "Edit rank",
+      "fieldName": "Name *",
+      "fieldLevel": "Level",
+      "fieldDescription": "Description",
+      "fieldIcon": "Icon",
+      "fieldColor": "Color"
+    },
+    "member": {
+      "title": "Add member",
+      "character": "Character *",
+      "rank": "Rank",
+      "noRank": "No rank",
+      "rankMenuItem": "{{icon}} {{name}} (Lv. {{level}})",
+      "role": "Role / title",
+      "rolePlaceholder": "e.g. Treasurer",
+      "joinedDate": "Joined date",
+      "notes": "Notes"
+    },
+    "relation": {
+      "title": "Add link",
+      "entity": "Entity *",
+      "relationKind": "Relation type",
+      "customLinkName": "Link name",
+      "description": "Description"
+    }
+  },
+  "detail": {
+    "backToListState": "Back to states list",
+    "backToListFaction": "Back to factions list",
+    "newTitleState": "New state",
+    "newTitleFaction": "New faction",
+    "fallbackNameState": "State",
+    "fallbackNameFaction": "Faction",
+    "tabs": {
+      "overview": "Overview",
+      "structure": "Structure",
+      "ambitions": "Ambitions",
+      "politics": "Politics",
+      "metrics": "Metrics"
+    },
+    "summary": {
+      "title": "Summary",
+      "coatOfArms": "Coat of arms",
+      "banner": "Banner",
+      "entityKind": "Entity",
+      "type": "Type",
+      "status": "Status",
+      "ruler": "Ruler",
+      "capital": "Capital",
+      "headquarters": "Headquarters",
+      "territories": "Territories",
+      "territory": "Territory",
+      "founded": "Founded",
+      "disbanded": "Disbanded",
+      "tags": "Tags"
+    },
+    "sections": {
+      "basics": "Main info",
+      "history": "Description & history",
+      "ranks": "Ranks",
+      "members": "Members",
+      "decrees": "Decrees",
+      "relations": "Relations"
+    },
+    "fields": {
+      "name": "Name *",
+      "motto": "Motto",
+      "type": "Type",
+      "status": "Status",
+      "dynasty": "Dynasty",
+      "territoryMap": "Map territories",
+      "foundedDate": "Founded date",
+      "disbandedDate": "Disbanded date",
+      "parentState": "Parent state",
+      "parentFaction": "Parent faction",
+      "primaryColor": "Primary color",
+      "secondaryColor": "Secondary color",
+      "description": "Description",
+      "history": "History",
+      "goals": "Goals & motivation",
+      "policyTitle": "Title *",
+      "policyEnactedDate": "Enacted date",
+      "relationDescriptionField": "Description"
+    },
+    "placeholders": {
+      "motto": "e.g. Winter is coming",
+      "descriptionFaction": "General description of the faction...",
+      "history": "How it was founded, key events...",
+      "goals": "What the faction is after...",
+      "rulerSearch": "Search or new name...",
+      "territoryMap": "Select regions...",
+      "policyTitleSearch": "Enter title"
+    },
+    "typeNotSet": "Not set",
+    "dynastyNotChosen": "Not chosen",
+    "parentNone": "None",
+    "territoryOccupied": "{{name}} ({{mapName}}) — held by: {{occupant}}",
+    "territoryOccupantStateKind": "state",
+    "territoryRebindTitle": "Reassign territory",
+    "territoryRebindMessage": "Territory \"{{territory}}\" currently belongs to «{{occupant}}». Reassign to «{{self}}»?",
+    "territorySelfFallback": "this state",
+    "rulerCreateOption": "+ Create character «{{name}}»",
+    "policies": {
+      "addDecree": "Add decree",
+      "loading": "Loading…",
+      "emptyTitle": "No decrees",
+      "emptyDescription": "Add decrees and political lines for the faction",
+      "emptyAction": "Add decree",
+      "searchLabel": "Search by title",
+      "typeAll": "All types",
+      "statusAll": "All statuses",
+      "categoryAll": "All categories",
+      "categoryLabel": "Category",
+      "filteredNone": "Nothing found",
+      "resetFilters": "Reset filters",
+      "dialogNew": "New decree",
+      "dialogEdit": "Edit decree",
+      "deleteConfirmMessage": "Delete «{{title}}»?"
+    },
+    "policyFilterStatus": {
+      "planned": "Planned",
+      "active": "Active",
+      "archived": "Archived"
+    }
+  },
+  "ranks": {
+    "emptyTitle": "No ranks",
+    "emptyDescription": "Create a rank hierarchy",
+    "addRank": "Add rank",
+    "levelChip": "Lv. {{level}}",
+    "memberCountChip": "{{count}} ppl"
+  },
+  "members": {
+    "emptyTitle": "No members",
+    "emptyDescription": "Add characters to this organization",
+    "addMember": "Add character",
+    "addButton": "Add",
+    "confirmRemoveFaction": "Remove \"{{name}}\" from the faction?",
+    "confirmRemoveState": "Remove \"{{name}}\" from the state?",
+    "formerBadge": "Former"
+  },
+  "relations": {
+    "emptyTitle": "No links",
+    "emptyDescription": "Set relationships with other factions",
+    "addLink": "Add link",
+    "confirmDeleteTitle": "Remove link",
+    "confirmDeleteMessage": "Remove this link?",
+    "deleteRankTitle": "Delete rank",
+    "deleteRankMessage": "Delete \"{{name}}\"?",
+    "genericDeleteTitle": "Delete"
+  },
+  "ambitions": {
+    "confirmDeleteTitle": "Delete ambition",
+    "confirmDeleteMessage": "Delete ambition «{{name}}»?\nIt will be removed from all factions in the project.\nThis cannot be undone.",
+    "deleted": "Ambition removed",
+    "deleteFailed": "Could not delete ambition",
+    "tabTitle": "Faction ambitions",
+    "add": "Add ambition",
+    "catalogTitle": "Ambition catalog",
+    "createTabDescription": "Create a custom ambition for this project. After saving it appears in the catalog immediately.",
+    "create": "Create ambition",
+    "emptyNotSavedTitle": "Save the faction first",
+    "emptyNotSavedDescription": "After saving you can add and configure ambitions.",
+    "emptyNoneTitle": "No ambitions yet",
+    "emptyNoneDescription": "Add ambitions from the catalog or create a custom one.",
+    "openCatalog": "Open catalog",
+    "conflictAlert": "Conflicting ambitions detected. Remove extras for everything to work correctly.",
+    "exclusionsLabel": "Excludes ambitions:",
+    "exclusionsSaved": "Ambition exclusions updated",
+    "tooltipConfigure": "Configure exclusions",
+    "detach": "Remove from faction",
+    "attach": "Add to faction",
+    "saveFactionFirstTooltip": "Save the faction first"
+  },
+  "ambitionDialog": {
+    "titleNew": "New ambition",
+    "titleEdit": "Edit ambition",
+    "fieldName": "Name",
+    "fieldDescription": "Description",
+    "exclusionsLabel": "Excludes ambitions:",
+    "exclusionsPlaceholder": "Select ambitions",
+    "uploadIcon": "Upload icon",
+    "formatsHint": "Allowed formats: jpeg, jpg, png, webp. Max: {{maxMb}} MB",
+    "fileInvalidType": "Allowed formats: jpg, jpeg, png, webp",
+    "fileTooLarge": "Maximum file size: {{maxMb}} MB",
+    "updated": "Ambition updated",
+    "created": "Ambition created",
+    "saveFailed": "Could not save ambition",
+    "previewAlt": "Ambition preview"
+  },
+  "compare": {
+    "title": "Compare metrics",
+    "entitiesLabel": "Entities",
+    "baseMetrics": "Core metrics",
+    "customMetrics": "Custom metrics",
+    "close": "Close",
+    "run": "Compare",
+    "chartBar": "Bar",
+    "chartRadar": "Radar"
+  },
+  "customMetrics": {
+    "name": "Name",
+    "value": "Value",
+    "unit": "Unit"
+  },
+  "snackbar": {
+    "loadError": "Failed to load",
+    "policiesLoadError": "Could not load policies",
+    "nameRequired": "Enter a name",
+    "saved": "Saved!",
+    "genericError": "Error",
+    "entityDeleted": "Deleted",
+    "coatUploaded": "Coat of arms uploaded!",
+    "bannerUploaded": "Banner uploaded!",
+    "rankUpdated": "Rank updated",
+    "rankCreated": "Rank created",
+    "memberAdded": "Added",
+    "relationAdded": "Link added",
+    "relationRemoved": "Removed",
+    "policyUpdated": "Policy updated",
+    "policyAdded": "Decree added",
+    "removed": "Removed",
+    "rulerCharacterCreated": "Character created",
+    "rulerCharacterCreateFailed": "Could not create character",
+    "deleteFailed": "Could not delete"
+  },
+  "confirm": {
+    "deleteEntityMessage": "Delete \"{{name}}\"?"
+  },
+  "entityCreated": {
+    "state": "State created!",
+    "faction": "Faction created!"
+  },
+  "tagField": {
+    "label": "Tags",
+    "placeholder": "Select or type...",
+    "noOptions": "Type a new tag"
+  }
+}

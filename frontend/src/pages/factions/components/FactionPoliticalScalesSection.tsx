@@ -36,6 +36,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { CollapsibleSection } from '@/components/detail/CollapsibleSection';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { shallow } from 'zustand/shallow';
+import { useTranslation } from 'react-i18next';
 
 function getActiveZone(zones: ScaleZone[] | null | undefined, value: number): ScaleZone | null {
   if (!zones?.length) return null;
@@ -105,7 +106,16 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
   entityType,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['factions', 'common']);
   const { showSnackbar } = useUIStore((s) => ({ showSnackbar: s.showSnackbar }), shallow);
+
+  const politicalScaleCategoryKeys = useMemo(
+    () =>
+      Object.keys(
+        entityType === 'state' ? STATE_POLITICAL_SCALE_GROUP_LABELS : FACTION_POLITICAL_SCALE_GROUP_LABELS
+      ),
+    [entityType]
+  );
 
   const [scales, setScales] = useState<PoliticalScale[]>([]);
   const [localByScaleId, setLocalByScaleId] = useState<Record<number, LocalAssignment>>({});
@@ -118,9 +128,6 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
   useEffect(() => {
     localRef.current = localByScaleId;
   }, [localByScaleId]);
-
-  const groupLabels =
-    entityType === 'state' ? STATE_POLITICAL_SCALE_GROUP_LABELS : FACTION_POLITICAL_SCALE_GROUP_LABELS;
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -138,11 +145,11 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
       setLocalByScaleId(map);
       localRef.current = map;
     } catch {
-      showSnackbar('Не удалось загрузить политические шкалы', 'error');
+      showSnackbar(t('factions:politicalScales.loadError'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [entityType, factionId, projectId, showSnackbar]);
+  }, [entityType, factionId, projectId, showSnackbar, t]);
 
   useEffect(() => {
     loadAll().catch(() => {});
@@ -182,12 +189,12 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
         localRef.current = next;
         setLocalByScaleId(next);
       } catch {
-        showSnackbar('Не удалось сохранить шкалы', 'error');
+        showSnackbar(t('factions:politicalScales.saveError'), 'error');
       } finally {
         setSaving(false);
       }
     },
-    [entityType, factionId, scales, showSnackbar]
+    [entityType, factionId, scales, showSnackbar, t]
   );
 
   const grouped = useMemo(() => {
@@ -224,7 +231,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
 
   const handleCreateScale = async () => {
     if (!createForm.code.trim() || !createForm.name.trim()) {
-      showSnackbar('Заполните код и название', 'error');
+      showSnackbar(t('factions:politicalScales.createFieldsError'), 'error');
       return;
     }
     try {
@@ -238,7 +245,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
         leftPoleLabel: createForm.leftPoleLabel.trim(),
         rightPoleLabel: createForm.rightPoleLabel.trim(),
       });
-      showSnackbar('Своя шкала создана', 'success');
+      showSnackbar(t('factions:politicalScales.createSuccess'), 'success');
       setCreateOpen(false);
       setCreateForm((prev) => ({
         ...prev,
@@ -251,7 +258,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
       }));
       await loadAll();
     } catch (e: unknown) {
-      showSnackbar(e instanceof Error ? e.message : 'Ошибка создания', 'error');
+      showSnackbar(e instanceof Error ? e.message : t('factions:politicalScales.createError'), 'error');
     }
   };
 
@@ -267,7 +274,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
   if (loading && scales.length === 0) {
     return (
       <GlassCard sx={{ p: 2, mb: 2 }}>
-        <Typography sx={{ color: 'text.secondary' }}>Загрузка политических шкал…</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('factions:politicalScales.loading')}</Typography>
       </GlassCard>
     );
   }
@@ -275,16 +282,16 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
   return (
     <>
       <CollapsibleSection
-        title="Политические шкалы"
+        title={t('factions:politicalScales.sectionTitle')}
         icon={<TrackChangesIcon />}
         defaultOpen
         action={
           <Box display="flex" gap={1}>
             <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-              Добавить свою шкалу
+              {t('factions:politicalScales.addCustom')}
             </Button>
             <Button size="small" variant="outlined" startIcon={<SettingsIcon />} onClick={() => setManageOpen(true)}>
-              Управление шкалами
+              {t('factions:politicalScales.manage')}
             </Button>
           </Box>
         }
@@ -293,7 +300,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
           {grouped.map(([category, items]) => (
             <Box key={category}>
               <Typography variant="subtitle2" sx={{ mb: 1.25, fontWeight: 700, color: 'text.secondary' }}>
-                {groupLabels[category] || category}
+                {t(`factions:politicalScaleGroups.${entityType}.${category}`, { defaultValue: category })}
               </Typography>
               <Box display="flex" flexDirection="column" gap={2.5}>
                 {items.map((scale) => {
@@ -350,17 +357,20 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                               <Tooltip
                                 title={
                                   active?.description
-                                    ? `${active.label}: ${active.description}`
+                                    ? t('factions:politicalScales.zoneTooltipBody', {
+                                        label: active.label,
+                                        description: active.description,
+                                      })
                                     : active?.label || ''
                                 }
                               >
                                 <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                                  {active ? active.label : `Значение: ${value}`}
+                                  {active ? active.label : t('factions:politicalScales.valueLabel', { value })}
                                 </Typography>
                               </Tooltip>
                             ) : (
                               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                Значение: {value}
+                                {t('factions:politicalScales.valueLabel', { value })}
                               </Typography>
                             )}
                           </Box>
@@ -380,7 +390,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                               size="small"
                             />
                           }
-                          label="Вкл."
+                          label={t('factions:politicalScales.enabledShort')}
                           sx={{ m: 0, flexShrink: 0 }}
                         />
                       </Box>
@@ -392,14 +402,14 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                           }
                           startIcon={noteOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                         >
-                          Комментарий
+                          {t('factions:politicalScales.comment')}
                         </Button>
                         <Collapse in={noteOpen}>
                           <TextField
                             fullWidth
                             size="small"
                             sx={{ mt: 1 }}
-                            placeholder="Заметка к шкале (необязательно)"
+                            placeholder={t('factions:politicalScales.notePlaceholder')}
                             value={loc?.note ?? ''}
                             onChange={(e) => updateLocal(scale.id, { note: e.target.value || null })}
                             onBlur={() => {
@@ -417,17 +427,16 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
         </Box>
         {saving && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'block' }}>
-            Сохранение…
+            {t('factions:politicalScales.saving')}
           </Typography>
         )}
       </CollapsibleSection>
 
       <Dialog open={manageOpen} onClose={() => setManageOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Все шкалы</DialogTitle>
+        <DialogTitle>{t('factions:politicalScales.manageDialogTitle')}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-            Включите или выключите шкалы для этой сущности. Выключенные шкалы не учитываются в будущих визуализациях
-            (радар и т.п.).
+            {t('factions:politicalScales.manageDialogBody')}
           </Typography>
           {scales.map((s) => {
             const loc = localByScaleId[s.id];
@@ -461,61 +470,61 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
           })}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setManageOpen(false)}>Отмена</Button>
+          <Button onClick={() => setManageOpen(false)}>{t('common:cancel')}</Button>
           <Button
             variant="contained"
             onClick={() => {
               void saveMap(localRef.current).then(() => setManageOpen(false));
             }}
           >
-            Сохранить
+            {t('common:save')}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Новая шкала (мир: {projectId})</DialogTitle>
+        <DialogTitle>{t('factions:politicalScales.createDialogTitle', { projectId })}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: 2 }}>
           <TextField
-            label="Код (латиница)"
+            label={t('factions:politicalScales.codeLabel')}
             value={createForm.code}
             onChange={(e) => setCreateForm((p) => ({ ...p, code: e.target.value }))}
-            helperText="Будет сохранён как p{мир}_код"
+            helperText={t('factions:politicalScales.codeHelper')}
           />
           <TextField
-            label="Название оси"
+            label={t('factions:politicalScales.axisNameLabel')}
             value={createForm.name}
             onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
           />
           <FormControl fullWidth>
-            <InputLabel>Категория</InputLabel>
+            <InputLabel>{t('factions:politicalScales.categoryLabel')}</InputLabel>
             <Select
-              label="Категория"
+              label={t('factions:politicalScales.categoryLabel')}
               value={createForm.category}
               onChange={(e) => setCreateForm((p) => ({ ...p, category: String(e.target.value) }))}
             >
-              {Object.keys(groupLabels).map((k) => (
+              {politicalScaleCategoryKeys.map((k) => (
                 <MenuItem key={k} value={k}>
-                  {groupLabels[k]}
+                  {t(`factions:politicalScaleGroups.${entityType}.${k}`)}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
           <TextField
-            label="Левый полюс"
+            label={t('factions:politicalScales.leftPoleLabel')}
             value={createForm.leftPoleLabel}
             onChange={(e) => setCreateForm((p) => ({ ...p, leftPoleLabel: e.target.value }))}
           />
           <TextField
-            label="Правый полюс"
+            label={t('factions:politicalScales.rightPoleLabel')}
             value={createForm.rightPoleLabel}
             onChange={(e) => setCreateForm((p) => ({ ...p, rightPoleLabel: e.target.value }))}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCreateOpen(false)}>Отмена</Button>
+          <Button onClick={() => setCreateOpen(false)}>{t('common:cancel')}</Button>
           <Button variant="contained" onClick={() => void handleCreateScale()}>
-            Создать
+            {t('common:create')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, IconButton, TextField, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useTranslation } from 'react-i18next';
 import type { ReplaceFactionCustomMetrics } from '@campaigner/shared';
 
 interface CustomMetricsEditorProps {
@@ -10,6 +11,7 @@ interface CustomMetricsEditorProps {
 }
 
 export const CustomMetricsEditor: React.FC<CustomMetricsEditorProps> = ({ metrics, onChange }) => {
+  const { t } = useTranslation(['factions', 'common']);
   const updateRow = (index: number, key: 'name' | 'value' | 'unit', value: string | number) => {
     onChange(
       metrics.map((metric, i) =>
@@ -27,24 +29,24 @@ export const CustomMetricsEditor: React.FC<CustomMetricsEditorProps> = ({ metric
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       {metrics.length === 0 ? (
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Кастомные показатели не добавлены.
+          {t('factions:metrics.customNone')}
         </Typography>
       ) : null}
       {metrics.map((metric, index) => (
         <Box key={`${metric.name}-${index}`} sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 1 }}>
           <TextField
-            label="Название"
+            label={t('factions:customMetrics.name')}
             value={metric.name}
             onChange={(event) => updateRow(index, 'name', event.target.value)}
           />
           <TextField
-            label="Значение"
+            label={t('factions:customMetrics.value')}
             type="number"
             value={metric.value}
             onChange={(event) => updateRow(index, 'value', Number(event.target.value || 0))}
           />
           <TextField
-            label="Единица"
+            label={t('factions:customMetrics.unit')}
             value={metric.unit ?? ''}
             onChange={(event) => updateRow(index, 'unit', event.target.value)}
           />

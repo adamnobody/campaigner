@@ -3,6 +3,7 @@ import { Button, alpha, useTheme, Tooltip, IconButton, Stack } from '@mui/materi
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import BlockIcon from '@mui/icons-material/Block';
+import { useTranslation } from 'react-i18next';
 import { ExclusionOverlay } from '@/components/ui/ExclusionOverlay';
 import { FlipCard } from '@/components/ui/FlipCard';
 
@@ -36,6 +37,7 @@ export const AmbitionFlipCard: React.FC<AmbitionFlipCardProps> = ({
   attachActionsDisabled = false,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['factions', 'common']);
   const firstLetter = [...name][0] ?? '?';
 
   return (
@@ -48,7 +50,7 @@ export const AmbitionFlipCard: React.FC<AmbitionFlipCardProps> = ({
       backTopRightSlot={
         onConfigureExclusions
           ? ({ imageFailed }) => (
-              <Tooltip title="Настроить исключения">
+              <Tooltip title={t('factions:ambitions.tooltipConfigure')}>
                 <IconButton
                   size="small"
                   onClick={() => onConfigureExclusions()}
@@ -68,7 +70,7 @@ export const AmbitionFlipCard: React.FC<AmbitionFlipCardProps> = ({
       }
       backBottomSlot={({ imageFailed }) => (
         <Stack spacing={1}>
-          <Tooltip title="Сначала сохраните фракцию" disableHoverListener={!attachActionsDisabled}>
+          <Tooltip title={t('factions:ambitions.saveFactionFirstTooltip')} disableHoverListener={!attachActionsDisabled}>
             <span>
               <Button
                 fullWidth
@@ -89,7 +91,7 @@ export const AmbitionFlipCard: React.FC<AmbitionFlipCardProps> = ({
                     : undefined
                 }
               >
-                {isAttached ? 'Убрать из фракции' : 'Добавить во фракцию'}
+                {isAttached ? t('factions:ambitions.detach') : t('factions:ambitions.attach')}
               </Button>
             </span>
           </Tooltip>

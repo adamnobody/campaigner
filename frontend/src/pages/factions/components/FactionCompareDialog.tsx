@@ -30,6 +30,7 @@ import {
   YAxis,
 } from 'recharts';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import { getMetricsForKind } from '@campaigner/shared';
 import type { Faction, FactionCompareResult } from '@campaigner/shared';
 
@@ -53,7 +54,16 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
   onCompare,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['factions', 'common']);
   const baseMetrics = useMemo(() => getMetricsForKind(kind), [kind]);
+  const baseMetricsT = useMemo(
+    () =>
+      baseMetrics.map((m) => ({
+        ...m,
+        label: t(`factions:metrics.keys.${m.key}.label`),
+      })),
+    [baseMetrics, t]
+  );
   const baseMetricKeys = useMemo(() => baseMetrics.map((metric) => metric.key), [baseMetrics]);
   const sameKindFactions = useMemo(() => factions.filter((faction) => faction.kind === kind), [factions, kind]);
   const [selectedFactionIds, setSelectedFactionIds] = useState<number[]>([currentFactionId]);
@@ -179,11 +189,11 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-      <DialogTitle>Сравнение показателей</DialogTitle>
+      <DialogTitle>{t('factions:compare.title')}</DialogTitle>
       <DialogContent sx={{ display: 'grid', gap: 2 }}>
         <TextField
           select
-          label="Сущности"
+          label={t('factions:compare.entitiesLabel')}
           SelectProps={{ multiple: true }}
           value={selectedFactionIds.map(String)}
           onChange={(event) => {
@@ -200,10 +210,10 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
 
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Базовые показатели
+            {t('factions:compare.baseMetrics')}
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {baseMetrics.map((metric) => (
+            {baseMetricsT.map((metric) => (
               <FormControlLabel
                 key={metric.key}
                 control={
@@ -227,7 +237,7 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
         {availableCustomMetrics.length ? (
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Кастомные показатели
+              {t('factions:compare.customMetrics')}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {availableCustomMetrics.map((name) => {
@@ -259,8 +269,8 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
           onChange={(_, value) => value && setChartType(value)}
           size="small"
         >
-          <ToggleButton value="bar">Bar</ToggleButton>
-          <ToggleButton value="radar">Radar</ToggleButton>
+          <ToggleButton value="bar">{t('factions:compare.chartBar')}</ToggleButton>
+          <ToggleButton value="radar">{t('factions:compare.chartRadar')}</ToggleButton>
         </ToggleButtonGroup>
 
         {result ? (
@@ -323,9 +333,9 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
         ) : null}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Закрыть</Button>
+        <Button onClick={onClose}>{t('factions:compare.close')}</Button>
         <Button onClick={runCompare} variant="contained" disabled={loading || selectedFactionIds.length === 0 || selectedMetricKeys.length === 0}>
-          Сравнить
+          {t('factions:compare.run')}
         </Button>
       </DialogActions>
     </Dialog>

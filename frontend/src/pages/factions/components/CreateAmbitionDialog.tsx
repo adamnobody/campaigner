@@ -22,6 +22,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useAmbitionsStore } from '@/store/useAmbitionsStore';
 import { apiClient } from '@/api/client';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { useTranslation } from 'react-i18next';
 
 interface CreateAmbitionDialogProps {
   open: boolean;
@@ -53,6 +54,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
   projectId,
   editingAmbition,
 }) => {
+  const { t } = useTranslation(['factions', 'common']);
   const createAmbition = useAmbitionsStore((s) => s.createAmbition);
   const updateAmbition = useAmbitionsStore((s) => s.updateAmbition);
   const updateExclusions = useAmbitionsStore((s) => s.updateExclusions);
@@ -108,10 +110,10 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
       candidate.type === '' ||
       candidate.type === 'application/octet-stream';
     if (!mimeOk && !(unknownMime && extOk) && !extOk) {
-      return 'Допустимые форматы: jpg, jpeg, png, webp';
+      return t('factions:ambitionDialog.fileInvalidType');
     }
     if (candidate.size > LIMITS.MAX_FILE_SIZE) {
-      return `Максимальный размер файла: ${Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024))}MB`;
+      return t('factions:ambitionDialog.fileTooLarge', { maxMb: Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024)) });
     }
     return null;
   };
@@ -149,7 +151,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
           iconPath,
         });
         await updateExclusions(editingAmbition.id, excludedIds);
-        showSnackbar('Амбиция обновлена', 'success');
+        showSnackbar(t('factions:ambitionDialog.updated'), 'success');
       } else {
         await createAmbition({
           projectId,
@@ -158,12 +160,12 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
           iconPath,
           excludedIds,
         });
-        showSnackbar('Амбиция создана', 'success');
+        showSnackbar(t('factions:ambitionDialog.created'), 'success');
       }
 
       onClose();
     } catch (error: unknown) {
-      showSnackbar(error instanceof Error ? error.message : 'Не удалось сохранить амбицию', 'error');
+      showSnackbar(error instanceof Error ? error.message : t('factions:ambitionDialog.saveFailed'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -171,13 +173,15 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={submitting ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{editingAmbition ? 'Редактировать амбицию' : 'Новая амбиция'}</DialogTitle>
+      <DialogTitle>
+        {editingAmbition ? t('factions:ambitionDialog.titleEdit') : t('factions:ambitionDialog.titleNew')}
+      </DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
           required
-          label="Название"
+          label={t('factions:ambitionDialog.fieldName')}
           value={name}
           onChange={(e) => setName(e.target.value.slice(0, 200))}
           margin="normal"
@@ -188,7 +192,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
           required
           multiline
           rows={4}
-          label="Описание"
+          label={t('factions:ambitionDialog.fieldDescription')}
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 10000))}
           margin="normal"
@@ -202,7 +206,11 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
             getOptionLabel={(option) => option.name}
             onChange={(_, value) => setExcludedIds(value.map((item) => item.id))}
             renderInput={(params) => (
-              <TextField {...params} label="Исключает амбиции:" placeholder="Выберите амбиции" />
+              <TextField
+                {...params}
+                label={t('factions:ambitionDialog.exclusionsLabel')}
+                placeholder={t('factions:ambitionDialog.exclusionsPlaceholder')}
+              />
             )}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
@@ -221,13 +229,11 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
 
         <Box sx={{ mt: 2 }}>
           <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} disabled={submitting}>
-            Загрузить иконку
+            {t('factions:ambitionDialog.uploadIcon')}
             <input type="file" hidden accept={ACCEPT_HINT} onChange={handleFileChange} />
           </Button>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            Допустимые форматы: jpeg, jpg, png, webp. Максимум:{' '}
-            {Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024))}
-            MB
+            {t('factions:ambitionDialog.formatsHint', { maxMb: Math.round(LIMITS.MAX_FILE_SIZE / (1024 * 1024)) })}
           </Typography>
         </Box>
 
@@ -246,7 +252,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
             <Box
               component="img"
               src={uploadAssetUrl(previewUrl) ?? previewUrl}
-              alt="Ambition preview"
+              alt={t('factions:ambitionDialog.previewAlt')}
               sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
             <IconButton
@@ -269,10 +275,10 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} color="inherit" disabled={submitting}>
-          Отмена
+          {t('common:cancel')}
         </Button>
         <DndButton variant="contained" onClick={handleSave} loading={submitting} disabled={!canSubmit}>
-          {editingAmbition ? 'Сохранить' : 'Создать'}
+          {editingAmbition ? t('common:save') : t('common:create')}
         </DndButton>
       </DialogActions>
     </Dialog>

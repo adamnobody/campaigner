@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
+import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import type { Ambition } from '@campaigner/shared';
 import { ExclusionCatalogTab, type ExclusionItem } from '@/components/exclusions/ExclusionCatalogTab';
@@ -23,6 +24,7 @@ function mapAmbitionCatalogRow(ambition: Ambition): AmbitionCatalogRow {
 }
 
 export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projectId, factionId }) => {
+  const { t } = useTranslation(['factions', 'common']);
   const [editingAmbition, setEditingAmbition] = useState<Ambition | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -110,14 +112,14 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
 
   const handleDeleteAmbition = (ambition: Ambition) => {
     showConfirmDialog(
-      'Удалить амбицию',
-      `Удалить амбицию «${ambition.name}»?\nОна будет удалена у всех фракций проекта.\nЭто действие нельзя отменить.`,
+      t('factions:ambitions.confirmDeleteTitle'),
+      t('factions:ambitions.confirmDeleteMessage', { name: ambition.name }),
       async () => {
         try {
           await deleteAmbition(ambition.id);
-          showSnackbar('Амбиция удалена', 'success');
+          showSnackbar(t('factions:ambitions.deleted'), 'success');
         } catch (error: unknown) {
-          showSnackbar(error instanceof Error ? error.message : 'Не удалось удалить амбицию', 'error');
+          showSnackbar(error instanceof Error ? error.message : t('factions:ambitions.deleteFailed'), 'error');
         }
       }
     );
@@ -126,21 +128,21 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
   return (
     <ExclusionCatalogTab<AmbitionCatalogRow, CreateAmbitionExtra>
       projectId={projectId}
-      title="Амбиции фракции"
+      title={t('factions:ambitions.tabTitle')}
       icon={<TrackChangesIcon sx={{ fontSize: '1.2rem' }} />}
-      addButtonLabel="Добавить амбицию"
-      catalogDialogTitle="Каталог амбиций"
-      createTabDescription="Создайте пользовательскую амбицию для текущего проекта. После сохранения она сразу появится в каталоге."
-      createButtonLabel="Создать амбицию"
-      emptyNotSavedTitle="Сначала сохраните фракцию"
-      emptyNotSavedDescription="После сохранения можно добавлять и настраивать амбиции."
-      emptyNoAssignedTitle="Амбиций пока нет"
-      emptyNoAssignedDescription="Добавьте амбиции из каталога или создайте пользовательскую."
-      emptyNoAssignedActionLabel="Открыть каталог"
+      addButtonLabel={t('factions:ambitions.add')}
+      catalogDialogTitle={t('factions:ambitions.catalogTitle')}
+      createTabDescription={t('factions:ambitions.createTabDescription')}
+      createButtonLabel={t('factions:ambitions.create')}
+      emptyNotSavedTitle={t('factions:ambitions.emptyNotSavedTitle')}
+      emptyNotSavedDescription={t('factions:ambitions.emptyNotSavedDescription')}
+      emptyNoAssignedTitle={t('factions:ambitions.emptyNoneTitle')}
+      emptyNoAssignedDescription={t('factions:ambitions.emptyNoneDescription')}
+      emptyNoAssignedActionLabel={t('factions:ambitions.openCatalog')}
       emptyStateIcon={<TrackChangesIcon />}
-      conflictAlertText="Обнаружены конфликтующие амбиции. Удалите лишние для корректной работы."
-      exclusionsDialogLabel="Исключает амбиции:"
-      exclusionsSavedSnackbar="Исключения амбиции обновлены"
+      conflictAlertText={t('factions:ambitions.conflictAlert')}
+      exclusionsDialogLabel={t('factions:ambitions.exclusionsLabel')}
+      exclusionsSavedSnackbar={t('factions:ambitions.exclusionsSaved')}
       exclusionsCatalog={catalog}
       items={items}
       assignedMainItems={assignedMainItems}

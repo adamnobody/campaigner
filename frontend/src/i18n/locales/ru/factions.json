@@ -1,1 +1,391 @@
-{}
+{
+  "list": {
+    "titleStates": "Государства",
+    "titleFactions": "Фракции",
+    "subtitleStates": "Государственные образования вашего мира",
+    "subtitleFactions": "Внутренние объединения, организации и группировки",
+    "createState": "Создать государство",
+    "createFaction": "Создать фракцию",
+    "searchStates": "Поиск государств...",
+    "searchFactions": "Поиск фракций...",
+    "anyStatus": "Любой статус",
+    "count": "{{shown}} из {{total}}",
+    "resetFilters": "Сбросить фильтры",
+    "loadingMore": "Загрузка...",
+    "tooltipOpen": "Открыть",
+    "tooltipDelete": "Удалить",
+    "confirmDeleteTitleState": "Удалить государство",
+    "confirmDeleteTitleFaction": "Удалить фракцию",
+    "confirmDeleteMessage": "Удалить «{{name}}»? Связанные записи участия и связи тоже будут удалены.",
+    "emptyFilteredTitle": "Ничего не найдено",
+    "emptyFilteredDescription": "Попробуйте изменить параметры поиска или фильтры",
+    "emptyNoStatesTitle": "Государств пока нет",
+    "emptyNoStatesDescription": "Создайте первое государство для вашего мира",
+    "emptyNoFactionsTitle": "Фракций пока нет",
+    "emptyNoFactionsDescription": "Создайте первую фракцию или внутреннюю группировку"
+  },
+  "entityKinds": {
+    "state": "Государство",
+    "faction": "Фракция"
+  },
+  "factionStatuses": {
+    "active": "Активна",
+    "disbanded": "Распущена",
+    "secret": "Тайная",
+    "exiled": "В изгнании",
+    "destroyed": "Уничтожена"
+  },
+  "relationTypes": {
+    "alliance": "Союз",
+    "war": "Война",
+    "neutral": "Нейтралитет",
+    "vassal": "Вассал",
+    "suzerain": "Сюзерен",
+    "trade": "Торговля",
+    "rivalry": "Соперничество",
+    "protectorate": "Протекторат",
+    "federation": "Федерация",
+    "custom": "Другое"
+  },
+  "factionTypes": {
+    "guild": "Гильдия",
+    "order": "Орден",
+    "cult": "Культ",
+    "trade_house": "Торговый дом",
+    "company": "Компания",
+    "military": "Армия / Военный орден",
+    "academy": "Академия / Школа",
+    "tribe": "Племя / Клан",
+    "criminal": "Преступная организация",
+    "other": "Другое"
+  },
+  "stateTypes": {
+    "empire": "Империя",
+    "kingdom": "Королевство",
+    "republic": "Республика",
+    "federation": "Федерация",
+    "principality": "Княжество",
+    "theocracy": "Теократия",
+    "city_state": "Город-государство",
+    "tribal_union": "Племенной союз",
+    "other": "Другое"
+  },
+  "decrees": {
+    "category": {
+      "economy": "Экономика",
+      "military": "Военное",
+      "social": "Социальное",
+      "religion": "Религия",
+      "foreign": "Внешняя политика",
+      "other": "Прочее"
+    }
+  },
+  "policyTypes": {
+    "ambition": "Амбиция",
+    "policy": "Политика"
+  },
+  "policyStatuses": {
+    "planned": "План",
+    "active": "Активна",
+    "archived": "Архив"
+  },
+  "metrics": {
+    "keys": {
+      "treasury": { "label": "Казна", "unit": "" },
+      "population": { "label": "Население", "unit": "чел." },
+      "army_size": { "label": "Армия", "unit": "чел." },
+      "navy_size": { "label": "Флот", "unit": "чел." },
+      "territory_km2": { "label": "Территория", "unit": "кв. км" },
+      "annual_income": { "label": "Доход в год", "unit": "" },
+      "annual_expenses": { "label": "Расход в год", "unit": "" },
+      "members_count": { "label": "Численность", "unit": "чел." },
+      "influence": { "label": "Влияние", "unit": "" }
+    },
+    "baseSection": "Базовые",
+    "customSection": "Кастомные",
+    "compareWithOthers": "Сравнить с другими",
+    "customNone": "Кастомные показатели не добавлены."
+  },
+  "politicalScaleGroups": {
+    "state": {
+      "power": "Власть и устройство",
+      "society": "Общество",
+      "economy": "Экономика",
+      "foreign": "Внешняя политика"
+    },
+    "faction": {
+      "authority": "Отношение к власти",
+      "ideology": "Идеология",
+      "methods": "Методы",
+      "base": "База"
+    }
+  },
+  "politicalScales": {
+    "loadError": "Не удалось загрузить политические шкалы",
+    "saveError": "Не удалось сохранить шкалы",
+    "createFieldsError": "Заполните код и название",
+    "createSuccess": "Своя шкала создана",
+    "createError": "Ошибка создания",
+    "loading": "Загрузка политических шкал…",
+    "sectionTitle": "Политические шкалы",
+    "addCustom": "Добавить свою шкалу",
+    "manage": "Управление шкалами",
+    "valueLabel": "Значение: {{value}}",
+    "zoneValueLabel": "{{label}}: {{value}}",
+    "zoneTooltipBody": "{{label}}: {{description}}",
+    "enabledShort": "Вкл.",
+    "comment": "Комментарий",
+    "notePlaceholder": "Заметка к шкале (необязательно)",
+    "saving": "Сохранение…",
+    "manageDialogTitle": "Все шкалы",
+    "manageDialogBody": "Включите или выключите шкалы для этой сущности. Выключенные шкалы не учитываются в будущих визуализациях (радар и т.п.).",
+    "createDialogTitle": "Новая шкала (мир: {{projectId}})",
+    "codeLabel": "Код (латиница)",
+    "codeHelper": "Будет сохранён как p{мир}_код",
+    "axisNameLabel": "Название оси",
+    "categoryLabel": "Категория",
+    "leftPoleLabel": "Левый полюс",
+    "rightPoleLabel": "Правый полюс"
+  },
+  "dialogs": {
+    "rank": {
+      "titleNew": "Новый ранг",
+      "titleEdit": "Редактировать ранг",
+      "fieldName": "Название *",
+      "fieldLevel": "Уровень",
+      "fieldDescription": "Описание",
+      "fieldIcon": "Иконка",
+      "fieldColor": "Цвет"
+    },
+    "member": {
+      "title": "Добавить члена",
+      "character": "Персонаж *",
+      "rank": "Ранг",
+      "noRank": "Без ранга",
+      "rankMenuItem": "{{icon}} {{name}} (ур. {{level}})",
+      "role": "Роль / Должность",
+      "rolePlaceholder": "напр. Казначей",
+      "joinedDate": "Дата вступления",
+      "notes": "Заметки"
+    },
+    "relation": {
+      "title": "Добавить связь",
+      "entity": "Сущность *",
+      "relationKind": "Тип отношений",
+      "customLinkName": "Название связи",
+      "description": "Описание"
+    }
+  },
+  "detail": {
+    "backToListState": "К списку государств",
+    "backToListFaction": "К списку фракций",
+    "newTitleState": "Новое государство",
+    "newTitleFaction": "Новая фракция",
+    "fallbackNameState": "Государство",
+    "fallbackNameFaction": "Фракция",
+    "tabs": {
+      "overview": "Обзор",
+      "structure": "Структура",
+      "ambitions": "Амбиции",
+      "politics": "Политика",
+      "metrics": "Показатели"
+    },
+    "summary": {
+      "title": "Сводка",
+      "coatOfArms": "Герб",
+      "banner": "Фон",
+      "entityKind": "Сущность",
+      "type": "Тип",
+      "status": "Статус",
+      "ruler": "Правитель",
+      "capital": "Столица",
+      "headquarters": "Штаб-квартира",
+      "territories": "Территории",
+      "territory": "Территория",
+      "founded": "Основана",
+      "disbanded": "Распущена",
+      "tags": "Теги"
+    },
+    "sections": {
+      "basics": "Основная информация",
+      "history": "Описание и история",
+      "ranks": "Ранги",
+      "members": "Члены",
+      "decrees": "Указы",
+      "relations": "Связи"
+    },
+    "fields": {
+      "name": "Название *",
+      "motto": "Девиз",
+      "type": "Тип",
+      "status": "Статус",
+      "dynasty": "Династия",
+      "territoryMap": "Территории на карте",
+      "foundedDate": "Дата основания",
+      "disbandedDate": "Дата роспуска",
+      "parentState": "Вышестоящее государство",
+      "parentFaction": "Родительская фракция",
+      "primaryColor": "Основной цвет",
+      "secondaryColor": "Вторичный цвет",
+      "description": "Описание",
+      "history": "История",
+      "goals": "Цели и мотивация",
+      "policyTitle": "Название *",
+      "policyEnactedDate": "Дата принятия",
+      "relationDescriptionField": "Описание"
+    },
+    "placeholders": {
+      "motto": "напр. Зима близко",
+      "descriptionFaction": "Общее описание фракции...",
+      "history": "Как была основана, ключевые события...",
+      "goals": "Чего добивается фракция...",
+      "rulerSearch": "Поиск или новое имя...",
+      "territoryMap": "Выберите области...",
+      "policyTitleSearch": "Введите название"
+    },
+    "typeNotSet": "Не указан",
+    "dynastyNotChosen": "Не выбрано",
+    "parentNone": "Нет",
+    "territoryOccupied": "{{name}} ({{mapName}}) — занято: {{occupant}}",
+    "territoryOccupantStateKind": "государство",
+    "territoryRebindTitle": "Перепривязка территории",
+    "territoryRebindMessage": "Территория «{{territory}}» сейчас принадлежит государству «{{occupant}}». Перепривязать к «{{self}}»?",
+    "territorySelfFallback": "это государство",
+    "rulerCreateOption": "+ Создать персонажа «{{name}}»",
+    "policies": {
+      "addDecree": "Добавить указ",
+      "loading": "Загрузка…",
+      "emptyTitle": "Нет указов",
+      "emptyDescription": "Добавьте указы и политические линии фракции",
+      "emptyAction": "Добавить указ",
+      "searchLabel": "Поиск по названию",
+      "typeAll": "Все типы",
+      "statusAll": "Все статусы",
+      "categoryAll": "Все категории",
+      "categoryLabel": "Категория",
+      "filteredNone": "Ничего не найдено",
+      "resetFilters": "Сбросить фильтры",
+      "dialogNew": "Новый указ",
+      "dialogEdit": "Редактировать указ",
+      "deleteConfirmMessage": "Удалить «{{title}}»?"
+    },
+    "policyFilterStatus": {
+      "planned": "Запланировано",
+      "active": "Активно",
+      "archived": "В архиве"
+    }
+  },
+  "ranks": {
+    "emptyTitle": "Нет рангов",
+    "emptyDescription": "Создайте иерархию рангов",
+    "addRank": "Добавить ранг",
+    "levelChip": "Ур. {{level}}",
+    "memberCountChip": "{{count}} чел."
+  },
+  "members": {
+    "emptyTitle": "Нет членов",
+    "emptyDescription": "Добавьте персонажей в фракцию",
+    "addMember": "Добавить персонажа",
+    "addButton": "Добавить",
+    "confirmRemoveFaction": "Удалить «{{name}}» из фракции?",
+    "confirmRemoveState": "Удалить «{{name}}» из государства?",
+    "formerBadge": "Бывший"
+  },
+  "relations": {
+    "emptyTitle": "Нет связей",
+    "emptyDescription": "Установите отношения с другими фракциями",
+    "addLink": "Добавить связь",
+    "confirmDeleteTitle": "Удалить связь",
+    "confirmDeleteMessage": "Удалить?",
+    "deleteRankTitle": "Удалить ранг",
+    "deleteRankMessage": "Удалить «{{name}}»?",
+    "genericDeleteTitle": "Удалить"
+  },
+  "ambitions": {
+    "confirmDeleteTitle": "Удалить амбицию",
+    "confirmDeleteMessage": "Удалить амбицию «{{name}}»?\nОна будет удалена у всех фракций проекта.\nЭто действие нельзя отменить.",
+    "deleted": "Амбиция удалена",
+    "deleteFailed": "Не удалось удалить амбицию",
+    "tabTitle": "Амбиции фракции",
+    "add": "Добавить амбицию",
+    "catalogTitle": "Каталог амбиций",
+    "createTabDescription": "Создайте пользовательскую амбицию для текущего проекта. После сохранения она сразу появится в каталоге.",
+    "create": "Создать амбицию",
+    "emptyNotSavedTitle": "Сначала сохраните фракцию",
+    "emptyNotSavedDescription": "После сохранения можно добавлять и настраивать амбиции.",
+    "emptyNoneTitle": "Амбиций пока нет",
+    "emptyNoneDescription": "Добавьте амбиции из каталога или создайте пользовательскую.",
+    "openCatalog": "Открыть каталог",
+    "conflictAlert": "Обнаружены конфликтующие амбиции. Удалите лишние для корректной работы.",
+    "exclusionsLabel": "Исключает амбиции:",
+    "exclusionsSaved": "Исключения амбиции обновлены",
+    "tooltipConfigure": "Настроить исключения",
+    "detach": "Убрать из фракции",
+    "attach": "Добавить во фракцию",
+    "saveFactionFirstTooltip": "Сначала сохраните фракцию"
+  },
+  "ambitionDialog": {
+    "titleNew": "Новая амбиция",
+    "titleEdit": "Редактировать амбицию",
+    "fieldName": "Название",
+    "fieldDescription": "Описание",
+    "exclusionsLabel": "Исключает амбиции:",
+    "exclusionsPlaceholder": "Выберите амбиции",
+    "uploadIcon": "Загрузить иконку",
+    "formatsHint": "Допустимые форматы: jpeg, jpg, png, webp. Максимум: {{maxMb}} MB",
+    "fileInvalidType": "Допустимые форматы: jpg, jpeg, png, webp",
+    "fileTooLarge": "Максимальный размер файла: {{maxMb}} MB",
+    "updated": "Амбиция обновлена",
+    "created": "Амбиция создана",
+    "saveFailed": "Не удалось сохранить амбицию",
+    "previewAlt": "Превью амбиции"
+  },
+  "compare": {
+    "title": "Сравнение показателей",
+    "entitiesLabel": "Сущности",
+    "baseMetrics": "Базовые показатели",
+    "customMetrics": "Кастомные показатели",
+    "close": "Закрыть",
+    "run": "Сравнить",
+    "chartBar": "Столбцы",
+    "chartRadar": "Радар"
+  },
+  "customMetrics": {
+    "name": "Название",
+    "value": "Значение",
+    "unit": "Единица"
+  },
+  "snackbar": {
+    "loadError": "Ошибка загрузки",
+    "policiesLoadError": "Не удалось загрузить политики",
+    "nameRequired": "Введите название",
+    "saved": "Сохранено!",
+    "genericError": "Ошибка",
+    "entityDeleted": "Удалена",
+    "coatUploaded": "Герб загружен!",
+    "bannerUploaded": "Фон загружен!",
+    "rankUpdated": "Ранг обновлён",
+    "rankCreated": "Ранг создан",
+    "memberAdded": "Добавлен",
+    "relationAdded": "Связь добавлена",
+    "relationRemoved": "Удалена",
+    "policyUpdated": "Политика обновлена",
+    "policyAdded": "Политика добавлена",
+    "removed": "Удалено",
+    "rulerCharacterCreated": "Персонаж создан",
+    "rulerCharacterCreateFailed": "Не удалось создать персонажа",
+    "deleteFailed": "Ошибка удаления"
+  },
+  "confirm": {
+    "deleteEntityMessage": "Удалить «{{name}}»?"
+  },
+  "entityCreated": {
+    "state": "Государство создано!",
+    "faction": "Фракция создана!"
+  },
+  "tagField": {
+    "label": "Теги",
+    "placeholder": "Выберите или введите...",
+    "noOptions": "Введите новый тег"
+  }
+}
