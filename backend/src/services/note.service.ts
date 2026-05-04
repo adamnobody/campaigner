@@ -4,6 +4,12 @@ import { NotFoundError } from '../middleware/errorHandler.js';
 import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers.js';
 import { BranchOverlayService } from './branchOverlay.service.js';
+import {
+  branchCreatedScopeSql,
+  isRowVisibleForActiveBranch,
+  resolveCreatedBranchId,
+  assertBranchBelongsToProject,
+} from './branchScope.js';
 
 type NoteFormat = Note['format'];
 type NoteType = Note['noteType'];
@@ -19,6 +25,7 @@ interface NoteRow {
   isPinned: number | boolean;
   createdAt: string;
   updatedAt: string;
+  createdBranchId?: number | null;
 }
 
 function mapRow(row: NoteRow): Note {
@@ -96,6 +103,10 @@ export class NoteService {
     const sortColumn = allowedSortColumns[sortBy] || 'updated_at';
     const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
+    const scope = branchCreatedScopeSql(branchId);
+    const scopedWhere = `${whereClause}${scope.sql}`;
+    const listParams = [...params, ...scope.params];
+
     let rows: NoteRow[];
     let total: number;
 
@@ -103,11 +114,12 @@ export class NoteService {
       const baseRows = db.prepare(`
         SELECT id, project_id as projectId, folder_id as folderId, title, content,
                format, note_type as noteType, is_pinned as isPinned,
-               created_at as createdAt, updated_at as updatedAt
+               created_at as createdAt, updated_at as updatedAt,
+               created_branch_id as createdBranchId
         FROM notes
-        ${whereClause}
+        ${scopedWhere}
         ORDER BY is_pinned DESC, ${sortColumn} ${order}
-      `).all(...params) as NoteRow[];
+      `).all(...listParams) as NoteRow[];
 
       const overlaid = BranchOverlayService.applyListOverlay(
         baseRows,
@@ -117,19 +129,20 @@ export class NoteService {
       rows = overlaid.slice(offset, offset + limit);
     } else {
       const countRow = db.prepare(`
-        SELECT COUNT(*) as count FROM notes ${whereClause}
-      `).get(...params) as { count: number };
+        SELECT COUNT(*) as count FROM notes ${scopedWhere}
+      `).get(...listParams) as { count: number };
       total = countRow.count;
 
       rows = db.prepare(`
         SELECT id, project_id as projectId, folder_id as folderId, title, content,
                format, note_type as noteType, is_pinned as isPinned,
-               created_at as createdAt, updated_at as updatedAt
+               created_at as createdAt, updated_at as updatedAt,
+               created_branch_id as createdBranchId
         FROM notes
-        ${whereClause}
+        ${scopedWhere}
         ORDER BY is_pinned DESC, ${sortColumn} ${order}
         LIMIT ? OFFSET ?
-      `).all(...params, limit, offset) as NoteRow[];
+      `).all(...listParams, limit, offset) as NoteRow[];
     }
 
     const tagsMap = loadTagsBatch(projectId, 'note', rows.map((r) => r.id));
@@ -149,10 +162,15 @@ export class NoteService {
     const row = db.prepare(`
       SELECT id, project_id as projectId, folder_id as folderId, title, content,
              format, note_type as noteType, is_pinned as isPinned,
-             created_at as createdAt, updated_at as updatedAt
+             created_at as createdAt, updated_at as updatedAt,
+             created_branch_id as createdBranchId
       FROM notes
       WHERE id = ?
     `).get(id) as NoteRow | undefined;
+
+    if (row && !isRowVisibleForActiveBranch(row.createdBranchId, branchId)) {
+      throw new NotFoundError('Note');
+    }
 
     const projectedRow = branchId
       ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'note'))
@@ -167,12 +185,17 @@ export class NoteService {
     return note;
   }
 
-  static create(data: CreateNote): Note {
+  static create(data: CreateNote, requestBranchId?: number): Note {
     const db = getDb();
 
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, data.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
+
     const result = db.prepare(`
-      INSERT INTO notes (project_id, folder_id, title, content, format, note_type, is_pinned)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO notes (project_id, folder_id, title, content, format, note_type, is_pinned, created_branch_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.projectId,
       data.folderId || null,
@@ -180,14 +203,15 @@ export class NoteService {
       data.content || '',
       data.format || 'md',
       data.noteType || 'note',
-      data.isPinned ? 1 : 0
+      data.isPinned ? 1 : 0,
+      createdBranchId,
     );
 
-    return this.getById(result.lastInsertRowid as number);
+    return this.getById(result.lastInsertRowid as number, requestBranchId);
   }
 
   static update(id: number, data: UpdateNote, branchId?: number): Note {
-    this.getById(id);
+    this.getById(id, branchId);
     if (branchId) {
       BranchOverlayService.saveUpsertOverride(branchId, 'note', id, pickNotePatch(data));
       return this.getById(id, branchId);
@@ -200,7 +224,7 @@ export class NoteService {
   }
 
   static delete(id: number, branchId?: number): void {
-    this.getById(id);
+    this.getById(id, branchId);
     if (branchId) {
       BranchOverlayService.saveDeleteOverride(branchId, 'note', id);
       return;

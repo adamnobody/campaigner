@@ -13,6 +13,7 @@ import { migrateFactionKindAndMembershipSync } from './migrations/008_faction_ki
 import { migrateFactionMetrics } from './migrations/009_faction_metrics.js';
 import { migratePoliticalScales } from './migrations/010_political_scales.js';
 import { migrateStateRelations } from './migrations/011_state_relations.js';
+import { migrateBranchScopedCreates } from './migrations/012_branch_scoped_creates.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +51,7 @@ export function initializeDatabase(): void {
   migrateFactionMetrics(database);
   migratePoliticalScales(database);
   migrateStateRelations(database);
+  migrateBranchScopedCreates(database);
   createIndexes(database);
 
   console.log('✅ Database initialized successfully');

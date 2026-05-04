@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { Dogma, CreateDogma, UpdateDogma } from '@campaigner/shared';
 import { dogmasApi } from '@/api/dogmas';
 import { getErrorMessage } from '@/utils/error';
+import { useProjectStore } from '@/store/useProjectStore';
+
+function activeProjectId(): number | undefined {
+  const id = useProjectStore.getState().currentProject?.id;
+  return typeof id === 'number' && id > 0 ? id : undefined;
+}
 
 interface DogmaState {
   dogmas: Dogma[];
@@ -66,7 +72,7 @@ export const useDogmaStore = create<DogmaState>((set) => ({
   fetchDogma: async (id) => {
     set({ loading: true, error: null });
     try {
-      const res = await dogmasApi.getById(id);
+      const res = await dogmasApi.getById(id, activeProjectId());
       set({ currentDogma: res.data.data, loading: false });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to fetch dogma'), loading: false });
@@ -93,7 +99,7 @@ export const useDogmaStore = create<DogmaState>((set) => ({
   updateDogma: async (id, data) => {
     set({ error: null });
     try {
-      const res = await dogmasApi.update(id, data);
+      const res = await dogmasApi.update(id, data, activeProjectId());
       const updated = res.data.data;
       set(state => ({
         dogmas: state.dogmas.map(d => d.id === id ? updated : d),
@@ -108,7 +114,7 @@ export const useDogmaStore = create<DogmaState>((set) => ({
   deleteDogma: async (id) => {
     set({ error: null });
     try {
-      await dogmasApi.delete(id);
+      await dogmasApi.delete(id, activeProjectId());
       set(state => ({
         dogmas: state.dogmas.filter(d => d.id !== id),
         total: state.total - 1,
@@ -136,7 +142,7 @@ export const useDogmaStore = create<DogmaState>((set) => ({
     set({ error: null });
     try {
       await dogmasApi.setTags(id, tagIds);
-      const res = await dogmasApi.getById(id);
+      const res = await dogmasApi.getById(id, activeProjectId());
       const updated = res.data.data;
       set(state => ({
         dogmas: state.dogmas.map(d => d.id === id ? updated : d),

@@ -1,4 +1,5 @@
 import { getDb } from '../db/connection.js';
+import { branchCreatedScopeSql } from './branchScope.js';
 
 export interface SearchResult {
   type: 'character' | 'note' | 'marker' | 'event' | 'dogma' | 'tag' | 'faction';
@@ -84,7 +85,7 @@ function createSnippet(content: string, query: string, radius = 30): string {
 }
 
 export class SearchService {
-  static search(projectId: number, query: string, limit = 20): SearchResult[] {
+  static search(projectId: number, query: string, limit = 20, branchId?: number): SearchResult[] {
     const db = getDb();
     const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 50));
     const like = `%${query}%`;
@@ -113,12 +114,13 @@ export class SearchService {
       });
     }
 
+    const noteScope = branchCreatedScopeSql(branchId);
     const notes = db.prepare(`
       SELECT id, title, content, note_type as noteType
       FROM notes
-      WHERE project_id = ? AND (title LIKE ? OR content LIKE ?)
+      WHERE project_id = ? AND (title LIKE ? OR content LIKE ?)${noteScope.sql}
       LIMIT ?
-    `).all(projectId, like, like, safeLimit) as NoteSearchRow[];
+    `).all(projectId, like, like, ...noteScope.params, safeLimit) as NoteSearchRow[];
 
     for (const note of notes) {
       const typeIcons: Record<NoteSearchRow['noteType'], string> = {
@@ -139,13 +141,14 @@ export class SearchService {
       });
     }
 
+    const markerScope = branchCreatedScopeSql(branchId, 'mm.created_branch_id');
     const markers = db.prepare(`
       SELECT mm.id, mm.title, mm.description, mm.icon
       FROM map_markers mm
       JOIN maps m ON mm.map_id = m.id
-      WHERE m.project_id = ? AND (mm.title LIKE ? OR mm.description LIKE ?)
+      WHERE m.project_id = ? AND (mm.title LIKE ? OR mm.description LIKE ?)${markerScope.sql}
       LIMIT ?
-    `).all(projectId, like, like, safeLimit) as MarkerSearchRow[];
+    `).all(projectId, like, like, ...markerScope.params, safeLimit) as MarkerSearchRow[];
 
     for (const marker of markers) {
       results.push({
@@ -158,12 +161,13 @@ export class SearchService {
       });
     }
 
+    const eventScope = branchCreatedScopeSql(branchId);
     const events = db.prepare(`
       SELECT id, title, description, event_date as eventDate, era
       FROM timeline_events
-      WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR era LIKE ?)
+      WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR era LIKE ?)${eventScope.sql}
       LIMIT ?
-    `).all(projectId, like, like, like, safeLimit) as EventSearchRow[];
+    `).all(projectId, like, like, like, ...eventScope.params, safeLimit) as EventSearchRow[];
 
     for (const event of events) {
       const parts = [event.eventDate, event.era].filter(Boolean);
@@ -178,12 +182,13 @@ export class SearchService {
       });
     }
 
+    const dogmaScope = branchCreatedScopeSql(branchId);
     const dogmas = db.prepare(`
       SELECT id, title, description, category, importance
       FROM dogmas
-      WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR impact LIKE ? OR exceptions LIKE ?)
+      WHERE project_id = ? AND (title LIKE ? OR description LIKE ? OR impact LIKE ? OR exceptions LIKE ?)${dogmaScope.sql}
       LIMIT ?
-    `).all(projectId, like, like, like, like, safeLimit) as DogmaSearchRow[];
+    `).all(projectId, like, like, like, like, ...dogmaScope.params, safeLimit) as DogmaSearchRow[];
 
     for (const dogma of dogmas) {
       results.push({

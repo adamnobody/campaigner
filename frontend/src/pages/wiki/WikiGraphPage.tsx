@@ -10,6 +10,7 @@ import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import { useParams, useNavigate } from 'react-router-dom';
 import { wikiApi } from '@/api/wiki';
 import { notesApi } from '@/api/notes';
+import { useBranchStore } from '@/store/useBranchStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { GlassCard } from '@/components/ui/GlassCard';
 
@@ -45,6 +46,7 @@ export const WikiGraphPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
   const theme = useTheme();
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -91,6 +93,7 @@ export const WikiGraphPage: React.FC = () => {
   }, [s2w]);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
       notesApi.getAll(pid, { noteType: 'wiki', limit: 500 }),
       wikiApi.getLinks(pid),
@@ -130,7 +133,7 @@ export const WikiGraphPage: React.FC = () => {
 
       if (ns.length > 0) requestAnimationFrame(() => fitCamera());
     }).catch(() => setLoading(false));
-  }, [pid]);
+  }, [pid, activeBranchId]);
 
   const fitCamera = useCallback(() => {
     const wrap = wrapRef.current;

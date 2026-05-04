@@ -11,6 +11,7 @@ import {
 import { alpha, type Theme } from '@mui/material/styles';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useBranchStore } from '@/store/useBranchStore';
 import { EmptyState } from '@/components/ui/EmptyState';
 import HubIcon from '@mui/icons-material/Hub';
 import { buildProjectGraph } from '@/pages/graph/data/buildProjectGraph';
@@ -111,6 +112,7 @@ export const ProjectGraphPage: React.FC = () => {
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
   const motionMode = usePreferencesStore((s) => s.motionMode);
   const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)', { noSsr: true });
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const drawerTransitionMs = useMemo(() => {
     const smooth = motionMode === 'full' && !prefersReducedMotion;
@@ -178,7 +180,7 @@ export const ProjectGraphPage: React.FC = () => {
     return () => {
       active = false;
     };
-  }, [pid, i18n.language]);
+  }, [pid, i18n.language, activeBranchId]);
 
   const filteredGraph = useMemo(() => {
     const lowerSearch = search.trim().toLowerCase();

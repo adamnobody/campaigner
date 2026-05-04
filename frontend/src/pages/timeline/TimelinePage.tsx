@@ -22,6 +22,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTimelineStore } from '@/store/useTimelineStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { tagsApi } from '@/api/tags';
 import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
@@ -61,6 +62,7 @@ export const TimelinePage: React.FC = () => {
   } = useTimelineStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
   const theme = useTheme();
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const eraColors = useEraColors();
 
   // Dialog form
@@ -107,7 +109,7 @@ export const TimelinePage: React.FC = () => {
     }).catch(() => {
       setExistingTagNames([]);
     });
-  }, [pid, fetchEvents]);
+  }, [pid, fetchEvents, activeBranchId]);
 
   // Eras list
   const allEras = [...new Set(events.map(e => e.era || ''))].filter(Boolean);

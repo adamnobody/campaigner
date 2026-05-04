@@ -24,7 +24,7 @@ interface MapState {
   reset: () => void;
 }
 
-export const useMapStore = create<MapState>((set) => ({
+export const useMapStore = create<MapState>((set, get) => ({
   currentMap: null,
   markers: [],
   mapTree: [],
@@ -44,7 +44,9 @@ export const useMapStore = create<MapState>((set) => ({
   fetchMapById: async (mapId) => {
     set({ loading: true, error: null });
     try {
-      const response = await mapApi.getMapById(mapId);
+      const mapState = get();
+      const projectId = mapState.currentMap?.projectId ?? mapState.mapTree[0]?.projectId;
+      const response = await mapApi.getMapById(mapId, projectId);
       set({ currentMap: response.data.data, loading: false });
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
@@ -64,7 +66,9 @@ export const useMapStore = create<MapState>((set) => ({
   fetchMarkers: async (mapId) => {
     set({ loading: true, error: null });
     try {
-      const response = await mapApi.getMarkersByMapId(mapId);
+      const mapState = get();
+      const projectId = mapState.currentMap?.projectId ?? mapState.mapTree[0]?.projectId;
+      const response = await mapApi.getMarkersByMapId(mapId, projectId);
       set({ markers: response.data.data, loading: false });
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
@@ -83,7 +87,8 @@ export const useMapStore = create<MapState>((set) => ({
 
   updateMap: async (mapId, data) => {
     try {
-      await mapApi.updateMap(mapId, data);
+      const projectId = get().currentMap?.projectId ?? get().mapTree[0]?.projectId;
+      await mapApi.updateMap(mapId, data, projectId);
       set((state) => ({
         currentMap: state.currentMap
           ? { ...state.currentMap, ...data }
@@ -107,7 +112,8 @@ export const useMapStore = create<MapState>((set) => ({
 
   createMarker: async (mapId, data) => {
     try {
-      const response = await mapApi.createMarker(mapId, data);
+      const projectId = get().currentMap?.projectId ?? get().mapTree[0]?.projectId;
+      const response = await mapApi.createMarker(mapId, data, projectId);
       set((state) => ({
         markers: [...state.markers, response.data.data],
       }));
@@ -120,7 +126,8 @@ export const useMapStore = create<MapState>((set) => ({
 
   updateMarker: async (markerId, data) => {
     try {
-      await mapApi.updateMarker(markerId, data);
+      const projectId = get().currentMap?.projectId ?? get().mapTree[0]?.projectId;
+      await mapApi.updateMarker(markerId, data, projectId);
       set((state) => ({
         markers: state.markers.map((m) =>
           m.id === markerId ? { ...m, ...data } : m
@@ -134,7 +141,8 @@ export const useMapStore = create<MapState>((set) => ({
 
   deleteMarker: async (markerId) => {
     try {
-      await mapApi.deleteMarker(markerId);
+      const projectId = get().currentMap?.projectId ?? get().mapTree[0]?.projectId;
+      await mapApi.deleteMarker(markerId, projectId);
       set((state) => ({
         markers: state.markers.filter((m) => m.id !== markerId),
       }));

@@ -5,17 +5,18 @@ import type { MapData } from '../components/mapUtils';
 
 type UseMapNavigationArgs = {
   loadMapData: (mapId: number) => Promise<void>;
+  projectId: number;
 };
 
-export function useMapNavigation({ loadMapData }: UseMapNavigationArgs) {
+export function useMapNavigation({ loadMapData, projectId }: UseMapNavigationArgs) {
   const [mapBreadcrumbs, setMapBreadcrumbs] = useState<MapData[]>([]);
 
   const navigateToChildMap = useCallback(async (childMapId: number) => {
-    const mapRes = await mapApi.getMapById(childMapId);
+    const mapRes = await mapApi.getMapById(childMapId, projectId);
     const childMap = normalizeMap(extractData(mapRes));
     setMapBreadcrumbs(prev => [...prev, childMap]);
     await loadMapData(childMapId);
-  }, [loadMapData]);
+  }, [loadMapData, projectId]);
 
   const navigateToBreadcrumb = useCallback(async (index: number) => {
     const target = mapBreadcrumbs[index];

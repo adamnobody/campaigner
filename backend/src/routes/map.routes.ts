@@ -59,7 +59,7 @@ router.get(
 
 router.get(
   '/projects/:projectId/territories/summary',
-  validateRequest({ params: projectIdParamsSchema }),
+  validateRequest({ params: projectIdParamsSchema, query: branchQuerySchema }),
   MapController.getTerritorySummariesForProject
 );
 

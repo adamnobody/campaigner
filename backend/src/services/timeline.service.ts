@@ -8,6 +8,12 @@ import { NotFoundError } from '../middleware/errorHandler.js';
 import { TagService } from './tag.service.js';
 import { loadTagsBatch, buildUpdateQuery } from '../utils/dbHelpers.js';
 import { BranchOverlayService } from './branchOverlay.service.js';
+import {
+  branchCreatedScopeSql,
+  isRowVisibleForActiveBranch,
+  resolveCreatedBranchId,
+  assertBranchBelongsToProject,
+} from './branchScope.js';
 
 interface TimelineEventRow {
   id: number;
@@ -20,13 +26,15 @@ interface TimelineEventRow {
   linkedNoteId: number | null;
   createdAt: string;
   updatedAt: string;
+  createdBranchId?: number | null;
 }
 
 const SELECT_FIELDS = `
   id, project_id as projectId, title, description,
   event_date as eventDate, sort_order as sortOrder, era,
   linked_note_id as linkedNoteId,
-  created_at as createdAt, updated_at as updatedAt
+  created_at as createdAt, updated_at as updatedAt,
+  created_branch_id as createdBranchId
 `;
 
 function mapRow(row: TimelineEventRow): TimelineEvent {
@@ -62,6 +70,10 @@ export class TimelineService {
       params.push(era);
     }
 
+    const scope = branchCreatedScopeSql(branchId);
+    query += scope.sql;
+    params.push(...scope.params);
+
     query += ' ORDER BY sort_order ASC, created_at ASC';
 
     const baseRows = db.prepare(query).all(...params) as TimelineEventRow[];
@@ -89,6 +101,10 @@ export class TimelineService {
       `SELECT ${SELECT_FIELDS} FROM timeline_events WHERE id = ?`
     ).get(id) as TimelineEventRow | undefined;
 
+    if (row && !isRowVisibleForActiveBranch(row.createdBranchId, branchId)) {
+      throw new NotFoundError('Timeline event');
+    }
+
     const projectedRow = branchId
       ? BranchOverlayService.applyItemOverlay(row ?? null, BranchOverlayService.getOverrides(branchId, 'timeline_event'))
       : row ?? null;
@@ -102,8 +118,13 @@ export class TimelineService {
     return event;
   }
 
-  static create(data: CreateTimelineEvent): TimelineEvent {
+  static create(data: CreateTimelineEvent, requestBranchId?: number): TimelineEvent {
     const db = getDb();
+
+    if (requestBranchId !== undefined) {
+      assertBranchBelongsToProject(requestBranchId, data.projectId);
+    }
+    const createdBranchId = resolveCreatedBranchId(data.projectId, requestBranchId);
 
     let sortOrder = data.sortOrder;
     if (sortOrder === undefined || sortOrder === 0) {
@@ -115,8 +136,8 @@ export class TimelineService {
     }
 
     const result = db.prepare(`
-      INSERT INTO timeline_events (project_id, title, description, event_date, sort_order, era, linked_note_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO timeline_events (project_id, title, description, event_date, sort_order, era, linked_note_id, created_branch_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.projectId,
       data.title,
@@ -124,14 +145,15 @@ export class TimelineService {
       data.eventDate,
       sortOrder,
       data.era || '',
-      data.linkedNoteId || null
+      data.linkedNoteId || null,
+      createdBranchId,
     );
 
-    return this.getById(result.lastInsertRowid as number);
+    return this.getById(result.lastInsertRowid as number, requestBranchId);
   }
 
   static update(id: number, data: UpdateTimelineEvent, branchId?: number): TimelineEvent {
-    this.getById(id);
+    this.getById(id, branchId);
     if (!branchId) {
       buildUpdateQuery('timeline_events', UPDATE_FIELD_MAP, data as Record<string, unknown>, id);
       return this.getById(id);
@@ -147,7 +169,7 @@ export class TimelineService {
   }
 
   static delete(id: number, branchId?: number): void {
-    this.getById(id);
+    this.getById(id, branchId);
     if (!branchId) {
       const db = getDb();
       db.prepare('DELETE FROM timeline_events WHERE id = ?').run(id);

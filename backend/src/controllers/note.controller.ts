@@ -67,10 +67,7 @@ export class NoteController {
 
   static create = asyncHandler(async (req: Request, res: Response) => {
     const branchId = NoteController.parseBranchId(req.body?.branchId);
-    if (branchId) {
-      throw new BadRequestError('Branch-local note create is not supported in MVP');
-    }
-    const note = NoteService.create(req.body);
+    const note = NoteService.create(req.body, branchId);
     return created(res, note);
   });
 

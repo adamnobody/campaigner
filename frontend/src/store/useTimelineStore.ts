@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { TimelineEvent, CreateTimelineEvent, UpdateTimelineEvent } from '@campaigner/shared';
 import { timelineApi } from '@/api/timeline';
 import { getErrorMessage } from '@/utils/error';
+import { useProjectStore } from '@/store/useProjectStore';
+
+function activeProjectId(): number | undefined {
+  const id = useProjectStore.getState().currentProject?.id;
+  return typeof id === 'number' && id > 0 ? id : undefined;
+}
 
 interface TimelineState {
   events: TimelineEvent[];
@@ -40,7 +46,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   fetchEvent: async (id) => {
     set({ loading: true, error: null });
     try {
-      const res = await timelineApi.getById(id);
+      const res = await timelineApi.getById(id, activeProjectId());
       set({ currentEvent: res.data.data, loading: false });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to fetch timeline event'), loading: false });
@@ -66,7 +72,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   updateEvent: async (id, data) => {
     set({ error: null });
     try {
-      const res = await timelineApi.update(id, data);
+      const res = await timelineApi.update(id, data, activeProjectId());
       const updated = res.data.data;
       set(state => ({
         events: state.events.map(e => e.id === id ? updated : e),
@@ -81,7 +87,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   deleteEvent: async (id) => {
     set({ error: null });
     try {
-      await timelineApi.delete(id);
+      await timelineApi.delete(id, activeProjectId());
       set(state => ({
         events: state.events.filter(e => e.id !== id),
         currentEvent: state.currentEvent?.id === id ? null : state.currentEvent,
@@ -107,7 +113,7 @@ export const useTimelineStore = create<TimelineState>((set) => ({
     set({ error: null });
     try {
       await timelineApi.setTags(id, tagIds);
-      const res = await timelineApi.getById(id);
+      const res = await timelineApi.getById(id, activeProjectId());
       const updated = res.data.data;
       set(state => ({
         events: state.events.map(e => e.id === id ? updated : e),

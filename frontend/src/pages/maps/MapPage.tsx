@@ -30,6 +30,7 @@ import { useMapNavigation } from './hooks/useMapNavigation';
 import { useMapMarkerCrud } from './hooks/useMapMarkerCrud';
 import { useMapTerritoryCrud } from './hooks/useMapTerritoryCrud';
 import { useMapInteractions } from './hooks/useMapInteractions';
+import { useBranchStore } from '@/store/useBranchStore';
 
 // ==================== Component ====================
 export const MapPage: React.FC = () => {
@@ -68,6 +69,7 @@ export const MapPage: React.FC = () => {
   const resetViewRef = useRef<() => void>(() => {});
 
   const territoryRefreshVersion = useMapTerritoriesRefreshStore((s) => s.version);
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   const {
     project,
@@ -103,14 +105,14 @@ export const MapPage: React.FC = () => {
   useEffect(() => {
     if (!currentMap?.id || territoryRefreshVersion === 0) return;
     let cancelled = false;
-    mapApi.getTerritoriesByMapId(currentMap.id).then((res) => {
+    mapApi.getTerritoriesByMapId(currentMap.id, pid).then((res) => {
       if (cancelled) return;
       setTerritories(parseTerritories(extractData(res)));
     }).catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [territoryRefreshVersion, currentMap?.id, setTerritories]);
+  }, [territoryRefreshVersion, currentMap?.id, setTerritories, pid, activeBranchId]);
 
   const {
     zoomDisplay,
@@ -136,7 +138,7 @@ export const MapPage: React.FC = () => {
     navigateToChildMap,
     navigateToBreadcrumb,
     navigateToParent,
-  } = useMapNavigation({ loadMapData });
+  } = useMapNavigation({ loadMapData, projectId: pid });
 
   const {
     dialogOpen,
@@ -191,6 +193,7 @@ export const MapPage: React.FC = () => {
     handleDeleteTerritory,
     closeTerritoryDialog,
   } = useMapTerritoryCrud({
+    projectId: pid,
     currentMap,
     pendingNewTerritoryRings,
     setPendingNewTerritoryRings,

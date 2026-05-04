@@ -97,7 +97,7 @@ export function useMapMarkerCrud({
         await mapApi.updateMarker(draggingMarker.id, {
           positionX: dragPreview.x / 100,
           positionY: dragPreview.y / 100,
-        });
+        }, projectId);
         setMarkers(prev => prev.map(m => m.id === draggingMarker.id ? { ...m, x: dragPreview.x, y: dragPreview.y } : m));
         if (selectedMarker?.id === draggingMarker.id) {
           setSelectedMarker(prev => prev ? { ...prev, x: dragPreview.x, y: dragPreview.y } : prev);
@@ -112,7 +112,7 @@ export function useMapMarkerCrud({
     setDragPreview(null);
     lastDragPreviewUpdateAtRef.current = 0;
     didDragRef.current = false;
-  }, [dragPreview, draggingMarker, selectedMarker?.id, setMarkers, setSelectedMarker, showSnackbar, t]);
+  }, [dragPreview, draggingMarker, selectedMarker?.id, setMarkers, setSelectedMarker, showSnackbar, t, projectId]);
 
   const handleSaveMarker = useCallback(async () => {
     if (!markerForm.title.trim()) return;
@@ -126,7 +126,7 @@ export function useMapMarkerCrud({
           icon: markerForm.icon,
           color: markerForm.color,
           linkedNoteId: markerForm.linkedNoteId,
-        });
+        }, projectId);
         const updated = normalizeMarker(extractData(res));
         setMarkers(prev => prev.map(m => m.id === editingMarker.id ? updated : m));
         if (selectedMarker?.id === editingMarker.id) setSelectedMarker(updated);
@@ -140,7 +140,7 @@ export function useMapMarkerCrud({
           icon: markerForm.icon,
           color: markerForm.color,
           linkedNoteId: markerForm.linkedNoteId,
-        });
+        }, projectId);
         const newMarker = normalizeMarker(extractData(res));
 
         if (markerForm.createChildMap && currentMap) {
@@ -152,7 +152,7 @@ export function useMapMarkerCrud({
               name: t('map:childMap.autoName', { title: newMarker.title }),
             });
             const childMap = normalizeMap(extractData(mapRes));
-            await mapApi.updateMarker(newMarker.id, { childMapId: childMap.id });
+            await mapApi.updateMarker(newMarker.id, { childMapId: childMap.id }, projectId);
             newMarker.childMapId = childMap.id;
 
             if (childMapFile) {
@@ -185,7 +185,7 @@ export function useMapMarkerCrud({
       t('map:confirm.deleteMarkerMessage', { name: marker.title }),
       async () => {
       try {
-        await mapApi.deleteMarker(marker.id);
+        await mapApi.deleteMarker(marker.id, projectId);
         setMarkers(prev => prev.filter(m => m.id !== marker.id));
         setSelectedMarker(null);
         setPanelOpen(false);
@@ -194,7 +194,7 @@ export function useMapMarkerCrud({
         showSnackbar(t('map:snackbar.markerDeleteError'), 'error');
       }
     });
-  }, [setMarkers, setPanelOpen, setSelectedMarker, showConfirmDialog, showSnackbar, t]);
+  }, [setMarkers, setPanelOpen, setSelectedMarker, showConfirmDialog, showSnackbar, t, projectId]);
 
   const handleEditMarker = useCallback((marker: Marker) => {
     setEditingMarker(marker);
@@ -216,7 +216,7 @@ export function useMapMarkerCrud({
     if (!file || !currentMap) return;
     try {
       await mapApi.uploadMapImage(currentMap.id, file);
-      const updated = normalizeMap(extractData(await mapApi.getMapById(currentMap.id)));
+      const updated = normalizeMap(extractData(await mapApi.getMapById(currentMap.id, projectId)));
       setCurrentMap(updated);
       if (!updated.parentMapId) {
         await projectsApi.uploadMap(projectId, file);

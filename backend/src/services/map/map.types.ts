@@ -62,6 +62,8 @@ export interface TerritoryRawRow {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  /** Set only when reading from DB; stripped before returning MapTerritory. */
+  createdBranchId?: number | null;
 }
 
 /**

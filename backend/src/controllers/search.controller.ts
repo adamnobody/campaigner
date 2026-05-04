@@ -14,13 +14,20 @@ export class SearchController {
     }
 
     const projectId = parseId(rawProjectId, 'project id');
+    const branchIdRaw = req.query.branchId;
+    const branchId =
+      branchIdRaw === undefined || branchIdRaw === null || branchIdRaw === ''
+        ? undefined
+        : Number(branchIdRaw);
+    const branchIdParsed =
+      typeof branchId === 'number' && Number.isInteger(branchId) && branchId > 0 ? branchId : undefined;
 
     const limitValue = Number(req.query.limit);
     const limit = Number.isFinite(limitValue)
       ? Math.max(1, Math.min(Math.trunc(limitValue), 50))
       : 20;
 
-    const results = SearchService.search(projectId, query, limit);
+    const results = SearchService.search(projectId, query, limit, branchIdParsed);
     return ok(res, results);
   });
 }

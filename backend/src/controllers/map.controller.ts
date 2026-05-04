@@ -43,7 +43,8 @@ export class MapController {
 
   static getTerritorySummariesForProject = asyncHandler(async (req: Request, res: Response) => {
     const projectId = parseId(req.params.projectId, 'project id');
-    const rows = mapService.listTerritorySummariesForProject(projectId);
+    const branchId = MapController.parseBranchId(req.query.branchId);
+    const rows = mapService.listTerritorySummariesForProject(projectId, branchId);
     return ok(res, rows);
   });
 
@@ -86,11 +87,8 @@ export class MapController {
 
   static createMarker = asyncHandler(async (req: Request, res: Response) => {
     const branchId = MapController.parseBranchId(req.body?.branchId);
-    if (branchId) {
-      throw new BadRequestError('Branch-local marker create is not supported in MVP');
-    }
     const mapId = parseId(req.params.mapId, 'map id');
-    const marker = mapService.createMarker(mapId, req.body);
+    const marker = mapService.createMarker(mapId, req.body, branchId);
     return created(res, marker);
   });
 
@@ -119,7 +117,8 @@ export class MapController {
 
   static createTerritory = asyncHandler(async (req: Request, res: Response) => {
     const mapId = parseId(req.params.mapId, 'map id');
-    const territory = mapService.createTerritory(mapId, req.body);
+    const branchId = MapController.parseBranchId(req.body?.branchId);
+    const territory = mapService.createTerritory(mapId, req.body, branchId);
     return created(res, territory);
   });
 

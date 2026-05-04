@@ -13,6 +13,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useBranchStore } from '@/store/useBranchStore';
 import { tagsApi } from '@/api/tags';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -39,6 +40,8 @@ export const DogmasPage: React.FC = () => {
     fetchDogmas, createDogma, updateDogma, deleteDogma, setTags,
   } = useDogmaStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
+
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
   // Флаг: была ли хотя бы одна успешная загрузка (чтобы отличить "ещё не грузили" от "загрузили и пусто")
   const [initialized, setInitialized] = useState(false);
@@ -84,14 +87,14 @@ export const DogmasPage: React.FC = () => {
       append,
     });
     setInitialized(true);
-  }, [pid, filterCategory, filterImportance, debouncedSearch, fetchDogmas]);
+  }, [pid, filterCategory, filterImportance, debouncedSearch, fetchDogmas, activeBranchId]);
 
   // Начальная загрузка без фильтров — узнаём общее количество
   useEffect(() => {
     fetchDogmas(pid, { limit: 1, offset: 0 }).then(() => {
       setTotalUnfiltered(useDogmaStore.getState().total);
     });
-  }, [pid, fetchDogmas]);
+  }, [pid, fetchDogmas, activeBranchId]);
 
   useEffect(() => {
     tagsApi.getAll(pid)
