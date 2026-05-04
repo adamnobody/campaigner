@@ -15,10 +15,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EventIcon from '@mui/icons-material/Event';
 import {
-  DYNASTY_EVENT_IMPORTANCE_LABELS,
   DYNASTY_EVENT_IMPORTANCE_COLORS,
 } from '@campaigner/shared';
 import type { DynastyEvent } from '@campaigner/shared';
+import { useTranslation } from 'react-i18next';
 
 // ==================== Sortable Event Item ====================
 
@@ -30,6 +30,7 @@ interface SortableEventProps {
 
 const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['dynasties', 'common']);
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: event.id });
@@ -88,7 +89,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
                     {event.title}
                   </Typography>
                   <Chip
-                    label={DYNASTY_EVENT_IMPORTANCE_LABELS[event.importance] || event.importance}
+                    label={t(`dynasties:eventImportance.${event.importance}`, { defaultValue: event.importance })}
                     size="small"
                     sx={{
                       height: 20, fontSize: '0.6rem',
@@ -124,8 +125,6 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
   );
 };
 
-// ==================== Timeline Component ====================
-
 interface DynastyEventsTimelineProps {
   events: DynastyEvent[];
   onEdit: (evt: DynastyEvent) => void;
@@ -137,6 +136,7 @@ export const DynastyEventsTimeline: React.FC<DynastyEventsTimelineProps> = ({
   events, onEdit, onDelete, onReorder,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['dynasties', 'common']);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
@@ -158,7 +158,7 @@ export const DynastyEventsTimeline: React.FC<DynastyEventsTimelineProps> = ({
       <Box sx={{ textAlign: 'center', py: 3 }}>
         <EventIcon sx={{ fontSize: 40, color: alpha(theme.palette.text.secondary, 0.25), mb: 1 }} />
         <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.65), fontSize: '0.9rem' }}>
-          Добавьте ключевые события династии
+          {t('dynasties:timeline.emptyHint')}
         </Typography>
       </Box>
     );

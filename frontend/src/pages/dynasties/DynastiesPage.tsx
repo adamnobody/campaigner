@@ -18,13 +18,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { routes } from '@/utils/routes';
+import { useTranslation } from 'react-i18next';
 import {
   DYNASTY_STATUSES,
-  DYNASTY_STATUS_LABELS,
   DYNASTY_STATUS_ICONS,
 } from '@campaigner/shared';
 
 export const DynastiesPage: React.FC = () => {
+  const { t } = useTranslation(['dynasties', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -66,12 +67,15 @@ export const DynastiesPage: React.FC = () => {
   };
 
   const handleDelete = (id: number, name: string) => {
-    showConfirmDialog('Удалить династию', `Удалить "${name}"? Все члены и события тоже будут удалены.`, async () => {
+    showConfirmDialog(
+      t('dynasties:list.confirmDeleteTitle'),
+      t('dynasties:list.confirmDeleteMessage', { name }),
+      async () => {
       try {
         await deleteDynasty(id);
-        showSnackbar('Династия удалена', 'success');
+        showSnackbar(t('dynasties:snackbar.deleted'), 'success');
       } catch {
-        showSnackbar('Ошибка удаления', 'error');
+        showSnackbar(t('dynasties:snackbar.deleteFailed'), 'error');
       }
     });
   };
@@ -79,7 +83,7 @@ export const DynastiesPage: React.FC = () => {
   if (!initialized && loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'text.secondary' }}>Загрузка...</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
       </Box>
     );
   }
@@ -90,14 +94,14 @@ export const DynastiesPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            Династии
+            {t('dynasties:list.title')}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Родословные линии и правящие дома вашего мира
+            {t('dynasties:list.subtitle')}
           </Typography>
         </Box>
         <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(routes.dynastyDetail(pid, 'new'))}>
-          Создать династию
+          {t('dynasties:list.create')}
         </DndButton>
       </Box>
 
@@ -105,7 +109,7 @@ export const DynastiesPage: React.FC = () => {
       {(dynasties.length > 0 || hasFilters) && (
         <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
-            placeholder="Поиск династий..."
+            placeholder={t('dynasties:list.searchPlaceholder')}
             value={search} onChange={e => setSearch(e.target.value)}
             sx={{ flexGrow: 1, maxWidth: 400 }}
             InputProps={{
@@ -120,10 +124,10 @@ export const DynastiesPage: React.FC = () => {
 
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} displayEmpty>
-              <MenuItem value="">Любой статус</MenuItem>
+              <MenuItem value="">{t('dynasties:list.anyStatus')}</MenuItem>
               {DYNASTY_STATUSES.map(s => (
                 <MenuItem key={s} value={s}>
-                  {DYNASTY_STATUS_ICONS[s]} {DYNASTY_STATUS_LABELS[s]}
+                  {DYNASTY_STATUS_ICONS[s]} {t(`dynasties:statuses.${s}`, { defaultValue: s })}
                 </MenuItem>
               ))}
             </Select>
@@ -132,12 +136,12 @@ export const DynastiesPage: React.FC = () => {
           {hasFilters && (
             <Button variant="outlined" onClick={clearFilters} size="small"
               sx={{ borderColor: alpha(theme.palette.primary.main, 0.5), textTransform: 'none' }}>
-              Сброс
+              {t('dynasties:list.resetFilters')}
             </Button>
           )}
 
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
-            {dynasties.length} из {total}
+            {t('dynasties:list.count', { shown: dynasties.length, total })}
           </Typography>
         </GlassCard>
       )}
@@ -147,17 +151,17 @@ export const DynastiesPage: React.FC = () => {
         hasFilters ? (
           <EmptyState
             icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title="Ничего не найдено"
-            description="Попробуйте изменить параметры поиска или фильтры"
-            actionLabel="Сбросить фильтры"
+            title={t('dynasties:list.emptyFilteredTitle')}
+            description={t('dynasties:list.emptyFilteredDescription')}
+            actionLabel={t('dynasties:list.emptyFilteredAction')}
             onAction={clearFilters}
           />
         ) : (
           <EmptyState
             icon={<AccountTreeIcon sx={{ fontSize: 64 }} />}
-            title="Династий пока нет"
-            description="Создайте родословные линии — правящие дома, благородные семьи и древние роды"
-            actionLabel="Создать династию"
+            title={t('dynasties:list.emptyNoDynastiesTitle')}
+            description={t('dynasties:list.emptyNoDynastiesDescription')}
+            actionLabel={t('dynasties:list.emptyNoDynastiesAction')}
             onAction={() => navigate(routes.dynastyDetail(pid, 'new'))}
           />
         )
@@ -199,12 +203,12 @@ export const DynastiesPage: React.FC = () => {
                     opacity: 0, transition: 'opacity 0.15s',
                     display: 'flex', gap: 0,
                   }}>
-                    <Tooltip title="Открыть">
+                    <Tooltip title={t('dynasties:list.tooltipOpen')}>
                       <IconButton size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Удалить">
+                    <Tooltip title={t('dynasties:list.tooltipDelete')}>
                       <IconButton size="small"
                         onClick={(e) => { e.stopPropagation(); handleDelete(dynasty.id, dynasty.name); }}
                         sx={{ color: theme.palette.error.main, '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) } }}>
@@ -254,7 +258,7 @@ export const DynastiesPage: React.FC = () => {
                   px: 2, pb: 2, flexWrap: 'wrap',
                 }}>
                   <Chip
-                    label={`${DYNASTY_STATUS_ICONS[dynasty.status] || ''} ${DYNASTY_STATUS_LABELS[dynasty.status] || dynasty.status}`}
+                    label={`${DYNASTY_STATUS_ICONS[dynasty.status] || ''} ${t(`dynasties:statuses.${dynasty.status}`, { defaultValue: dynasty.status })}`.trim()}
                     size="small"
                     sx={{
                       height: 22, fontSize: '0.7rem', fontWeight: 600,

@@ -1,1 +1,189 @@
-{}
+{
+  "list": {
+    "title": "Династии",
+    "subtitle": "Родословные линии и правящие дома вашего мира",
+    "create": "Создать династию",
+    "searchPlaceholder": "Поиск династий...",
+    "anyStatus": "Любой статус",
+    "resetFilters": "Сброс",
+    "count": "{{shown}} из {{total}}",
+    "tooltipOpen": "Открыть",
+    "tooltipDelete": "Удалить",
+    "confirmDeleteTitle": "Удалить династию",
+    "confirmDeleteMessage": "Удалить «{{name}}»? Все члены и события тоже будут удалены.",
+    "emptyFilteredTitle": "Ничего не найдено",
+    "emptyFilteredDescription": "Попробуйте изменить параметры поиска или фильтры",
+    "emptyFilteredAction": "Сбросить фильтры",
+    "emptyNoDynastiesTitle": "Династий пока нет",
+    "emptyNoDynastiesDescription": "Создайте родословные линии — правящие дома, благородные семьи и древние роды",
+    "emptyNoDynastiesAction": "Создать династию"
+  },
+  "statuses": {
+    "active": "Правящая",
+    "extinct": "Угасшая",
+    "exiled": "В изгнании",
+    "declining": "В упадке",
+    "rising": "Восходящая"
+  },
+  "familyRelationTypes": {
+    "parent": "Родитель",
+    "child": "Ребёнок",
+    "spouse": "Супруг(а)",
+    "sibling": "Брат/сестра"
+  },
+  "eventImportance": {
+    "critical": "Переломный момент",
+    "major": "Важное",
+    "normal": "Обычное",
+    "minor": "Незначительное"
+  },
+  "detail": {
+    "backToList": "К списку династий",
+    "newTitle": "Новая династия",
+    "fallbackName": "Династия",
+    "uploadCoatTooltip": "Загрузить герб",
+    "tabs": {
+      "overview": "Обзор",
+      "family": "Семья и древо",
+      "events": "События"
+    },
+    "summary": {
+      "title": "Сводка",
+      "status": "Статус",
+      "founder": "Основатель",
+      "head": "Глава",
+      "heir": "Наследник",
+      "linkedFaction": "Связанная фракция",
+      "tags": "Теги"
+    },
+    "sections": {
+      "basics": "Основное",
+      "description": "Описание и история",
+      "tree": "Генеалогическое древо",
+      "members": "Члены династии",
+      "familyLinks": "Родственные связи",
+      "events": "Ключевые события"
+    },
+    "fields": {
+      "name": "Название *",
+      "motto": "Девиз",
+      "status": "Статус",
+      "linkedFaction": "Связанная фракция",
+      "foundedDate": "Дата основания",
+      "extinctDate": "Дата угасания",
+      "founder": "Основатель",
+      "head": "Глава",
+      "heir": "Наследник",
+      "primaryColor": "Основной цвет",
+      "secondaryColor": "Вторичный цвет",
+      "description": "Описание",
+      "history": "История рода",
+      "eventTitle": "Название *",
+      "eventDate": "Дата *",
+      "eventImportance": "Важность",
+      "eventDescription": "Описание"
+    },
+    "placeholders": {
+      "motto": "напр. Огонь и Кровь",
+      "description": "Общее описание династии...",
+      "history": "Как был основан род, ключевые вехи...",
+      "eventDate": "напр. 3-я эпоха, 2941 год"
+    },
+    "factionNone": "Нет",
+    "characterNotSet": "Не указан",
+    "generationFounders": "Основатели",
+    "generationN": "Поколение {{n}}",
+    "mainLineChip": "Главная линия",
+    "members": {
+      "emptyTitle": "Нет членов",
+      "emptyDescription": "Добавьте персонажей в династию",
+      "addCharacter": "Добавить персонажа",
+      "add": "Добавить",
+      "confirmRemove": "Удалить «{{name}}» из династии?"
+    },
+    "familyLinks": {
+      "emptyTitle": "Нет связей",
+      "emptyNeedMembers": "Добавьте минимум двух членов, чтобы создать связи",
+      "emptyDescription": "Установите родственные связи между членами",
+      "addLink": "Добавить связь",
+      "add": "Добавить",
+      "confirmDeleteTitle": "Удалить связь",
+      "confirmDeleteMessage": "Удалить родственную связь?",
+      "confirmDeleteGeneric": "Удалить"
+    },
+    "events": {
+      "emptyTitle": "Нет событий",
+      "emptyDescription": "Добавьте ключевые события в историю династии",
+      "addEvent": "Добавить событие",
+      "add": "Добавить",
+      "confirmDeleteTitle": "Удалить событие",
+      "confirmDeleteMessage": "Удалить «{{title}}»?"
+    }
+  },
+  "dialogs": {
+    "member": {
+      "title": "Добавить члена династии",
+      "character": "Персонаж *",
+      "generation": "Поколение",
+      "generationHelper": "0 = основатели, 1 = дети, 2 = внуки...",
+      "role": "Роль в династии",
+      "rolePlaceholder": "напр. Основатель, Глава, Наследник, младший сын",
+      "birthDate": "Дата рождения",
+      "deathDate": "Дата смерти",
+      "line": "Линия",
+      "lineMain": "Главная линия",
+      "lineBranch": "Боковая ветвь",
+      "notes": "Заметки",
+      "add": "Добавить"
+    },
+    "familyLink": {
+      "title": "Добавить родственную связь",
+      "from": "От кого *",
+      "to": "К кому *",
+      "relationType": "Тип связи",
+      "customLabel": "Пользовательская подпись",
+      "customLabelPlaceholder": "напр. Приёмный сын",
+      "add": "Добавить"
+    },
+    "event": {
+      "titleNew": "Новое событие",
+      "titleEdit": "Редактировать событие",
+      "add": "Добавить"
+    }
+  },
+  "tree": {
+    "legendParent": "Родитель",
+    "legendSpouse": "Супруг",
+    "legendSibling": "Родные"
+  },
+  "timeline": {
+    "emptyHint": "Добавьте ключевые события династии"
+  },
+  "snackbar": {
+    "loadError": "Ошибка загрузки",
+    "nameRequired": "Введите название",
+    "created": "Династия создана!",
+    "saved": "Сохранено!",
+    "genericError": "Ошибка",
+    "deleted": "Удалена",
+    "deleteFailed": "Ошибка удаления",
+    "coatUploaded": "Герб загружен!",
+    "memberAdded": "Член династии добавлен",
+    "linkAdded": "Связь добавлена",
+    "linkRemoved": "Удалена",
+    "memberRemoved": "Удалён",
+    "eventUpdated": "Событие обновлено",
+    "eventAdded": "Событие добавлено",
+    "eventRemoved": "Удалено",
+    "reorderError": "Ошибка сортировки",
+    "memberRemoveFailed": "Ошибка"
+  },
+  "confirm": {
+    "deleteDynastyDetail": "Удалить «{{name}}»?"
+  },
+  "tagField": {
+    "label": "Теги",
+    "placeholder": "Выберите или введите...",
+    "noOptions": "Введите новый тег"
+  }
+}

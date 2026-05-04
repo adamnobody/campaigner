@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import ReactFlow, {
   Node, Edge, Background,
   useNodesState, useEdgesState, Position, MarkerType,
@@ -9,7 +10,6 @@ import { Box, Typography, Avatar, Chip } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import PersonIcon from '@mui/icons-material/Person';
 import type { DynastyMember, DynastyFamilyLink } from '@campaigner/shared';
-import { DYNASTY_FAMILY_RELATION_LABELS } from '@campaigner/shared';
 import { useNavigate, useParams } from 'react-router-dom';
 import { routes } from '@/utils/routes';
 import 'reactflow/dist/style.css';
@@ -119,6 +119,7 @@ function buildLayout(
   members: DynastyMember[],
   familyLinks: DynastyFamilyLink[],
   edgePalette: EdgePalette,
+  getEdgeLabel: (link: DynastyFamilyLink) => string,
 ) {
   const hasSavedPositions = members.some(m => m.graphX != null && m.graphY != null);
 
@@ -130,7 +131,7 @@ function buildLayout(
       data: buildNodeData(m),
     }));
 
-    const edges: Edge[] = buildEdges(familyLinks, edgePalette);
+    const edges: Edge[] = buildEdges(familyLinks, edgePalette, getEdgeLabel);
     return { nodes, edges };
   }
 
@@ -200,11 +201,15 @@ function buildLayout(
     });
   });
 
-  const edges: Edge[] = buildEdges(familyLinks, edgePalette);
+  const edges: Edge[] = buildEdges(familyLinks, edgePalette, getEdgeLabel);
   return { nodes, edges };
 }
 
-function buildEdges(familyLinks: DynastyFamilyLink[], palette: EdgePalette): Edge[] {
+function buildEdges(
+  familyLinks: DynastyFamilyLink[],
+  palette: EdgePalette,
+  getEdgeLabel: (link: DynastyFamilyLink) => string,
+): Edge[] {
   return familyLinks.map(link => {
     const relType = link.relationType;
     const isSpouse = relType === 'spouse';
@@ -226,7 +231,7 @@ function buildEdges(familyLinks: DynastyFamilyLink[], palette: EdgePalette): Edg
       targetHandle: isSpouse ? 'left' : undefined,
       type: isSpouse ? 'straight' : isSibling ? 'step' : 'smoothstep',
       animated: isSpouse,
-      label: link.customLabel || DYNASTY_FAMILY_RELATION_LABELS[relType] || '',
+      label: getEdgeLabel(link),
       labelStyle: { fill: palette.edgeLabelFill, fontSize: 9, fontWeight: 600 },
       labelBgStyle: { fill: palette.edgeLabelBg },
       labelBgPadding: [6, 3] as [number, number],
@@ -258,6 +263,13 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   members, familyLinks, dynastyColor, onSavePositions,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['dynasties', 'common']);
+  const getEdgeLabel = useCallback(
+    (link: DynastyFamilyLink) =>
+      link.customLabel ||
+      t(`dynasties:familyRelationTypes.${link.relationType}`, { defaultValue: link.relationType }),
+    [t]
+  );
   const edgePalette = useMemo((): EdgePalette => ({
     primary: theme.palette.primary.main,
     spouse: theme.palette.secondary.main,
@@ -268,8 +280,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   }), [theme, dynastyColor]);
 
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
-    () => buildLayout(members, familyLinks, edgePalette),
-    [members, familyLinks, edgePalette]
+    () => buildLayout(members, familyLinks, edgePalette, getEdgeLabel),
+    [members, familyLinks, edgePalette, getEdgeLabel]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
@@ -352,15 +364,15 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       }}>
         <Box display="flex" alignItems="center" gap={0.5}>
           <Box sx={{ width: 14, height: 2, backgroundColor: theme.palette.primary.main, borderRadius: 1 }} />
-          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>Родитель</Typography>
+          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>{t('dynasties:tree.legendParent')}</Typography>
         </Box>
         <Box display="flex" alignItems="center" gap={0.5}>
           <Box sx={{ width: 14, height: 2, backgroundColor: theme.palette.secondary.main, borderRadius: 1 }} />
-          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>Супруг</Typography>
+          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>{t('dynasties:tree.legendSpouse')}</Typography>
         </Box>
         <Box display="flex" alignItems="center" gap={0.5}>
           <Box sx={{ width: 14, height: 0, borderTop: `2px dashed ${theme.palette.info.main}` }} />
-          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>Родные</Typography>
+          <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.text.secondary, 0.95) }}>{t('dynasties:tree.legendSibling')}</Typography>
         </Box>
       </Box>
     </Box>
