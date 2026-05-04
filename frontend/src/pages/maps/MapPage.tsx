@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMapTerritoriesRefreshStore } from '@/store/useMapTerritoriesRefreshStore';
 import { Box, Typography, Button, alpha } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
@@ -32,6 +33,7 @@ import { useMapInteractions } from './hooks/useMapInteractions';
 
 // ==================== Component ====================
 export const MapPage: React.FC = () => {
+  const { t } = useTranslation(['map', 'common']);
   const { projectId, mapId } = useParams<{ projectId: string; mapId?: string }>();
   const pid = parseInt(projectId!);
   const mid = mapId ? parseInt(mapId) : null;
@@ -212,7 +214,10 @@ export const MapPage: React.FC = () => {
           startEditingPoints(territory);
           return;
         }
-        showConfirmDialog('Отменить рисование?', 'Отменить начатое рисование территории?', () => {
+        showConfirmDialog(
+          t('map:confirm.cancelDrawingTitle'),
+          t('map:confirm.cancelDrawingMessage'),
+          () => {
           clearDrawingDraft();
           setMode('select');
           startEditingPoints(territory);
@@ -227,7 +232,9 @@ export const MapPage: React.FC = () => {
       drawingCompletedRings.length,
       startEditingPoints,
       clearDrawingDraft,
+      setMode,
       showConfirmDialog,
+      t,
     ],
   );
 
@@ -303,8 +310,8 @@ export const MapPage: React.FC = () => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'Escape') return;
       if (e.repeat) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) {
+      const targetEl = e.target as HTMLElement | null;
+      if (targetEl && (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA' || targetEl.tagName === 'SELECT' || targetEl.isContentEditable)) {
         return;
       }
       if (territoryDialogOpen || dialogOpen || confirmDialogOpen) return;
@@ -346,33 +353,33 @@ export const MapPage: React.FC = () => {
     try {
       const res = await mapApi.createMap({
         projectId: pid, parentMapId: currentMap.id,
-        parentMarkerId: marker.id, name: `Карта: ${marker.title}`,
+        parentMarkerId: marker.id, name: t('map:childMap.autoName', { title: marker.title }),
       });
       const newMap = normalizeMap(extractData(res));
       await mapApi.updateMarker(marker.id, { childMapId: newMap.id });
       setMarkers(prev => prev.map(m => m.id === marker.id ? { ...m, childMapId: newMap.id } : m));
       if (selectedMarker?.id === marker.id) setSelectedMarker(prev => prev ? { ...prev, childMapId: newMap.id } : prev);
-      showSnackbar('Вложенная карта создана', 'success');
+      showSnackbar(t('map:snackbar.nestedMapCreated'), 'success');
     } catch {
-      showSnackbar('Ошибка создания карты', 'error');
+      showSnackbar(t('map:snackbar.nestedMapCreateError'), 'error');
     }
-  }, [currentMap, pid, selectedMarker?.id, showSnackbar]);
+  }, [currentMap, pid, selectedMarker?.id, showSnackbar, t]);
 
   const handleUploadChildMapImage = useCallback(async (marker: Marker, file: File) => {
     if (!marker.childMapId) return;
     try {
       await mapApi.uploadMapImage(marker.childMapId, file);
-      showSnackbar('Изображение загружено', 'success');
+      showSnackbar(t('map:snackbar.childMapImageUploaded'), 'success');
     } catch {
-      showSnackbar('Ошибка загрузки изображения', 'error');
+      showSnackbar(t('map:snackbar.childMapImageError'), 'error');
     }
-  }, [showSnackbar]);
+  }, [showSnackbar, t]);
 
   // ==================== Loading ====================
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка карты...</Typography>
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>{t('map:page.loading')}</Typography>
       </Box>
     );
   }
@@ -403,10 +410,10 @@ export const MapPage: React.FC = () => {
       />
       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.42)', mb: 1, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>
         {editingTerritoryPoints
-          ? 'Перетащите точки для изменения формы · ПКМ — удалить точку · Двойной клик — добавить точку на ребре'
+          ? t('map:page.hintEditingPoints')
           : mode === 'draw_territory'
-          ? 'Клик — вершины линии · замкнуть: наведи на первую точку (кольцо) и кликни, или R / «Контур готов» · «Сохранить» — имя и создание'
-          : 'Клик — маркер · Shift+клик по территории — маркер поверх неё · Клик по территории — настройки · Перетаскивание маркера · Двойной клик — вложенная карта · Alt+drag / СКМ — пан · Колёсико — зум'
+          ? t('map:page.hintDrawTerritory')
+          : t('map:page.hintSelectMode')
         }
       </Typography>
 
@@ -440,7 +447,7 @@ export const MapPage: React.FC = () => {
                 }}
               >
                 <img
-                  ref={imgRef} src={mapImageUrl} alt="Map"
+                  ref={imgRef} src={mapImageUrl} alt={t('map:page.mapImageAlt')}
                   onClick={handleMapClick}
                   onLoad={(e) => {
                     const el = e.currentTarget;
@@ -502,9 +509,9 @@ export const MapPage: React.FC = () => {
             </>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.3)', mb: 2 }}>Карта не загружена</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.3)', mb: 2 }}>{t('map:page.noMapImage')}</Typography>
               <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />}>
-                Загрузить изображение карты
+                {t('map:page.uploadMapImage')}
                 <input type="file" hidden accept="image/*" onChange={handleUploadMap} />
               </Button>
             </Box>
@@ -522,20 +529,24 @@ export const MapPage: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Typography variant="body2" sx={{ color: 'warning.main', mr: 1, whiteSpace: 'nowrap' }}>
-                ✏️ {editingTerritoryPoints.name} — {editingTerritoryPoints.rings.length} контура, {territoryTotalPointCount(editingTerritoryPoints)} точек
+                ✏️ {t('map:editingPoints.banner', {
+                  name: editingTerritoryPoints.name,
+                  ringCount: editingTerritoryPoints.rings.length,
+                  pointCount: territoryTotalPointCount(editingTerritoryPoints),
+                })}
               </Typography>
               <Button size="small" variant="outlined" onClick={cancelEditingPoints}
                 sx={{ borderColor: (theme) => alpha(theme.palette.text.primary, 0.2), color: 'text.secondary',
                   '&:hover': { borderColor: (theme) => alpha(theme.palette.text.primary, 0.4) } }}>
-                Отмена
+                {t('common:cancel')}
               </Button>
               <DndButton size="small" variant="contained" onClick={saveEditingPoints}
                 sx={{ minWidth: 100 }}>
-                Сохранить
+                {t('common:save')}
               </DndButton>
             </Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-              Esc — отмена
+              {t('map:editingPoints.escHint')}
             </Typography>
           </Box>
         )}
@@ -550,7 +561,7 @@ export const MapPage: React.FC = () => {
           }}>
             <Box sx={{ textAlign: 'center' }}>
               <MapIcon sx={{ fontSize: 40, color: 'primary.main', opacity: 0.5, mb: 1 }} />
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>Загрузка карты...</Typography>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>{t('map:page.loadingOverlay')}</Typography>
             </Box>
           </Box>
         )}

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { mapApi } from '@/api/maps';
 import { projectsApi } from '@/api/projects';
 import { extractData, normalizeMap, normalizeMarker, DEFAULT_FORM, MARKER_COLORS } from '../components/mapUtils';
@@ -32,6 +33,7 @@ export function useMapMarkerCrud({
   showSnackbar,
   showConfirmDialog,
 }: UseMapMarkerCrudArgs) {
+  const { t } = useTranslation(['map', 'common']);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMarker, setEditingMarker] = useState<Marker | null>(null);
   const [clickPos, setClickPos] = useState<{ x: number; y: number } | null>(null);
@@ -100,9 +102,9 @@ export function useMapMarkerCrud({
         if (selectedMarker?.id === draggingMarker.id) {
           setSelectedMarker(prev => prev ? { ...prev, x: dragPreview.x, y: dragPreview.y } : prev);
         }
-        showSnackbar('Маркер перемещён', 'success');
+        showSnackbar(t('map:snackbar.markerMoved'), 'success');
       } catch {
-        showSnackbar('Ошибка перемещения', 'error');
+        showSnackbar(t('map:snackbar.markerMoveError'), 'error');
       }
     }
 
@@ -110,7 +112,7 @@ export function useMapMarkerCrud({
     setDragPreview(null);
     lastDragPreviewUpdateAtRef.current = 0;
     didDragRef.current = false;
-  }, [dragPreview, draggingMarker, selectedMarker?.id, setMarkers, setSelectedMarker, showSnackbar]);
+  }, [dragPreview, draggingMarker, selectedMarker?.id, setMarkers, setSelectedMarker, showSnackbar, t]);
 
   const handleSaveMarker = useCallback(async () => {
     if (!markerForm.title.trim()) return;
@@ -128,7 +130,7 @@ export function useMapMarkerCrud({
         const updated = normalizeMarker(extractData(res));
         setMarkers(prev => prev.map(m => m.id === editingMarker.id ? updated : m));
         if (selectedMarker?.id === editingMarker.id) setSelectedMarker(updated);
-        showSnackbar('Маркер обновлён', 'success');
+        showSnackbar(t('map:snackbar.markerUpdated', { name: markerForm.title.trim() }), 'success');
       } else if (clickPos && currentMap) {
         const res = await mapApi.createMarker(currentMap.id, {
           title: markerForm.title,
@@ -147,7 +149,7 @@ export function useMapMarkerCrud({
               projectId,
               parentMapId: currentMap.id,
               parentMarkerId: newMarker.id,
-              name: `Карта: ${newMarker.title}`,
+              name: t('map:childMap.autoName', { title: newMarker.title }),
             });
             const childMap = normalizeMap(extractData(mapRes));
             await mapApi.updateMarker(newMarker.id, { childMapId: childMap.id });
@@ -157,39 +159,42 @@ export function useMapMarkerCrud({
               try {
                 await mapApi.uploadMapImage(childMap.id, childMapFile);
               } catch {
-                showSnackbar('Карта создана, но ошибка загрузки изображения', 'warning');
+                showSnackbar(t('map:snackbar.markerChildMapUploadWarning'), 'warning');
               }
             }
           } catch {
-            showSnackbar('Маркер создан, но ошибка создания вложенной карты', 'warning');
+            showSnackbar(t('map:snackbar.markerChildMapWarning'), 'warning');
           }
         }
 
         setMarkers(prev => [...prev, newMarker]);
         setChildMapFile(null);
         setChildMapPreview(null);
-        showSnackbar('Маркер добавлен', 'success');
+        showSnackbar(t('map:snackbar.markerCreated', { name: newMarker.title }), 'success');
       }
       setDialogOpen(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка сохранения';
+      const message = error instanceof Error ? error.message : t('map:snackbar.markerSaveError');
       showSnackbar(message, 'error');
     }
-  }, [markerForm, editingMarker, clickPos, currentMap, projectId, childMapFile, selectedMarker?.id, setMarkers, setSelectedMarker, showSnackbar]);
+  }, [markerForm, editingMarker, clickPos, currentMap, projectId, childMapFile, selectedMarker?.id, setMarkers, setSelectedMarker, showSnackbar, t]);
 
   const handleDeleteMarker = useCallback((marker: Marker) => {
-    showConfirmDialog('Удалить маркер', `Удалить "${marker.title}"?`, async () => {
+    showConfirmDialog(
+      t('map:confirm.deleteMarkerTitle'),
+      t('map:confirm.deleteMarkerMessage', { name: marker.title }),
+      async () => {
       try {
         await mapApi.deleteMarker(marker.id);
         setMarkers(prev => prev.filter(m => m.id !== marker.id));
         setSelectedMarker(null);
         setPanelOpen(false);
-        showSnackbar('Маркер удалён', 'success');
+        showSnackbar(t('map:snackbar.markerDeleted', { name: marker.title }), 'success');
       } catch {
-        showSnackbar('Ошибка удаления', 'error');
+        showSnackbar(t('map:snackbar.markerDeleteError'), 'error');
       }
     });
-  }, [setMarkers, setPanelOpen, setSelectedMarker, showConfirmDialog, showSnackbar]);
+  }, [setMarkers, setPanelOpen, setSelectedMarker, showConfirmDialog, showSnackbar, t]);
 
   const handleEditMarker = useCallback((marker: Marker) => {
     setEditingMarker(marker);
@@ -217,11 +222,11 @@ export function useMapMarkerCrud({
         await projectsApi.uploadMap(projectId, file);
         setProject(extractData(await projectsApi.getById(projectId)));
       }
-      showSnackbar('Карта загружена!', 'success');
+      showSnackbar(t('map:snackbar.mapUploaded'), 'success');
     } catch {
-      showSnackbar('Ошибка загрузки', 'error');
+      showSnackbar(t('map:snackbar.mapUploadError'), 'error');
     }
-  }, [currentMap, projectId, setCurrentMap, setProject, showSnackbar]);
+  }, [currentMap, projectId, setCurrentMap, setProject, showSnackbar, t]);
 
   const closeDialog = useCallback(() => setDialogOpen(false), []);
 

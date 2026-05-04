@@ -1,1 +1,161 @@
-{}
+{
+  "markerIcons": {
+    "castle": "Замок",
+    "city": "Город",
+    "village": "Деревня",
+    "tavern": "Таверна",
+    "dungeon": "Подземелье",
+    "forest": "Лес",
+    "mountain": "Гора",
+    "river": "Река",
+    "cave": "Пещера",
+    "temple": "Храм",
+    "ruins": "Руины",
+    "port": "Порт",
+    "bridge": "Мост",
+    "tower": "Башня",
+    "camp": "Лагерь",
+    "battlefield": "Поле боя",
+    "mine": "Шахта",
+    "farm": "Ферма",
+    "graveyard": "Кладбище",
+    "custom": "Своя"
+  },
+  "defaults": {
+    "rootMapName": "Корневая карта"
+  },
+  "page": {
+    "loading": "Загрузка карты…",
+    "loadingOverlay": "Загрузка карты…",
+    "noMapImage": "Карта не загружена",
+    "uploadMapImage": "Загрузить изображение карты",
+    "mapImageAlt": "Карта",
+    "hintEditingPoints": "Перетащите точки для изменения формы · ПКМ — удалить точку · Двойной клик — добавить точку на ребре",
+    "hintDrawTerritory": "Клик — вершины линии · замкнуть: наведи на первую точку (кольцо) и кликни, или R / «Контур готов» · «Сохранить» — имя и создание",
+    "hintSelectMode": "Клик — маркер · Shift+клик по территории — маркер поверх неё · Клик по территории — настройки · Перетаскивание маркера · Двойной клик — вложенная карта · Alt+drag / СКМ — пан · Колёсико — зум"
+  },
+  "confirm": {
+    "cancelDrawingTitle": "Отменить рисование?",
+    "cancelDrawingMessage": "Отменить начатое рисование территории?",
+    "deleteMarkerTitle": "Удалить маркер",
+    "deleteMarkerMessage": "Удалить «{{name}}»?",
+    "deleteTerritoryTitle": "Удалить территорию",
+    "deleteTerritoryMessage": "Удалить «{{name}}»?"
+  },
+  "toolbar": {
+    "tooltipSelectMode": "Режим выбора",
+    "tooltipDrawTerritory": "Рисовать территорию",
+    "drawingChip": "{{rings}} конт. · {{points}} т.к.",
+    "completeContour": "Контур готов",
+    "statsChip": "{{markers}} маркеров · {{territories}} территорий",
+    "uploadMap": "Загрузить карту",
+    "zoomPercent": "{{value}}%",
+    "backParentAria": "К родительской карте"
+  },
+  "markerPanel": {
+    "positionLabel": "X: {{x}}% · Y: {{y}}%",
+    "sectionDescription": "Описание",
+    "sectionLinkedNote": "Привязанная заметка",
+    "noteTypeWiki": "Вики-статья",
+    "noteTypeNote": "Заметка",
+    "notLinked": "Не привязана",
+    "sectionChildMap": "Вложенная карта",
+    "openChildMap": "Открыть вложенную карту",
+    "uploadImage": "Загрузить изображение",
+    "createChildMap": "Создать вложенную карту"
+  },
+  "territoryPanel": {
+    "subtitle": "Территория · контуров: {{rings}}, точек: {{points}}",
+    "sectionDescription": "Описание",
+    "sectionOwnership": "Принадлежность",
+    "factionKindState": "Государство",
+    "factionKindFaction": "Фракция",
+    "notLinkedFaction": "Не привязана к государству/фракции",
+    "sectionVisual": "Визуальные параметры",
+    "fillColor": "Цвет заливки",
+    "opacity": "Прозрачность",
+    "borderColor": "Цвет границы",
+    "borderWidth": "Толщина границы",
+    "settings": "Настройки",
+    "editShape": "Редактировать форму"
+  },
+  "markerDialog": {
+    "editTitle": "Редактировать маркер",
+    "createTitle": "Добавить маркер",
+    "fieldTitle": "Название маркера",
+    "fieldDescription": "Описание",
+    "linkedNoteLabel": "Привязанная заметка",
+    "linkedNotePlaceholder": "Начните вводить…",
+    "noNotes": "Нет заметок",
+    "clear": "Очистить",
+    "createNestedMapTitle": "Создать вложенную карту",
+    "createNestedMapHint": "Маркер станет входом на отдельную карту",
+    "uploadChildMapImage": "Загрузить изображение карты",
+    "removeAttachment": "Удалить",
+    "fieldIcon": "Иконка",
+    "colorLabel": "Цвет",
+    "previewFallback": "Превью маркера"
+  },
+  "territoryDialog": {
+    "editTitle": "Редактировать территорию",
+    "createTitle": "Новая территория",
+    "fieldName": "Название территории",
+    "fieldDescription": "Описание",
+    "factionLabel": "Принадлежность (государство/фракция)",
+    "factionPlaceholder": "Выберите сущность…",
+    "noFactions": "Нет доступных сущностей",
+    "clear": "Очистить",
+    "fillSwatches": "Цвет заливки",
+    "opacitySlider": "Прозрачность: {{percent}}%",
+    "borderColorSwatches": "Цвет границы",
+    "borderWidthSlider": "Толщина границы: {{width}}px",
+    "smoothingSlider": "Сглаживание углов: {{percent}}%",
+    "previewLabel": "Превью",
+    "previewNameFallback": "Территория"
+  },
+  "editingPoints": {
+    "banner": "✏️ {{name}} — {{ringCount}} контура · {{pointCount}} точек",
+    "escHint": "Esc — отмена"
+  },
+  "childMap": {
+    "autoName": "Карта: {{title}}"
+  },
+  "noteTypes": {
+    "wiki": "Вики",
+    "lore": "Лор",
+    "note": "Заметка"
+  },
+  "snackbar": {
+    "mapLoadError": "Ошибка загрузки карты",
+    "markerMoved": "Маркер перемещён",
+    "markerMoveError": "Ошибка перемещения",
+    "markerUpdated": "Маркер «{{name}}» обновлён",
+    "markerCreated": "Маркер «{{name}}» добавлен",
+    "markerDeleted": "Маркер «{{name}}» удалён",
+    "markerDeleteError": "Ошибка удаления",
+    "markerSaveError": "Ошибка сохранения",
+    "mapUploaded": "Карта загружена!",
+    "mapUploadError": "Ошибка загрузки",
+    "territoryUpdated": "Территория «{{name}}» обновлена",
+    "territoryCreated": "Территория «{{name}}» создана",
+    "territoryDeleted": "Территория «{{name}}» удалена",
+    "territoryDeleteError": "Ошибка удаления",
+    "territorySaveError": "Ошибка сохранения территории",
+    "territoryShapeSaved": "Точки территории обновлены",
+    "territoryPointsSaveError": "Ошибка сохранения точек",
+    "deleteRingMinVertices": "Нельзя удалить: в контуре должно остаться минимум 3 вершины",
+    "finishShapeEditFirst": "Сначала завершите редактирование формы",
+    "shapeEditCancelled": "Редактирование формы отменено",
+    "nestedMapCreated": "Вложенная карта создана",
+    "nestedMapCreateError": "Ошибка создания карты",
+    "childMapImageUploaded": "Изображение загружено",
+    "childMapImageError": "Ошибка загрузки изображения",
+    "markerChildMapUploadWarning": "Карта создана, но ошибка загрузки изображения",
+    "markerChildMapWarning": "Маркер создан, но ошибка создания вложенной карты"
+  },
+  "drawing": {
+    "minThreePoints": "Минимум 3 точки на один контур",
+    "needClosedContour": "Нужен хотя бы один замкнутый контур (3+ точек). «Контур готов» — зафиксировать контур.",
+    "minThreePerRing": "Каждый контур — не меньше 3 точек"
+  }
+}
