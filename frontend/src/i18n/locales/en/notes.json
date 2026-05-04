@@ -1,1 +1,133 @@
-{}
+{
+  "list": {
+    "title": "Notes",
+    "subtitle": "Free-form ideas and drafts for your world",
+    "newNote": "New note",
+    "searchPlaceholder": "Search notes...",
+    "tabAll": "All ({{count}})",
+    "tabNotes": "Notes",
+    "tabWiki": "Wiki",
+    "tabMarkers": "Markers",
+    "emptyFilteredTitle": "Nothing found",
+    "emptyFilteredDescription": "Try another search query or tab",
+    "emptyFilteredAction": "Reset filters",
+    "emptyNoNotesTitle": "No notes yet",
+    "emptyNoNotesDescription": "Create notes, ideas, and drafts for your world",
+    "emptyNoNotesAction": "Create note",
+    "tooltipEditTags": "Edit tags",
+    "tooltipDelete": "Delete",
+    "addTagsHint": "+ add tags"
+  },
+  "noteTypes": {
+    "note": "Note",
+    "wiki": "Wiki",
+    "marker_note": "Marker"
+  },
+  "dialogs": {
+    "createTitle": "New note",
+    "createFieldTitle": "Title *",
+    "createFieldFormat": "Format",
+    "tagsDialogTitle": "Tags: {{title}}",
+    "newTagHint": "Type a new tag"
+  },
+  "tagField": {
+    "label": "Tags",
+    "placeholder": "Select or type..."
+  },
+  "confirm": {
+    "deleteNoteTitle": "Delete note",
+    "deleteNoteMessage": "Delete “{{title}}”?"
+  },
+  "snackbar": {
+    "created": "Note “{{title}}” created",
+    "createError": "Could not create note",
+    "deleted": "Deleted",
+    "deleteError": "Error",
+    "tagsUpdated": "Tags updated",
+    "saved": "Note “{{title}}” saved",
+    "saveError": "Could not save",
+    "linkCreated": "Link created",
+    "linkDuplicate": "Link already exists",
+    "linkDeleted": "Link removed",
+    "pinned": "Pinned",
+    "unpinned": "Unpinned",
+    "togglePinError": "Error"
+  },
+  "editor": {
+    "placeholder": "Start writing...",
+    "wikiChip": "WIKI",
+    "tooltipHideLinks": "Hide links",
+    "tooltipShowLinks": "Show links",
+    "backAria": "Back",
+    "pinAria": "Toggle pin",
+    "saveStatusSaved": "Saved {{time}}",
+    "saveStatusUnsaved": "• Unsaved changes",
+    "saveStatusSaving": "Saving…",
+    "saveStatusError": "Save failed",
+    "modeEdit": "Source",
+    "modeSplit": "Split",
+    "modePreview": "Preview",
+    "hintBar": "Autosave in 3s · Ctrl+S save · Ctrl+Z undo · Ctrl+Shift+Z redo{{wikiHint}}",
+    "hintBarWikiSuffix": " · [Link text](/__note__/ID) — internal wiki link",
+    "wordCount": "{{words}} words · {{chars}} characters",
+    "saved": {
+      "justNow": "just now",
+      "secondsAgo": "{{count}} s ago",
+      "minutesAgo": "{{count}} min ago"
+    }
+  },
+  "markdown": {
+    "placeholders": {
+      "bold": "bold text",
+      "italic": "italic",
+      "heading": "Heading",
+      "linkText": "text",
+      "wikiTitle": "Article title",
+      "code": "code",
+      "listItem": "list item",
+      "quote": "quote"
+    }
+  },
+  "toolbar": {
+    "undo": "Undo (Ctrl+Z)",
+    "redo": "Redo (Ctrl+Shift+Z)",
+    "heading": "Heading",
+    "bold": "Bold (Ctrl+B)",
+    "italic": "Italic (Ctrl+I)",
+    "list": "List",
+    "quote": "Quote",
+    "code": "Code",
+    "link": "Link",
+    "hr": "Horizontal rule",
+    "wikiLink": "Internal wiki link"
+  },
+  "preview": {
+    "empty": "Empty…",
+    "emptyMarkdown": "Empty…"
+  },
+  "wikiSidebar": {
+    "title": "Links ({{count}})",
+    "addLink": "Add link",
+    "emptyTitle": "No links",
+    "emptyHint": "Link to other wiki articles",
+    "footerHint": "Use [link text](/__note__/ID)",
+    "deleteLinkAria": "Remove link"
+  },
+  "wikiDialogs": {
+    "createTitle": "Add link",
+    "createArticleLabel": "Wiki article *",
+    "createArticlePlaceholder": "Choose an article…",
+    "createNoOptions": "No articles",
+    "createLabelField": "Link description (optional)",
+    "createLabelPlaceholder": "e.g. capital, ally, part of…",
+    "createSubmit": "Create link",
+    "insertTitle": "Insert wiki link",
+    "insertArticleLabel": "Wiki article *",
+    "insertArticlePlaceholder": "Choose an article…",
+    "insertNoOptions": "No articles",
+    "insertLinkTextLabel": "Link text",
+    "insertLinkTextPlaceholder": "Text shown in the article",
+    "insertLinkTextHelper": "A markdown link to the internal article will be inserted",
+    "insertSubmit": "Insert"
+  }
+}

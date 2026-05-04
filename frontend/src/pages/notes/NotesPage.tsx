@@ -13,6 +13,7 @@ import PushPinIcon from '@mui/icons-material/PushPin';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -27,6 +28,7 @@ import { ALLOWED_NOTE_FORMATS } from '@campaigner/shared';
 import type { Note } from '@campaigner/shared';
 
 export const NotesPage: React.FC = () => {
+  const { t, i18n } = useTranslation(['notes', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -61,14 +63,14 @@ export const NotesPage: React.FC = () => {
     }).catch(() => {});
   }, [pid]);
 
-  const allTagNames = allTags.map(t => t.name);
+  const allTagNames = allTags.map(tag => tag.name);
 
   // ============ Resolve tag names → ids ============
   const resolveTagIds = async (tagNames: string[]): Promise<number[]> => {
     if (tagNames.length === 0) return [];
     const tagIds: number[] = [];
     for (const name of tagNames) {
-      const existing = allTags.find(t => t.name.toLowerCase() === name.toLowerCase());
+      const existing = allTags.find(tag => tag.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         tagIds.push(existing.id);
       } else {
@@ -102,22 +104,25 @@ export const NotesPage: React.FC = () => {
       setCreateOpen(false);
       setNewTitle('');
       setNewTagValues([]);
-      showSnackbar('Заметка создана', 'success');
+      showSnackbar(t('notes:snackbar.created', { title: newTitle.trim() }), 'success');
       navigate(`/project/${pid}/notes/${note.id}`);
     } catch {
-      showSnackbar('Ошибка создания', 'error');
+      showSnackbar(t('notes:snackbar.createError'), 'error');
     }
   };
 
   // ============ Delete ============
   const handleDelete = (id: number, title: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    showConfirmDialog('Удалить заметку', `Удалить "${title}"?`, async () => {
+    showConfirmDialog(
+      t('notes:confirm.deleteNoteTitle'),
+      t('notes:confirm.deleteNoteMessage', { title }),
+      async () => {
       try {
         await deleteNote(id);
-        showSnackbar('Удалено', 'success');
+        showSnackbar(t('notes:snackbar.deleted'), 'success');
       } catch {
-        showSnackbar('Ошибка', 'error');
+        showSnackbar(t('notes:snackbar.deleteError'), 'error');
       }
     });
   };
@@ -126,7 +131,7 @@ export const NotesPage: React.FC = () => {
   const handleOpenTagsEdit = (note: Note, e: React.MouseEvent) => {
     e.stopPropagation();
     setTagsEditNote(note);
-    setEditTagValues((note.tags || []).map((t: any) => t.name));
+    setEditTagValues((note.tags || []).map((tag: { name: string }) => tag.name));
     setTagsDialogOpen(true);
   };
 
@@ -137,9 +142,9 @@ export const NotesPage: React.FC = () => {
       await setTags(tagsEditNote.id, tagIds);
       setTagsDialogOpen(false);
       setTagsEditNote(null);
-      showSnackbar('Теги обновлены', 'success');
+      showSnackbar(t('notes:snackbar.tagsUpdated'), 'success');
     } catch {
-      showSnackbar('Ошибка', 'error');
+      showSnackbar(t('notes:snackbar.deleteError'), 'error');
     }
   };
 
@@ -152,14 +157,14 @@ export const NotesPage: React.FC = () => {
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            Заметки
+            {t('notes:list.title')}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Свободные записи, идеи и черновики
+            {t('notes:list.subtitle')}
           </Typography>
         </Box>
         <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-          Новая заметка
+          {t('notes:list.newNote')}
         </DndButton>
       </Box>
 
@@ -168,7 +173,7 @@ export const NotesPage: React.FC = () => {
         <GlassCard sx={{ p: 2, mb: 3 }}>
           <TextField
             fullWidth
-            placeholder="Поиск заметок..."
+            placeholder={t('notes:list.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             sx={{ mb: 2 }}
@@ -179,10 +184,10 @@ export const NotesPage: React.FC = () => {
           />
 
           <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
-            <Tab label={`Все (${total})`} />
-            <Tab label="Заметки" />
-            <Tab label="Вики" />
-            <Tab label="Маркеры" />
+            <Tab label={t('notes:list.tabAll', { count: total })} />
+            <Tab label={t('notes:list.tabNotes')} />
+            <Tab label={t('notes:list.tabWiki')} />
+            <Tab label={t('notes:list.tabMarkers')} />
           </Tabs>
         </GlassCard>
       )}
@@ -192,17 +197,17 @@ export const NotesPage: React.FC = () => {
         hasFilters ? (
           <EmptyState
             icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title="Ничего не найдено"
-            description="Попробуйте изменить параметры поиска или выбрать другую вкладку"
-            actionLabel="Сбросить фильтры"
+            title={t('notes:list.emptyFilteredTitle')}
+            description={t('notes:list.emptyFilteredDescription')}
+            actionLabel={t('notes:list.emptyFilteredAction')}
             onAction={() => { setSearch(''); setTab(0); }}
           />
         ) : (
           <EmptyState
             icon={<DescriptionIcon sx={{ fontSize: 64 }} />}
-            title="Заметок пока нет"
-            description="Создавайте заметки, идеи и черновики для вашего мира"
-            actionLabel="Создать заметку"
+            title={t('notes:list.emptyNoNotesTitle')}
+            description={t('notes:list.emptyNoNotesDescription')}
+            actionLabel={t('notes:list.emptyNoNotesAction')}
             onAction={() => setCreateOpen(true)}
           />
         )
@@ -231,13 +236,13 @@ export const NotesPage: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
-                    <Tooltip title="Редактировать теги">
+                    <Tooltip title={t('notes:list.tooltipEditTags')}>
                       <IconButton size="small" onClick={(e) => handleOpenTagsEdit(note, e)}
                         sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
                         <LocalOfferIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Удалить">
+                    <Tooltip title={t('notes:list.tooltipDelete')}>
                       <IconButton size="small" onClick={(e) => handleDelete(note.id, note.title, e)}
                         sx={{ color: theme.palette.error.main, '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) } }}>
                         <DeleteIcon sx={{ fontSize: 16 }} />
@@ -289,10 +294,10 @@ export const NotesPage: React.FC = () => {
                   <Box display="flex" gap={0.5} flexWrap="wrap" alignItems="center">
                     <Chip label={note.format.toUpperCase()} size="small" variant="outlined"
                       sx={{ height: 22, fontSize: '0.65rem', color: 'text.secondary', borderColor: theme.palette.divider }} />
-                    <Chip label={note.noteType} size="small" color="primary" variant="outlined"
+                    <Chip label={t(`notes:noteTypes.${note.noteType}`, { defaultValue: note.noteType })} size="small" color="primary" variant="outlined"
                       sx={{ height: 22, fontSize: '0.65rem' }} />
-                    {note.tags?.map((tag: any) => (
-                      <Chip key={tag.id} label={tag.name} size="small"
+                    {note.tags?.map((tag) => (
+                      <Chip key={tag.id ?? tag.name} label={tag.name} size="small"
                         sx={{ height: 22, fontSize: '0.65rem', fontWeight: 600, backgroundColor: tag.color ? alpha(tag.color, 0.15) : alpha(theme.palette.primary.main, 0.15), color: tag.color || theme.palette.primary.main, borderRadius: 1 }} />
                     ))}
                   </Box>
@@ -307,13 +312,13 @@ export const NotesPage: React.FC = () => {
                       <LocalOfferIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                       <Typography className="add-tag-text" variant="caption"
                         sx={{ color: 'text.secondary', transition: 'color 0.15s' }}>
-                        + добавить теги
+                        {t('notes:list.addTagsHint')}
                       </Typography>
                     </Box>
                   )}
 
                   <Typography variant="caption" sx={{ color: 'text.disabled', mt: 1, display: 'block' }}>
-                    {new Date(note.updatedAt).toLocaleDateString('ru-RU')}
+                    {new Date(note.updatedAt).toLocaleDateString(i18n.language)}
                   </Typography>
                 </Box>
               </GlassCard>
@@ -325,15 +330,15 @@ export const NotesPage: React.FC = () => {
       {/* ============ Create Dialog ============ */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>Новая заметка</DialogTitle>
+        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('notes:dialogs.createTitle')}</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus fullWidth label="Название *" value={newTitle}
+            autoFocus fullWidth label={t('notes:dialogs.createFieldTitle')} value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)} margin="normal"
           />
           <FormControl fullWidth margin="normal">
-            <InputLabel>Формат</InputLabel>
-            <Select value={newFormat} label="Формат" onChange={(e) => setNewFormat(e.target.value as 'md' | 'txt')}>
+            <InputLabel>{t('notes:dialogs.createFieldFormat')}</InputLabel>
+            <Select value={newFormat} label={t('notes:dialogs.createFieldFormat')} onChange={(e) => setNewFormat(e.target.value as 'md' | 'txt')}>
               {ALLOWED_NOTE_FORMATS.map(f => (
                 <MenuItem key={f} value={f}>{f.toUpperCase()}</MenuItem>
               ))}
@@ -352,7 +357,7 @@ export const NotesPage: React.FC = () => {
               ))
             }
             renderInput={(params) => (
-              <TextField {...params} label="Теги" margin="normal" placeholder="Выберите или введите..."
+              <TextField {...params} label={t('notes:tagField.label')} margin="normal" placeholder={t('notes:tagField.placeholder')}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -366,15 +371,15 @@ export const NotesPage: React.FC = () => {
                 }}
               />
             )}
-            noOptionsText="Введите новый тег"
+            noOptionsText={t('notes:dialogs.newTagHint')}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => { setCreateOpen(false); setNewTitle(''); setNewTagValues([]); }} color="inherit">
-            Отмена
+            {t('common:cancel')}
           </Button>
           <DndButton variant="contained" onClick={handleCreate} disabled={!newTitle.trim()}>
-            Создать
+            {t('common:create')}
           </DndButton>
         </DialogActions>
       </Dialog>
@@ -383,7 +388,7 @@ export const NotesPage: React.FC = () => {
       <Dialog open={tagsDialogOpen} onClose={() => setTagsDialogOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-          Теги: {tagsEditNote?.title}
+          {tagsEditNote ? t('notes:dialogs.tagsDialogTitle', { title: tagsEditNote.title }) : ''}
         </DialogTitle>
         <DialogContent>
           <Autocomplete
@@ -398,7 +403,7 @@ export const NotesPage: React.FC = () => {
               ))
             }
             renderInput={(params) => (
-              <TextField {...params} label="Теги" margin="normal" placeholder="Выберите или введите..."
+              <TextField {...params} label={t('notes:tagField.label')} margin="normal" placeholder={t('notes:tagField.placeholder')}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -412,13 +417,13 @@ export const NotesPage: React.FC = () => {
                 }}
               />
             )}
-            noOptionsText="Введите новый тег"
+            noOptionsText={t('notes:dialogs.newTagHint')}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setTagsDialogOpen(false)} color="inherit">Отмена</Button>
+          <Button onClick={() => setTagsDialogOpen(false)} color="inherit">{t('common:cancel')}</Button>
           <DndButton variant="contained" onClick={handleSaveTags}>
-            Сохранить
+            {t('common:save')}
           </DndButton>
         </DialogActions>
       </Dialog>

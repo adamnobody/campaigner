@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, IconButton, Tooltip, useTheme, alpha } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -29,6 +30,7 @@ export const NoteEditorWikiSidebar: React.FC<Props> = ({
   onDeleteLink,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(['notes', 'common']);
   return (
     <Box sx={{
       width: 260, flexShrink: 0, borderLeft: `1px solid ${theme.palette.divider}`,
@@ -39,10 +41,10 @@ export const NoteEditorWikiSidebar: React.FC<Props> = ({
         <Box display="flex" alignItems="center" gap={0.5}>
           <AccountTreeIcon sx={{ fontSize: 16, color: alpha(theme.palette.info.main, 0.6) }} />
           <Typography variant="subtitle2" sx={{ color: alpha(theme.palette.info.main, 0.8), fontWeight: 600, fontSize: '0.8rem' }}>
-            Связи ({wikiLinks.length})
+            {t('notes:wikiSidebar.title', { count: wikiLinks.length })}
           </Typography>
         </Box>
-        <Tooltip title="Добавить связь">
+        <Tooltip title={t('notes:wikiSidebar.addLink')}>
           <IconButton size="small" onClick={onOpenCreateLink}
             sx={{ color: alpha(theme.palette.info.main, 0.5), '&:hover': { color: theme.palette.info.main } }}>
             <AddIcon sx={{ fontSize: 18 }} />
@@ -55,10 +57,10 @@ export const NoteEditorWikiSidebar: React.FC<Props> = ({
           <Box sx={{ textAlign: 'center', py: 3 }}>
             <AccountTreeIcon sx={{ fontSize: 32, color: alpha(theme.palette.text.primary, 0.08), mb: 1 }} />
             <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
-              Нет связей
+              {t('notes:wikiSidebar.emptyTitle')}
             </Typography>
             <Typography variant="caption" sx={{ color: alpha(theme.palette.text.primary, 0.15), display: 'block', fontSize: '0.65rem' }}>
-              Свяжите с другими вики-статьями
+              {t('notes:wikiSidebar.emptyHint')}
             </Typography>
           </Box>
         ) : (
@@ -70,7 +72,7 @@ export const NoteEditorWikiSidebar: React.FC<Props> = ({
                 <ListItem
                   key={link.id}
                   secondaryAction={
-                    <IconButton size="small" onClick={() => onDeleteLink(link.id)}
+                    <IconButton size="small" onClick={() => onDeleteLink(link.id)} aria-label={t('notes:wikiSidebar.deleteLinkAria')}
                       sx={{ color: alpha(theme.palette.error.main, 0.3), '&:hover': { color: alpha(theme.palette.error.main, 0.7) } }}>
                       <DeleteIcon sx={{ fontSize: 14 }} />
                     </IconButton>
@@ -104,7 +106,7 @@ export const NoteEditorWikiSidebar: React.FC<Props> = ({
 
       <Box sx={{ p: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
         <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.6rem', display: 'block', textAlign: 'center' }}>
-          Используйте [Текст ссылки](/__note__/ID)
+          {t('notes:wikiSidebar.footerHint')}
         </Typography>
       </Box>
     </Box>
