@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Paper, TextField, IconButton,
+  Box, Typography, TextField, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Chip, Select, MenuItem, FormControl,
   InputAdornment, Collapse, Tooltip, InputLabel,
@@ -19,6 +19,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTimelineStore } from '@/store/useTimelineStore';
 import { useUIStore } from '@/store/useUIStore';
 import { tagsApi } from '@/api/tags';
@@ -50,6 +51,7 @@ interface NoteOption {
 }
 
 export const TimelinePage: React.FC = () => {
+  const { t } = useTranslation(['timeline', 'common']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -146,7 +148,7 @@ export const TimelinePage: React.FC = () => {
     setDescription(event.description || '');
     setEventDate(event.eventDate);
     setEra(event.era || '');
-    setTagsStr((event.tags || []).map((t: any) => t.name).join(', '));
+    setTagsStr((event.tags || []).map((tag) => tag.name).join(', '));
     setTagsInput('');
     setLinkedNoteId(event.linkedNoteId || null);
     setDialogOpen(true);
@@ -176,7 +178,7 @@ export const TimelinePage: React.FC = () => {
     const existingTags: any[] = existingRes.data.data || [];
     const tagIds: number[] = [];
     for (const name of tagNames) {
-      const existing = existingTags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
+      const existing = existingTags.find((tag: { name: string }) => tag.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         tagIds.push(existing.id);
       } else {
@@ -195,41 +197,47 @@ export const TimelinePage: React.FC = () => {
         await updateEvent(editingEvent.id, {
           title, description, eventDate, era, linkedNoteId,
         });
-        if (finalTags !== (editingEvent.tags || []).map((t: any) => t.name).join(', ')) {
+        if (finalTags !== (editingEvent.tags || []).map((tag) => tag.name).join(', ')) {
           await saveTags(editingEvent.id, finalTags);
         }
-        showSnackbar('Событие обновлено', 'success');
+        showSnackbar(t('timeline:snackbar.eventUpdated', { title: title.trim() }), 'success');
       } else {
         const created = await createEvent({
           projectId: pid, title, description, eventDate, era,
           sortOrder: 0, linkedNoteId,
         });
         if (finalTags.trim()) await saveTags(created.id, finalTags);
-        showSnackbar('Событие создано', 'success');
+        showSnackbar(t('timeline:snackbar.eventCreated', { title: title.trim() }), 'success');
       }
       setDialogOpen(false);
       resetForm();
       fetchEvents(pid);
     } catch {
-      showSnackbar('Ошибка сохранения', 'error');
+      showSnackbar(t('timeline:snackbar.saveError'), 'error');
     }
   };
 
   const handleDelete = (id: number, name: string) => {
-    showConfirmDialog('Удалить событие', `Удалить "${name}"?`, async () => {
-      try {
-        await deleteEvent(id);
-        showSnackbar('Событие удалено', 'success');
-      } catch { showSnackbar('Ошибка', 'error'); }
-    });
+    showConfirmDialog(
+      t('timeline:confirm.deleteTitle'),
+      t('timeline:confirm.deleteMessage', { title: name }),
+      async () => {
+        try {
+          await deleteEvent(id);
+          showSnackbar(t('timeline:snackbar.eventDeleted', { title: name }), 'success');
+        } catch {
+          showSnackbar(t('timeline:snackbar.error'), 'error');
+        }
+      },
+    );
   };
 
   const handleUnlinkNote = async (eventId: number) => {
     try {
       await updateEvent(eventId, { linkedNoteId: null });
-      showSnackbar('Заметка откреплена', 'success');
+      showSnackbar(t('timeline:snackbar.noteUnlinked'), 'success');
       fetchEvents(pid);
-    } catch { showSnackbar('Ошибка', 'error'); }
+    } catch { showSnackbar(t('timeline:snackbar.error'), 'error'); }
   };
 
   const toggleEra = (eraName: string) => {
@@ -247,7 +255,7 @@ export const TimelinePage: React.FC = () => {
     if (newIdx < 0 || newIdx >= events.length) return;
     const newOrder = events.map(e => e.id);
     [newOrder[idx], newOrder[newIdx]] = [newOrder[newIdx], newOrder[idx]];
-    try { await reorderEvents(pid, newOrder); } catch { showSnackbar('Ошибка сортировки', 'error'); }
+    try { await reorderEvents(pid, newOrder); } catch { showSnackbar(t('timeline:snackbar.reorderError'), 'error'); }
   };
 
   // Drag & drop
@@ -262,13 +270,13 @@ export const TimelinePage: React.FC = () => {
     ids.splice(fromIdx, 1);
     ids.splice(toIdx, 0, dragId);
     setDragId(null); setDragOverId(null);
-    try { await reorderEvents(pid, ids); } catch { showSnackbar('Ошибка сортировки', 'error'); }
+    try { await reorderEvents(pid, ids); } catch { showSnackbar(t('timeline:snackbar.reorderError'), 'error'); }
   };
 
   if (loading && events.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>Загрузка...</Typography>
+        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>{t('common:loading')}</Typography>
       </Box>
     );
   }
@@ -278,19 +286,19 @@ export const TimelinePage: React.FC = () => {
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff' }}>
-          Хронология
+          {t('timeline:page.title')}
         </Typography>
         <DndButton variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
-          Добавить событие
+          {t('timeline:page.addEvent')}
         </DndButton>
       </Box>
 
       {events.length === 0 ? (
         <EmptyState
           icon={<TimelineIcon sx={{ fontSize: 64 }} />}
-          title="Хронология пуста"
-          description="Создайте хронологию вашего мира — эпохи, войны, открытия и поворотные моменты"
-          actionLabel="Добавить событие"
+          title={t('timeline:empty.title')}
+          description={t('timeline:empty.description')}
+          actionLabel={t('timeline:empty.action')}
           onAction={handleOpenCreate}
         />
       ) : (
@@ -298,7 +306,7 @@ export const TimelinePage: React.FC = () => {
           {/* Filters */}
           <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
             <TextField
-              placeholder="Поиск событий..."
+              placeholder={t('timeline:filters.searchPlaceholder')}
               value={search} onChange={e => setSearch(e.target.value)}
               sx={{
                 flexGrow: 1, maxWidth: 400,
@@ -325,7 +333,7 @@ export const TimelinePage: React.FC = () => {
                     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
                     color: '#fff',
                   }}>
-                  <MenuItem value="">Все эпохи</MenuItem>
+                  <MenuItem value="">{t('timeline:filters.allEras')}</MenuItem>
                   {allEras.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -334,12 +342,12 @@ export const TimelinePage: React.FC = () => {
             {(search || filterEra) && (
               <Button variant="outlined" onClick={() => { setSearch(''); setFilterEra(''); }}
                 size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
-                Сброс
+                {t('common:reset')}
               </Button>
             )}
 
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-              {filtered.length} из {events.length}
+              {t('timeline:filters.countShown', { filtered: filtered.length, total: events.length })}
             </Typography>
           </Box>
 
@@ -470,11 +478,12 @@ export const TimelinePage: React.FC = () => {
                                           textDecorationColor: alpha(theme.palette.warning.main, 0.7),
                                         },
                                       }}>
-                                      {noteName || `Заметка #${event.linkedNoteId}`}
+                                      {noteName || t('timeline:eventCard.noteFallback', { id: event.linkedNoteId })}
                                     </Typography>
-                                    <Tooltip title="Открепить заметку">
+                                    <Tooltip title={t('timeline:eventCard.unlinkNote')}>
                                       <IconButton size="small"
                                         onClick={(e) => { e.stopPropagation(); handleUnlinkNote(event.id); }}
+                                        aria-label={t('timeline:eventCard.unlinkNote')}
                                         sx={{ color: 'text.disabled', p: 0.3, '&:hover': { color: alpha(theme.palette.error.main, 0.6) } }}>
                                         <LinkOffIcon sx={{ fontSize: 14 }} />
                                       </IconButton>
@@ -485,8 +494,8 @@ export const TimelinePage: React.FC = () => {
                                 {/* Tags */}
                                 {event.tags && event.tags.length > 0 && (
                                   <Box display="flex" gap={0.5} mt={1} flexWrap="wrap">
-                                    {event.tags.map((tag: any) => (
-                                      <Chip key={tag.id} label={tag.name} size="small" sx={{
+                                    {event.tags.map((tag) => (
+                                      <Chip key={tag.id ?? tag.name} label={tag.name} size="small" sx={{
                                         height: 20, fontSize: '0.65rem', fontWeight: 600,
                                         backgroundColor: tag.color || alpha(theme.palette.primary.main, 0.2),
                                         color: theme.palette.text.primary, borderRadius: 1,
@@ -499,34 +508,38 @@ export const TimelinePage: React.FC = () => {
                               {/* Actions */}
                               <Box className="event-actions" display="flex" alignItems="center" gap={0}
                                 sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0, ml: 1 }}>
-                                <Tooltip title="Вверх">
+                                <Tooltip title={t('timeline:eventCard.moveUp')}>
                                   <IconButton size="small" onClick={() => moveEvent(event.id, 'up')}
                                     disabled={globalIdx === 0}
+                                    aria-label={t('timeline:eventCard.moveUp')}
                                     sx={{ color: 'text.disabled', '&:hover': { color: 'text.primary' } }}>
                                     <KeyboardArrowUpIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Вниз">
+                                <Tooltip title={t('timeline:eventCard.moveDown')}>
                                   <IconButton size="small" onClick={() => moveEvent(event.id, 'down')}
                                     disabled={globalIdx === events.length - 1}
+                                    aria-label={t('timeline:eventCard.moveDown')}
                                     sx={{ color: 'text.disabled', '&:hover': { color: 'text.primary' } }}>
                                     <KeyboardArrowDownIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Редактировать">
+                                <Tooltip title={t('timeline:eventCard.edit')}>
                                   <IconButton size="small" onClick={() => handleOpenEdit(event)}
+                                    aria-label={t('timeline:eventCard.edit')}
                                     sx={{ color: 'text.disabled', '&:hover': { color: 'text.primary' } }}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Удалить">
+                                <Tooltip title={t('timeline:eventCard.delete')}>
                                   <IconButton size="small" onClick={() => handleDelete(event.id, event.title)}
+                                    aria-label={t('timeline:eventCard.delete')}
                                     sx={{ color: alpha(theme.palette.error.main, 0.4), '&:hover': { color: alpha(theme.palette.error.main, 0.8) } }}>
                                     <DeleteIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Перетащить">
-                                  <Box sx={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: 'text.disabled' }}>
+                                <Tooltip title={t('timeline:eventCard.drag')}>
+                                  <Box sx={{ cursor: 'grab', display: 'flex', alignItems: 'center', color: 'text.disabled' }} aria-hidden>
                                     <DragIndicatorIcon fontSize="small" />
                                   </Box>
                                 </Tooltip>
@@ -548,17 +561,17 @@ export const TimelinePage: React.FC = () => {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
         <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-          {editingEvent ? 'Редактировать событие' : 'Новое событие'}
+          {editingEvent ? t('timeline:dialog.editTitle') : t('timeline:dialog.createTitle')}
         </DialogTitle>
         <DialogContent>
-          <TextField autoFocus fullWidth label="Название *" value={title}
+          <TextField autoFocus fullWidth label={t('timeline:dialog.titleLabel')} value={title}
             onChange={e => setTitle(e.target.value)} margin="normal"
-            placeholder="напр. Падение Нетерила" />
+            placeholder={t('timeline:dialog.titlePlaceholder')} />
 
-          <TextField fullWidth label="Дата *" value={eventDate}
+          <TextField fullWidth label={t('timeline:dialog.dateLabel')} value={eventDate}
             onChange={e => setEventDate(e.target.value)} margin="normal"
-            placeholder="напр. 3520 год Третьей Эпохи"
-            helperText="Свободный формат — используйте календарь вашего мира" />
+            placeholder={t('timeline:dialog.datePlaceholder')}
+            helperText={t('timeline:dialog.dateHelper')} />
 
           <Autocomplete
             freeSolo
@@ -567,21 +580,21 @@ export const TimelinePage: React.FC = () => {
             onChange={(_, val) => setEra(val || '')}
             onInputChange={(_, val) => setEra(val || '')}
             renderInput={(params) => (
-              <TextField {...params} label="Эпоха" margin="normal"
-                placeholder="Выберите или введите новую эпоху"
-                helperText="Выберите существующую или введите название новой" />
+              <TextField {...params} label={t('timeline:dialog.eraLabel')} margin="normal"
+                placeholder={t('timeline:dialog.eraPlaceholder')}
+                helperText={t('timeline:dialog.eraHelper')} />
             )}
-            noOptionsText="Нет эпох — введите название"
-            clearText="Очистить"
+            noOptionsText={t('timeline:dialog.eraNoOptions')}
+            clearText={t('timeline:dialog.autocompleteClear')}
             sx={{
               '& .MuiAutocomplete-clearIndicator': { color: 'rgba(255,255,255,0.3)' },
               '& .MuiAutocomplete-popupIndicator': { color: 'rgba(255,255,255,0.3)' },
             }}
           />
 
-          <TextField fullWidth label="Описание" value={description}
+          <TextField fullWidth label={t('timeline:dialog.descriptionLabel')} value={description}
             onChange={e => setDescription(e.target.value)} margin="normal"
-            multiline rows={4} placeholder="Что произошло..." />
+            multiline rows={4} placeholder={t('timeline:dialog.descriptionPlaceholder')} />
 
           {/* Linked Note */}
           <Autocomplete
@@ -591,8 +604,8 @@ export const TimelinePage: React.FC = () => {
             onChange={(_, val) => setLinkedNoteId(val ? val.id : null)}
             isOptionEqualToValue={(opt, val) => opt.id === val.id}
             renderInput={(params) => (
-              <TextField {...params} label="Привязать заметку" margin="normal"
-                placeholder="Начните вводить название заметки..."
+              <TextField {...params} label={t('timeline:dialog.linkNoteLabel')} margin="normal"
+                placeholder={t('timeline:dialog.linkNotePlaceholder')}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -614,8 +627,8 @@ export const TimelinePage: React.FC = () => {
                 </Box>
               </li>
             )}
-            noOptionsText="Нет заметок"
-            clearText="Очистить"
+            noOptionsText={t('timeline:dialog.noteNoOptions')}
+            clearText={t('timeline:dialog.autocompleteClear')}
             sx={{
               '& .MuiAutocomplete-clearIndicator': { color: 'rgba(255,255,255,0.3)' },
               '& .MuiAutocomplete-popupIndicator': { color: 'rgba(255,255,255,0.3)' },
@@ -626,7 +639,8 @@ export const TimelinePage: React.FC = () => {
             <Box display="flex" alignItems="center" gap={1} mt={0.5} ml={1}>
               <DescriptionIcon sx={{ fontSize: 14, color: 'rgba(78,205,196,0.7)' }} />
               <Typography variant="caption" sx={{ color: 'rgba(78,205,196,0.7)' }}>
-                Привязана: {notesMap.get(linkedNoteId) || `#${linkedNoteId}`}
+                {t('timeline:dialog.linkedPrefix')}{' '}
+                {notesMap.get(linkedNoteId) || `#${linkedNoteId}`}
               </Typography>
             </Box>
           )}
@@ -635,18 +649,18 @@ export const TimelinePage: React.FC = () => {
             options={existingTagNames}
             value={tagsStr}
             pendingInput={tagsInput}
-            label="Теги"
-            placeholder="Выберите или введите..."
-            helperText="Можно выбрать существующие теги или добавить новые"
+            label={t('timeline:tagField.label')}
+            placeholder={t('timeline:tagField.placeholder')}
+            helperText={t('timeline:tagField.helperText')}
             margin="normal"
             onValueChange={setTagsStr}
             onPendingInputChange={setTagsInput}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} color="inherit">Отмена</Button>
+          <Button onClick={() => setDialogOpen(false)} color="inherit">{t('common:cancel')}</Button>
           <DndButton variant="contained" onClick={handleSave} disabled={!title.trim() || !eventDate.trim()}>
-            {editingEvent ? 'Сохранить' : 'Создать'}
+            {editingEvent ? t('common:save') : t('common:create')}
           </DndButton>
         </DialogActions>
       </Dialog>
