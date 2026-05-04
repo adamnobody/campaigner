@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, Drawer, IconButton, Slider,
   TextField, Button, Divider, Select, MenuItem,
@@ -11,26 +12,34 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useStyleStore } from '@/store/useStyleStore';
 
-const accentColors = [
-  { label: 'Синий', value: 'rgba(130,130,255,0.9)' },
-  { label: 'Золотой', value: 'rgba(201,169,89,0.9)' },
-  { label: 'Зелёный', value: 'rgba(130,255,160,0.9)' },
-  { label: 'Красный', value: 'rgba(255,130,130,0.9)' },
-  { label: 'Бирюзовый', value: 'rgba(78,205,196,0.9)' },
-  { label: 'Фиолетовый', value: 'rgba(187,143,206,0.9)' },
-  { label: 'Оранжевый', value: 'rgba(240,178,122,0.9)' },
-];
+const ACCENT_PRESETS = [
+  { id: 'blue', value: 'rgba(130,130,255,0.9)' },
+  { id: 'gold', value: 'rgba(201,169,89,0.9)' },
+  { id: 'green', value: 'rgba(130,255,160,0.9)' },
+  { id: 'red', value: 'rgba(255,130,130,0.9)' },
+  { id: 'teal', value: 'rgba(78,205,196,0.9)' },
+  { id: 'violet', value: 'rgba(187,143,206,0.9)' },
+  { id: 'orange', value: 'rgba(240,178,122,0.9)' },
+] as const;
 
-const fonts = [
-  { label: 'Cinzel (DnD)', value: '"Cinzel", "Georgia", serif' },
-  { label: 'Georgia', value: '"Georgia", serif' },
-  { label: 'Crimson Text', value: '"Crimson Text", serif' },
-  { label: 'Inter', value: '"Inter", sans-serif' },
-  { label: 'Roboto', value: '"Roboto", sans-serif' },
-  { label: 'Playfair Display', value: '"Playfair Display", serif' },
-];
+const FONT_PRESETS = [
+  { id: 'cinzel', value: '"Cinzel", "Georgia", serif' },
+  { id: 'georgia', value: '"Georgia", serif' },
+  { id: 'crimson', value: '"Crimson Text", serif' },
+  { id: 'inter', value: '"Inter", sans-serif' },
+  { id: 'roboto', value: '"Roboto", sans-serif' },
+  { id: 'playfair', value: '"Playfair Display", serif' },
+] as const;
+
+const CARD_SHADE_PRESETS = [
+  { shade: 'transparent', value: 'rgba(255,255,255,0.02)' },
+  { shade: 'light', value: 'rgba(255,255,255,0.04)' },
+  { shade: 'medium', value: 'rgba(255,255,255,0.08)' },
+  { shade: 'solid', value: 'rgba(255,255,255,0.12)' },
+] as const;
 
 export const StyleCustomizer: React.FC = () => {
+  const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -60,7 +69,7 @@ export const StyleCustomizer: React.FC = () => {
   return (
     <>
       {/* Float button */}
-      <Tooltip title="Настройки стиля" placement="left">
+      <Tooltip title={t('styleCustomizer.tooltip')} placement="left">
         <IconButton
           onClick={() => setOpen(true)}
           sx={{
@@ -111,7 +120,7 @@ export const StyleCustomizer: React.FC = () => {
                 color: '#fff',
               }}
             >
-              Кастомизация
+              {t('styleCustomizer.title')}
             </Typography>
             <IconButton onClick={() => setOpen(false)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
               <CloseIcon />
@@ -120,7 +129,7 @@ export const StyleCustomizer: React.FC = () => {
 
           {/* Background Image */}
           <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Фоновое изображение
+            {t('styleCustomizer.backgroundImage')}
           </Typography>
 
           {backgroundImage && (
@@ -168,7 +177,7 @@ export const StyleCustomizer: React.FC = () => {
                 fontSize: '0.8rem',
               }}
             >
-              Загрузить файл
+              {t('styleCustomizer.uploadFile')}
             </Button>
             <input
               ref={fileInputRef}
@@ -181,7 +190,7 @@ export const StyleCustomizer: React.FC = () => {
 
           <TextField
             fullWidth
-            placeholder="Или вставьте URL изображения"
+            placeholder={t('styleCustomizer.imageUrlPlaceholder')}
             size="small"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -200,7 +209,7 @@ export const StyleCustomizer: React.FC = () => {
 
           {/* Background opacity */}
           <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Прозрачность фона: {Math.round(backgroundOpacity * 100)}%
+            {t('styleCustomizer.backgroundOpacity', { pct: Math.round(backgroundOpacity * 100) })}
           </Typography>
           <Slider
             value={backgroundOpacity}
@@ -215,11 +224,11 @@ export const StyleCustomizer: React.FC = () => {
 
           {/* Accent color */}
           <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Акцентный цвет
+            {t('styleCustomizer.accentColor')}
           </Typography>
           <Box display="flex" gap={1} mb={2} flexWrap="wrap">
-            {accentColors.map((c) => (
-              <Tooltip key={c.label} title={c.label}>
+            {ACCENT_PRESETS.map((c) => (
+              <Tooltip key={c.id} title={t(`styleCustomizer.accentNames.${c.id}`)}>
                 <Box
                   onClick={() => setAccentColor(c.value)}
                   sx={{
@@ -243,7 +252,7 @@ export const StyleCustomizer: React.FC = () => {
 
           {/* Font */}
           <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Шрифт заголовков
+            {t('styleCustomizer.headerFont')}
           </Typography>
           <FormControl fullWidth size="small" sx={{ mb: 2 }}>
             <Select
@@ -255,9 +264,9 @@ export const StyleCustomizer: React.FC = () => {
                 color: '#fff',
               }}
             >
-              {fonts.map((f) => (
-                <MenuItem key={f.label} value={f.value}>
-                  <Typography sx={{ fontFamily: f.value }}>{f.label}</Typography>
+              {FONT_PRESETS.map((f) => (
+                <MenuItem key={f.id} value={f.value}>
+                  <Typography sx={{ fontFamily: f.value }}>{t(`styleCustomizer.fontNames.${f.id}`)}</Typography>
                 </MenuItem>
               ))}
             </Select>
@@ -267,7 +276,7 @@ export const StyleCustomizer: React.FC = () => {
 
           {/* Text opacity */}
           <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Яркость текста: {Math.round(textOpacity * 100)}%
+            {t('styleCustomizer.textBrightness', { pct: Math.round(textOpacity * 100) })}
           </Typography>
           <Slider
             value={textOpacity}
@@ -280,17 +289,12 @@ export const StyleCustomizer: React.FC = () => {
 
           {/* Card opacity */}
           <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Фон карточек
+            {t('styleCustomizer.cardBackground')}
           </Typography>
           <Box display="flex" gap={1} mb={3} flexWrap="wrap">
-            {[
-              { label: 'Прозрачный', value: 'rgba(255,255,255,0.02)' },
-              { label: 'Лёгкий', value: 'rgba(255,255,255,0.04)' },
-              { label: 'Средний', value: 'rgba(255,255,255,0.08)' },
-              { label: 'Плотный', value: 'rgba(255,255,255,0.12)' },
-            ].map((opt) => (
+            {CARD_SHADE_PRESETS.map((opt) => (
               <Button
-                key={opt.label}
+                key={opt.shade}
                 variant={cardBackground === opt.value ? 'contained' : 'outlined'}
                 size="small"
                 onClick={() => setCardBackground(opt.value)}
@@ -305,7 +309,7 @@ export const StyleCustomizer: React.FC = () => {
                   },
                 }}
               >
-                {opt.label}
+                {t(`styleCustomizer.cardShade.${opt.shade}`)}
               </Button>
             ))}
           </Box>
@@ -314,7 +318,7 @@ export const StyleCustomizer: React.FC = () => {
 
           {/* Preview */}
           <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Превью
+            {t('styleCustomizer.preview')}
           </Typography>
           <Paper
             sx={{
@@ -326,10 +330,10 @@ export const StyleCustomizer: React.FC = () => {
             }}
           >
             <Typography sx={{ fontFamily: headerFont, fontWeight: 700, color: '#fff', fontSize: '1.1rem' }}>
-              Название проекта
+              {t('styleCustomizer.previewTitle')}
             </Typography>
             <Typography variant="body2" sx={{ color: `rgba(255,255,255,${textOpacity})`, mt: 0.5 }}>
-              Описание проекта будет выглядеть так
+              {t('styleCustomizer.previewDescription')}
             </Typography>
           </Paper>
 
@@ -346,7 +350,7 @@ export const StyleCustomizer: React.FC = () => {
               '&:hover': { borderColor: 'rgba(255,100,100,0.5)' },
             }}
           >
-            Сбросить всё
+            {t('styleCustomizer.resetAll')}
           </Button>
         </Box>
       </Drawer>

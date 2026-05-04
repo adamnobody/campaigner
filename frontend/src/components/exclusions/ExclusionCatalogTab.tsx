@@ -1,4 +1,5 @@
 import React, { useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Box,
@@ -105,8 +106,8 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
   icon,
   addButtonLabel,
   catalogDialogTitle,
-  catalogTabLabel = 'Каталог',
-  createTabLabel = 'Создать свою',
+  catalogTabLabel,
+  createTabLabel,
   createTabDescription,
   createButtonLabel,
   emptyNotSavedTitle,
@@ -139,6 +140,10 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
   onCreateDialogOpenChange,
   catalogHeaderExtraSx,
 }: ExclusionCatalogTabProps<T, TCreateExtra>) {
+  const { t } = useTranslation('common');
+  const resolvedCatalogTabLabel = catalogTabLabel ?? t('exclusionCatalog.catalogTab');
+  const resolvedCreateTabLabel = createTabLabel ?? t('exclusionCatalog.createTab');
+
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
   const [catalogTab, setCatalogTab] = useState<'catalog' | 'create'>('catalog');
   const [createDialogOpenInternal, setCreateDialogOpenInternal] = useState(false);
@@ -173,7 +178,7 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
     const conflictingIds = getExcludingIds(itemId, idsToCheck, exclusionsCatalog);
     if (conflictingIds.length === 0) return null;
     const names = conflictingIds.map((id) => nameById.get(id) ?? `#${id}`);
-    return `Исключено: ${names.join(', ')}`;
+    return t('exclusionCatalog.blockedTooltip', { names: names.join(', ') });
   };
 
   const gridSx = {
@@ -235,7 +240,7 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
                 underline="hover"
                 onClick={() => setShowConflictDetails((prev) => !prev)}
               >
-                Подробнее
+                {t('exclusionCatalog.detailsLink')}
               </Link>
             }
           >
@@ -262,10 +267,10 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Button size="small" onClick={() => { void onToggleAssign(pair.leftId); }}>
-                        Убрать {leftName}
+                        {t('exclusionCatalog.removePair', { name: leftName })}
                       </Button>
                       <Button size="small" onClick={() => { void onToggleAssign(pair.rightId); }}>
-                        Убрать {rightName}
+                        {t('exclusionCatalog.removePair', { name: rightName })}
                       </Button>
                     </Box>
                   </Box>
@@ -322,8 +327,8 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
         <DialogTitle>{catalogDialogTitle}</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           <Tabs value={catalogTab} onChange={(_, value) => setCatalogTab(value)} sx={{ mb: 2 }}>
-            <Tab value="catalog" label={catalogTabLabel} />
-            <Tab value="create" label={createTabLabel} />
+            <Tab value="catalog" label={resolvedCatalogTabLabel} />
+            <Tab value="create" label={resolvedCreateTabLabel} />
           </Tabs>
 
           {catalogTab === 'catalog' ? (
@@ -372,7 +377,11 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
       <EditExclusionsDialog
         open={Boolean(editingExclusionsItem)}
         onClose={() => setEditingExclusionsItem(null)}
-        title={editingExclusionsItem ? `Исключения: ${editingExclusionsItem.name}` : 'Исключения'}
+        title={
+          editingExclusionsItem
+            ? t('exclusionCatalog.dialogTitle', { name: editingExclusionsItem.name })
+            : t('exclusionCatalog.dialogTitleFallback')
+        }
         label={exclusionsDialogLabel}
         options={exclusionsCatalog.map((x) => ({ id: x.id, name: x.name }))}
         selfId={editingExclusionsItem?.id ?? 0}

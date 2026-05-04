@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Ambition, CreateAmbition, UpdateAmbition } from '@campaigner/shared';
 import { ambitionsApi } from '@/api/ambitions';
 import { getErrorMessage } from '@/utils/error';
+import i18n from '@/i18n';
 
 interface AmbitionsState {
   catalog: Ambition[];
@@ -34,7 +35,7 @@ export const useAmbitionsStore = create<AmbitionsState>((set, get) => ({
       set({ catalog: res.data.data ?? [], loading: false });
     } catch (error: unknown) {
       set({
-        error: getErrorMessage(error, 'Не удалось загрузить каталог амбиций'),
+        error: getErrorMessage(error, i18n.t('storeErrors.ambitionsCatalogLoad')),
         loading: false,
       });
     }
@@ -51,7 +52,7 @@ export const useAmbitionsStore = create<AmbitionsState>((set, get) => ({
       const ambitions = res.data.data ?? [];
       set({ factionAmbitionIds: new Set(ambitions.map((a) => a.id)) });
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error, 'Не удалось загрузить амбиции фракции') });
+      set({ error: getErrorMessage(error, i18n.t('storeErrors.factionAmbitionsLoad')) });
     }
   },
 
@@ -74,7 +75,7 @@ export const useAmbitionsStore = create<AmbitionsState>((set, get) => ({
     } catch (error: unknown) {
       set({
         factionAmbitionIds: prev,
-        error: getErrorMessage(error, 'Не удалось изменить амбицию'),
+        error: getErrorMessage(error, i18n.t('storeErrors.ambitionToggle')),
       });
       throw error;
     }
@@ -126,7 +127,7 @@ export const useAmbitionsStore = create<AmbitionsState>((set, get) => ({
     } catch (error: unknown) {
       set({
         catalog: previous,
-        error: getErrorMessage(error, 'Не удалось обновить исключения амбиции'),
+        error: getErrorMessage(error, i18n.t('storeErrors.ambitionExclusions')),
       });
       throw error;
     }

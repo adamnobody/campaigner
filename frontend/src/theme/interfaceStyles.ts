@@ -68,8 +68,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'dark-fantasy': {
     id: 'dark-fantasy',
     label: 'Dark Fantasy',
-    shortDescription: 'Мрачный кинематографичный стиль для лора и карт.',
-    spotlight: 'Глубокие тени, serif-заголовки и мягкий золотой акцент.',
+    shortDescription: 'Dark cinematic style tailored for lore and maps.',
+    spotlight: 'Deep shadows, serif headlines, and a soft gold accent.',
     recommendedPalettes: ['obsidian-gold', 'brass-smoke'],
     compatiblePalettes: ['ember-crimson', 'royal-violet', 'deep-amber'],
     defaults: {
@@ -94,8 +94,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'high-fantasy': {
     id: 'high-fantasy',
     label: 'High Fantasy',
-    shortDescription: 'Более светлый эпичный стиль с акцентом на легендарность.',
-    spotlight: 'Воздушные панели, мягкие свечения и выразительная типографика.',
+    shortDescription: 'Brighter epic look with a legendary atmosphere.',
+    spotlight: 'Airy panels, soft glows, and expressive typography.',
     recommendedPalettes: ['moonstone-silver', 'parchment-ivory'],
     compatiblePalettes: ['obsidian-gold', 'sable-rose', 'deep-amber'],
     defaults: {
@@ -120,8 +120,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'sci-fi': {
     id: 'sci-fi',
     label: 'Sci-Fi',
-    shortDescription: 'Чистый технологичный интерфейс для аналитики и данных.',
-    spotlight: 'Геометрия, четкие границы и умеренная динамика.',
+    shortDescription: 'Clean tech UI for analytics and data.',
+    spotlight: 'Geometry, crisp edges, and restrained motion.',
     recommendedPalettes: ['midnight-cyan', 'storm-indigo'],
     compatiblePalettes: ['ashen-teal', 'moonstone-silver', 'neon-magenta'],
     defaults: {
@@ -146,8 +146,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   cyberpunk: {
     id: 'cyberpunk',
     label: 'Cyberpunk',
-    shortDescription: 'Высокий контраст, неон и агрессивные акцентные элементы.',
-    spotlight: 'Яркие сигналы, плотная сетка и напряженный визуальный ритм.',
+    shortDescription: 'High contrast, neon, and aggressive accents.',
+    spotlight: 'Bright signals, tight grids, and tense visual rhythm.',
     recommendedPalettes: ['neon-magenta', 'royal-violet'],
     compatiblePalettes: ['storm-indigo', 'ember-crimson', 'midnight-cyan'],
     defaults: {
@@ -172,8 +172,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   solarpunk: {
     id: 'solarpunk',
     label: 'Solarpunk',
-    shortDescription: 'Оптимистичный экологичный стиль с мягкой технологичностью.',
-    spotlight: 'Натуральные оттенки, воздушная сетка и спокойная динамика.',
+    shortDescription: 'Optimistic eco-tech with gentle futurism.',
+    spotlight: 'Natural tones, airy grids, and calm dynamics.',
     recommendedPalettes: ['verdant-lime', 'forest-emerald'],
     compatiblePalettes: ['ashen-teal', 'midnight-cyan', 'moonstone-silver'],
     defaults: {
@@ -198,8 +198,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   steampunk: {
     id: 'steampunk',
     label: 'Steampunk',
-    shortDescription: 'Индустриальная ретро-эстетика и материальные фактуры.',
-    spotlight: 'Латунные акценты, плотные панели и отчетливые контуры.',
+    shortDescription: 'Industrial retro aesthetics and tactile textures.',
+    spotlight: 'Brass accents, dense panels, and clear outlines.',
     recommendedPalettes: ['brass-smoke', 'deep-amber'],
     compatiblePalettes: ['obsidian-gold', 'ember-crimson', 'sable-rose'],
     defaults: {
@@ -224,8 +224,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'noir-detective': {
     id: 'noir-detective',
     label: 'Noir Detective',
-    shortDescription: 'Строгий темный минимализм для фокуса на содержании.',
-    spotlight: 'Почти монохром, минимум шума и строгий контраст.',
+    shortDescription: 'Strict dark minimalism focused on content.',
+    spotlight: 'Near-monochrome, low noise, and firm contrast.',
     recommendedPalettes: ['moonstone-silver', 'ashen-teal'],
     compatiblePalettes: ['obsidian-gold', 'storm-indigo', 'parchment-ivory'],
     defaults: {
@@ -250,8 +250,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'arcane-mystic': {
     id: 'arcane-mystic',
     label: 'Arcane Mystic',
-    shortDescription: 'Магический стиль с сиянием и мягкими градиентами.',
-    spotlight: 'Фиолетово-лазурные свечения и плавные акценты.',
+    shortDescription: 'Mystical look with glow and soft gradients.',
+    spotlight: 'Violet–azure glows and smooth highlights.',
     recommendedPalettes: ['royal-violet', 'neon-magenta'],
     compatiblePalettes: ['midnight-cyan', 'sable-rose', 'storm-indigo'],
     defaults: {
@@ -276,8 +276,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'imperial-chronicle': {
     id: 'imperial-chronicle',
     label: 'Imperial Chronicle',
-    shortDescription: 'Официальный архивный стиль для энциклопедии мира.',
-    spotlight: 'Стабильная читаемость, аккуратные границы и строгий ритм.',
+    shortDescription: 'Formal archival style for an in-world encyclopedia.',
+    spotlight: 'Readable, neat borders, and steady rhythm.',
     recommendedPalettes: ['parchment-ivory', 'obsidian-gold'],
     compatiblePalettes: ['moonstone-silver', 'deep-amber', 'sable-rose'],
     defaults: {
@@ -302,8 +302,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'industrial-brutal': {
     id: 'industrial-brutal',
     label: 'Industrial Brutal',
-    shortDescription: 'Утилитарный и плотный интерфейс без декоративности.',
-    spotlight: 'Плотные блоки, минимум скруглений и четкая иерархия.',
+    shortDescription: 'Utilitarian dense UI without ornament.',
+    spotlight: 'Solid blocks, minimal rounding, and clear hierarchy.',
     recommendedPalettes: ['brass-smoke', 'ember-crimson'],
     compatiblePalettes: ['deep-amber', 'ashen-teal', 'storm-indigo'],
     defaults: {
@@ -328,8 +328,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   holographic: {
     id: 'holographic',
     label: 'Holographic',
-    shortDescription: 'Стеклянные панели с холодными переливами и глубиной.',
-    spotlight: 'Полупрозрачные слои и контурные акценты интерфейса.',
+    shortDescription: 'Glass panels with cool shimmer and depth.',
+    spotlight: 'Translucent layers and contour UI accents.',
     recommendedPalettes: ['midnight-cyan', 'neon-magenta'],
     compatiblePalettes: ['moonstone-silver', 'storm-indigo', 'royal-violet'],
     defaults: {
@@ -354,8 +354,8 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
   'scholar-manuscript': {
     id: 'scholar-manuscript',
     label: 'Scholar Manuscript',
-    shortDescription: 'Спокойный документный стиль для чтения и заметок.',
-    spotlight: 'Теплый характер, умеренный контраст и минимум анимации.',
+    shortDescription: 'Calm document style for reading and notes.',
+    spotlight: 'Warm tone, moderate contrast, and minimal motion.',
     recommendedPalettes: ['parchment-ivory', 'deep-amber'],
     compatiblePalettes: ['moonstone-silver', 'obsidian-gold', 'forest-emerald'],
     defaults: {
@@ -417,20 +417,20 @@ export const getPaletteCompatibility = (
   if (profile.recommendedPalettes.includes(paletteId)) {
     return {
       level: 'ideal',
-      label: 'Идеально',
-      hint: 'Палитра максимально раскрывает выбранный стиль.',
+      label: 'Perfect match',
+      hint: 'This palette fully fits the selected style.',
     };
   }
   if (profile.compatiblePalettes.includes(paletteId)) {
     return {
       level: 'good',
-      label: 'Хорошо',
-      hint: 'Сочетание стабильное, сохраняется характер стиля.',
+      label: 'Good',
+      hint: 'Stable pairing; the style character is preserved.',
     };
   }
   return {
     level: 'experimental',
-    label: 'Эксперимент',
-    hint: 'Работает, но стиль будет восприниматься нестандартно.',
+    label: 'Experimental',
+    hint: 'Works, but the style will feel unconventional.',
   };
 };

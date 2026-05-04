@@ -3,6 +3,7 @@ import { Box, Typography, Button, Paper } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import HomeIcon from '@mui/icons-material/Home';
+import i18n from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -68,14 +69,14 @@ export class ErrorBoundary extends Component<Props, State> {
               variant="h5"
               sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, color: '#fff', mb: 1 }}
             >
-              Что-то пошло не так
+              {i18n.t('errorBoundary.title')}
             </Typography>
 
             <Typography
               variant="body2"
               sx={{ color: 'rgba(255,255,255,0.5)', mb: 3 }}
             >
-              Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.
+              {i18n.t('errorBoundary.description')}
             </Typography>
 
             {this.state.error && (
@@ -104,7 +105,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
               >
-                Повторить
+                {i18n.t('errorBoundary.retry')}
               </Button>
               <Button
                 variant="contained"
@@ -115,7 +116,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   '&:hover': { backgroundColor: 'rgba(130,130,255,0.5)' },
                 }}
               >
-                На главную
+                {i18n.t('errorBoundary.home')}
               </Button>
             </Box>
           </Paper>

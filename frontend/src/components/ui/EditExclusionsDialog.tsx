@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Autocomplete,
   Box,
@@ -38,6 +39,7 @@ export const EditExclusionsDialog: React.FC<EditExclusionsDialogProps> = ({
   selectedIds,
   onSave,
 }) => {
+  const { t } = useTranslation('common');
   const [localIds, setLocalIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -81,7 +83,7 @@ export const EditExclusionsDialog: React.FC<EditExclusionsDialogProps> = ({
             value={selectedOptions}
             getOptionLabel={(option) => option.name}
             onChange={(_, value) => setLocalIds(value.map((item) => item.id))}
-            renderInput={(params) => <TextField {...params} label={label} placeholder="Выберите значения" />}
+            renderInput={(params) => <TextField {...params} label={label} placeholder={t('editExclusions.valuesPlaceholder')} />}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
                 <Chip
@@ -99,10 +101,10 @@ export const EditExclusionsDialog: React.FC<EditExclusionsDialogProps> = ({
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <DndButton variant="outlined" color="inherit" onClick={onClose} disabled={submitting}>
-          Отмена
+          {t('cancel')}
         </DndButton>
         <DndButton variant="contained" onClick={handleSave} loading={submitting} disabled={!canSave}>
-          Сохранить
+          {t('save')}
         </DndButton>
       </DialogActions>
     </Dialog>

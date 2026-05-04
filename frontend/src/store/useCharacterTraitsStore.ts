@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { CharacterTrait, CreateCharacterTrait } from '@campaigner/shared';
 import { characterTraitsApi } from '@/api/characterTraits';
 import { getErrorMessage } from '@/utils/error';
+import i18n from '@/i18n';
 
 interface CharacterTraitsState {
   traits: CharacterTrait[];
@@ -33,7 +34,7 @@ export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) =
       set({ traits: res.data.data ?? [], loading: false });
     } catch (error: unknown) {
       set({
-        error: getErrorMessage(error, 'Не удалось загрузить черты'),
+        error: getErrorMessage(error, i18n.t('storeErrors.traitsLoad')),
         loading: false,
       });
     }
@@ -50,7 +51,7 @@ export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) =
       const ids = res.data.data ?? [];
       set({ assignedTraitIds: new Set(ids) });
     } catch (error: unknown) {
-      set({ error: getErrorMessage(error, 'Не удалось загрузить назначенные черты') });
+      set({ error: getErrorMessage(error, i18n.t('storeErrors.traitsAssignedLoad')) });
     }
   },
 
@@ -72,7 +73,7 @@ export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) =
     } catch (error: unknown) {
       set({
         assignedTraitIds: prev,
-        error: getErrorMessage(error, 'Не удалось изменить черту'),
+        error: getErrorMessage(error, i18n.t('storeErrors.traitToggle')),
       });
       throw error;
     }
@@ -109,7 +110,7 @@ export const useCharacterTraitsStore = create<CharacterTraitsState>((set, get) =
     } catch (error: unknown) {
       set({
         traits: previous,
-        error: getErrorMessage(error, 'Не удалось обновить исключения черты'),
+        error: getErrorMessage(error, i18n.t('storeErrors.traitExclusions')),
       });
       throw error;
     }

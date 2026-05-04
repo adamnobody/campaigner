@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Autocomplete, Chip, InputAdornment, TextField } from '@mui/material';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 
@@ -19,14 +20,18 @@ export const TagAutocompleteField: React.FC<TagAutocompleteFieldProps> = ({
   options,
   value,
   pendingInput,
-  label = 'Теги',
-  placeholder = 'Выберите или введите...',
-  noOptionsText = 'Введите новый тег',
+  label,
+  placeholder,
+  noOptionsText,
   helperText,
   margin = 'none',
   onValueChange,
   onPendingInputChange,
 }) => {
+  const { t } = useTranslation('common');
+  const labelText = label ?? t('tagField.label');
+  const placeholderText = placeholder ?? t('tagField.placeholder');
+  const noOptionsTextResolved = noOptionsText ?? t('tagField.noOptionsText');
   const parsedValue = value
     ? value.split(',').map((s) => s.trim()).filter(Boolean)
     : [];
@@ -58,8 +63,8 @@ export const TagAutocompleteField: React.FC<TagAutocompleteFieldProps> = ({
       renderInput={(params) => (
         <TextField
           {...params}
-          label={label}
-          placeholder={placeholder}
+          label={labelText}
+          placeholder={placeholderText}
           helperText={helperText}
           margin={margin}
           InputProps={{
@@ -75,7 +80,7 @@ export const TagAutocompleteField: React.FC<TagAutocompleteFieldProps> = ({
           }}
         />
       )}
-      noOptionsText={noOptionsText}
+      noOptionsText={noOptionsTextResolved}
       sx={{
         '& .MuiAutocomplete-clearIndicator': {
           color: 'rgba(255,255,255,0.3)',

@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Typography, LinearProgress, Fade } from '@mui/material';
-
-const quotes = [
-  'Описание начинается в воображении писателя, но должно заканчиваться в воображении читателя',
-  'Упс... Похоже, мои плохие идеи работают лучше, чем хорошие.',
-  'Не забывайте почаще спать.',
-  'Всё, что мне нужно, — это лист бумаги и что-нибудь, на чём можно писать, и тогда я смогу перевернуть мир с ног на голову',
-  'Писатель талантлив, если он умеет представить новое привычным, а привычное новым',
-];
+import { SPLASH_TIP_KEYS } from '@/components/ui/splashTipKeys';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -17,13 +10,14 @@ interface SplashScreenProps {
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   const { t } = useTranslation('common');
   const [progress, setProgress] = useState(0);
-  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [tipIndex, setTipIndex] = useState(
+    () => Math.floor(Math.random() * SPLASH_TIP_KEYS.length)
+  );
   const [fadeIn, setFadeIn] = useState(true);
 
-  // Progress bar animation
   useEffect(() => {
     const timer = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(timer);
           setTimeout(onFinish, 300);
@@ -36,18 +30,19 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
     return () => clearInterval(timer);
   }, [onFinish]);
 
-  // Rotating quotes
   useEffect(() => {
     const interval = setInterval(() => {
       setFadeIn(false);
       setTimeout(() => {
-        setQuoteIndex(prev => (prev + 1) % quotes.length);
+        setTipIndex((prev) => (prev + 1) % SPLASH_TIP_KEYS.length);
         setFadeIn(true);
       }, 400);
-    }, 3000);
+    }, 4500);
 
     return () => clearInterval(interval);
   }, []);
+
+  const tipKey = SPLASH_TIP_KEYS[tipIndex];
 
   return (
     <Box
@@ -62,7 +57,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
         background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a14 70%, #000 100%)',
       }}
     >
-      {/* Title */}
       <Typography
         sx={{
           fontFamily: '"Cinzel", "Georgia", serif',
@@ -77,8 +71,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
         {t('appName')}
       </Typography>
 
-      {/* Progress bar */}
-      <Box sx={{ width: { xs: '80%', md: '500px' }, mb: 4 }}>
+      <Box sx={{ width: { xs: '80%', md: '500px' }, mb: 3 }}>
         <LinearProgress
           variant="determinate"
           value={progress}
@@ -95,21 +88,31 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
         />
       </Box>
 
-      {/* Quote */}
-      <Box sx={{ height: 60, display: 'flex', alignItems: 'center' }}>
+      <Typography
+        variant="overline"
+        sx={{
+          color: 'rgba(255,255,255,0.35)',
+          letterSpacing: '0.12em',
+          mb: 1,
+          fontSize: '0.7rem',
+        }}
+      >
+        {t('splash.tipsHeading')}
+      </Typography>
+
+      <Box sx={{ minHeight: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: 560, px: 2 }}>
         <Fade in={fadeIn} timeout={400}>
           <Typography
             variant="body2"
+            key={tipKey}
             sx={{
-              color: 'rgba(255,255,255,0.45)',
-              fontStyle: 'italic',
+              color: 'rgba(255,255,255,0.65)',
               textAlign: 'center',
-              maxWidth: 500,
-              px: 2,
-              fontSize: '0.85rem',
+              fontSize: '0.9rem',
+              lineHeight: 1.45,
             }}
           >
-            {quotes[quoteIndex]}
+            {t(`splash.tips.${tipKey}`)}
           </Typography>
         </Fade>
       </Box>
