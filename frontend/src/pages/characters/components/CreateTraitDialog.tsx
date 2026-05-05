@@ -22,6 +22,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { apiClient } from '@/api/client';
 import { LIMITS } from '@campaigner/shared';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { localizedPredefinedTraitTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
 interface CreateTraitDialogProps {
   open: boolean;
@@ -113,8 +114,11 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
     () =>
       traits
         .filter((trait) => trait.projectId === projectId)
-        .map((trait) => ({ id: trait.id, name: trait.name })),
-    [traits, projectId]
+        .map((trait) => {
+          const { displayLabel } = localizedPredefinedTraitTexts(trait, t);
+          return { id: trait.id, label: displayLabel };
+        }),
+    [traits, projectId, t]
   );
   const selectedTraitOptions = useMemo(() => {
     const selected = new Set(excludedIds);
@@ -184,7 +188,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
             multiple
             options={availableTraitOptions}
             value={selectedTraitOptions}
-            getOptionLabel={(option) => option.name}
+            getOptionLabel={(option) => option.label}
             onChange={(_, value) => setExcludedIds(value.map((item) => item.id))}
             renderInput={(params) => (
               <TextField {...params} label={t('traits.exclusionsLabel')} placeholder={t('traits.exclusionsAutocompletePlaceholder')} />
@@ -193,7 +197,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
               value.map((option, index) => (
                 <Chip
                   icon={<BlockIcon sx={{ fontSize: 16 }} />}
-                  label={option.name}
+                  label={option.label}
                   size="small"
                   {...getTagProps({ index })}
                   key={option.id}

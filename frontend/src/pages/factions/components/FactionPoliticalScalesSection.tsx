@@ -37,6 +37,7 @@ import { CollapsibleSection } from '@/components/detail/CollapsibleSection';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { shallow } from 'zustand/shallow';
 import { useTranslation } from 'react-i18next';
+import { localizedBuiltinPoliticalScale } from '@/i18n/catalog/displayBuiltinTexts';
 
 function getActiveZone(zones: ScaleZone[] | null | undefined, value: number): ScaleZone | null {
   if (!zones?.length) return null;
@@ -304,10 +305,11 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
               </Typography>
               <Box display="flex" flexDirection="column" gap={2.5}>
                 {items.map((scale) => {
+                  const ld = localizedBuiltinPoliticalScale(scale, t);
                   const loc = localByScaleId[scale.id];
                   const value = loc?.value ?? 0;
                   const enabled = loc?.enabled ?? true;
-                  const active = getActiveZone(scale.zones ?? null, value);
+                  const active = getActiveZone(ld.zones ?? null, value);
                   const noteOpen = Boolean(expandedNotes[scale.id]);
                   return (
                     <GlassCard
@@ -321,11 +323,11 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                       <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
                         <Box flex={1} minWidth={0}>
                           <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                            {scale.name}
+                            {ld.name}
                           </Typography>
                           <Box display="flex" alignItems="center" gap={1.5}>
                             <Typography variant="caption" sx={{ width: 120, color: 'text.secondary', flexShrink: 0 }}>
-                              {scale.leftPoleLabel}
+                              {ld.leftPoleLabel}
                             </Typography>
                             <Slider
                               size="small"
@@ -348,12 +350,12 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                               variant="caption"
                               sx={{ width: 120, textAlign: 'right', color: 'text.secondary', flexShrink: 0 }}
                             >
-                              {scale.rightPoleLabel}
+                              {ld.rightPoleLabel}
                             </Typography>
                           </Box>
-                          <ZoneStrip zones={scale.zones ?? null} />
+                          <ZoneStrip zones={ld.zones ?? null} />
                           <Box mt={1}>
-                            {scale.zones?.length ? (
+                            {ld.zones?.length ? (
                               <Tooltip
                                 title={
                                   active?.description
@@ -441,6 +443,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
           {scales.map((s) => {
             const loc = localByScaleId[s.id];
             const enabled = loc?.enabled ?? true;
+            const dn = localizedBuiltinPoliticalScale(s, t).name;
             return (
               <Box
                 key={s.id}
@@ -451,7 +454,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                 py={0.5}
               >
                 <Typography variant="body2" sx={{ minWidth: 0 }}>
-                  {s.name}
+                  {dn}
                 </Typography>
                 <Switch
                   checked={enabled}

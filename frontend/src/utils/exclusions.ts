@@ -2,6 +2,8 @@ export interface ExcludableItem {
   id: number;
   name: string;
   exclusions?: number[];
+  /** When `name` is stored in another language (e.g. seeded RU), UI may show this instead. */
+  displayLabel?: string;
 }
 
 export interface ConflictPair {

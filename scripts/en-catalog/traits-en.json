@@ -1,0 +1,142 @@
+{
+  "dobrota": {
+    "name": "Kindness",
+    "description": "Genuine sympathy for others and willingness to help even at your own cost."
+  },
+  "zlost": {
+    "name": "Anger",
+    "description": "Tendency to flare up and lash out aggressively at irritants."
+  },
+  "chrevogudie": {
+    "name": "Gluttony",
+    "description": "Poor restraint with food, drink, and bodily pleasures."
+  },
+  "pokhot": {
+    "name": "Lust",
+    "description": "Overpowering desire—hard to resist temptation or craving."
+  },
+  "ambitsioznost": {
+    "name": "Ambition",
+    "description": "Drive toward big goals—unwilling to settle."
+  },
+  "kreativnost": {
+    "name": "Creativity",
+    "description": "Unconventional thinking and rich imagination—you spot unexpected angles."
+  },
+  "apatiya": {
+    "name": "Apathy",
+    "description": "Deep indifference to what happens around you and to your fate."
+  },
+  "nervoznost": {
+    "name": "Nervousness",
+    "description": "Chronic anxiety and unease—with a leaning toward panic."
+  },
+  "egoizm": {
+    "name": "Selfishness",
+    "description": "Puts personal interests ahead of everyone else's."
+  },
+  "samokontrol": {
+    "name": "Self‑control",
+    "description": "Manages impulses and emotions even under heavy pressure."
+  },
+  "kharizma": {
+    "name": "Charisma",
+    "description": "Natural magnetism and ability to rally people behind you."
+  },
+  "khladnokrovie": {
+    "name": "Level‑headedness",
+    "description": "Steady calm under strain—still thinks clearly when stressed."
+  },
+  "fanatizm": {
+    "name": "Fanaticism",
+    "description": "Blind, unwavering devotion to idea, creed, or cause."
+  },
+  "doverchivost": {
+    "name": "Credulity",
+    "description": "Trusts others easily—not expecting betrayal or deception."
+  },
+  "mudrost": {
+    "name": "Wisdom",
+    "description": "Deep grasp of life and human nature—you see essentials quickly."
+  },
+  "litsemerie": {
+    "name": "Hypocrisy",
+    "description": "Hides true motives behind a mask of virtue."
+  },
+  "malodushie": {
+    "name": "Cowardice",
+    "description": "Struggles to act decisively in the face of danger or hardship."
+  },
+  "chestnost": {
+    "name": "Honesty",
+    "description": "Speaks truth even when costly or risky."
+  },
+  "khrabrost": {
+    "name": "Courage",
+    "description": "Steps toward peril for convictions and loved ones."
+  },
+  "upryamstvo": {
+    "name": "Stubbornness",
+    "description": "Holds firm and seldom backs away from chosen choices."
+  },
+  "reshitelnost": {
+    "name": "Decisiveness",
+    "description": "Decides swiftly and shifts into action immediately."
+  },
+  "vernost": {
+    "name": "Loyalty",
+    "description": "Unshakable commitment to allies and principles."
+  },
+  "khitrost": {
+    "name": "Cunning",
+    "description": "Favours roundabout paths, manoeuvres, odd angles over frontal clash."
+  },
+  "zhestokost": {
+    "name": "Cruelty",
+    "description": "Willingness to hurt without remorse."
+  },
+  "miloserdie": {
+    "name": "Mercy",
+    "description": "Forgiving, sparing, ready to grant second chances."
+  },
+  "vysokomerie": {
+    "name": "Arrogance",
+    "description": "Feeling superior over those around."
+  },
+  "lyubopytstvo": {
+    "name": "Curiosity",
+    "description": "Insatiable pull toward learning and discovery."
+  },
+  "melankholiya": {
+    "name": "Melancholy",
+    "description": "Inclination to sadness, inwardness, and heavy reflection."
+  },
+  "optimizm": {
+    "name": "Optimism",
+    "description": "Belief something good waits ahead—finding light even in trouble."
+  },
+  "paranoyya": {
+    "name": "Paranoia",
+    "description": "Chronic suspicion and expectation of threats from anyone."
+  },
+  "zhadnost": {
+    "name": "Greed",
+    "description": "Desperate need to hoard and reluctance to share."
+  },
+  "shchedrost": {
+    "name": "Generosity",
+    "description": "Genuine readiness to give and share without tallying reciprocity."
+  },
+  "raschetlivost": {
+    "name": "Calculation",
+    "description": "Cool pragmatism—every step weighed for gain and logic."
+  },
+  "umstvennaya-otstalost": {
+    "name": "Slow wit",
+    "description": "Limited capacity to learn or wrestle with complex ideas."
+  },
+  "utonchennost": {
+    "name": "Refinement",
+    "description": "Polished manners, taste for detail."
+  }
+}

@@ -24,6 +24,8 @@ import { getConflictPairs, getExcludingIds, isExcluded, type ExcludableItem } fr
 
 export interface ExclusionItem extends ExcludableItem {
   description?: string;
+  /** Localized description for predefined catalog rows (optional). */
+  displayDescription?: string;
   isCustom: boolean;
   imagePath?: string | null;
 }
@@ -163,7 +165,8 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
   );
 
   const nameById = useMemo(
-    () => new Map(exclusionsCatalog.map((x) => [x.id, x.name] as const)),
+    () =>
+      new Map(exclusionsCatalog.map((x) => [x.id, x.displayLabel ?? x.name] as const)),
     [exclusionsCatalog]
   );
 
@@ -379,11 +382,16 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
         onClose={() => setEditingExclusionsItem(null)}
         title={
           editingExclusionsItem
-            ? t('exclusionCatalog.dialogTitle', { name: editingExclusionsItem.name })
+            ? t('exclusionCatalog.dialogTitle', {
+                name: editingExclusionsItem.displayLabel ?? editingExclusionsItem.name,
+              })
             : t('exclusionCatalog.dialogTitleFallback')
         }
         label={exclusionsDialogLabel}
-        options={exclusionsCatalog.map((x) => ({ id: x.id, name: x.name }))}
+        options={exclusionsCatalog.map((x) => ({
+          id: x.id,
+          name: x.displayLabel ?? x.name,
+        }))}
         selfId={editingExclusionsItem?.id ?? 0}
         selectedIds={editingExclusionsItem?.exclusions ?? []}
         onSave={async (excludedIds) => {
