@@ -163,6 +163,8 @@ export const ProjectGraphPage: React.FC = () => {
   const panningRef = useRef(false);
   const panStartRef = useRef({ mx: 0, my: 0, px: 0, py: 0 });
   const justPannedRef = useRef(false);
+  /** Left button down on empty pane — clear selection on release if user did not pan-drag */
+  const panePointerDownRef = useRef(false);
   const ignoreSavedLayoutRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
@@ -859,6 +861,7 @@ export const ProjectGraphPage: React.FC = () => {
     const { sx, sy } = getMousePositionOnCanvas(event);
     const hit = hitNode(sx, sy);
     if (hit && event.button === 0) {
+      panePointerDownRef.current = false;
       dragNodeIdRef.current = hit.id;
       setSelectedNodeId(hit.id);
       if (isMdUp) {
@@ -867,6 +870,7 @@ export const ProjectGraphPage: React.FC = () => {
       setCanvasCursor('grabbing');
       return;
     }
+    panePointerDownRef.current = Boolean(!hit && event.button === 0);
     if (event.button === 0) {
       panningRef.current = true;
       justPannedRef.current = false;
@@ -904,6 +908,11 @@ export const ProjectGraphPage: React.FC = () => {
   };
 
   const handleMouseUp = () => {
+    if (panePointerDownRef.current && !justPannedRef.current) {
+      setSelectedNodeId(null);
+    }
+    panePointerDownRef.current = false;
+
     const hadDrag = dragNodeIdRef.current !== null;
     dragNodeIdRef.current = null;
     panningRef.current = false;
