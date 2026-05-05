@@ -24,6 +24,9 @@
   "defaults": {
     "rootMapName": "Корневая карта"
   },
+  "breadcrumb": {
+    "worldMap": "Мир"
+  },
   "page": {
     "loading": "Загрузка карты…",
     "loadingOverlay": "Загрузка карты…",

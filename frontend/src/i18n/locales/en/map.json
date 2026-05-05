@@ -24,6 +24,9 @@
   "defaults": {
     "rootMapName": "Root map"
   },
+  "breadcrumb": {
+    "worldMap": "World"
+  },
   "page": {
     "loading": "Loading map…",
     "loadingOverlay": "Loading map…",

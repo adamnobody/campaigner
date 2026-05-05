@@ -69,6 +69,21 @@ export interface MapData {
   id: number; projectId: number; parentMapId: number | null;
   parentMarkerId: number | null; name: string; imagePath: string | null;
 }
+
+/** Stored names for automatic root maps (historical backend RU literal + canonical EN); display via `map:breadcrumb.worldMap`. */
+const STORED_WORLD_ROOT_MAP_LABELS_LOWER = new Set(['мир', 'world']);
+
+export function localizedRootMapDisplayedName(
+  map: Pick<MapData, 'name' | 'parentMapId'>,
+  worldMapLabel: string,
+): string {
+  if (map.parentMapId != null) return map.name;
+  const trimmed = map.name.trim();
+  if (!trimmed) return map.name;
+  if (STORED_WORLD_ROOT_MAP_LABELS_LOWER.has(trimmed.toLowerCase())) return worldMapLabel;
+  return map.name;
+}
+
 export interface NoteOption { id: number; title: string; noteType: string; }
 export interface FactionOption {
   id: number;

@@ -36,7 +36,7 @@ export function useMapData({
   onBeforeMapLoad,
   onInitialMapResolved,
 }: UseMapDataArgs) {
-  const { t, i18n } = useTranslation(['map', 'common']);
+  const { t } = useTranslation(['map', 'common']);
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const onInitialMapResolvedRef = useRef(onInitialMapResolved);
 
@@ -109,7 +109,7 @@ export function useMapData({
           } catch {
             mapToLoad = normalizeMap(extractData(await mapApi.createMap({
               projectId,
-              name: i18n.t('map:defaults.rootMapName'),
+              name: 'World',
             })));
           }
         }
@@ -138,7 +138,7 @@ export function useMapData({
 
     init();
     return () => { cancelled = true; };
-  }, [projectId, mapId, activeBranchId, i18n]);
+  }, [projectId, mapId, activeBranchId]);
 
   return {
     project,
