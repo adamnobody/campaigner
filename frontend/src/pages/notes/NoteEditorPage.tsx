@@ -23,6 +23,7 @@ import { useHotkeys } from '@/hooks/useHotkeys';
 import { useHistory } from '@/hooks/useHistory';
 import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import { wikiApi } from '@/api/wiki';
 import { notesApi } from '@/api/notes';
 import { NoteEditorMarkdownToolbar } from '@/pages/notes/components/NoteEditorMarkdownToolbar';
@@ -31,6 +32,7 @@ import { InsertWikiLinkDialog } from '@/pages/notes/components/InsertWikiLinkDia
 import { CreateWikiLinkDialog } from '@/pages/notes/components/CreateWikiLinkDialog';
 import { MarkdownPreview } from '@/pages/notes/components/MarkdownPreview';
 import { shallow } from 'zustand/shallow';
+import { isNotFoundError } from '@/utils/error';
 
 const AUTOSAVE_DELAY = 3000;
 
@@ -42,10 +44,11 @@ export const NoteEditorPage: React.FC = () => {
   const pid = parseInt(projectId!);
   const nid = parseInt(noteId!);
   const navigate = useNavigate();
-  const { currentNote, fetchNote, updateNote } = useNoteStore((state) => ({
+  const { currentNote, fetchNote, updateNote, setCurrentNote } = useNoteStore((state) => ({
     currentNote: state.currentNote,
     fetchNote: state.fetchNote,
     updateNote: state.updateNote,
+    setCurrentNote: state.setCurrentNote,
   }), shallow);
   const showSnackbar = useUIStore((state) => state.showSnackbar);
   const theme = useTheme();
@@ -59,6 +62,7 @@ export const NoteEditorPage: React.FC = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [branchMissingDialogOpen, setBranchMissingDialogOpen] = useState(false);
 
   // Wiki sidebar
   const [showLinks, setShowLinks] = useState(false);
@@ -81,6 +85,13 @@ export const NoteEditorPage: React.FC = () => {
   const history = useHistory('');
   const initializedNoteIdRef = useRef<number | null>(null);
   const wikiNotesLoadedRef = useRef(false);
+  const closeMissingBranchEntity = useCallback(() => {
+    setBranchMissingDialogOpen(false);
+    setCurrentNote(null);
+    setLinkDialogOpen(false);
+    setInsertWikiDialogOpen(false);
+    navigate(`/project/${pid}/notes`, { replace: true });
+  }, [navigate, pid, setCurrentNote]);
 
   useEffect(() => {
     hasChangesRef.current = hasChanges;
@@ -98,8 +109,17 @@ export const NoteEditorPage: React.FC = () => {
   }, [content, mode]);
 
   useEffect(() => {
-    fetchNote(nid);
-  }, [nid, fetchNote, activeBranchId]);
+    fetchNote(nid).catch((error: unknown) => {
+      if (isNotFoundError(error)) {
+        hasChangesRef.current = false;
+        setHasChanges(false);
+        setCurrentNote(null);
+        setBranchMissingDialogOpen(true);
+        return;
+      }
+      showSnackbar(t('notes:snackbar.loadError'), 'error');
+    });
+  }, [nid, fetchNote, setCurrentNote, showSnackbar, t, activeBranchId]);
 
   useEffect(() => {
     if (currentNote) {
@@ -328,11 +348,11 @@ export const NoteEditorPage: React.FC = () => {
   useEffect(() => {
     return () => {
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      if (hasChangesRef.current) {
+      if (hasChangesRef.current && !branchMissingDialogOpen) {
         updateNote(nid, { title: titleRef.current, content: contentRef.current }).catch(() => {});
       }
     };
-  }, [nid, updateNote]);
+  }, [branchMissingDialogOpen, nid, updateNote]);
 
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -372,7 +392,18 @@ export const NoteEditorPage: React.FC = () => {
     return { words, chars: content.length };
   }, [content]);
 
-  if (!currentNote) return <LoadingScreen />;
+  if (!currentNote) {
+    return (
+      <>
+        <LoadingScreen />
+        <BranchEntityMissingDialog
+          open={branchMissingDialogOpen}
+          entityName={t('notes:noteTypes.note').toLowerCase()}
+          onClose={closeMissingBranchEntity}
+        />
+      </>
+    );
+  }
 
   const isMarkdown = currentNote.format === 'md';
   const isWiki = currentNote.noteType === 'wiki';
@@ -529,6 +560,11 @@ export const NoteEditorPage: React.FC = () => {
         wikiNotes={wikiNotes}
         currentNoteId={nid}
         onCreateLink={handleCreateLink}
+      />
+      <BranchEntityMissingDialog
+        open={branchMissingDialogOpen}
+        entityName={t('notes:noteTypes.note').toLowerCase()}
+        onClose={closeMissingBranchEntity}
       />
     </Box>
   );

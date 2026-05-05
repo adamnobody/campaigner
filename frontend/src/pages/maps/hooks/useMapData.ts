@@ -6,6 +6,7 @@ import { projectsApi } from '@/api/projects';
 import { notesApi } from '@/api/notes';
 import { factionsApi } from '@/api/factions';
 import { useBranchStore } from '@/store/useBranchStore';
+import { isNotFoundError } from '@/utils/error';
 import {
   extractData,
   normalizeMap,
@@ -17,6 +18,8 @@ import {
 } from '../components/mapUtils';
 import type { MapData, Marker, Territory, NoteOption, FactionOption } from '../components/mapUtils';
 
+const noop = () => {};
+
 type UseMapDataArgs = {
   projectId: number;
   mapId: number | null;
@@ -24,7 +27,7 @@ type UseMapDataArgs = {
   clearDrawingDraft: () => void;
   resetView: () => void;
   onBeforeMapLoad?: () => void;
-  onInitialMapResolved?: (map: MapData) => void;
+  onMissingMap?: () => void;
 };
 
 export function useMapData({
@@ -34,15 +37,10 @@ export function useMapData({
   clearDrawingDraft,
   resetView,
   onBeforeMapLoad,
-  onInitialMapResolved,
+  onMissingMap = noop,
 }: UseMapDataArgs) {
   const { t } = useTranslation(['map', 'common']);
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
-  const onInitialMapResolvedRef = useRef(onInitialMapResolved);
-
-  useEffect(() => {
-    onInitialMapResolvedRef.current = onInitialMapResolved;
-  }, [onInitialMapResolved]);
 
   const [project, setProject] = useState<Project | null>(null);
   const [currentMap, setCurrentMap] = useState<MapData | null>(null);
@@ -86,11 +84,15 @@ export function useMapData({
       setFactions(newFactions);
       setImgSize(null);
       resetView();
-    } catch {
-      showSnackbar(t('map:snackbar.mapLoadError'), 'error');
+    } catch (error: unknown) {
+      if (isNotFoundError(error)) {
+        onMissingMap();
+      } else {
+        showSnackbar(t('map:snackbar.mapLoadError'), 'error');
+      }
     }
     setTransitioning(false);
-  }, [projectId, activeBranchId, onBeforeMapLoad, clearDrawingDraft, resetView, showSnackbar, t]);
+  }, [projectId, activeBranchId, onBeforeMapLoad, onMissingMap, clearDrawingDraft, resetView, showSnackbar, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,7 +118,6 @@ export function useMapData({
         if (cancelled) return;
 
         setCurrentMap(mapToLoad);
-        onInitialMapResolvedRef.current?.(mapToLoad);
 
         const [markersRes, territoriesRes, notesRes, factionsRes] = await Promise.all([
           mapApi.getMarkersByMapId(mapToLoad.id, projectId),
@@ -130,15 +131,17 @@ export function useMapData({
         setTerritories(parseTerritories(extractData(territoriesRes)));
         setNotes(parseNotes(extractData(notesRes)));
         setFactions(parseFactions(extractData(factionsRes)));
-      } catch {
-        // no-op: screen-level fallbacks handle empty/failed state
+      } catch (error: unknown) {
+        if (!cancelled && isNotFoundError(error)) {
+          onMissingMap();
+        }
       }
       if (!cancelled) setLoading(false);
     };
 
     init();
     return () => { cancelled = true; };
-  }, [projectId, mapId, activeBranchId]);
+  }, [projectId, mapId, activeBranchId, onMissingMap]);
 
   return {
     project,

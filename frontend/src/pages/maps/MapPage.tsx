@@ -31,6 +31,7 @@ import { useMapMarkerCrud } from './hooks/useMapMarkerCrud';
 import { useMapTerritoryCrud } from './hooks/useMapTerritoryCrud';
 import { useMapInteractions } from './hooks/useMapInteractions';
 import { useBranchStore } from '@/store/useBranchStore';
+import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 
 // ==================== Component ====================
 export const MapPage: React.FC = () => {
@@ -54,6 +55,7 @@ export const MapPage: React.FC = () => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelType, setPanelType] = useState<'marker' | 'territory'>('marker');
   const [drawClosureHover, setDrawClosureHover] = useState(false);
+  const [branchMissingDialogOpen, setBranchMissingDialogOpen] = useState(false);
 
   const {
     drawingCompletedRings,
@@ -70,6 +72,13 @@ export const MapPage: React.FC = () => {
 
   const territoryRefreshVersion = useMapTerritoriesRefreshStore((s) => s.version);
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const handleMissingMap = useCallback(() => {
+    setSelectedMarker(null);
+    setSelectedTerritory(null);
+    setPanelOpen(false);
+    setMode('select');
+    setBranchMissingDialogOpen(true);
+  }, []);
 
   const {
     project,
@@ -99,8 +108,15 @@ export const MapPage: React.FC = () => {
       setPanelOpen(false);
       setMode('select');
     },
-    onInitialMapResolved: (map) => setMapBreadcrumbs([map]),
+    onMissingMap: handleMissingMap,
   });
+  const closeMissingBranchMap = useCallback(() => {
+    setBranchMissingDialogOpen(false);
+    setCurrentMap(null);
+    setMarkers([]);
+    setTerritories([]);
+    navigate(`/project/${pid}/map`, { replace: true });
+  }, [navigate, pid, setCurrentMap, setMarkers, setTerritories]);
 
   useEffect(() => {
     if (!currentMap?.id || territoryRefreshVersion === 0) return;
@@ -139,6 +155,11 @@ export const MapPage: React.FC = () => {
     navigateToBreadcrumb,
     navigateToParent,
   } = useMapNavigation({ loadMapData, projectId: pid });
+
+  useEffect(() => {
+    if (!currentMap) return;
+    setMapBreadcrumbs((prev) => (prev.length === 0 || prev[prev.length - 1].id !== currentMap.id ? [currentMap] : prev));
+  }, [currentMap, setMapBreadcrumbs]);
 
   const {
     dialogOpen,
@@ -627,6 +648,11 @@ export const MapPage: React.FC = () => {
         setTerritoryForm={setTerritoryForm}
         factions={factions}
         onSave={handleSaveTerritory}
+      />
+      <BranchEntityMissingDialog
+        open={branchMissingDialogOpen}
+        entityName={t('map:page.entityName').toLowerCase()}
+        onClose={closeMissingBranchMap}
       />
     </Box>
   );

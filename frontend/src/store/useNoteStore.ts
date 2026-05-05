@@ -60,6 +60,7 @@ export const useNoteStore = create<NoteState>((set) => ({
       set({ currentNote: res.data.data, loading: false });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to fetch note'), loading: false });
+      throw error;
     }
   },
 

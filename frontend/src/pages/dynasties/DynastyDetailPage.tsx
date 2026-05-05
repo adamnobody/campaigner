@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, TextField, Button,
   Avatar, IconButton, Chip,
@@ -33,6 +33,7 @@ import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import {
   DYNASTY_STATUSES, DYNASTY_STATUS_ICONS,
 } from '@campaigner/shared';
@@ -41,6 +42,7 @@ import { FamilyTree } from '@/pages/dynasties/components/FamilyTree';
 import { DynastyEventsTimeline } from '@/pages/dynasties/components/DynastyEventsTimeline';
 import { shallow } from 'zustand/shallow';
 import { routes } from '@/utils/routes';
+import { isNotFoundError } from '@/utils/error';
 
 // ==================== Form ====================
 
@@ -136,6 +138,7 @@ export const DynastyDetailPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [branchMissingDialogOpen, setBranchMissingDialogOpen] = useState(false);
 
   // Dialogs
   const [memberDialogOpen, setMemberDialogOpen] = useState(false);
@@ -147,6 +150,14 @@ export const DynastyDetailPage: React.FC = () => {
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<DynastyEvent | null>(null);
   const [eventForm, setEventForm] = useState({ title: '', description: '', eventDate: '', importance: 'normal', sortOrder: 0 });
+  const closeMissingBranchEntity = useCallback(() => {
+    setBranchMissingDialogOpen(false);
+    setCurrentDynasty(null);
+    setMemberDialogOpen(false);
+    setFamilyLinkDialogOpen(false);
+    setEventDialogOpen(false);
+    navigate(routes.dynasties(pid), { replace: true });
+  }, [navigate, pid, setCurrentDynasty]);
 
   // ==================== Load ====================
 
@@ -158,8 +169,15 @@ export const DynastyDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (isNew) { setForm(EMPTY_FORM); setCurrentDynasty(null); setTagsInput(''); return; }
-    fetchDynasty(pid, parseInt(dynastyId!)).catch(() => showSnackbar(t('dynasties:snackbar.loadError'), 'error'));
-  }, [dynastyId, isNew, fetchDynasty, showSnackbar, t, pid, activeBranchId]);
+    fetchDynasty(pid, parseInt(dynastyId!)).catch((error: unknown) => {
+      if (isNotFoundError(error)) {
+        setCurrentDynasty(null);
+        setBranchMissingDialogOpen(true);
+        return;
+      }
+      showSnackbar(t('dynasties:snackbar.loadError'), 'error');
+    });
+  }, [dynastyId, isNew, fetchDynasty, showSnackbar, setCurrentDynasty, t, pid, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !currentDynasty || currentDynasty.id !== did) return;
@@ -788,6 +806,11 @@ export const DynastyDetailPage: React.FC = () => {
         open={eventDialogOpen} onClose={() => setEventDialogOpen(false)}
         form={eventForm} onFormChange={setEventForm} onSubmit={handleSaveEvent}
         editingEvent={editingEvent}
+      />
+      <BranchEntityMissingDialog
+        open={branchMissingDialogOpen}
+        entityName={t('dynasties:detail.fallbackName').toLowerCase()}
+        onClose={closeMissingBranchEntity}
       />
     </Box>
   );

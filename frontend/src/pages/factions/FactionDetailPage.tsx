@@ -46,6 +46,7 @@ import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import {
   FACTION_KIND_ICONS,
   FACTION_TYPES,
@@ -71,6 +72,7 @@ import type {
 } from '@campaigner/shared';
 import { shallow } from 'zustand/shallow';
 import { routes } from '@/utils/routes';
+import { isNotFoundError } from '@/utils/error';
 
 // ==================== Types ====================
 
@@ -207,6 +209,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const [saving, setSaving] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [branchMissingDialogOpen, setBranchMissingDialogOpen] = useState(false);
 
   const [rankDialogOpen, setRankDialogOpen] = useState(false);
   const [editingRank, setEditingRank] = useState<FactionRank | null>(null);
@@ -244,6 +247,12 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   /** Поля формы и тело PUT по маршруту, не по `currentFaction.kind` (иначе теряются state-only поля). */
   const resolvedEntityType: 'state' | 'faction' = normalizedEntityType;
   const isStateEntity = resolvedEntityType === 'state';
+  const closeMissingBranchEntity = useCallback(() => {
+    setBranchMissingDialogOpen(false);
+    setCurrentFaction(null);
+    setPolicyDialogOpen(false);
+    navigate(routes.factionList(pid, resolvedEntityType), { replace: true });
+  }, [navigate, pid, resolvedEntityType, setCurrentFaction]);
 
   // ==================== Load ====================
 
@@ -290,8 +299,15 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       }
       return;
     }
-    fetchFaction(pid, parseInt(factionId!)).catch(() => showSnackbar(t('factions:snackbar.loadError'), 'error'));
-  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, t, pid, activeBranchId]);
+    fetchFaction(pid, parseInt(factionId!)).catch((error: unknown) => {
+      if (isNotFoundError(error)) {
+        setCurrentFaction(null);
+        setBranchMissingDialogOpen(true);
+        return;
+      }
+      showSnackbar(t('factions:snackbar.loadError'), 'error');
+    });
+  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, setCurrentFaction, t, pid, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !fid) {
@@ -305,8 +321,14 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       .then((res) => {
         if (!cancelled) setFactionPolicies(res.data.data || []);
       })
-      .catch(() => {
-        if (!cancelled) showSnackbar(t('factions:snackbar.policiesLoadError'), 'error');
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        if (isNotFoundError(error)) {
+          setCurrentFaction(null);
+          setBranchMissingDialogOpen(true);
+          return;
+        }
+        showSnackbar(t('factions:snackbar.policiesLoadError'), 'error');
       })
       .finally(() => {
         if (!cancelled) setPoliciesLoading(false);
@@ -314,7 +336,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     return () => {
       cancelled = true;
     };
-  }, [fid, isNew, pid, showSnackbar, t, activeBranchId]);
+  }, [fid, isNew, pid, showSnackbar, setCurrentFaction, t, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;
@@ -1555,6 +1577,12 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         factions={factions}
         onClose={() => setCompareDialogOpen(false)}
         onCompare={(factionIds, metricKeys) => compareFactions({ factionIds, metricKeys })}
+      />
+
+      <BranchEntityMissingDialog
+        open={branchMissingDialogOpen}
+        entityName={t(`factions:entityKinds.${resolvedEntityType}`).toLowerCase()}
+        onClose={closeMissingBranchEntity}
       />
 
       <Dialog open={policyDialogOpen} onClose={() => setPolicyDialogOpen(false)} fullWidth maxWidth="sm">

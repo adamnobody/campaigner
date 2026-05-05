@@ -252,6 +252,10 @@
     "territoryRebindMessage": "Territory \"{{territory}}\" currently belongs to «{{occupant}}». Reassign to «{{self}}»?",
     "territorySelfFallback": "this state",
     "rulerCreateOption": "+ Create character «{{name}}»",
+    "branchMissing": {
+      "title": "Item is not available in this branch",
+      "message": "This entity ({{entity}}) does not exist in the selected branch. Close this dialog to return to the list."
+    },
     "policies": {
       "addDecree": "Add decree",
       "loading": "Loading…",

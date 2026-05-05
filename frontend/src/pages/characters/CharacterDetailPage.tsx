@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, TextField, Button,
   Avatar, IconButton, Chip, Dialog,
@@ -36,7 +36,9 @@ import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import { routes } from '@/utils/routes';
+import { isNotFoundError } from '@/utils/error';
 import {
   RELATIONSHIP_TYPE_KEYS,
   type RelationshipTypeKey,
@@ -153,11 +155,18 @@ export const CharacterDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [stateOptions, setStateOptions] = useState<Array<{ id: number; name: string }>>([]);
   const [factionOptions, setFactionOptions] = useState<Array<{ id: number; name: string }>>([]);
+  const [branchMissingDialogOpen, setBranchMissingDialogOpen] = useState(false);
 
   const [relDialogOpen, setRelDialogOpen] = useState(false);
   const [relForm, setRelForm] = useState<{ targetId: string; type: RelationshipType; description: string }>({
     targetId: '', type: 'ally', description: '',
   });
+  const closeMissingBranchEntity = useCallback(() => {
+    setBranchMissingDialogOpen(false);
+    setCurrentCharacter(null);
+    setRelDialogOpen(false);
+    navigate(routes.characters(pid), { replace: true });
+  }, [navigate, pid, setCurrentCharacter]);
 
   // ==================== Load ====================
 
@@ -191,8 +200,15 @@ export const CharacterDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (isNew) { setForm(EMPTY_FORM); setCurrentCharacter(null); setTagsInput(''); return; }
-    fetchCharacter(pid, parseInt(characterId!)).catch(() => showSnackbar(t('snackbar.loadError'), 'error'));
-  }, [characterId, isNew, fetchCharacter, showSnackbar, t, pid, activeBranchId]);
+    fetchCharacter(pid, parseInt(characterId!)).catch((error: unknown) => {
+      if (isNotFoundError(error)) {
+        setCurrentCharacter(null);
+        setBranchMissingDialogOpen(true);
+        return;
+      }
+      showSnackbar(t('snackbar.loadError'), 'error');
+    });
+  }, [characterId, isNew, fetchCharacter, showSnackbar, setCurrentCharacter, t, pid, activeBranchId]);
 
   useEffect(() => {
     if (isNew || !currentCharacter || currentCharacter.id !== parseInt(characterId!)) return;
@@ -565,6 +581,11 @@ export const CharacterDetailPage: React.FC = () => {
           <DndButton variant="contained" onClick={handleAddRelationship} disabled={!relForm.targetId}>{t('detail.relationships.addButton')}</DndButton>
         </DialogActions>
       </Dialog>
+      <BranchEntityMissingDialog
+        open={branchMissingDialogOpen}
+        entityName={t('detail.fallbackName').toLowerCase()}
+        onClose={closeMissingBranchEntity}
+      />
     </Box>
   );
 };

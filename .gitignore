@@ -39,6 +39,11 @@ backend/uploads/
 .DS_Store
 Thumbs.db
 
+# ==================== Skills ====================
+skills-lock.json
+.agents/
+autoskills/
+
 # ==================== Logs ====================
 logs/
 *.log
@@ -66,3 +71,6 @@ coverage/
 AGENTS.md
 PROJECT_TREE.md
 docs/
+PLAN.md
+PLAN_EXECUTION.md
+PLAN_LOCALIZATION.md

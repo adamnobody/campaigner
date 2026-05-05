@@ -23,6 +23,10 @@
   "next": "Next",
   "skip": "Skip",
   "done": "Done",
+  "branchMissing": {
+    "title": "Item is not available in this branch",
+    "message": "This item ({{entity}}) does not exist in the selected branch. Close this dialog to return back."
+  },
   "splash": {
     "tipsHeading": "Did you know?",
     "tips": {

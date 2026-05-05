@@ -28,6 +28,7 @@
     "worldMap": "World"
   },
   "page": {
+    "entityName": "Map",
     "loading": "Loading map…",
     "loadingOverlay": "Loading map…",
     "noMapImage": "No map image loaded",

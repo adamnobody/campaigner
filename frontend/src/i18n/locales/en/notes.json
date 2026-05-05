@@ -39,6 +39,7 @@
     "deleteNoteMessage": "Delete “{{title}}”?"
   },
   "snackbar": {
+    "loadError": "Could not load note",
     "created": "Note “{{title}}” created",
     "createError": "Could not create note",
     "deleted": "Deleted",

@@ -28,6 +28,7 @@
     "worldMap": "Мир"
   },
   "page": {
+    "entityName": "Карта",
     "loading": "Загрузка карты…",
     "loadingOverlay": "Загрузка карты…",
     "noMapImage": "Карта не загружена",

@@ -252,6 +252,10 @@
     "territoryRebindMessage": "Территория «{{territory}}» сейчас принадлежит государству «{{occupant}}». Перепривязать к «{{self}}»?",
     "territorySelfFallback": "это государство",
     "rulerCreateOption": "+ Создать персонажа «{{name}}»",
+    "branchMissing": {
+      "title": "Элемент недоступен в этой ветке",
+      "message": "Эта сущность ({{entity}}) отсутствует в выбранной ветке. Закройте окно, чтобы вернуться к списку."
+    },
     "policies": {
       "addDecree": "Добавить указ",
       "loading": "Загрузка…",
