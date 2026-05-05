@@ -95,9 +95,26 @@ export function useMapInteractions({
   const [draggingTerritoryPoint, setDraggingTerritoryPoint] = useState<TerritoryPointDragPayload | null>(null);
   const [drawPointerPercent, setDrawPointerPercent] = useState<{ x: number; y: number } | null>(null);
   const [edgeInsertPhantom, setEdgeInsertPhantom] = useState<EdgeInsertPhantom | null>(null);
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
   const lastPointDragUpdateAtRef = useRef(0);
   const lastPhantomAtRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressNextMapClickRef = useRef(false);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control') setIsCtrlPressed(true);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control') setIsCtrlPressed(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
 
   useEffect(() => {
     if (mode !== 'draw_territory' || drawingPoints.length === 0) {
@@ -113,13 +130,18 @@ export function useMapInteractions({
     if (e.shiftKey) {
       e.preventDefault();
     }
-    if (e.button === 1 || (e.button === 0 && e.altKey)) {
+    const byMiddleMouse = e.button === 1;
+    const byAltLeft = e.button === 0 && e.altKey;
+    const byPanModeLeft = e.button === 0 && mode === 'select';
+    const byMarkerCtrlLeft = e.button === 0 && mode === 'marker' && e.ctrlKey;
+    if (byMiddleMouse || byAltLeft || byPanModeLeft || byMarkerCtrlLeft) {
       isPanningRef.current = true;
       panStartRef.current = { x: e.clientX, y: e.clientY };
       panOriginRef.current = { ...panRef.current };
+      suppressNextMapClickRef.current = e.button === 0;
       e.preventDefault();
     }
-  }, [isPanningRef, panOriginRef, panRef, panStartRef]);
+  }, [isPanningRef, mode, panOriginRef, panRef, panStartRef]);
 
   const handlePointDragStart = useCallback((e: React.MouseEvent, payload: TerritoryPointDragPayload) => {
     e.stopPropagation();
@@ -129,6 +151,9 @@ export function useMapInteractions({
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isCtrlPressed !== e.ctrlKey) {
+      setIsCtrlPressed(e.ctrlKey);
+    }
     if (isPanningRef.current) {
       setEdgeInsertPhantom(null);
       panRef.current = {
@@ -171,7 +196,7 @@ export function useMapInteractions({
       setDrawPointerPercent(null);
     }
 
-    if (mode === 'select' && editingTerritoryPoints && draggingTerritoryPoint === null && imgRef.current) {
+    if (mode !== 'draw_territory' && editingTerritoryPoints && draggingTerritoryPoint === null && imgRef.current) {
       const now = performance.now();
       if (now - lastPhantomAtRef.current >= 16) {
         lastPhantomAtRef.current = now;
@@ -207,6 +232,7 @@ export function useMapInteractions({
     editingTerritoryPoints,
     handleMarkerDragMove,
     imgRef,
+    isCtrlPressed,
     isPanningRef,
     mode,
     panOriginRef,
@@ -230,6 +256,9 @@ export function useMapInteractions({
 
     if (isPanningRef.current) {
       isPanningRef.current = false;
+      if (e?.button === 0) {
+        suppressNextMapClickRef.current = true;
+      }
       return;
     }
 
@@ -238,7 +267,7 @@ export function useMapInteractions({
 
   const handleMarkerClick = useCallback((e: React.MouseEvent, marker: Marker) => {
     e.stopPropagation();
-    if (didDragRef.current || transitioning || mode !== 'select') return;
+    if (didDragRef.current || transitioning || mode !== 'marker') return;
 
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
@@ -261,7 +290,7 @@ export function useMapInteractions({
 
   const handleTerritoryClick = useCallback((e: React.MouseEvent, territory: Territory) => {
     e.stopPropagation();
-    if (mode !== 'select') return;
+    if (mode === 'draw_territory') return;
     if (editingTerritoryPoints) {
       if (territory.id === editingTerritoryPoints.id) return;
       showSnackbar(t('map:snackbar.finishShapeEditFirst'), 'warning');
@@ -292,6 +321,10 @@ export function useMapInteractions({
   ]);
 
   const handleMapClick = useCallback((e: React.MouseEvent) => {
+    if (suppressNextMapClickRef.current) {
+      suppressNextMapClickRef.current = false;
+      return;
+    }
     if (isPanningRef.current || didDragRef.current || transitioning) return;
     if (!imgRef.current || !currentMap) return;
     const rect = imgRef.current.getBoundingClientRect();
@@ -314,7 +347,7 @@ export function useMapInteractions({
       return;
     }
 
-    if (mode === 'select' && editingTerritoryPoints) {
+    if (editingTerritoryPoints) {
       if (!e.shiftKey) {
         for (let i = territories.length - 1; i >= 0; i -= 1) {
           if (isPointInTerritory(px, py, territories[i])) {
@@ -339,6 +372,8 @@ export function useMapInteractions({
       }
     }
 
+    if (mode === 'select') return;
+    if (mode === 'marker' && e.ctrlKey) return;
     openNewMarkerDialogAt(px, py);
   }, [
     completeContour,
@@ -356,6 +391,7 @@ export function useMapInteractions({
     setSelectedMarker,
     setSelectedTerritory,
     showSnackbar,
+    suppressNextMapClickRef,
     t,
     territories,
     transitioning,
@@ -414,6 +450,7 @@ export function useMapInteractions({
     finishDrawing,
     cancelDrawing,
     handleMapModeChange,
+    isCtrlPressed,
     closePanel,
     resetForMapLoad,
   };

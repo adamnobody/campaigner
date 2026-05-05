@@ -45,11 +45,11 @@ export const MapMarkerOnMap: React.FC<Props> = ({
       transform: `translate(-50%, -50%) scale(${1 / zoomDisplay})`,
       willChange: 'transform',
       backfaceVisibility: 'hidden',
-      cursor: mode === 'select' ? (isDraggingVisual ? 'grabbing' : 'grab') : 'crosshair',
+      cursor: mode === 'marker' ? (isDraggingVisual ? 'grabbing' : 'grab') : 'default',
       zIndex: isDraggingVisual ? 100 : isSelected ? 10 : 5,
       opacity: isDraggingVisual ? 0.85 : 1,
       transition: isDraggingVisual ? 'none' : 'transform 0.15s',
-      pointerEvents: mode === 'select' ? 'auto' : 'none',
+      pointerEvents: mode === 'marker' ? 'auto' : 'none',
       '&:hover': {
         transform: `translate(-50%, -50%) scale(${1 / zoomDisplay * 1.15})`,
       },

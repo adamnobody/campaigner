@@ -36,7 +36,8 @@
     "mapImageAlt": "Map",
     "hintEditingPoints": "Drag points to reshape · Right-click — delete vertex · Double-click — add vertex on edge",
     "hintDrawTerritory": "Click — polygon vertices · Close: hover the first point (ring) and click, or R / «Complete ring» · «Save» — name and create",
-    "hintSelectMode": "Click — marker · Shift+click territory — marker on top · Click territory — settings · Drag marker · Double-click — nested map · Alt+drag / middle mouse — pan · Wheel — zoom"
+    "hintSelectMode": "Left-drag to pan map · Middle-drag to pan · Wheel to zoom",
+    "hintMarkerMode": "Left-click to add marker · Ctrl + left-drag or middle-drag to pan · Wheel to zoom"
   },
   "confirm": {
     "cancelDrawingTitle": "Cancel drawing?",
@@ -47,7 +48,8 @@
     "deleteTerritoryMessage": "Delete “{{name}}”?"
   },
   "toolbar": {
-    "tooltipSelectMode": "Select mode",
+    "tooltipSelectMode": "Pan mode",
+    "tooltipMarkerMode": "Marker mode",
     "tooltipDrawTerritory": "Draw territory",
     "drawingChip": "{{rings}} closed · {{points}} pts",
     "completeContour": "Complete ring",

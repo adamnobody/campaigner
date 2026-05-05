@@ -59,7 +59,7 @@ export function useMapMarkerCrud({
   }, [setPanelOpen]);
 
   const handleMarkerMouseDown = useCallback((e: React.MouseEvent, marker: Marker, mode: MapMode) => {
-    if (e.button !== 0 || e.altKey || mode !== 'select') return;
+    if (e.button !== 0 || e.altKey || mode !== 'marker') return;
     e.stopPropagation();
     isDraggingRef.current = true;
     didDragRef.current = false;

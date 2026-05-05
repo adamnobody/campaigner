@@ -33,7 +33,7 @@ export const PANEL_WIDTH = 360;
 export const TERRITORY_SVG_FILTER_MAX_POINTS = 56;
 
 export type MarkerIcon = CreateMarker['icon'];
-export type MapMode = 'select' | 'draw_territory';
+export type MapMode = 'select' | 'marker' | 'draw_territory';
 
 export const DEFAULT_FORM = {
   title: '',

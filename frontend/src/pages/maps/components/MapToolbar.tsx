@@ -13,6 +13,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PentagonIcon from '@mui/icons-material/Pentagon';
 import MouseIcon from '@mui/icons-material/Mouse';
+import PlaceIcon from '@mui/icons-material/Place';
 import UndoIcon from '@mui/icons-material/Undo';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
@@ -120,6 +121,11 @@ export const MapToolbar: React.FC<MapToolbarProps> = ({
           <ToggleButton value="select">
             <Tooltip title={t('map:toolbar.tooltipSelectMode')}>
               <MouseIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="marker">
+            <Tooltip title={t('map:toolbar.tooltipMarkerMode')}>
+              <PlaceIcon fontSize="small" />
             </Tooltip>
           </ToggleButton>
           <ToggleButton value="draw_territory">

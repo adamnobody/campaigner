@@ -270,6 +270,7 @@ export const MapPage: React.FC = () => {
     draggingTerritoryPoint,
     drawPointerPercent,
     edgeInsertPhantom,
+    isCtrlPressed,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
@@ -437,6 +438,8 @@ export const MapPage: React.FC = () => {
           ? t('map:page.hintEditingPoints')
           : mode === 'draw_territory'
           ? t('map:page.hintDrawTerritory')
+          : mode === 'marker'
+          ? t('map:page.hintMarkerMode')
           : t('map:page.hintSelectMode')
         }
       </Typography>
@@ -451,10 +454,19 @@ export const MapPage: React.FC = () => {
               position: 'relative',
               userSelect: 'none',
               WebkitUserSelect: 'none',
-            cursor: isPanningRef.current ? 'grabbing'
-              : (draggingMarker && didDragRef.current) ? 'grabbing'
-              : mode === 'draw_territory' ? (drawClosureHover ? 'pointer' : 'crosshair')
-              : 'crosshair',
+              cursor: isPanningRef.current
+                ? 'grabbing'
+                : draggingMarker && didDragRef.current
+                ? 'grabbing'
+                : mode === 'draw_territory'
+                ? drawClosureHover
+                  ? 'pointer'
+                  : 'crosshair'
+                : mode === 'marker'
+                ? isCtrlPressed
+                  ? 'grab'
+                  : 'crosshair'
+                : 'grab',
           }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
