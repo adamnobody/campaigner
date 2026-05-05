@@ -14,6 +14,8 @@ shared/dist/
 backend/dist/
 frontend/dist/
 dist-electron/
+dist-electron-check/
+dist-electron-check2/
 
 # ==================== Local data (SQLite, uploads) ====================
 # Создаётся при первом запуске бэкенда; в репозиторий не коммитим.
