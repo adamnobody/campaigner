@@ -615,8 +615,8 @@ export const HomePage: React.FC = () => {
             sx={{
               width: '100%',
               borderTop: `1px solid ${alpha(theme.palette.divider, 0.24)}`,
-              backgroundColor: alpha(theme.palette.background.paper, 0.42),
-              backdropFilter: 'blur(10px)',
+              backgroundColor: alpha(theme.palette.background.paper, 0.6),
+              backdropFilter: 'blur(12px)',
               mt: 4,
             }}
           >
@@ -630,7 +630,7 @@ export const HomePage: React.FC = () => {
                 py: 3,
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: { xs: 'flex-start', sm: 'center' },
                 gap: 2,
                 flexWrap: 'wrap',
               }}
@@ -654,28 +654,42 @@ export const HomePage: React.FC = () => {
                       fontFamily: theme.typography.h6.fontFamily,
                       fontWeight: 700,
                       color: 'text.primary',
-                      fontSize: '0.95rem',
-                      lineHeight: 1.2,
+                      fontSize: '1rem',
+                      lineHeight: 1.3,
                     }}
                   >
                     Campaigner
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: alpha(theme.palette.text.secondary, 0.97), fontSize: '0.86rem', lineHeight: 1.5 }}
+                  >
                     {t('projects:home.footer.tagline')}
                   </Typography>
                 </Box>
               </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                 <Typography
                   variant="caption"
                   sx={{
-                    color: alpha(theme.palette.text.secondary, 0.7),
-                    fontSize: '0.72rem',
-                    letterSpacing: '0.03em',
+                    color: alpha(theme.palette.text.secondary, 0.92),
+                    fontSize: '0.86rem',
+                    letterSpacing: '0.015em',
+                    lineHeight: 1.5,
                   }}
                 >
                   © {new Date().getFullYear()} · {t('projects:home.footer.madeFor')}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: alpha(theme.palette.text.secondary, 0.95),
+                    fontSize: '0.86rem',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Github: @adamnobody
                 </Typography>
               </Box>
             </Container>

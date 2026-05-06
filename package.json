@@ -1,6 +1,8 @@
 {
   "name": "campaigner",
   "version": "1.0.0",
+  "description": "Campaign - worldbuilding management application",
+  "author": "adamnobody",
   "private": true,
   "main": "electron/main.js",
   "workspaces": [

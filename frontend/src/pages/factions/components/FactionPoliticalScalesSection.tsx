@@ -315,18 +315,22 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                     <GlassCard
                       key={scale.id}
                       sx={{
-                        p: 2,
+                        p: 2.25,
                         opacity: enabled ? 1 : 0.55,
                         border: `1px solid ${alpha(theme.palette.divider, 0.45)}`,
+                        backgroundColor: alpha(theme.palette.background.paper, 0.62),
                       }}
                     >
                       <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
                         <Box flex={1} minWidth={0}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, lineHeight: 1.48, fontSize: '1rem' }}>
                             {ld.name}
                           </Typography>
                           <Box display="flex" alignItems="center" gap={1.5}>
-                            <Typography variant="caption" sx={{ width: 120, color: 'text.secondary', flexShrink: 0 }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ width: 120, color: alpha(theme.palette.text.secondary, 0.98), flexShrink: 0, fontSize: '0.88rem', lineHeight: 1.4 }}
+                            >
                               {ld.leftPoleLabel}
                             </Typography>
                             <Slider
@@ -348,7 +352,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                             />
                             <Typography
                               variant="caption"
-                              sx={{ width: 120, textAlign: 'right', color: 'text.secondary', flexShrink: 0 }}
+                              sx={{ width: 120, textAlign: 'right', color: alpha(theme.palette.text.secondary, 0.98), flexShrink: 0, fontSize: '0.88rem', lineHeight: 1.4 }}
                             >
                               {ld.rightPoleLabel}
                             </Typography>
@@ -366,12 +370,12 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                                     : active?.label || ''
                                 }
                               >
-                                <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                                <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.45 }}>
                                   {active ? active.label : t('factions:politicalScales.valueLabel', { value })}
                                 </Typography>
                               </Tooltip>
                             ) : (
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.98), fontSize: '0.88rem', lineHeight: 1.45 }}>
                                 {t('factions:politicalScales.valueLabel', { value })}
                               </Typography>
                             )}
@@ -393,7 +397,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                             />
                           }
                           label={t('factions:politicalScales.enabledShort')}
-                          sx={{ m: 0, flexShrink: 0 }}
+                          sx={{ m: 0, flexShrink: 0, '& .MuiFormControlLabel-label': { fontSize: '0.88rem', lineHeight: 1.4 } }}
                         />
                       </Box>
                       <Box mt={1}>

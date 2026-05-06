@@ -284,7 +284,7 @@ export const AppearanceSettingsPage: React.FC = () => {
       component="span"
       sx={{
         color: 'info.main',
-        fontSize: '0.75rem',
+        fontSize: '0.82rem',
         fontWeight: 600,
         visibility: isPending ? 'visible' : 'hidden',
       }}
@@ -627,7 +627,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     color={compatibilityColor[currentPaletteCompatibility.level]}
                     variant={currentPaletteCompatibility.level === 'ideal' ? 'filled' : 'outlined'}
                   />
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem' }}>
+                  <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.97), fontSize: '0.9rem', lineHeight: 1.55 }}>
                     {currentPaletteCompatibility.hint}
                   </Typography>
                   <FormControlLabel
@@ -640,7 +640,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                       />
                     }
                     label={
-                      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+                      <Typography sx={{ fontSize: '0.86rem', color: alpha(theme.palette.text.secondary, 0.97), lineHeight: 1.45 }}>
                         {t('appearance:autoPalette.label')}
                       </Typography>
                     }
@@ -695,15 +695,15 @@ export const AppearanceSettingsPage: React.FC = () => {
                           />
                         </Box>
 
-                        <Typography sx={{ color: 'text.secondary', fontSize: '0.76rem', lineHeight: 1.45, mb: 0.75 }}>
+                        <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.98), fontSize: '0.9rem', lineHeight: 1.55, mb: 0.75 }}>
                           {t(`appearance:interfaceStyles.${styleId}.shortDescription`)}
                         </Typography>
-                        <Typography sx={{ color: 'text.secondary', fontSize: '0.72rem', lineHeight: 1.45, mb: 1 }}>
+                        <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.94), fontSize: '0.84rem', lineHeight: 1.5, mb: 1 }}>
                           {t(`appearance:interfaceStyles.${styleId}.spotlight`)}
                         </Typography>
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                          <Typography sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
+                          <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.97), fontSize: '0.84rem', lineHeight: 1.45 }}>
                             {t('appearance:recommendedPalette', { name: recommendedPaletteName })}
                           </Typography>
                           <Button
@@ -860,7 +860,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                             <Typography
                               sx={{
                                 fontWeight: selected ? 800 : 600,
-                                fontSize: '0.78rem',
+                                fontSize: '0.86rem',
                                 color: selected ? theme.palette.primary.main : 'text.primary',
                                 letterSpacing: '0.03em',
                                 lineHeight: 1.2,
@@ -1393,7 +1393,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                   />
 
                   <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.08) }}>
-                    <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }} dangerouslySetInnerHTML={{ __html: t('appearance:sections.customFonts.localHint') }} />
+                    <Typography sx={{ fontSize: '0.9rem', color: alpha(theme.palette.text.secondary, 0.96), lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: t('appearance:sections.customFonts.localHint') }} />
                   </Box>
                 </Stack>
               </GlassCard>
@@ -1472,7 +1472,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                         ),
                       }}
                     >
-                      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', mb: 1 }}>
+                      <Typography sx={{ fontSize: '0.9rem', color: alpha(theme.palette.text.secondary, 0.97), mb: 1, lineHeight: 1.55 }}>
                         {t('appearance:sections.patterns.previewPanel')}
                       </Typography>
                       <Box
@@ -1560,7 +1560,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                         ),
                       }}
                     >
-                      <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', mb: 1 }}>
+                      <Typography sx={{ fontSize: '0.9rem', color: alpha(theme.palette.text.secondary, 0.97), mb: 1, lineHeight: 1.55 }}>
                         {t('appearance:sections.patterns.previewCard')}
                       </Typography>
                       <Box
@@ -1633,7 +1633,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                             <Typography sx={{ fontWeight: 700, color: 'text.primary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {customTheme.name}
                             </Typography>
-                            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                            <Typography sx={{ fontSize: '0.86rem', color: alpha(theme.palette.text.secondary, 0.97), lineHeight: 1.45 }}>
                               {new Date(customTheme.createdAt).toLocaleString()}
                             </Typography>
                           </Box>

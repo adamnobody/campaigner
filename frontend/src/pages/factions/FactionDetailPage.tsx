@@ -1412,7 +1412,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                             </Box>
                           }
                           sx={{
-                            backgroundColor: alpha(theme.palette.background.paper, 0.5),
+                            backgroundColor: alpha(theme.palette.background.paper, 0.64),
                             borderRadius: 1.5,
                             mb: 1,
                             border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
@@ -1422,37 +1422,48 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                           <ListItemText
                             primary={
                               <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                                <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{pol.title}</Typography>
+                                <Typography sx={{ color: 'text.primary', fontWeight: 700, lineHeight: 1.45, fontSize: '1rem' }}>
+                                  {pol.title}
+                                </Typography>
                                 <Chip
                                   label={t(`factions:policyTypes.${pol.type}`)}
                                   size="small"
-                                  sx={{ height: 20, fontSize: '0.65rem' }}
+                                  sx={{ height: 23, fontSize: '0.76rem', fontWeight: 600 }}
                                 />
                                 <Chip
                                   label={t(`factions:policyStatuses.${pol.status}`)}
                                   size="small"
                                   color="primary"
                                   variant="outlined"
-                                  sx={{ height: 20, fontSize: '0.65rem' }}
+                                  sx={{ height: 23, fontSize: '0.76rem', fontWeight: 600 }}
                                 />
                                 <Chip
                                   label={t(`factions:decrees.category.${pol.category ?? 'other'}`)}
                                   size="small"
                                   variant="outlined"
-                                  sx={{ height: 20, fontSize: '0.65rem' }}
+                                  sx={{ height: 23, fontSize: '0.76rem', fontWeight: 600 }}
                                 />
                                 {pol.enactedDate ? (
                                   <Chip
                                     label={pol.enactedDate}
                                     size="small"
-                                    sx={{ height: 20, fontSize: '0.65rem' }}
+                                    sx={{ height: 23, fontSize: '0.76rem', fontWeight: 600 }}
                                   />
                                 ) : null}
                               </Box>
                             }
                             secondary={
                               pol.description ? (
-                                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.75, whiteSpace: 'pre-wrap' }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: alpha(theme.palette.text.secondary, 0.96),
+                                    mt: 0.85,
+                                    whiteSpace: 'pre-wrap',
+                                    lineHeight: 1.65,
+                                    fontSize: '0.98rem',
+                                  }}
+                                >
                                   {pol.description}
                                 </Typography>
                               ) : null

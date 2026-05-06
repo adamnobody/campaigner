@@ -35,7 +35,10 @@ export const SectionHeader: React.FC<{
         {title}
       </Typography>
       {subtitle && (
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+        <Typography
+          variant="caption"
+          sx={{ color: (theme) => alpha(theme.palette.text.secondary, 0.95), fontSize: '0.84rem', lineHeight: 1.45 }}
+        >
           {subtitle}
         </Typography>
       )}
