@@ -23,6 +23,7 @@ const FactionDetailPage = React.lazy(() => import('./pages/factions/FactionDetai
 const DynastiesPage = React.lazy(() => import('./pages/dynasties/DynastiesPage').then(m => ({ default: m.DynastiesPage })));
 const DynastyDetailPage = React.lazy(() => import('./pages/dynasties/DynastyDetailPage').then(m => ({ default: m.DynastyDetailPage })));
 const ProjectGraphPage = React.lazy(() => import('./pages/graph/ProjectGraphPage').then(m => ({ default: m.ProjectGraphPage })));
+const ProjectDashboardPage = React.lazy(() => import('./pages/project-dashboard/ProjectDashboardPage').then(m => ({ default: m.ProjectDashboardPage })));
 const PageLoader = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
     <CircularProgress />
@@ -44,7 +45,7 @@ const App: React.FC = () => {
             <Route index element={<HomePage />} />
             <Route path="appearance" element={<ErrorBoundary><AppearanceSettingsPage /></ErrorBoundary>} />
             <Route path="project/:projectId">
-              <Route index element={<Navigate to="map" replace />} />
+              <Route index element={<ErrorBoundary><ProjectDashboardPage /></ErrorBoundary>} />
               <Route path="map" element={<ErrorBoundary><MapPage /></ErrorBoundary>} />
               <Route path="map/:mapId" element={<ErrorBoundary><MapPage /></ErrorBoundary>} />
               <Route path="characters" element={<ErrorBoundary><CharactersPage /></ErrorBoundary>} />

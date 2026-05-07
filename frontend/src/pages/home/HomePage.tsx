@@ -189,7 +189,7 @@ export const HomePage: React.FC = () => {
     });
     setCreateDialogOpen(false);
     showSnackbar(t('projects:snackbar.created'), 'success');
-    navigate(`/project/${project.id}/map`);
+    navigate(`/project/${project.id}`);
   };
 
   const handleDelete = (id: number, name: string, e: React.MouseEvent) => {
@@ -232,7 +232,7 @@ export const HomePage: React.FC = () => {
         const res = await projectsApi.importProject(importPayload, { locale });
         showSnackbar(t('projects:snackbar.imported', { name: res.data.data.name }), 'success');
         fetchProjects();
-        navigate(`/project/${res.data.data.id}/map`);
+        navigate(`/project/${res.data.data.id}`);
       } catch (err: any) {
         if (err instanceof SyntaxError) {
           showSnackbar(t('projects:snackbar.importNotValidJson'), 'error');
@@ -252,7 +252,7 @@ export const HomePage: React.FC = () => {
       const project = res.data.data;
       showSnackbar(t('projects:snackbar.tutorialCreated'), 'success');
       startOnboarding(project.id);
-      navigate(`/project/${project.id}/map`);
+      navigate(`/project/${project.id}`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t('projects:snackbar.tutorialFailed');
       showSnackbar(message, 'error');
@@ -469,7 +469,7 @@ export const HomePage: React.FC = () => {
                     <GlassCard
                       key={project.id}
                       interactive={true}
-                      onClick={() => navigate(`/project/${project.id}/map`)}
+                      onClick={() => navigate(`/project/${project.id}`)}
                       sx={{
                         opacity: isLoaded ? 1 : 0,
                         transform: isLoaded ? 'translateY(0)' : 'translateY(30px)',
