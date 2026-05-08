@@ -32,6 +32,7 @@ import { useDynastyStore } from '@/store/useDynastyStore';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useBranchStore } from '@/store/useBranchStore';
+import { useUIStore } from '@/store/useUIStore';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
@@ -55,6 +56,137 @@ type RevealProps = {
   animationKey: string;
   style?: React.CSSProperties;
 };
+
+type OverviewAnimatedBackgroundProps = {
+  shouldAnimate: boolean;
+  accentColor: string;
+};
+
+function OverviewAnimatedBackground({ shouldAnimate, accentColor }: OverviewAnimatedBackgroundProps) {
+  const theme = useTheme();
+  const sidebarWidth = useUIStore((state) => state.sidebarWidth);
+
+  const contourLayerA = useMemo(() => {
+    const paths = Array.from({ length: 26 }).map((_, i) => {
+      const offset = i * 50 - 100;
+      const y1 = 50 + offset;
+      const y2 = 300 + offset + Math.sin(i) * 60;
+      const y3 = 150 + offset + Math.cos(i) * 40;
+      const y4 = 400 + offset + Math.sin(i * 1.5) * 80;
+      const y5 = 200 + offset + Math.cos(i * 1.2) * 50;
+      const y6 = 350 + offset;
+      return `<path d='M -400 ${y1} C 200 ${y2}, 600 ${y3}, 1000 ${y3} S 1800 ${y4}, 2400 ${y5} T 3200 ${y6}' />`;
+    }).join('');
+
+    const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2400 1200' preserveAspectRatio='xMidYMid slice'>
+        <g fill='none' stroke='${alpha(accentColor, 0.25)}' stroke-width='1.5'>
+          ${paths}
+        </g>
+      </svg>
+    `;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }, [accentColor]);
+
+  const contourLayerB = useMemo(() => {
+    const paths = Array.from({ length: 22 }).map((_, i) => {
+      const offset = i * 70 - 150;
+      const y1 = 20 + offset;
+      const y2 = 250 + offset - Math.cos(i) * 50;
+      const y3 = 180 + offset - Math.sin(i) * 30;
+      const y4 = 350 + offset - Math.cos(i * 1.5) * 70;
+      const y5 = 150 + offset - Math.sin(i * 1.2) * 40;
+      const y6 = 280 + offset;
+      return `<path d='M -400 ${y1} C 300 ${y2}, 700 ${y3}, 1100 ${y3} S 1700 ${y4}, 2300 ${y5} T 3200 ${y6}' />`;
+    }).join('');
+
+    const svg = `
+      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2400 1200' preserveAspectRatio='xMidYMid slice'>
+        <g fill='none' stroke='${alpha(accentColor, 0.15)}' stroke-width='2'>
+          ${paths}
+        </g>
+      </svg>
+    `;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }, [accentColor]);
+
+  return (
+    <Box
+      aria-hidden
+      sx={{
+        position: 'fixed',
+        top: '64px',
+        left: sidebarWidth,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+        '@keyframes topoDriftA': {
+          '0%': { transform: 'translate3d(-2%, -2%, 0) scale(1.05)' },
+          '50%': { transform: 'translate3d(2%, 2%, 0) scale(1.05)' },
+          '100%': { transform: 'translate3d(-2%, -2%, 0) scale(1.05)' },
+        },
+        '@keyframes topoDriftB': {
+          '0%': { transform: 'translate3d(2%, 1%, 0) scale(1.08)' },
+          '50%': { transform: 'translate3d(-2%, -1%, 0) scale(1.08)' },
+          '100%': { transform: 'translate3d(2%, 1%, 0) scale(1.08)' },
+        },
+        '@keyframes topoBreath': {
+          '0%': { opacity: 0.5 },
+          '50%': { opacity: 0.85 },
+          '100%': { opacity: 0.5 },
+        },
+      }}
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: '-10%',
+          backgroundImage: contourLayerA,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.75,
+          maskImage: 'radial-gradient(ellipse at 50% 50%, #000 50%, transparent 95%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, #000 50%, transparent 95%)',
+          animation: shouldAnimate ? 'topoDriftA 30s ease-in-out infinite, topoBreath 22s ease-in-out infinite' : 'none',
+        }}
+      />
+      
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: '-10%',
+          backgroundImage: contourLayerB,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.65,
+          maskImage: 'radial-gradient(ellipse at 50% 50%, #000 40%, transparent 90%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, #000 40%, transparent 90%)',
+          animation: shouldAnimate ? 'topoDriftB 40s ease-in-out infinite, topoBreath 28s ease-in-out infinite' : 'none',
+        }}
+      />
+      
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(ellipse at 50% 30%, ${alpha(accentColor, 0.12)} 0%, transparent 70%)`,
+        }}
+      />
+      
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background: `linear-gradient(180deg, transparent 0%, transparent 70%, ${theme.palette.background.default} 100%)`,
+        }}
+      />
+    </Box>
+  );
+}
 
 function Reveal({
   children,
@@ -166,6 +298,16 @@ export const ProjectDashboardPage: React.FC = () => {
   const { motionMode } = preferences;
   const prefersReducedMotion = useReducedMotion();
   const shouldAnimate = motionMode === 'full' && !prefersReducedMotion;
+  const themePaletteWithAccent = theme.palette as typeof theme.palette & {
+    accent?: { main?: string };
+    brand?: { main?: string };
+  };
+  const customAccent = preferences.customColorThemes.find((preset) => preset.id === preferences.themePreset)?.accentMain;
+  const overviewAccentColor =
+    customAccent ??
+    themePaletteWithAccent.accent?.main ??
+    themePaletteWithAccent.brand?.main ??
+    theme.palette.primary.main;
 
   // Language mapping
   const isRu = i18n.language.startsWith('ru');
@@ -315,55 +457,56 @@ export const ProjectDashboardPage: React.FC = () => {
 
   if (isEmptyProject) {
     return (
-      <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }} key={animationKey}>
-        <Box>
-          <Reveal shouldAnimate={shouldAnimate} delay={0} animationKey={`${animationKey}-empty-hero`}>
-            <Box sx={{ textAlign: 'center', mb: 8 }}>
-              <Typography variant="h3" fontWeight={700} gutterBottom>
-                {i18nText.welcome}
-              </Typography>
-              <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-                {i18nText.startBuilding}
-              </Typography>
-            </Box>
-          </Reveal>
+      <Box key={animationKey} sx={{ position: 'relative', isolation: 'isolate' }}>
+        <OverviewAnimatedBackground shouldAnimate={shouldAnimate} accentColor={overviewAccentColor} />
+        <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 }, position: 'relative', zIndex: 1 }}>
+            <Reveal shouldAnimate={shouldAnimate} delay={0} animationKey={`${animationKey}-empty-hero`}>
+              <Box sx={{ textAlign: 'center', mb: 8 }}>
+                <Typography variant="h3" fontWeight={700} gutterBottom>
+                  {i18nText.welcome}
+                </Typography>
+                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+                  {i18nText.startBuilding}
+                </Typography>
+              </Box>
+            </Reveal>
 
-          <Grid container spacing={4} justifyContent="center">
-            {[
-              { icon: DescriptionIcon, title: i18nText.createNote, to: `/project/${pid}/notes` },
-              { icon: PeopleIcon, title: i18nText.createChar, to: `/project/${pid}/characters/new` },
-              { icon: GroupsIcon, title: i18nText.createFaction, to: `/project/${pid}/factions/new` },
-              { icon: TimelineIcon, title: i18nText.addEvent, to: `/project/${pid}/timeline` },
-              { icon: MapIcon, title: i18nText.createMap, to: `/project/${pid}/map` },
-            ].map((action, i) => (
-              <Grid item xs={12} sm={6} md={4} key={i}>
-                <Reveal
-                  shouldAnimate={shouldAnimate}
-                  delay={0.1 + i * 0.06}
-                  animationKey={`${animationKey}-empty-card-${i}`}
-                  style={{ height: '100%' }}
-                >
-                  <GlassCard interactive onClick={() => navigate(action.to)} sx={{ p: 4, textAlign: 'center', height: '100%' }}>
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        p: 2,
-                        borderRadius: '50%',
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        color: 'primary.main',
-                        mb: 2,
-                      }}
-                    >
-                      <action.icon fontSize="large" />
-                    </Box>
-                    <Typography variant="h6">{action.title}</Typography>
-                  </GlassCard>
-                </Reveal>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      </Container>
+            <Grid container spacing={4} justifyContent="center">
+              {[
+                { icon: DescriptionIcon, title: i18nText.createNote, to: `/project/${pid}/notes` },
+                { icon: PeopleIcon, title: i18nText.createChar, to: `/project/${pid}/characters/new` },
+                { icon: GroupsIcon, title: i18nText.createFaction, to: `/project/${pid}/factions/new` },
+                { icon: TimelineIcon, title: i18nText.addEvent, to: `/project/${pid}/timeline` },
+                { icon: MapIcon, title: i18nText.createMap, to: `/project/${pid}/map` },
+              ].map((action, i) => (
+                <Grid item xs={12} sm={6} md={4} key={i}>
+                  <Reveal
+                    shouldAnimate={shouldAnimate}
+                    delay={0.1 + i * 0.06}
+                    animationKey={`${animationKey}-empty-card-${i}`}
+                    style={{ height: '100%' }}
+                  >
+                    <GlassCard interactive onClick={() => navigate(action.to)} sx={{ p: 4, textAlign: 'center', height: '100%' }}>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          p: 2,
+                          borderRadius: '50%',
+                          bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          color: 'primary.main',
+                          mb: 2,
+                        }}
+                      >
+                        <action.icon fontSize="large" />
+                      </Box>
+                      <Typography variant="h6">{action.title}</Typography>
+                    </GlassCard>
+                  </Reveal>
+                </Grid>
+              ))}
+            </Grid>
+        </Container>
+      </Box>
     );
   }
 
@@ -378,7 +521,9 @@ export const ProjectDashboardPage: React.FC = () => {
   ];
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 } }} key={animationKey}>
+    <Box key={animationKey} sx={{ position: 'relative', isolation: 'isolate' }}>
+      <OverviewAnimatedBackground shouldAnimate={shouldAnimate} accentColor={overviewAccentColor} />
+      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
       <Box>
         {/* HERO */}
         <Reveal shouldAnimate={shouldAnimate} delay={0} animationKey={`${animationKey}-hero`}>
@@ -606,6 +751,7 @@ export const ProjectDashboardPage: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
