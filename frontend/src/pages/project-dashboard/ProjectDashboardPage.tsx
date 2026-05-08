@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -266,23 +266,35 @@ export const ProjectDashboardPage: React.FC = () => {
   const preferences = usePreferencesStore();
 
   const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const lastLoadedScopeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (pid <= 0) return;
     let mounted = true;
+    const currentScopeKey = `${pid}:${branchStore.activeBranchId ?? 'none'}`;
+    if (branchStore.activeProjectId === pid && lastLoadedScopeRef.current === currentScopeKey) {
+      return;
+    }
+    const shouldFetchBranches = !branchStore.initialized || branchStore.activeProjectId !== pid;
 
     const loadData = async () => {
+      setIsBootstrapping(true);
       try {
+        if (shouldFetchBranches) {
+          await branchStore.fetchBranches(pid);
+        }
+
         await Promise.allSettled([
-          charStore.initialized ? Promise.resolve() : charStore.fetchCharacters(pid),
-          factionStore.initialized ? Promise.resolve() : factionStore.fetchFactions(pid),
-          noteStore.total > 0 || noteStore.notes.length > 0 ? Promise.resolve() : noteStore.fetchNotes(pid),
-          timelineStore.events.length > 0 ? Promise.resolve() : timelineStore.fetchEvents(pid),
-          mapStore.mapTree.length > 0 ? Promise.resolve() : mapStore.fetchMapTree(pid),
-          dynastyStore.initialized ? Promise.resolve() : dynastyStore.fetchDynasties(pid),
-          dogmaStore.total > 0 || dogmaStore.dogmas.length > 0 ? Promise.resolve() : dogmaStore.fetchDogmas(pid),
-          branchStore.initialized ? Promise.resolve() : branchStore.fetchBranches(pid),
+          charStore.fetchCharacters(pid),
+          factionStore.fetchFactions(pid),
+          noteStore.fetchNotes(pid),
+          timelineStore.fetchEvents(pid),
+          mapStore.fetchMapTree(pid),
+          dynastyStore.fetchDynasties(pid),
+          dogmaStore.fetchDogmas(pid),
         ]);
+        const activeBranchId = useBranchStore.getState().activeBranchId;
+        lastLoadedScopeRef.current = `${pid}:${activeBranchId ?? 'none'}`;
       } finally {
         if (mounted) setIsBootstrapping(false);
       }
@@ -293,7 +305,7 @@ export const ProjectDashboardPage: React.FC = () => {
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pid]);
+  }, [pid, branchStore.activeBranchId]);
 
   const { motionMode } = preferences;
   const prefersReducedMotion = useReducedMotion();

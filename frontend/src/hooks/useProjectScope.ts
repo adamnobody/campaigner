@@ -23,10 +23,14 @@ export const useProjectScope = (): number | null => {
   const branchStoreProjectId = useBranchStore((s) => s.activeProjectId);
 
   useEffect(() => {
+    if (currentProjectId === null) {
+      previousBranchScopeRef.current = null;
+      return;
+    }
+
     const previousProjectId = previousProjectIdRef.current;
     const shouldReset =
       previousProjectId !== null &&
-      currentProjectId !== null &&
       previousProjectId !== currentProjectId;
 
     if (shouldReset) {

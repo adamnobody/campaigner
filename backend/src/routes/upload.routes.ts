@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { uploadMapImage, uploadCharacterImage, uploadTraitImage, uploadAmbitionImage } from '../middleware/upload.js';
+import {
+  uploadMapImage,
+  uploadCharacterImage,
+  uploadTraitImage,
+  uploadAmbitionImage,
+  uploadAppearanceImage,
+} from '../middleware/upload.js';
 import { Request, Response, NextFunction } from 'express';
 
 const router = Router();
@@ -74,6 +80,26 @@ router.post('/ambitions', uploadAmbitionImage, (req: Request, res: Response, nex
       success: true,
       data: {
         path: `/uploads/ambitions/${req.file.filename}`,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/appearance', uploadAppearanceImage, (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'No file uploaded' });
+      return;
+    }
+    res.json({
+      success: true,
+      data: {
+        path: `/api/uploads/appearance/${req.file.filename}`,
         filename: req.file.filename,
         originalName: req.file.originalname,
         size: req.file.size,

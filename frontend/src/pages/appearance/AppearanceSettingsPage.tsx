@@ -62,6 +62,7 @@ import { AppearanceLivePreview } from '@/pages/appearance/components/AppearanceL
 import { FONT_PRESET_OPTIONS } from '@/pages/appearance/components/fontPresets';
 import { useDebouncedDraft } from '@/pages/appearance/components/useDebouncedDraft';
 import { CreateColorThemeDialog, type CreateColorThemeValues } from '@/pages/appearance/components/CreateColorThemeDialog';
+import { uploadsApi } from '@/api/uploads';
 import {
   INTERFACE_STYLE_ORDER,
   INTERFACE_STYLE_PROFILES,
@@ -348,6 +349,15 @@ export const AppearanceSettingsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  const uploadAppearanceImage = async (file: File) => {
+    const response = await uploadsApi.uploadAppearanceImage(file);
+    const uploadedPath = response.data.data?.path;
+    if (!uploadedPath) {
+      throw new Error('Upload did not return an asset URL');
+    }
+    return uploadedPath;
+  };
+
   const handleBackgroundFileUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -355,17 +365,16 @@ export const AppearanceSettingsPage: React.FC = () => {
 
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
+      input.value = '';
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        if (typeof result === 'string') {
-          setHomeBackgroundImageDraftImmediately(result);
-          setHomeBackgroundImage(result);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const uploadedPath = await uploadAppearanceImage(file);
+        setHomeBackgroundImageDraftImmediately(uploadedPath);
+        setHomeBackgroundImage(uploadedPath);
+      } catch (error) {
+        console.error('Failed to upload appearance background image', error);
+      }
     };
 
     input.click();
@@ -375,24 +384,25 @@ export const AppearanceSettingsPage: React.FC = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/png,image/jpeg,image/webp,image/svg+xml';
-    input.onchange = (event) => {
+    input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
+      input.value = '';
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        if (typeof result !== 'string') return;
+
+      try {
+        const uploadedPath = await uploadAppearanceImage(file);
         if (target === 'panel') {
           setPanelPatternMode('custom');
-          setPanelPatternUrlDraftImmediately(result);
-          setPanelPatternUrl(result);
+          setPanelPatternUrlDraftImmediately(uploadedPath);
+          setPanelPatternUrl(uploadedPath);
         } else {
           setCardPatternMode('custom');
-          setCardPatternUrlDraftImmediately(result);
-          setCardPatternUrl(result);
+          setCardPatternUrlDraftImmediately(uploadedPath);
+          setCardPatternUrl(uploadedPath);
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Failed to upload appearance pattern image', error);
+      }
     };
     input.click();
   };
