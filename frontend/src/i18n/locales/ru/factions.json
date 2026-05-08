@@ -352,7 +352,8 @@
     "close": "Закрыть",
     "run": "Сравнить",
     "chartBar": "Столбцы",
-    "chartRadar": "Радар"
+    "chartRadar": "Радар",
+    "valueLabel": "Значение"
   },
   "customMetrics": {
     "name": "Название",
