@@ -14,6 +14,7 @@ campaigner
 │  │  │  ├─ dogma.controller.ts
 │  │  │  ├─ dynasty.controller.ts
 │  │  │  ├─ faction.controller.ts
+│  │  │  ├─ graphLayout.controller.ts
 │  │  │  ├─ map.controller.ts
 │  │  │  ├─ note.controller.ts
 │  │  │  ├─ political-scale.controller.ts
@@ -34,7 +35,11 @@ campaigner
 │  │  │  │  ├─ 008_faction_kind_and_membership_sync.ts
 │  │  │  │  ├─ 009_faction_metrics.ts
 │  │  │  │  ├─ 010_political_scales.ts
-│  │  │  │  └─ 011_state_relations.ts
+│  │  │  │  ├─ 011_state_relations.ts
+│  │  │  │  ├─ 012_branch_scoped_creates.ts
+│  │  │  │  ├─ 013_branch_visibility_v020.ts
+│  │  │  │  ├─ 014_faction_relations_branch.ts
+│  │  │  │  └─ 015_graph_layouts.ts
 │  │  │  ├─ seeds
 │  │  │  │  └─ politicalScalesSeedData.ts
 │  │  │  ├─ connection.ts
@@ -57,8 +62,10 @@ campaigner
 │  │  │  ├─ faction.routes.ts
 │  │  │  ├─ map.routes.ts
 │  │  │  ├─ note.routes.ts
+│  │  │  ├─ noteListQuerySchema.test.ts
 │  │  │  ├─ political-scale.routes.ts
 │  │  │  ├─ project.routes.ts
+│  │  │  ├─ querySchemas.ts
 │  │  │  ├─ search.routes.ts
 │  │  │  ├─ tag.routes.ts
 │  │  │  ├─ timeline.routes.ts
@@ -87,6 +94,7 @@ campaigner
 │  │  │  ├─ project
 │  │  │  │  ├─ assetHelpers.ts
 │  │  │  │  ├─ demoProject.payload.ts
+│  │  │  │  ├─ graphLayoutImport.helpers.ts
 │  │  │  │  ├─ index.ts
 │  │  │  │  ├─ project.service.ts
 │  │  │  │  ├─ project.types.ts
@@ -95,9 +103,11 @@ campaigner
 │  │  │  ├─ ambition.service.ts
 │  │  │  ├─ branch.service.ts
 │  │  │  ├─ branchOverlay.service.ts
+│  │  │  ├─ branchScope.ts
 │  │  │  ├─ character-trait.service.ts
 │  │  │  ├─ character.service.ts
 │  │  │  ├─ dogma.service.ts
+│  │  │  ├─ graphLayout.service.ts
 │  │  │  ├─ note.service.ts
 │  │  │  ├─ search.service.ts
 │  │  │  ├─ tag.service.ts
@@ -106,33 +116,14 @@ campaigner
 │  │  ├─ utils
 │  │  │  ├─ apiResponse.ts
 │  │  │  ├─ asyncHandler.ts
+│  │  │  ├─ branchRequest.ts
 │  │  │  ├─ dbHelpers.ts
 │  │  │  └─ parseId.ts
 │  │  └─ index.ts
 │  ├─ .env.example
 │  ├─ package.json
 │  └─ tsconfig.json
-├─ chunks
-│  ├─ chunk_backend_api.txt
-│  ├─ chunk_backend_db.txt
-│  ├─ chunk_backend_services.txt
-│  ├─ chunk_backend_utils.txt
-│  ├─ chunk_frontend_api.txt
-│  ├─ chunk_frontend_components_ui.txt
-│  ├─ chunk_frontend_entry.txt
-│  ├─ chunk_frontend_hooks.txt
-│  ├─ chunk_frontend_pages_content.txt
-│  ├─ chunk_frontend_pages_entities.txt
-│  ├─ chunk_frontend_pages_system.txt
-│  ├─ chunk_frontend_pages_visualization.txt
-│  ├─ chunk_frontend_store.txt
-│  ├─ chunk_frontend_theme.txt
-│  ├─ chunk_shared.txt
-│  └─ chunk_uncategorized.txt
-├─ docs
-│  ├─ architecture
-│  │  └─ conventions.md
-│  └─ performance-regression-checklist.md
+├─ data
 ├─ electron
 │  ├─ icon.ico
 │  └─ main.js
@@ -207,6 +198,7 @@ campaigner
 │  │     ├─ zhadnost.jpg
 │  │     ├─ zhestokost.jpg
 │  │     └─ zlost.jpg
+│  ├─ scripts
 │  ├─ src
 │  │  ├─ api
 │  │  │  ├─ ambitions.ts
@@ -217,6 +209,7 @@ campaigner
 │  │  │  ├─ dogmas.ts
 │  │  │  ├─ dynasties.ts
 │  │  │  ├─ factions.ts
+│  │  │  ├─ graphLayout.ts
 │  │  │  ├─ maps.ts
 │  │  │  ├─ notes.ts
 │  │  │  ├─ politicalScales.ts
@@ -225,7 +218,9 @@ campaigner
 │  │  │  ├─ tags.ts
 │  │  │  ├─ timeline.ts
 │  │  │  ├─ types.ts
-│  │  │  └─ wiki.ts
+│  │  │  ├─ uploads.ts
+│  │  │  ├─ wiki.ts
+│  │  │  └─ withBranchParams.ts
 │  │  ├─ components
 │  │  │  ├─ detail
 │  │  │  │  └─ CollapsibleSection.tsx
@@ -245,6 +240,7 @@ campaigner
 │  │  │  │  ├─ ThemePreviewCard.tsx
 │  │  │  │  └─ ThemeSliderControl.tsx
 │  │  │  └─ ui
+│  │  │     ├─ BranchEntityMissingDialog.tsx
 │  │  │     ├─ ConfirmDialog.tsx
 │  │  │     ├─ DndButton.tsx
 │  │  │     ├─ EditExclusionsDialog.tsx
@@ -262,6 +258,7 @@ campaigner
 │  │  │     ├─ SearchDialog.tsx
 │  │  │     ├─ SectionHeader.tsx
 │  │  │     ├─ SplashScreen.tsx
+│  │  │     ├─ splashTipKeys.ts
 │  │  │     └─ StyleCustomizer.tsx
 │  │  ├─ hooks
 │  │  │  ├─ useDebounce.ts
@@ -269,8 +266,14 @@ campaigner
 │  │  │  ├─ useHotkeys.ts
 │  │  │  └─ useProjectScope.ts
 │  │  ├─ i18n
+│  │  │  ├─ catalog
+│  │  │  │  └─ displayBuiltinTexts.ts
 │  │  │  ├─ locales
 │  │  │  │  ├─ en
+│  │  │  │  │  ├─ builtins
+│  │  │  │  │  │  ├─ catalogAmbitions.json
+│  │  │  │  │  │  ├─ catalogTraits.json
+│  │  │  │  │  │  └─ politicalScalesBuiltin.json
 │  │  │  │  │  ├─ ambitions.json
 │  │  │  │  │  ├─ appearance.json
 │  │  │  │  │  ├─ characters.json
@@ -282,8 +285,10 @@ campaigner
 │  │  │  │  │  ├─ map.json
 │  │  │  │  │  ├─ navigation.json
 │  │  │  │  │  ├─ notes.json
+│  │  │  │  │  ├─ onboarding.json
 │  │  │  │  │  ├─ policies.json
 │  │  │  │  │  ├─ projects.json
+│  │  │  │  │  ├─ projectSettings.json
 │  │  │  │  │  ├─ settings.json
 │  │  │  │  │  ├─ timeline.json
 │  │  │  │  │  └─ wiki.json
@@ -299,8 +304,10 @@ campaigner
 │  │  │  │     ├─ map.json
 │  │  │  │     ├─ navigation.json
 │  │  │  │     ├─ notes.json
+│  │  │  │     ├─ onboarding.json
 │  │  │  │     ├─ policies.json
 │  │  │  │     ├─ projects.json
+│  │  │  │     ├─ projectSettings.json
 │  │  │  │     ├─ settings.json
 │  │  │  │     ├─ timeline.json
 │  │  │  │     └─ wiki.json
@@ -360,6 +367,8 @@ campaigner
 │  │  │  │  │  ├─ GraphLegend.tsx
 │  │  │  │  │  ├─ GraphStatusBar.tsx
 │  │  │  │  │  └─ GraphToolbar.tsx
+│  │  │  │  ├─ data
+│  │  │  │  │  └─ buildProjectGraph.ts
 │  │  │  │  ├─ formatNodeMeta.ts
 │  │  │  │  ├─ ProjectGraphPage.tsx
 │  │  │  │  └─ types.ts
@@ -398,6 +407,8 @@ campaigner
 │  │  │  │  │  └─ ToolbarButton.tsx
 │  │  │  │  ├─ NoteEditorPage.tsx
 │  │  │  │  └─ NotesPage.tsx
+│  │  │  ├─ project-dashboard
+│  │  │  │  └─ ProjectDashboardPage.tsx
 │  │  │  ├─ project-settings
 │  │  │  │  └─ ProjectSettingsPage.tsx
 │  │  │  ├─ timeline
@@ -449,12 +460,16 @@ campaigner
 │  ├─ index.html
 │  ├─ package.json
 │  ├─ tsconfig.json
-│  ├─ tsconfig.tsbuildinfo
 │  └─ vite.config.ts
 ├─ scripts
 │  ├─ db
 │  │  ├─ explain-hot.mjs
 │  │  └─ seed-demo.mjs
+│  ├─ en-catalog
+│  │  ├─ ambitions-en.json
+│  │  ├─ political-axes-en.json
+│  │  ├─ political-zones-en-by-ru-label.json
+│  │  └─ traits-en.json
 │  ├─ perf
 │  │  ├─ reports
 │  │  │  ├─ release-after.json
@@ -482,8 +497,11 @@ campaigner
 │  │  ├─ frontend.mjs
 │  │  ├─ index.mjs
 │  │  └─ lib.mjs
+│  ├─ _political-rows-from-seed.json
 │  ├─ chunker.mjs
 │  ├─ doctor.mjs
+│  ├─ extract-political-scales-from-seed.mjs
+│  ├─ gen-en-builtins.mjs
 │  ├─ generate-tree.mjs
 │  └─ smoke-runner.mjs
 ├─ shared
@@ -497,6 +515,7 @@ campaigner
 │  │  │  ├─ dogma.schema.ts
 │  │  │  ├─ dynasty.schema.ts
 │  │  │  ├─ faction.schema.ts
+│  │  │  ├─ graphLayout.schema.ts
 │  │  │  ├─ index.ts
 │  │  │  ├─ map.schema.ts
 │  │  │  ├─ note.schema.ts
@@ -510,16 +529,10 @@ campaigner
 │  │  ├─ constants.ts
 │  │  └─ index.ts
 │  ├─ package.json
-│  ├─ tsconfig.json
-│  └─ tsconfig.tsbuildinfo
+│  └─ tsconfig.json
 ├─ .gitignore
-├─ AGENTS.md
 ├─ LICENSE
-├─ package-lock.json
 ├─ package.json
-├─ PLAN_EXECUTION.md
-├─ PLAN_LOCALIZATION.md
-├─ PLAN.md
 ├─ README.md
 ├─ start.bat
 └─ tsconfig.json
