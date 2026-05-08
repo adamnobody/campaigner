@@ -113,6 +113,7 @@ export function exportProject(id: number): ImportedProjectPayload & {
   const timelineEvents = db.prepare(`
     SELECT id, title, description, event_date as eventDate,
            sort_order as sortOrder, era,
+           COALESCE(era_color, '') as eraColor,
            linked_note_id as linkedNoteId,
            created_at as createdAt, updated_at as updatedAt
     FROM timeline_events WHERE project_id = ?

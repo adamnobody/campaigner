@@ -101,6 +101,7 @@ export interface ExportTimelineEventRow {
   eventDate: string;
   sortOrder: number;
   era: string;
+  eraColor?: string;
   linkedNoteId: number | null;
   createdAt: string;
   updatedAt: string;

@@ -138,6 +138,7 @@ export function createTables(db: Database.Database): void {
       event_date TEXT NOT NULL,
       sort_order INTEGER DEFAULT 0,
       era TEXT DEFAULT '',
+      era_color TEXT DEFAULT '',
       linked_note_id INTEGER,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),

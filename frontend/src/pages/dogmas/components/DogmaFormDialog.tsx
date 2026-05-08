@@ -33,8 +33,6 @@ type Props = {
   setIsPublic: (v: boolean) => void;
   importance: string;
   setImportance: (v: string) => void;
-  icon: string;
-  setIcon: (v: string) => void;
   tagsStr: string;
   setTagsStr: (v: string) => void;
   tagsInput: string;
@@ -61,8 +59,6 @@ export const DogmaFormDialog: React.FC<Props> = ({
   setIsPublic,
   importance,
   setImportance,
-  icon,
-  setIcon,
   tagsStr,
   setTagsStr,
   tagsInput,
@@ -104,11 +100,6 @@ export const DogmaFormDialog: React.FC<Props> = ({
             </Select>
           </FormControl>
         </Box>
-
-        <TextField fullWidth label={t('dogmas:form.fields.icon')} value={icon}
-          onChange={e => setIcon(e.target.value)} margin="normal"
-          placeholder={t('dogmas:form.placeholders.icon')}
-          sx={{ maxWidth: 200 }} />
 
         <TextField fullWidth label={t('dogmas:form.fields.description')} value={description}
           onChange={e => setDescription(e.target.value)} margin="normal"

@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
-import { tagsApi } from '@/api/tags';
+import { useTagStore } from '@/store/useTagStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -42,6 +42,7 @@ export const DogmasPage: React.FC = () => {
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
 
   // Флаг: была ли хотя бы одна успешная загрузка (чтобы отличить "ещё не грузили" от "загрузили и пусто")
   const [initialized, setInitialized] = useState(false);
@@ -56,10 +57,8 @@ export const DogmasPage: React.FC = () => {
   const [exceptions, setExceptions] = useState('');
   const [isPublic, setIsPublic] = useState(true);
   const [importance, setImportance] = useState<string>('major');
-  const [icon, setIcon] = useState('');
   const [tagsStr, setTagsStr] = useState('');
   const [tagsInput, setTagsInput] = useState('');
-  const [existingTagNames, setExistingTagNames] = useState<string[]>([]);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -97,15 +96,8 @@ export const DogmasPage: React.FC = () => {
   }, [pid, fetchDogmas, activeBranchId]);
 
   useEffect(() => {
-    tagsApi.getAll(pid)
-      .then((res) => {
-        const tags = res.data.data || [];
-        setExistingTagNames(tags.map((tag: { name: string }) => tag.name));
-      })
-      .catch(() => {
-        setExistingTagNames([]);
-      });
-  }, [pid]);
+    fetchTags(pid).catch(() => {});
+  }, [pid, activeBranchId, fetchTags]);
 
   // Загрузка при смене фильтров
   useEffect(() => {
@@ -136,6 +128,7 @@ export const DogmasPage: React.FC = () => {
 
   // Есть ли активные фильтры
   const hasFilters = !!(debouncedSearch || filterCategory || filterImportance);
+  const existingTagNames = tags.map((tag) => tag.name);
 
   // Group by category
   const groupedCategories: { key: string; label: string; icon: string; dogmas: Dogma[] }[] = [];
@@ -184,7 +177,6 @@ export const DogmasPage: React.FC = () => {
     setExceptions('');
     setIsPublic(true);
     setImportance('major');
-    setIcon('');
     setTagsStr('');
     setTagsInput('');
     setEditingDogma(null);
@@ -201,7 +193,6 @@ export const DogmasPage: React.FC = () => {
     setExceptions(dogma.exceptions || '');
     setIsPublic(dogma.isPublic);
     setImportance(dogma.importance);
-    setIcon(dogma.icon || '');
     setTagsStr((dogma.tags || []).map((tag: { name: string }) => tag.name).join(', '));
     setDialogOpen(true);
   };
@@ -226,18 +217,7 @@ export const DogmasPage: React.FC = () => {
       await setTags(dogmaId, []);
       return;
     }
-    const existingRes = await tagsApi.getAll(pid);
-    const existingTags: any[] = existingRes.data.data || [];
-    const tagIds: number[] = [];
-    for (const name of tagNames) {
-      const existing = existingTags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        tagIds.push(existing.id);
-      } else {
-        const newRes = await tagsApi.create({ name, projectId: pid });
-        tagIds.push(newRes.data.data.id);
-      }
-    }
+    const tagIds = await findOrCreateTagsByNames(pid, tagNames);
     await setTags(dogmaId, tagIds);
   };
 
@@ -248,7 +228,7 @@ export const DogmasPage: React.FC = () => {
       if (editingDogma) {
         await updateDogma(editingDogma.id, {
           title, category: category as any, description, impact, exceptions,
-          isPublic, importance: importance as any, icon,
+          isPublic, importance: importance as any,
         });
         if (finalTags !== (editingDogma.tags || []).map((tag: { name: string }) => tag.name).join(', ')) {
           await saveTags(editingDogma.id, finalTags);
@@ -258,7 +238,7 @@ export const DogmasPage: React.FC = () => {
         const created = await createDogma({
           projectId: pid, title, category: category as any,
           description, impact, exceptions, isPublic,
-          importance: importance as any, icon,
+          importance: importance as any,
           status: 'active', sortOrder: 0, color: '',
         });
         if (finalTags.trim()) await saveTags(created.id, finalTags);
@@ -473,8 +453,6 @@ export const DogmasPage: React.FC = () => {
         setIsPublic={setIsPublic}
         importance={importance}
         setImportance={setImportance}
-        icon={icon}
-        setIcon={setIcon}
         tagsStr={tagsStr}
         setTagsStr={setTagsStr}
         tagsInput={tagsInput}

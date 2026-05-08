@@ -353,6 +353,38 @@ export const MapPage: React.FC = () => {
     cancelEditingPoints,
   ]);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (loading || transitioning) return;
+      if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      if (e.code !== 'Digit1' && e.code !== 'Digit2' && e.code !== 'Digit3') return;
+      if (e.repeat) return;
+      const targetEl = e.target as HTMLElement | null;
+      if (targetEl && (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA' || targetEl.tagName === 'SELECT' || targetEl.isContentEditable)) {
+        return;
+      }
+      if (territoryDialogOpen || dialogOpen || confirmDialogOpen) return;
+
+      const nextMode: MapMode =
+        e.code === 'Digit1' ? 'select' : e.code === 'Digit2' ? 'marker' : 'draw_territory';
+
+      e.preventDefault();
+      if (nextMode !== mode) {
+        handleMapModeChange(nextMode);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [
+    loading,
+    transitioning,
+    mode,
+    territoryDialogOpen,
+    dialogOpen,
+    confirmDialogOpen,
+    handleMapModeChange,
+  ]);
+
   const notesMap = useMemo(() => {
     const m = new Map<number, NoteOption>();
     notes.forEach(n => m.set(n.id, n));
@@ -433,7 +465,7 @@ export const MapPage: React.FC = () => {
         territoriesCount={territories.length}
         onUploadMap={handleUploadMap}
       />
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.42)', mb: 1, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.42)', mb: 0.25, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>
         {editingTerritoryPoints
           ? t('map:page.hintEditingPoints')
           : mode === 'draw_territory'
@@ -442,6 +474,9 @@ export const MapPage: React.FC = () => {
           ? t('map:page.hintMarkerMode')
           : t('map:page.hintSelectMode')
         }
+      </Typography>
+      <Typography variant="caption" component="div" sx={{ color: 'rgba(255,255,255,0.32)', mb: 1, fontSize: '0.72rem', lineHeight: 1.4 }}>
+        {t('map:page.modeShortcutsHint')}
       </Typography>
 
       {/* Map + Panel */}

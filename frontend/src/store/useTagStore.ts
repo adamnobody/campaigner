@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/utils/error';
 
 interface TagState {
   tags: Tag[];
+  projectId: number | null;
   loading: boolean;
   initialized: boolean;
   error: string | null;
@@ -19,6 +20,7 @@ interface TagState {
 
 export const useTagStore = create<TagState>((set, get) => ({
   tags: [],
+  projectId: null,
   loading: false,
   initialized: false,
   error: null,
@@ -29,6 +31,7 @@ export const useTagStore = create<TagState>((set, get) => ({
       const res = await tagsApi.getAll(projectId);
       set({
         tags: res.data.data || [],
+        projectId,
         loading: false,
         initialized: true,
       });
@@ -88,7 +91,7 @@ export const useTagStore = create<TagState>((set, get) => ({
 
     if (normalizedNames.length === 0) return [];
 
-    if (!get().initialized) {
+    if (!get().initialized || get().projectId !== projectId) {
       await get().fetchTags(projectId);
     }
 
@@ -121,6 +124,7 @@ export const useTagStore = create<TagState>((set, get) => ({
   reset: () =>
     set({
       tags: [],
+      projectId: null,
       loading: false,
       initialized: false,
       error: null,

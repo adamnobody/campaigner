@@ -267,7 +267,8 @@ export function useMapInteractions({
 
   const handleMarkerClick = useCallback((e: React.MouseEvent, marker: Marker) => {
     e.stopPropagation();
-    if (didDragRef.current || transitioning || mode !== 'marker') return;
+    if (didDragRef.current || transitioning) return;
+    if (mode !== 'marker' && mode !== 'select') return;
 
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {

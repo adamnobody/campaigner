@@ -10,6 +10,8 @@ export const timelineEventSchema = z.object({
   eventDate: z.string().max(100), // Свободный формат даты (игровой мир может иметь свой календарь)
   sortOrder: z.number().int().default(0), // Для ручной сортировки
   era: z.string().max(200).optional().default(''),
+  /** HEX цвет строки группы событий (эпохи) для таймлайна */
+  eraColor: z.string().max(30).optional().default(''),
   tags: z.array(tagSchema).max(LIMITS.MAX_TAGS_PER_ENTITY).optional().default([]),
   linkedNoteId: idSchema.nullable().optional(),
   createdAt: z.string().datetime(),

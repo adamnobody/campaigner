@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { LIMITS } from '@campaigner/shared';
 
 export const idParamsSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
 export const setTagsBodySchema = z.object({
-  tagIds: z.array(z.number().int().positive()),
+  tagIds: z.array(z.number().int().positive()).max(LIMITS.MAX_TAGS_PER_ENTITY),
 });
 
 export const projectIdQuerySchema = z.object({

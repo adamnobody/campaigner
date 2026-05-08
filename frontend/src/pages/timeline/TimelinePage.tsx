@@ -3,7 +3,7 @@ import {
   Box, Typography, TextField, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Chip, Select, MenuItem, FormControl,
-  InputAdornment, Collapse, Tooltip, InputLabel,
+  InputAdornment, Collapse, Tooltip,
   Autocomplete, useTheme, alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { useTimelineStore } from '@/store/useTimelineStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
-import { tagsApi } from '@/api/tags';
+import { useTagStore } from '@/store/useTagStore';
 import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -46,6 +46,13 @@ const useEraColors = () => {
   ];
 };
 
+/** Пресеты HEX для строки выбора цвета эпохи */
+const ERA_COLOR_HEX_PRESETS = [
+  '#5B9BD5', '#70AD47', '#FFC000', '#FF6B6B',
+  '#9B59B6', '#3498DB', '#E67E22', '#1ABC9C',
+] as const;
+const FALLBACK_ERA_HEX = '#5B9BD5';
+
 interface NoteOption {
   id: number;
   title: string;
@@ -58,11 +65,12 @@ export const TimelinePage: React.FC = () => {
   const navigate = useNavigate();
   const {
     events, loading, fetchEvents, createEvent, updateEvent,
-    deleteEvent, reorderEvents,
+    deleteEvent, reorderEvents, setTags,
   } = useTimelineStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
   const theme = useTheme();
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
   const eraColors = useEraColors();
 
   // Dialog form
@@ -72,9 +80,9 @@ export const TimelinePage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [era, setEra] = useState('');
+  const [eraColor, setEraColor] = useState('');
   const [tagsStr, setTagsStr] = useState('');
   const [tagsInput, setTagsInput] = useState('');
-  const [existingTagNames, setExistingTagNames] = useState<string[]>([]);
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
 
   // Notes for linking
@@ -103,16 +111,12 @@ export const TimelinePage: React.FC = () => {
       setNotesMap(m);
     }).catch(() => {});
 
-    tagsApi.getAll(pid).then((res) => {
-      const tags = res.data.data || [];
-      setExistingTagNames(tags.map((tag: { name: string }) => tag.name));
-    }).catch(() => {
-      setExistingTagNames([]);
-    });
-  }, [pid, fetchEvents, activeBranchId]);
+    fetchTags(pid).catch(() => {});
+  }, [pid, fetchEvents, fetchTags, activeBranchId]);
 
   // Eras list
   const allEras = [...new Set(events.map(e => e.era || ''))].filter(Boolean);
+  const allTagNames = tags.map((tag) => tag.name);
 
   // Filtered events
   const filtered = events.filter(e => {
@@ -137,9 +141,18 @@ export const TimelinePage: React.FC = () => {
     groupedEras.push({ name, events: evts });
   }
 
+  const displayColorForEraGroup = (
+    group: { name: string; events: TimelineEvent[] },
+    groupIndex: number,
+  ): string => {
+    const hex = group.events.map((ev) => ev.eraColor).find((c) => c && String(c).trim());
+    if (hex) return hex;
+    return eraColors[groupIndex % eraColors.length];
+  };
+
   const resetForm = () => {
     setTitle(''); setDescription(''); setEventDate('');
-    setEra(''); setTagsStr(''); setTagsInput(''); setLinkedNoteId(null); setEditingEvent(null);
+    setEra(''); setEraColor(''); setTagsStr(''); setTagsInput(''); setLinkedNoteId(null); setEditingEvent(null);
   };
 
   const handleOpenCreate = () => { resetForm(); setDialogOpen(true); };
@@ -150,6 +163,7 @@ export const TimelinePage: React.FC = () => {
     setDescription(event.description || '');
     setEventDate(event.eventDate);
     setEra(event.era || '');
+    setEraColor((event.eraColor && String(event.eraColor).trim()) || '');
     setTagsStr((event.tags || []).map((tag) => tag.name).join(', '));
     setTagsInput('');
     setLinkedNoteId(event.linkedNoteId || null);
@@ -173,31 +187,25 @@ export const TimelinePage: React.FC = () => {
   const saveTags = async (eventId: number, tagsString: string) => {
     const tagNames = tagsString.split(',').map(s => s.trim()).filter(Boolean);
     if (tagNames.length === 0) {
-      await useTimelineStore.getState().setTags(eventId, []);
+      await setTags(eventId, []);
       return;
     }
-    const existingRes = await tagsApi.getAll(pid);
-    const existingTags: any[] = existingRes.data.data || [];
-    const tagIds: number[] = [];
-    for (const name of tagNames) {
-      const existing = existingTags.find((tag: { name: string }) => tag.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        tagIds.push(existing.id);
-      } else {
-        const newRes = await tagsApi.create({ name, projectId: pid });
-        tagIds.push(newRes.data.data.id);
-      }
-    }
-    await useTimelineStore.getState().setTags(eventId, tagIds);
+    const tagIds = await findOrCreateTagsByNames(pid, tagNames);
+    await setTags(eventId, tagIds);
   };
 
   const handleSave = async () => {
     if (!title.trim() || !eventDate.trim()) return;
+    const trimmedEra = era.trim();
+    const eraColorPayload = trimmedEra
+      ? (eraColor.trim() || FALLBACK_ERA_HEX)
+      : '';
     const finalTags = mergeTagValues(tagsStr, tagsInput);
     try {
       if (editingEvent) {
         await updateEvent(editingEvent.id, {
-          title, description, eventDate, era, linkedNoteId,
+          title, description, eventDate, era: trimmedEra, linkedNoteId,
+          eraColor: eraColorPayload,
         });
         if (finalTags !== (editingEvent.tags || []).map((tag) => tag.name).join(', ')) {
           await saveTags(editingEvent.id, finalTags);
@@ -205,8 +213,9 @@ export const TimelinePage: React.FC = () => {
         showSnackbar(t('timeline:snackbar.eventUpdated', { title: title.trim() }), 'success');
       } else {
         const created = await createEvent({
-          projectId: pid, title, description, eventDate, era,
+          projectId: pid, title, description, eventDate, era: trimmedEra,
           sortOrder: 0, linkedNoteId,
+          eraColor: eraColorPayload,
         });
         if (finalTags.trim()) await saveTags(created.id, finalTags);
         showSnackbar(t('timeline:snackbar.eventCreated', { title: title.trim() }), 'success');
@@ -362,7 +371,7 @@ export const TimelinePage: React.FC = () => {
             }} />
 
             {groupedEras.map((group, gi) => {
-              const eraColor = eraColors[gi % eraColors.length];
+              const eraColorResolved = displayColorForEraGroup(group, gi);
               const eraKey = group.name || '__none__';
               const collapsed = collapsedEras.has(eraKey);
 
@@ -378,7 +387,7 @@ export const TimelinePage: React.FC = () => {
                       <Box sx={{
                         width: 32, height: 32, borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: eraColor, flexShrink: 0, zIndex: 1,
+                        backgroundColor: eraColorResolved, flexShrink: 0, zIndex: 1,
                         border: `3px solid ${theme.palette.background.default}`,
                       }}>
                         {collapsed
@@ -387,7 +396,7 @@ export const TimelinePage: React.FC = () => {
                       </Box>
                       <Typography sx={{
                         fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.2rem',
-                        color: eraColor,
+                        color: eraColorResolved,
                       }}>
                         {group.name}
                       </Typography>
@@ -422,7 +431,7 @@ export const TimelinePage: React.FC = () => {
                           }}>
                             <Box sx={{
                               width: 12, height: 12, borderRadius: '50%',
-                              backgroundColor: group.name ? eraColor : alpha(theme.palette.primary.main, 0.5),
+                              backgroundColor: group.name ? eraColorResolved : alpha(theme.palette.primary.main, 0.5),
                               border: `2px solid ${theme.palette.background.default}`,
                               transition: 'transform 0.15s',
                               transform: isDropTarget ? 'scale(1.8)' : 'scale(1)',
@@ -442,7 +451,7 @@ export const TimelinePage: React.FC = () => {
                               <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                                 <Box display="flex" alignItems="center" gap={1.5} mb={0.5} flexWrap="wrap">
                                   <Typography sx={{
-                                    color: group.name ? eraColor : alpha(theme.palette.primary.main, 0.8),
+                                    color: group.name ? eraColorResolved : alpha(theme.palette.primary.main, 0.8),
                                     fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap',
                                   }}>
                                     {event.eventDate}
@@ -579,7 +588,18 @@ export const TimelinePage: React.FC = () => {
             freeSolo
             options={allEras}
             value={era}
-            onChange={(_, val) => setEra(val || '')}
+            onChange={(_, val) => {
+              const name = val ?? '';
+              setEra(name);
+              if (name.trim()) {
+                const fromEvent = events.find(
+                  (e) => (e.era || '') === name && e.eraColor && String(e.eraColor).trim(),
+                );
+                if (fromEvent?.eraColor) setEraColor(String(fromEvent.eraColor).trim());
+              } else {
+                setEraColor('');
+              }
+            }}
             onInputChange={(_, val) => setEra(val || '')}
             renderInput={(params) => (
               <TextField {...params} label={t('timeline:dialog.eraLabel')} margin="normal"
@@ -593,6 +613,51 @@ export const TimelinePage: React.FC = () => {
               '& .MuiAutocomplete-popupIndicator': { color: 'rgba(255,255,255,0.3)' },
             }}
           />
+
+          {era.trim() !== '' && (
+            <Box sx={{ mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)', mb: 1 }}>
+                {t('timeline:dialog.eraColorLabel')}
+              </Typography>
+              <Box display="flex" flexWrap="wrap" alignItems="center" gap={1}>
+                {ERA_COLOR_HEX_PRESETS.map((hex) => (
+                  <Box
+                    key={hex}
+                    component="button"
+                    type="button"
+                    onClick={() => setEraColor(hex)}
+                    aria-label={hex}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 1,
+                      bgcolor: hex,
+                      border:
+                        eraColor === hex
+                          ? '2px solid rgba(255,255,255,0.9)'
+                          : '1px solid rgba(255,255,255,0.25)',
+                      cursor: 'pointer',
+                      p: 0,
+                    }}
+                  />
+                ))}
+                <TextField
+                  type="color"
+                  value={/^#[0-9A-Fa-f]{6}$/i.test(eraColor) ? eraColor : FALLBACK_ERA_HEX}
+                  onChange={(e) => setEraColor(e.target.value)}
+                  size="small"
+                  sx={{
+                    width: 72,
+                    '& input': { height: 32, p: 0, cursor: 'pointer' },
+                  }}
+                  inputProps={{ 'aria-label': t('timeline:dialog.eraColorPickerAria') }}
+                />
+              </Box>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', display: 'block', mt: 0.75 }}>
+                {t('timeline:dialog.eraColorHelper')}
+              </Typography>
+            </Box>
+          )}
 
           <TextField fullWidth label={t('timeline:dialog.descriptionLabel')} value={description}
             onChange={e => setDescription(e.target.value)} margin="normal"
@@ -648,7 +713,7 @@ export const TimelinePage: React.FC = () => {
           )}
 
           <TagAutocompleteField
-            options={existingTagNames}
+            options={allTagNames}
             value={tagsStr}
             pendingInput={tagsInput}
             label={t('timeline:tagField.label')}

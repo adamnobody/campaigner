@@ -359,8 +359,11 @@ export const MapTerritorySvg: React.FC<Props> = ({
                 stroke="transparent"
                 strokeWidth={Math.max(t.borderWidth + 6, 10)}
                 style={{
-                  pointerEvents: mode === 'marker' ? 'auto' : 'none',
-                  cursor: mode === 'marker' ? 'pointer' : 'default',
+                  pointerEvents: mode === 'marker' || mode === 'select' ? 'auto' : 'none',
+                  cursor: mode === 'marker' || mode === 'select' ? 'pointer' : 'default',
+                }}
+                onMouseDown={(e) => {
+                  if (mode === 'select') e.stopPropagation();
                 }}
                 onClick={(e) => onTerritoryClick(e, t)}
               />

@@ -37,7 +37,8 @@
     "hintEditingPoints": "Перетащите точки для изменения формы · ПКМ — удалить точку · Двойной клик — добавить точку на ребре",
     "hintDrawTerritory": "Клик — вершины линии · замкнуть: наведи на первую точку (кольцо) и кликни, или R / «Контур готов» · «Сохранить» — имя и создание",
     "hintSelectMode": "ЛКМ drag — перемещение карты · СКМ drag — панорамирование · Колёсико — зум",
-    "hintMarkerMode": "ЛКМ — добавить маркер · Ctrl + ЛКМ drag или СКМ drag — панорамирование · Колёсико — зум"
+    "hintMarkerMode": "ЛКМ — добавить маркер · Ctrl + ЛКМ drag или СКМ drag — панорамирование · Колёсико — зум",
+    "modeShortcutsHint": "Ctrl+1 — перемещение · Ctrl+2 — маркеры · Ctrl+3 — территории"
   },
   "confirm": {
     "cancelDrawingTitle": "Отменить рисование?",
@@ -48,9 +49,9 @@
     "deleteTerritoryMessage": "Удалить «{{name}}»?"
   },
   "toolbar": {
-    "tooltipSelectMode": "Режим перемещения",
-    "tooltipMarkerMode": "Режим маркера",
-    "tooltipDrawTerritory": "Рисовать территорию",
+    "tooltipSelectMode": "Режим перемещения (Ctrl+1)",
+    "tooltipMarkerMode": "Режим маркера (Ctrl+2)",
+    "tooltipDrawTerritory": "Рисовать территорию (Ctrl+3)",
     "drawingChip": "{{rings}} конт. · {{points}} т.к.",
     "completeContour": "Контур готов",
     "statsChip": "{{markers}} маркеров · {{territories}} территорий",
