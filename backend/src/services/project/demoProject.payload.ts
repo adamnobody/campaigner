@@ -57,6 +57,7 @@ export function getDemoProjectPayload(locale: DemoProjectLocale): ImportedProjec
         eventDate: '0001-01-01',
         sortOrder: 0,
         era: isRu ? 'Обучение' : 'Tutorial',
+        eraColor: '#4CAF93',
         linkedNoteId: 1,
         createdAt: now(),
         updatedAt: now(),

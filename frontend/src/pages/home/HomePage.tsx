@@ -189,7 +189,7 @@ export const HomePage: React.FC = () => {
     });
     setCreateDialogOpen(false);
     showSnackbar(t('projects:snackbar.created'), 'success');
-    navigate(`/project/${project.id}/map`);
+    navigate(`/project/${project.id}`);
   };
 
   const handleDelete = (id: number, name: string, e: React.MouseEvent) => {
@@ -232,7 +232,7 @@ export const HomePage: React.FC = () => {
         const res = await projectsApi.importProject(importPayload, { locale });
         showSnackbar(t('projects:snackbar.imported', { name: res.data.data.name }), 'success');
         fetchProjects();
-        navigate(`/project/${res.data.data.id}/map`);
+        navigate(`/project/${res.data.data.id}`);
       } catch (err: any) {
         if (err instanceof SyntaxError) {
           showSnackbar(t('projects:snackbar.importNotValidJson'), 'error');
@@ -252,7 +252,7 @@ export const HomePage: React.FC = () => {
       const project = res.data.data;
       showSnackbar(t('projects:snackbar.tutorialCreated'), 'success');
       startOnboarding(project.id);
-      navigate(`/project/${project.id}/map`);
+      navigate(`/project/${project.id}`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t('projects:snackbar.tutorialFailed');
       showSnackbar(message, 'error');
@@ -469,7 +469,7 @@ export const HomePage: React.FC = () => {
                     <GlassCard
                       key={project.id}
                       interactive={true}
-                      onClick={() => navigate(`/project/${project.id}/map`)}
+                      onClick={() => navigate(`/project/${project.id}`)}
                       sx={{
                         opacity: isLoaded ? 1 : 0,
                         transform: isLoaded ? 'translateY(0)' : 'translateY(30px)',
@@ -615,8 +615,8 @@ export const HomePage: React.FC = () => {
             sx={{
               width: '100%',
               borderTop: `1px solid ${alpha(theme.palette.divider, 0.24)}`,
-              backgroundColor: alpha(theme.palette.background.paper, 0.42),
-              backdropFilter: 'blur(10px)',
+              backgroundColor: alpha(theme.palette.background.paper, 0.6),
+              backdropFilter: 'blur(12px)',
               mt: 4,
             }}
           >
@@ -630,7 +630,7 @@ export const HomePage: React.FC = () => {
                 py: 3,
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: { xs: 'flex-start', sm: 'center' },
                 gap: 2,
                 flexWrap: 'wrap',
               }}
@@ -654,28 +654,42 @@ export const HomePage: React.FC = () => {
                       fontFamily: theme.typography.h6.fontFamily,
                       fontWeight: 700,
                       color: 'text.primary',
-                      fontSize: '0.95rem',
-                      lineHeight: 1.2,
+                      fontSize: '1rem',
+                      lineHeight: 1.3,
                     }}
                   >
                     Campaigner
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: alpha(theme.palette.text.secondary, 0.97), fontSize: '0.86rem', lineHeight: 1.5 }}
+                  >
                     {t('projects:home.footer.tagline')}
                   </Typography>
                 </Box>
               </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                 <Typography
                   variant="caption"
                   sx={{
-                    color: alpha(theme.palette.text.secondary, 0.7),
-                    fontSize: '0.72rem',
-                    letterSpacing: '0.03em',
+                    color: alpha(theme.palette.text.secondary, 0.92),
+                    fontSize: '0.86rem',
+                    letterSpacing: '0.015em',
+                    lineHeight: 1.5,
                   }}
                 >
                   © {new Date().getFullYear()} · {t('projects:home.footer.madeFor')}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: alpha(theme.palette.text.secondary, 0.95),
+                    fontSize: '0.86rem',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Github: @adamnobody
                 </Typography>
               </Box>
             </Container>

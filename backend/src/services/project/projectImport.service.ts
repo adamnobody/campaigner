@@ -296,12 +296,12 @@ export function importProject(
         const result = db.prepare(`
           INSERT INTO timeline_events (
             project_id, title, description, event_date,
-            sort_order, era, linked_note_id, created_branch_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            sort_order, era, era_color, linked_note_id, created_branch_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           projectId, event.title, event.description || '',
           event.eventDate, event.sortOrder || 0,
-          event.era || '', newLinkedNoteId,
+          event.era || '', event.eraColor || '', newLinkedNoteId,
           mainBranchId,
         );
         timelineEventIdMap.set(event.id, result.lastInsertRowid as number);

@@ -40,7 +40,10 @@
     "linkNotePlaceholder": "Start typing a note title…",
     "noteNoOptions": "No notes",
     "linkedPrefix": "Linked:",
-    "autocompleteClear": "Clear"
+    "autocompleteClear": "Clear",
+    "eraColorLabel": "Era color",
+    "eraColorHelper": "Used for the era header and markers on the timeline. Shown when the era field is set.",
+    "eraColorPickerAria": "Custom era color"
   },
   "tagField": {
     "label": "Tags",

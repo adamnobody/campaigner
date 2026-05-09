@@ -31,6 +31,7 @@ import { useMapMarkerCrud } from './hooks/useMapMarkerCrud';
 import { useMapTerritoryCrud } from './hooks/useMapTerritoryCrud';
 import { useMapInteractions } from './hooks/useMapInteractions';
 import { useBranchStore } from '@/store/useBranchStore';
+import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 
 // ==================== Component ====================
 export const MapPage: React.FC = () => {
@@ -54,6 +55,7 @@ export const MapPage: React.FC = () => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelType, setPanelType] = useState<'marker' | 'territory'>('marker');
   const [drawClosureHover, setDrawClosureHover] = useState(false);
+  const [branchMissingDialogOpen, setBranchMissingDialogOpen] = useState(false);
 
   const {
     drawingCompletedRings,
@@ -70,6 +72,13 @@ export const MapPage: React.FC = () => {
 
   const territoryRefreshVersion = useMapTerritoriesRefreshStore((s) => s.version);
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const handleMissingMap = useCallback(() => {
+    setSelectedMarker(null);
+    setSelectedTerritory(null);
+    setPanelOpen(false);
+    setMode('select');
+    setBranchMissingDialogOpen(true);
+  }, []);
 
   const {
     project,
@@ -99,8 +108,15 @@ export const MapPage: React.FC = () => {
       setPanelOpen(false);
       setMode('select');
     },
-    onInitialMapResolved: (map) => setMapBreadcrumbs([map]),
+    onMissingMap: handleMissingMap,
   });
+  const closeMissingBranchMap = useCallback(() => {
+    setBranchMissingDialogOpen(false);
+    setCurrentMap(null);
+    setMarkers([]);
+    setTerritories([]);
+    navigate(`/project/${pid}/map`, { replace: true });
+  }, [navigate, pid, setCurrentMap, setMarkers, setTerritories]);
 
   useEffect(() => {
     if (!currentMap?.id || territoryRefreshVersion === 0) return;
@@ -139,6 +155,11 @@ export const MapPage: React.FC = () => {
     navigateToBreadcrumb,
     navigateToParent,
   } = useMapNavigation({ loadMapData, projectId: pid });
+
+  useEffect(() => {
+    if (!currentMap) return;
+    setMapBreadcrumbs((prev) => (prev.length === 0 || prev[prev.length - 1].id !== currentMap.id ? [currentMap] : prev));
+  }, [currentMap, setMapBreadcrumbs]);
 
   const {
     dialogOpen,
@@ -249,6 +270,7 @@ export const MapPage: React.FC = () => {
     draggingTerritoryPoint,
     drawPointerPercent,
     edgeInsertPhantom,
+    isCtrlPressed,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
@@ -331,6 +353,38 @@ export const MapPage: React.FC = () => {
     cancelEditingPoints,
   ]);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (loading || transitioning) return;
+      if (!e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      if (e.code !== 'Digit1' && e.code !== 'Digit2' && e.code !== 'Digit3') return;
+      if (e.repeat) return;
+      const targetEl = e.target as HTMLElement | null;
+      if (targetEl && (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA' || targetEl.tagName === 'SELECT' || targetEl.isContentEditable)) {
+        return;
+      }
+      if (territoryDialogOpen || dialogOpen || confirmDialogOpen) return;
+
+      const nextMode: MapMode =
+        e.code === 'Digit1' ? 'select' : e.code === 'Digit2' ? 'marker' : 'draw_territory';
+
+      e.preventDefault();
+      if (nextMode !== mode) {
+        handleMapModeChange(nextMode);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [
+    loading,
+    transitioning,
+    mode,
+    territoryDialogOpen,
+    dialogOpen,
+    confirmDialogOpen,
+    handleMapModeChange,
+  ]);
+
   const notesMap = useMemo(() => {
     const m = new Map<number, NoteOption>();
     notes.forEach(n => m.set(n.id, n));
@@ -411,13 +465,18 @@ export const MapPage: React.FC = () => {
         territoriesCount={territories.length}
         onUploadMap={handleUploadMap}
       />
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.42)', mb: 1, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.42)', mb: 0.25, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>
         {editingTerritoryPoints
           ? t('map:page.hintEditingPoints')
           : mode === 'draw_territory'
           ? t('map:page.hintDrawTerritory')
+          : mode === 'marker'
+          ? t('map:page.hintMarkerMode')
           : t('map:page.hintSelectMode')
         }
+      </Typography>
+      <Typography variant="caption" component="div" sx={{ color: 'rgba(255,255,255,0.32)', mb: 1, fontSize: '0.72rem', lineHeight: 1.4 }}>
+        {t('map:page.modeShortcutsHint')}
       </Typography>
 
       {/* Map + Panel */}
@@ -430,10 +489,19 @@ export const MapPage: React.FC = () => {
               position: 'relative',
               userSelect: 'none',
               WebkitUserSelect: 'none',
-            cursor: isPanningRef.current ? 'grabbing'
-              : (draggingMarker && didDragRef.current) ? 'grabbing'
-              : mode === 'draw_territory' ? (drawClosureHover ? 'pointer' : 'crosshair')
-              : 'crosshair',
+              cursor: isPanningRef.current
+                ? 'grabbing'
+                : draggingMarker && didDragRef.current
+                ? 'grabbing'
+                : mode === 'draw_territory'
+                ? drawClosureHover
+                  ? 'pointer'
+                  : 'crosshair'
+                : mode === 'marker'
+                ? isCtrlPressed
+                  ? 'grab'
+                  : 'crosshair'
+                : 'grab',
           }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -627,6 +695,11 @@ export const MapPage: React.FC = () => {
         setTerritoryForm={setTerritoryForm}
         factions={factions}
         onSave={handleSaveTerritory}
+      />
+      <BranchEntityMissingDialog
+        open={branchMissingDialogOpen}
+        entityName={t('map:page.entityName').toLowerCase()}
+        onClose={closeMissingBranchMap}
       />
     </Box>
   );

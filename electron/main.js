@@ -1,6 +1,6 @@
 const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('path');
-const { spawn, execSync } = require('child_process');
+const { spawn } = require('child_process');
 const fs = require('fs');
 
 let mainWindow;
@@ -9,10 +9,13 @@ let serverProcess;
 const SERVER_PORT = 3001;
 
 const logFile = path.join(app.getPath('userData'), 'electron-debug.log');
+
 function log(msg) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
   console.log(msg);
-  try { fs.appendFileSync(logFile, line); } catch (e) {}
+  try {
+    fs.appendFileSync(logFile, line);
+  } catch (e) {}
 }
 
 function getBasePath() {
@@ -21,49 +24,29 @@ function getBasePath() {
     : path.join(__dirname, '..');
 }
 
-function findSystemNode() {
-  try {
-    const cmd = process.platform === 'win32' ? 'where node' : 'which node';
-    const nodePath = execSync(cmd, { encoding: 'utf-8' }).split('\n')[0].trim();
-    if (nodePath && fs.existsSync(nodePath)) return nodePath;
-  } catch (e) {}
-
-  // Типичные пути на Windows
-  const candidates = [
-    'C:\\Program Files\\nodejs\\node.exe',
-    'C:\\Program Files (x86)\\nodejs\\node.exe',
-    path.join(process.env.LOCALAPPDATA || '', 'fnm_multishells', '**', 'node.exe'),
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
-  return null;
+function getNodeRuntime() {
+  // В packaged-приложении это будет Campaigner.exe.
+  // С ELECTRON_RUN_AS_NODE=1 он работает как node.exe.
+  return process.execPath;
 }
 
 function startServer() {
   return new Promise((resolve, reject) => {
-    const systemNode = findSystemNode();
-
-    if (!systemNode) {
-      dialog.showErrorBox(
-        'Node.js не найден',
-        'Для работы приложения необходим Node.js.\nСкачайте с https://nodejs.org'
-      );
-      app.quit();
-      return reject(new Error('Node.js not found'));
-    }
-
     const base = getBasePath();
+
     const serverPath = path.join(base, 'backend', 'dist', 'index.js');
+    const backendCwd = path.join(base, 'backend');
     const frontendDist = path.join(base, 'frontend', 'dist');
     const dbPath = path.join(app.getPath('userData'), 'campaigner.sqlite');
     const nodeModulesPath = path.join(base, 'node_modules');
+    const nodeRuntime = getNodeRuntime();
 
     log(`=== Server startup ===`);
     log(`app.isPackaged: ${app.isPackaged}`);
     log(`basePath: ${base}`);
-    log(`Node.js: ${systemNode}`);
+    log(`Node runtime: ${nodeRuntime}`);
     log(`Server: ${serverPath} (exists: ${fs.existsSync(serverPath)})`);
+    log(`Backend cwd: ${backendCwd} (exists: ${fs.existsSync(backendCwd)})`);
     log(`Frontend: ${frontendDist} (exists: ${fs.existsSync(frontendDist)})`);
     log(`node_modules: ${nodeModulesPath} (exists: ${fs.existsSync(nodeModulesPath)})`);
     log(`DB: ${dbPath}`);
@@ -74,28 +57,50 @@ function startServer() {
       return reject(new Error(errMsg));
     }
 
-    serverProcess = spawn(systemNode, [serverPath], {
-      cwd: path.join(base, 'backend'),
+    serverProcess = spawn(nodeRuntime, [serverPath], {
+      cwd: backendCwd,
       env: {
         ...process.env,
+
+        // Главное: заставляем Electron.exe работать как Node.js.
+        ELECTRON_RUN_AS_NODE: '1',
+
         NODE_ENV: 'production',
         PORT: String(SERVER_PORT),
         DATABASE_PATH: dbPath,
         FRONTEND_DIST_PATH: frontendDist,
+
+        // Твой root node_modules лежит в resources/node_modules.
         NODE_PATH: nodeModulesPath,
       },
       stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
     });
 
     let started = false;
     let stderrBuffer = '';
 
+    function markStarted(reason) {
+      if (started) return;
+      started = true;
+      log(`[server] Started: ${reason}`);
+      resolve();
+    }
+
     serverProcess.stdout.on('data', (data) => {
       const msg = data.toString();
       log(`[server:out] ${msg.trim()}`);
-      if (!started && (msg.includes('Server') || msg.includes('listening') || msg.includes('port'))) {
-        started = true;
-        resolve();
+
+      if (
+        !started &&
+        (
+          msg.toLowerCase().includes('server') ||
+          msg.toLowerCase().includes('listening') ||
+          msg.toLowerCase().includes('port') ||
+          msg.includes(String(SERVER_PORT))
+        )
+      ) {
+        markStarted('stdout signal');
       }
     });
 
@@ -107,24 +112,34 @@ function startServer() {
 
     serverProcess.on('error', (err) => {
       log(`[spawn-error] ${err.message}`);
-      reject(err);
+
+      if (!started) {
+        dialog.showErrorBox(
+          'Ошибка запуска сервера',
+          `${err.message}\n\nЛог: ${logFile}`
+        );
+
+        reject(err);
+      }
     });
 
     serverProcess.on('exit', (code) => {
       log(`[server:exit] code=${code}`);
+
       if (!started) {
-        dialog.showErrorBox('Ошибка сервера',
-          `Сервер завершился с кодом ${code}\n\n${stderrBuffer.slice(0, 500)}\n\nЛог: ${logFile}`);
+        dialog.showErrorBox(
+          'Ошибка сервера',
+          `Сервер завершился с кодом ${code}\n\n${stderrBuffer.slice(0, 1000)}\n\nЛог: ${logFile}`
+        );
+
         reject(new Error(`Server exit code ${code}`));
       }
     });
 
-    // Fallback: если через 6 сек сервер не написал "listening" — всё равно пробуем
+    // Fallback: если через 6 сек сервер не написал "listening" — всё равно пробуем открыть окно.
     setTimeout(() => {
       if (!started) {
-        started = true;
-        log('[server] Fallback timeout — trying to open window');
-        resolve();
+        markStarted('fallback timeout');
       }
     }, 6000);
   });
@@ -152,7 +167,17 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  mainWindow.on('closed', () => { mainWindow = null; });
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+function stopServer() {
+  if (serverProcess) {
+    log('[server] Killing server process');
+    serverProcess.kill();
+    serverProcess = null;
+  }
 }
 
 app.whenReady().then(async () => {
@@ -168,10 +193,10 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (serverProcess) serverProcess.kill();
+  stopServer();
   app.quit();
 });
 
 app.on('before-quit', () => {
-  if (serverProcess) serverProcess.kill();
+  stopServer();
 });

@@ -4,7 +4,7 @@ import {
   InputAdornment, Tabs, Tab, Chip, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, FormControl, InputLabel, Select, MenuItem,
-  Autocomplete, Tooltip, useTheme, alpha,
+  Tooltip, useTheme, alpha,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -17,12 +17,13 @@ import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
+import { useTagStore } from '@/store/useTagStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { tagsApi } from '@/api/tags';
+import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ALLOWED_NOTE_FORMATS } from '@campaigner/shared';
@@ -36,6 +37,7 @@ export const NotesPage: React.FC = () => {
   const theme = useTheme();
   const { notes, total, loading, fetchNotes, createNote, deleteNote, setTags } = useNoteStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
+  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
 
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
 
@@ -44,14 +46,15 @@ export const NotesPage: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newFormat, setNewFormat] = useState<'md' | 'txt'>('md');
-  const [newTagValues, setNewTagValues] = useState<string[]>([]);
+  const [newTagsStr, setNewTagsStr] = useState('');
+  const [newTagsInput, setNewTagsInput] = useState('');
   const debouncedSearch = useDebounce(search, 300);
 
   // Tags
-  const [allTags, setAllTags] = useState<{ id: number; name: string; color: string }[]>([]);
   const [tagsDialogOpen, setTagsDialogOpen] = useState(false);
   const [tagsEditNote, setTagsEditNote] = useState<Note | null>(null);
-  const [editTagValues, setEditTagValues] = useState<string[]>([]);
+  const [editTagsStr, setEditTagsStr] = useState('');
+  const [editTagsInput, setEditTagsInput] = useState('');
 
   const noteTypes = ['all', 'note', 'wiki', 'marker_note'];
 
@@ -61,29 +64,30 @@ export const NotesPage: React.FC = () => {
   }, [pid, fetchNotes, debouncedSearch, tab, activeBranchId]);
 
   useEffect(() => {
-    tagsApi.getAll(pid).then(res => {
-      setAllTags(res.data.data || []);
-    }).catch(() => {});
-  }, [pid]);
+    fetchTags(pid).catch(() => {});
+  }, [pid, activeBranchId, fetchTags]);
 
-  const allTagNames = allTags.map(tag => tag.name);
+  const allTagNames = tags.map(tag => tag.name);
+
+  const mergeTagValues = (tagsString: string, pendingInput: string): string => {
+    const committed = tagsString
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const pending = pendingInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set([...committed, ...pending])).join(', ');
+  };
 
   // ============ Resolve tag names → ids ============
-  const resolveTagIds = async (tagNames: string[]): Promise<number[]> => {
+  const resolveTagIds = async (tagsString: string): Promise<number[]> => {
+    const tagNames = tagsString.split(',').map(s => s.trim()).filter(Boolean);
     if (tagNames.length === 0) return [];
-    const tagIds: number[] = [];
-    for (const name of tagNames) {
-      const existing = allTags.find(tag => tag.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        tagIds.push(existing.id);
-      } else {
-        const res = await tagsApi.create({ name, projectId: pid });
-        const newTag = res.data.data;
-        tagIds.push(newTag.id);
-        setAllTags(prev => [...prev, newTag]);
-      }
-    }
-    return tagIds;
+    return findOrCreateTagsByNames(pid, tagNames);
   };
 
   // ============ Create ============
@@ -99,14 +103,16 @@ export const NotesPage: React.FC = () => {
         isPinned: false,
       });
 
-      if (newTagValues.length > 0) {
-        const tagIds = await resolveTagIds(newTagValues);
+      const finalTags = mergeTagValues(newTagsStr, newTagsInput);
+      if (finalTags.trim()) {
+        const tagIds = await resolveTagIds(finalTags);
         if (tagIds.length > 0) await setTags(note.id, tagIds);
       }
 
       setCreateOpen(false);
       setNewTitle('');
-      setNewTagValues([]);
+      setNewTagsStr('');
+      setNewTagsInput('');
       showSnackbar(t('notes:snackbar.created', { title: newTitle.trim() }), 'success');
       navigate(`/project/${pid}/notes/${note.id}`);
     } catch {
@@ -134,20 +140,24 @@ export const NotesPage: React.FC = () => {
   const handleOpenTagsEdit = (note: Note, e: React.MouseEvent) => {
     e.stopPropagation();
     setTagsEditNote(note);
-    setEditTagValues((note.tags || []).map((tag: { name: string }) => tag.name));
+    setEditTagsStr((note.tags || []).map((tag: { name: string }) => tag.name).join(', '));
+    setEditTagsInput('');
     setTagsDialogOpen(true);
   };
 
   const handleSaveTags = async () => {
     if (!tagsEditNote) return;
     try {
-      const tagIds = await resolveTagIds(editTagValues);
+      const finalTags = mergeTagValues(editTagsStr, editTagsInput);
+      const tagIds = await resolveTagIds(finalTags);
       await setTags(tagsEditNote.id, tagIds);
       setTagsDialogOpen(false);
       setTagsEditNote(null);
+      setEditTagsStr('');
+      setEditTagsInput('');
       showSnackbar(t('notes:snackbar.tagsUpdated'), 'success');
     } catch {
-      showSnackbar(t('notes:snackbar.deleteError'), 'error');
+      showSnackbar(t('notes:snackbar.saveError'), 'error');
     }
   };
 
@@ -348,37 +358,20 @@ export const NotesPage: React.FC = () => {
             </Select>
           </FormControl>
 
-          <Autocomplete
-            multiple freeSolo
+          <TagAutocompleteField
             options={allTagNames}
-            value={newTagValues}
-            onChange={(_, vals) => setNewTagValues(vals)}
-            renderTags={(value, getTagProps) =>
-              value.map((opt, index) => (
-                <Chip {...getTagProps({ index })} key={opt} label={opt} size="small"
-                  sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.15), color: theme.palette.primary.main, fontSize: '0.75rem' }} />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField {...params} label={t('notes:tagField.label')} margin="normal" placeholder={t('notes:tagField.placeholder')}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <LocalOfferIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
+            value={newTagsStr}
+            pendingInput={newTagsInput}
+            onValueChange={setNewTagsStr}
+            onPendingInputChange={setNewTagsInput}
+            label={t('notes:tagField.label')}
+            placeholder={t('notes:tagField.placeholder')}
+            margin="normal"
             noOptionsText={t('notes:dialogs.newTagHint')}
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => { setCreateOpen(false); setNewTitle(''); setNewTagValues([]); }} color="inherit">
+          <Button onClick={() => { setCreateOpen(false); setNewTitle(''); setNewTagsStr(''); setNewTagsInput(''); }} color="inherit">
             {t('common:cancel')}
           </Button>
           <DndButton variant="contained" onClick={handleCreate} disabled={!newTitle.trim()}>
@@ -394,32 +387,15 @@ export const NotesPage: React.FC = () => {
           {tagsEditNote ? t('notes:dialogs.tagsDialogTitle', { title: tagsEditNote.title }) : ''}
         </DialogTitle>
         <DialogContent>
-          <Autocomplete
-            multiple freeSolo
+          <TagAutocompleteField
             options={allTagNames}
-            value={editTagValues}
-            onChange={(_, vals) => setEditTagValues(vals)}
-            renderTags={(value, getTagProps) =>
-              value.map((opt, index) => (
-                <Chip {...getTagProps({ index })} key={opt} label={opt} size="small"
-                  sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.15), color: theme.palette.primary.main, fontSize: '0.75rem' }} />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField {...params} label={t('notes:tagField.label')} margin="normal" placeholder={t('notes:tagField.placeholder')}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <LocalOfferIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
+            value={editTagsStr}
+            pendingInput={editTagsInput}
+            onValueChange={setEditTagsStr}
+            onPendingInputChange={setEditTagsInput}
+            label={t('notes:tagField.label')}
+            placeholder={t('notes:tagField.placeholder')}
+            margin="normal"
             noOptionsText={t('notes:dialogs.newTagHint')}
           />
         </DialogContent>

@@ -170,35 +170,50 @@ export const createAppTheme = (preferences: Pick<
     },
     typography: {
       fontFamily: uiFont,
+      htmlFontSize: 16,
       h1: {
         fontFamily: headingFont,
         fontWeight: 700,
+        lineHeight: 1.18,
+        letterSpacing: '0.01em',
       },
       h2: {
         fontFamily: headingFont,
         fontWeight: 700,
+        lineHeight: 1.22,
+        letterSpacing: '0.01em',
       },
       h3: {
         fontFamily: headingFont,
         fontWeight: 600,
+        lineHeight: 1.25,
       },
       h4: {
         fontFamily: headingFont,
         fontWeight: 600,
+        lineHeight: 1.3,
       },
       h5: {
         fontFamily: headingFont,
         fontWeight: 600,
+        lineHeight: 1.34,
       },
       h6: {
         fontFamily: headingFont,
         fontWeight: 600,
+        lineHeight: 1.38,
       },
       body1: {
         fontFamily: bodyFont,
+        fontSize: '1rem',
+        lineHeight: 1.65,
+        letterSpacing: '0.01em',
       },
       body2: {
         fontFamily: bodyFont,
+        fontSize: '0.95rem',
+        lineHeight: 1.58,
+        letterSpacing: '0.01em',
       },
       button: {
         fontFamily: uiFont,
@@ -207,12 +222,18 @@ export const createAppTheme = (preferences: Pick<
       },
       caption: {
         fontFamily: uiFont,
+        fontSize: '0.82rem',
+        lineHeight: 1.45,
+        letterSpacing: '0.02em',
       },
       subtitle1: {
         fontFamily: uiFont,
+        lineHeight: 1.5,
       },
       subtitle2: {
         fontFamily: uiFont,
+        fontSize: '0.9rem',
+        lineHeight: 1.45,
       },
     },
     components: {
@@ -228,6 +249,9 @@ export const createAppTheme = (preferences: Pick<
               linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0))
             `,
             backgroundAttachment: 'fixed',
+            textRendering: 'optimizeLegibility',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
           },
           '*': {
             boxSizing: 'border-box',

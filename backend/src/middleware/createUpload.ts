@@ -72,7 +72,12 @@ export function createDiskUpload(options: CreateDiskUploadOptions) {
     const mime = file.mimetype.toLowerCase();
 
     const extAllowed = allowedExtensions.includes(ext);
-    const mimeAllowed = allowedMimeTypes.includes(mime);
+    const mimeAllowed = allowedMimeTypes.some((allowedMime) => {
+      if (allowedMime.endsWith('/*')) {
+        return mime.startsWith(`${allowedMime.slice(0, -1)}`);
+      }
+      return allowedMime === mime;
+    });
     /** Браузеры/ОС иногда шлют пустой type или octet-stream для jpg/png — при известном расширении разрешаем. */
     const mimeUnknownButExtOk =
       extAllowed && (mime === '' || mime === 'application/octet-stream');

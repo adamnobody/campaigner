@@ -1,0 +1,530 @@
+{
+  "authoritarianism_democracy": {
+    "name": "Authoritarianism ↔ Democracy",
+    "leftPole": "Authoritarianism",
+    "rightPole": "Democracy",
+    "leftDesc": "Strong concentration of power; limited participatory institutions.",
+    "rightDesc": "Broad political participation and competitive elections.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -66,
+        "label": "Tyranny / dictatorship",
+        "description": "Rule from a single centre with no meaningful checks on power."
+      },
+      {
+        "from": -65,
+        "to": -20,
+        "label": "Authoritarian regime",
+        "description": "Institutions exist formally, but opposition is weak."
+      },
+      {
+        "from": -19,
+        "to": 19,
+        "label": "Hybrid regime",
+        "description": "A mix of democratic and authoritarian practice."
+      },
+      {
+        "from": 20,
+        "to": 65,
+        "label": "Representative democracy",
+        "description": "Elections and parliament are the core of legitimacy."
+      },
+      {
+        "from": 66,
+        "to": 100,
+        "label": "Direct democracy",
+        "description": "Maximum direct citizen participation in decisions."
+      }
+    ]
+  },
+  "centralization_federalization": {
+    "name": "Centralization ↔ Federalization",
+    "leftPole": "Centralization",
+    "rightPole": "Federalization",
+    "leftDesc": "Decisions and resources concentrated in the capital.",
+    "rightDesc": "Regions and constituent units have substantial autonomy.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Unitary state",
+        "description": "A single administrative chain of command."
+      },
+      {
+        "from": -49,
+        "to": 20,
+        "label": "Devolution",
+        "description": "Gradual transfer of powers downward."
+      },
+      {
+        "from": 21,
+        "to": 65,
+        "label": "Federation",
+        "description": "Clear separation between levels of government."
+      },
+      {
+        "from": 66,
+        "to": 100,
+        "label": "Confederation",
+        "description": "A union with high autonomy for members."
+      }
+    ]
+  },
+  "monarchy_republic": {
+    "name": "Monarchy ↔ Republic",
+    "leftPole": "Monarchy",
+    "rightPole": "Republic",
+    "leftDesc": "Inherited supreme authority and royal symbolism.",
+    "rightDesc": "Elected bodies and no hereditary rule.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -66,
+        "label": "Absolute monarchy",
+        "description": "The monarch is the primary source of laws."
+      },
+      {
+        "from": -65,
+        "to": -20,
+        "label": "Constitutional monarchy",
+        "description": "Parliament and law constrain the monarch."
+      },
+      {
+        "from": -19,
+        "to": 19,
+        "label": "Hybrid form",
+        "description": "Features of monarchy and republic in balance."
+      },
+      {
+        "from": 20,
+        "to": 65,
+        "label": "Parliamentary republic",
+        "description": "Government answers to parliament."
+      },
+      {
+        "from": 66,
+        "to": 100,
+        "label": "Presidential republic",
+        "description": "Strong executive power of the president."
+      }
+    ]
+  },
+  "theocracy_secularism": {
+    "name": "Theocracy ↔ Secularism",
+    "leftPole": "Theocracy",
+    "rightPole": "Secularism",
+    "leftDesc": "Religious law and clergy shape the foundations of state.",
+    "rightDesc": "Neutral state on religion; pluralism among faiths.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Theocracy",
+        "description": "Theological norms define what is lawful."
+      },
+      {
+        "from": -49,
+        "to": -10,
+        "label": "State religion",
+        "description": "Official cult and church privileges."
+      },
+      {
+        "from": -9,
+        "to": 30,
+        "label": "Religion in public life",
+        "description": "Strong presence of religion in symbols and norms."
+      },
+      {
+        "from": 31,
+        "to": 100,
+        "label": "Secular state",
+        "description": "Separation of spheres and equality of denominations."
+      }
+    ]
+  },
+  "police_state_civil_liberties": {
+    "name": "Police state ↔ Civil liberties",
+    "leftPole": "Police state",
+    "rightPole": "Civil liberties",
+    "leftDesc": "Heavy surveillance, limits on privacy and assembly.",
+    "rightDesc": "Strong freedoms of speech, association, and judicial protection."
+  },
+  "traditionalism_progressivism": {
+    "name": "Traditionalism ↔ Progressivism",
+    "leftPole": "Traditionalism",
+    "rightPole": "Progressivism",
+    "leftDesc": "Stable norms, community bonds, religion as anchor.",
+    "rightDesc": "Reforms, minority rights, and evolving social norms."
+  },
+  "estate_meritocracy": {
+    "name": "Estate hierarchy ↔ Meritocracy",
+    "leftPole": "Estate hierarchy",
+    "rightPole": "Meritocracy",
+    "leftDesc": "Status and access to power tied to birth and class.",
+    "rightDesc": "Roles by competence and merit."
+  },
+  "monoethnic_multicultural": {
+    "name": "Mono‑ethnicity ↔ Multiculturalism",
+    "leftPole": "Mono‑ethnicity",
+    "rightPole": "Multiculturalism",
+    "leftDesc": "One dominant culture; assimilationist expectations.",
+    "rightDesc": "Plural cultures supported and integrated."
+  },
+  "planned_market": {
+    "name": "Planned ↔ Market economy",
+    "leftPole": "Planned economy",
+    "rightPole": "Market economy",
+    "leftDesc": "Central planning and quotas.",
+    "rightDesc": "Prices and competition as the primary regulator.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Command economy",
+        "description": "Plans and allocation from above."
+      },
+      {
+        "from": -49,
+        "to": -10,
+        "label": "Regulated planned economy",
+        "description": "Planning with space for market elements."
+      },
+      {
+        "from": -9,
+        "to": 30,
+        "label": "Mixed economy",
+        "description": "State and market share key levers."
+      },
+      {
+        "from": 31,
+        "to": 70,
+        "label": "Market with regulation",
+        "description": "Markets dominate; regulation is selective."
+      },
+      {
+        "from": 71,
+        "to": 100,
+        "label": "Free market",
+        "description": "Minimal barriers and interference."
+      }
+    ]
+  },
+  "protectionism_free_trade": {
+    "name": "Protectionism ↔ Free trade",
+    "leftPole": "Protectionism",
+    "rightPole": "Free trade",
+    "leftDesc": "Tariffs and quotas to shield domestic sectors.",
+    "rightDesc": "Minimal barriers for imports and exports."
+  },
+  "agrarian_industrial": {
+    "name": "Agrarian ↔ Industrialization",
+    "leftPole": "Agrarian",
+    "rightPole": "Industrialization",
+    "leftDesc": "Farmland as the backbone of the economy.",
+    "rightDesc": "Industry, services, and innovation dominant.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Agrarian society",
+        "description": "Most people work land and natural cycles."
+      },
+      {
+        "from": -49,
+        "to": 0,
+        "label": "Agrarian–industrial",
+        "description": "Transitional sectors and urbanization."
+      },
+      {
+        "from": 1,
+        "to": 50,
+        "label": "Industrial society",
+        "description": "Factories, infrastructure, mass production."
+      },
+      {
+        "from": 51,
+        "to": 100,
+        "label": "Post-industrial society",
+        "description": "Services, IT, science, global value chains."
+      }
+    ]
+  },
+  "state_private_property": {
+    "name": "State property ↔ Private property",
+    "leftPole": "State/common property",
+    "rightPole": "Private property",
+    "leftDesc": "State and communal assets at the core.",
+    "rightDesc": "Private titles and liquid asset markets."
+  },
+  "isolationism_expansionism": {
+    "name": "Isolationism ↔ Expansionism",
+    "leftPole": "Isolationism",
+    "rightPole": "Expansionism",
+    "leftDesc": "Minimal foreign entanglement.",
+    "rightDesc": "Active projection of interests abroad."
+  },
+  "militarism_pacifism": {
+    "name": "Militarism ↔ Pacifism",
+    "leftPole": "Militarism",
+    "rightPole": "Pacifism",
+    "leftDesc": "Armed forces wield major political leverage.",
+    "rightDesc": "Diplomacy first; scepticism toward force."
+  },
+  "sovereignty_integration": {
+    "name": "Sovereignty ↔ Integration",
+    "leftPole": "Sovereignty",
+    "rightPole": "Integration",
+    "leftDesc": "Full control over laws and borders.",
+    "rightDesc": "Pooled sovereignty in unions and supranational bodies.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Full independence",
+        "description": "No binding obligations; national sovereignty first."
+      },
+      {
+        "from": -49,
+        "to": 0,
+        "label": "Alliance relations",
+        "description": "Treaties and coordination without surrender of sovereignty."
+      },
+      {
+        "from": 1,
+        "to": 50,
+        "label": "Confederal structures",
+        "description": "Shared institutions with divided competences."
+      },
+      {
+        "from": 51,
+        "to": 100,
+        "label": "Supranational union",
+        "description": "Deep integration of laws and policies."
+      }
+    ]
+  },
+  "xenophobia_openness": {
+    "name": "Xenophobia ↔ Openness",
+    "leftPole": "Xenophobia",
+    "rightPole": "Openness",
+    "leftDesc": "Fear of outsiders; rigid barriers to newcomers.",
+    "rightDesc": "Migration and exchange as norms and strengths."
+  },
+  "loyalism_opposition": {
+    "name": "Loyalism ↔ Opposition",
+    "leftPole": "Loyalism",
+    "rightPole": "Opposition",
+    "leftDesc": "Backing current elites and lawful institutions.",
+    "rightDesc": "Critical of the regime and intent on change."
+  },
+  "reformism_revolution": {
+    "name": "Reformism ↔ Revolutionary stance",
+    "leftPole": "Reformism",
+    "rightPole": "Revolutionary stance",
+    "leftDesc": "Gradual change within the system.",
+    "rightDesc": "Sharp rupture with the previous order acceptable.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Conservatives",
+        "description": "Resistance to change; preserving the status quo."
+      },
+      {
+        "from": -49,
+        "to": 0,
+        "label": "Reformists",
+        "description": "Evolution of rules and institutions."
+      },
+      {
+        "from": 1,
+        "to": 50,
+        "label": "Radical reformists",
+        "description": "Rapid reforms without violent coup."
+      },
+      {
+        "from": 51,
+        "to": 100,
+        "label": "Revolutionaries",
+        "description": "Violent overturn of the system as an acceptable goal."
+      }
+    ]
+  },
+  "legalism_underground": {
+    "name": "Legalism ↔ Underground",
+    "leftPole": "Legalism",
+    "rightPole": "Underground",
+    "leftDesc": "Registered, public lawful activity.",
+    "rightDesc": "Covert organisations skirting bans.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Official party",
+        "description": "Fully legal status and access to institutions."
+      },
+      {
+        "from": -49,
+        "to": 0,
+        "label": "Semi-legal movement",
+        "description": "Partial legitimacy; grey-zone activity."
+      },
+      {
+        "from": 1,
+        "to": 50,
+        "label": "Illegal movement",
+        "description": "Banned activity without deep secrecy."
+      },
+      {
+        "from": 51,
+        "to": 100,
+        "label": "Underground organisation",
+        "description": "Strict conspiracy and covert networks."
+      }
+    ]
+  },
+  "conformism_radicalism": {
+    "name": "Conformism ↔ Radicalism",
+    "leftPole": "Conformism",
+    "rightPole": "Radicalism",
+    "leftDesc": "Conventional tone and tempered demands.",
+    "rightDesc": "Strident rhetoric; low tolerance for compromise."
+  },
+  "collectivism_individualism": {
+    "name": "Collectivism ↔ Individualism",
+    "leftPole": "Collectivism",
+    "rightPole": "Individualism",
+    "leftDesc": "Group aims and solidarity prioritised.",
+    "rightDesc": "Personal autonomy and voluntary choice prized."
+  },
+  "egalitarianism_elitism": {
+    "name": "Egalitarianism ↔ Elitism",
+    "leftPole": "Egalitarianism",
+    "rightPole": "Elitism",
+    "leftDesc": "Even access and role distribution valued.",
+    "rightDesc": "Leadership layer and hierarchical competence norms."
+  },
+  "dogmatism_pragmatism": {
+    "name": "Dogmatism ↔ Pragmatism",
+    "leftPole": "Dogmatism",
+    "rightPole": "Pragmatism",
+    "leftDesc": "Rigid doctrines and symbolic purity.",
+    "rightDesc": "Flexible tactics and weighing outcomes."
+  },
+  "nationalism_internationalism": {
+    "name": "Nationalism ↔ Internationalism",
+    "leftPole": "Nationalism",
+    "rightPole": "Internationalism",
+    "leftDesc": "National community and culture first.",
+    "rightDesc": "Cross‑border solidarity and shared values."
+  },
+  "nonviolence_armed_struggle": {
+    "name": "Nonviolence ↔ Armed struggle",
+    "leftPole": "Nonviolence",
+    "rightPole": "Armed struggle",
+    "leftDesc": "Rejection of force as policy.",
+    "rightDesc": "Weapons and coercion may be legitimised strategically.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Principled non-violence",
+        "description": "No use of force even in retaliation."
+      },
+      {
+        "from": -49,
+        "to": 0,
+        "label": "Civil resistance",
+        "description": "Boycotts, strikes, demonstrations."
+      },
+      {
+        "from": 1,
+        "to": 50,
+        "label": "Coercive actions",
+        "description": "Conflicts short of systemic war."
+      },
+      {
+        "from": 51,
+        "to": 100,
+        "label": "Armed struggle",
+        "description": "Guerrilla or military line as strategy."
+      }
+    ]
+  },
+  "publicity_conspiracy": {
+    "name": "Publicity ↔ Conspiracy",
+    "leftPole": "Publicity",
+    "rightPole": "Conspiracy",
+    "leftDesc": "Open campaigns and visible media fronts.",
+    "rightDesc": "Cells and minimal trace in public."
+  },
+  "diplomacy_confrontation": {
+    "name": "Diplomacy ↔ Confrontation",
+    "leftPole": "Diplomacy",
+    "rightPole": "Confrontation",
+    "leftDesc": "Negotiations, coalitions, searching for compromise.",
+    "rightDesc": "Hard pressure and frontal challenge to rivals."
+  },
+  "propaganda_coercion": {
+    "name": "Propaganda ↔ Coercion",
+    "leftPole": "Propaganda",
+    "rightPole": "Coercion",
+    "leftDesc": "Myth‑making and shaping opinion.",
+    "rightDesc": "Direct sanctions and intimidation."
+  },
+  "mass_cadre": {
+    "name": "Mass base ↔ Cadre organisation",
+    "leftPole": "Mass orientation",
+    "rightPole": "Cadre orientation",
+    "leftDesc": "Broad recruitment and grassroots scale.",
+    "rightDesc": "Tight initiation and disciplined core.",
+    "zones": [
+      {
+        "from": -100,
+        "to": -50,
+        "label": "Mass movement",
+        "description": "Tens of thousands of supporters and activists."
+      },
+      {
+        "from": -49,
+        "to": 0,
+        "label": "Broad-based party",
+        "description": "Large but manageable structure."
+      },
+      {
+        "from": 1,
+        "to": 50,
+        "label": "Cadre party",
+        "description": "Professional core and discipline."
+      },
+      {
+        "from": 51,
+        "to": 100,
+        "label": "Order / inner circle",
+        "description": "Elite fellowship with rituals and filters."
+      }
+    ]
+  },
+  "self_financed_patronage": {
+    "name": "Self‑financing ↔ Patronage",
+    "leftPole": "Self‑financing",
+    "rightPole": "Patronage",
+    "leftDesc": "Dues and autonomous funding.",
+    "rightDesc": "Sponsors or patrons supply resources."
+  },
+  "secular_religious": {
+    "name": "Secularity ↔ Religiosity (ideological)",
+    "leftPole": "Secularity",
+    "rightPole": "Religiosity",
+    "leftDesc": "Secular ideas and neutral speech.",
+    "rightDesc": "Vows, dogma, and ritual at the ideological core."
+  },
+  "class_based_transclass": {
+    "name": "Class‑bound ↔ Cross‑class",
+    "leftPole": "Class‑bound",
+    "rightPole": "Cross‑class",
+    "leftDesc": "Explicit class or estate base.",
+    "rightDesc": "Alliances spanning strata \"for the common cause\"."
+  }
+}

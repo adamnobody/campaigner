@@ -1,0 +1,118 @@
+{
+  "torgovaya-dominatsiya": {
+    "name": "Trade dominance",
+    "description": "Control key markets and financial flows of the region."
+  },
+  "voennoe-prevoskhodstvo": {
+    "name": "Military supremacy",
+    "description": "Field armies that can overwhelm any rival on land and sea."
+  },
+  "podderzhanie-mira": {
+    "name": "Keeping the peace",
+    "description": "Constrain escalation and preserve the balance among neighbours."
+  },
+  "territorialnaya-ekspansiya": {
+    "name": "Territorial expansion",
+    "description": "Steadily push borders outward and consolidate new lands."
+  },
+  "religioznaya-ekspansiya": {
+    "name": "Religious expansion",
+    "description": "Spread your faith across neighbouring realms through missions and influence."
+  },
+  "tekhnologicheskiy-progress": {
+    "name": "Technological progress",
+    "description": "Invest in breakthroughs that bolster economy and armies."
+  },
+  "kulturnaya-assimilyatsiya": {
+    "name": "Cultural assimilation",
+    "description": "Weave neighbouring peoples in through language, schooling, symbols of authority."
+  },
+  "zashchita-traditsiy": {
+    "name": "Defending traditions",
+    "description": "Preserve ancestral customs against sweeping change."
+  },
+  "izolyatsionizm": {
+    "name": "Isolationism",
+    "description": "Minimise outside ties—focus inward."
+  },
+  "magicheskoe-prevoskhodstvo": {
+    "name": "Magical supremacy",
+    "description": "Amass foremost mages and artefacts to dominate the arcane sphere."
+  },
+  "obedinenie-naroda": {
+    "name": "Uniting the people",
+    "description": "Surmount fractures and forge a cohesive national endeavour."
+  },
+  "sverzhenie-soseda": {
+    "name": "Toppling the neighbour",
+    "description": "Strip a neighbouring power of legitimacy—war, plots, sabotage of its economy."
+  },
+  "nakoplenie-bogatstva": {
+    "name": "Wealth hoarding",
+    "description": "Concentrate resources and capital toward long‑term autonomy."
+  },
+  "nauchnyy-progress": {
+    "name": "Scientific progress",
+    "description": "Grow academies and labs for relentless discovery."
+  },
+  "demokratizatsiya": {
+    "name": "Democratisation",
+    "description": "Shift power toward representative bodies and widen citizen participation."
+  },
+  "restavratsiya-starogo-poryadka": {
+    "name": "Restoring the old order",
+    "description": "Bring back prior institutions—undo recent reforms."
+  },
+  "sozdanie-koloniy": {
+    "name": "Founding colonies",
+    "description": "Settle remote lands and lodge economic footholds."
+  },
+  "kontrol-morskikh-putey": {
+    "name": "Command of sea lanes",
+    "description": "Dominate straits and ports—shipping and logistics obey you."
+  },
+  "kontrol-torgovykh-marshrutov": {
+    "name": "Command of trade routes",
+    "description": "Monopolise caravan and river routes—set terms for exchange."
+  },
+  "religioznoe-obrashchenie-sosedey": {
+    "name": "Converting neighbours",
+    "description": "Peacefully or by pressure bring neighbours into your confession."
+  },
+  "vyzhivanie": {
+    "name": "Survival",
+    "description": "Keep the faction afloat amid crisis, shortage, outer pressure."
+  },
+  "mest": {
+    "name": "Vengeance",
+    "description": "Punish those behind past defeats and vindicate tarnished honour."
+  },
+  "osvobozhdenie-poraboshchennykh": {
+    "name": "Liberating the enslaved",
+    "description": "Abolish bondage institutions and release dependent peoples."
+  },
+  "poraboshchenie-sosedey": {
+    "name": "Subjugating neighbours",
+    "description": "Dominate adjacent peoples—exploit their resources for yours."
+  },
+  "ustanovlenie-tiranii": {
+    "name": "Establishing tyranny",
+    "description": "Concentrate unchecked power—and crush dissent."
+  },
+  "razvitie-iskusstv": {
+    "name": "Advancing the arts",
+    "description": "Use culture as a lever of prestige and cohesion."
+  },
+  "diplomaticheskaya-gegemoniya": {
+    "name": "Diplomatic hegemony",
+    "description": "Be the decisive broker in alliances and treaties."
+  },
+  "ekologicheskaya-garmoniya": {
+    "name": "Ecological harmony",
+    "description": "Balance growth with stewardship of nature."
+  },
+  "industrializatsiya": {
+    "name": "Industrialisation",
+    "description": "Shift toward mass production and sprawling infrastructure."
+  }
+}

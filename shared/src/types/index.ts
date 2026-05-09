@@ -383,6 +383,7 @@ export interface ImportedProjectPayload {
     eventDate: string;
     sortOrder: number;
     era: string;
+    eraColor?: string;
     linkedNoteId: number | null;
     createdAt: string;
     updatedAt: string;
@@ -590,7 +591,7 @@ export interface Faction {
   createdAt: string;
   updatedAt: string;
   // Joined
-  tags?: any[];
+  tags?: Tag[];
   customMetrics?: CustomMetric[];
   ranks?: FactionRank[];
   members?: FactionMember[];
@@ -679,7 +680,7 @@ export interface Dynasty {
   createdAt: string;
   updatedAt: string;
   // Joined
-  tags?: any[];
+  tags?: Tag[];
   members?: DynastyMember[];
   memberCount?: number;
   events?: DynastyEvent[];

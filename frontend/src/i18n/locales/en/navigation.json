@@ -1,5 +1,6 @@
 {
   "menu": {
+    "overview": "Overview",
     "map": "Map",
     "graph": "Graph",
     "characters": "Characters",

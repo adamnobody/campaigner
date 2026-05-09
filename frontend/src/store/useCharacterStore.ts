@@ -80,6 +80,7 @@ export const useCharacterStore = create<CharacterState>((set, get) => ({
       set({ currentCharacter: res.data.data, loading: false });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, 'Failed to fetch character'), loading: false });
+      throw error;
     }
   },
 

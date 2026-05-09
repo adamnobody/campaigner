@@ -37,6 +37,7 @@ import { CollapsibleSection } from '@/components/detail/CollapsibleSection';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { shallow } from 'zustand/shallow';
 import { useTranslation } from 'react-i18next';
+import { localizedBuiltinPoliticalScale } from '@/i18n/catalog/displayBuiltinTexts';
 
 function getActiveZone(zones: ScaleZone[] | null | undefined, value: number): ScaleZone | null {
   if (!zones?.length) return null;
@@ -304,28 +305,33 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
               </Typography>
               <Box display="flex" flexDirection="column" gap={2.5}>
                 {items.map((scale) => {
+                  const ld = localizedBuiltinPoliticalScale(scale, t);
                   const loc = localByScaleId[scale.id];
                   const value = loc?.value ?? 0;
                   const enabled = loc?.enabled ?? true;
-                  const active = getActiveZone(scale.zones ?? null, value);
+                  const active = getActiveZone(ld.zones ?? null, value);
                   const noteOpen = Boolean(expandedNotes[scale.id]);
                   return (
                     <GlassCard
                       key={scale.id}
                       sx={{
-                        p: 2,
+                        p: 2.25,
                         opacity: enabled ? 1 : 0.55,
                         border: `1px solid ${alpha(theme.palette.divider, 0.45)}`,
+                        backgroundColor: alpha(theme.palette.background.paper, 0.62),
                       }}
                     >
                       <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
                         <Box flex={1} minWidth={0}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                            {scale.name}
+                          <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, lineHeight: 1.48, fontSize: '1rem' }}>
+                            {ld.name}
                           </Typography>
                           <Box display="flex" alignItems="center" gap={1.5}>
-                            <Typography variant="caption" sx={{ width: 120, color: 'text.secondary', flexShrink: 0 }}>
-                              {scale.leftPoleLabel}
+                            <Typography
+                              variant="caption"
+                              sx={{ width: 120, color: alpha(theme.palette.text.secondary, 0.98), flexShrink: 0, fontSize: '0.88rem', lineHeight: 1.4 }}
+                            >
+                              {ld.leftPoleLabel}
                             </Typography>
                             <Slider
                               size="small"
@@ -346,14 +352,14 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                             />
                             <Typography
                               variant="caption"
-                              sx={{ width: 120, textAlign: 'right', color: 'text.secondary', flexShrink: 0 }}
+                              sx={{ width: 120, textAlign: 'right', color: alpha(theme.palette.text.secondary, 0.98), flexShrink: 0, fontSize: '0.88rem', lineHeight: 1.4 }}
                             >
-                              {scale.rightPoleLabel}
+                              {ld.rightPoleLabel}
                             </Typography>
                           </Box>
-                          <ZoneStrip zones={scale.zones ?? null} />
+                          <ZoneStrip zones={ld.zones ?? null} />
                           <Box mt={1}>
-                            {scale.zones?.length ? (
+                            {ld.zones?.length ? (
                               <Tooltip
                                 title={
                                   active?.description
@@ -364,12 +370,12 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                                     : active?.label || ''
                                 }
                               >
-                                <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                                <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.45 }}>
                                   {active ? active.label : t('factions:politicalScales.valueLabel', { value })}
                                 </Typography>
                               </Tooltip>
                             ) : (
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              <Typography variant="caption" sx={{ color: alpha(theme.palette.text.secondary, 0.98), fontSize: '0.88rem', lineHeight: 1.45 }}>
                                 {t('factions:politicalScales.valueLabel', { value })}
                               </Typography>
                             )}
@@ -391,7 +397,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                             />
                           }
                           label={t('factions:politicalScales.enabledShort')}
-                          sx={{ m: 0, flexShrink: 0 }}
+                          sx={{ m: 0, flexShrink: 0, '& .MuiFormControlLabel-label': { fontSize: '0.88rem', lineHeight: 1.4 } }}
                         />
                       </Box>
                       <Box mt={1}>
@@ -441,6 +447,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
           {scales.map((s) => {
             const loc = localByScaleId[s.id];
             const enabled = loc?.enabled ?? true;
+            const dn = localizedBuiltinPoliticalScale(s, t).name;
             return (
               <Box
                 key={s.id}
@@ -451,7 +458,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                 py={0.5}
               >
                 <Typography variant="body2" sx={{ minWidth: 0 }}>
-                  {s.name}
+                  {dn}
                 </Typography>
                 <Switch
                   checked={enabled}

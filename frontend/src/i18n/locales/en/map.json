@@ -24,7 +24,11 @@
   "defaults": {
     "rootMapName": "Root map"
   },
+  "breadcrumb": {
+    "worldMap": "World"
+  },
   "page": {
+    "entityName": "Map",
     "loading": "Loading map…",
     "loadingOverlay": "Loading map…",
     "noMapImage": "No map image loaded",
@@ -32,7 +36,9 @@
     "mapImageAlt": "Map",
     "hintEditingPoints": "Drag points to reshape · Right-click — delete vertex · Double-click — add vertex on edge",
     "hintDrawTerritory": "Click — polygon vertices · Close: hover the first point (ring) and click, or R / «Complete ring» · «Save» — name and create",
-    "hintSelectMode": "Click — marker · Shift+click territory — marker on top · Click territory — settings · Drag marker · Double-click — nested map · Alt+drag / middle mouse — pan · Wheel — zoom"
+    "hintSelectMode": "Left-drag to pan map · Middle-drag to pan · Wheel to zoom",
+    "hintMarkerMode": "Left-click to add marker · Ctrl + left-drag or middle-drag to pan · Wheel to zoom",
+    "modeShortcutsHint": "Ctrl+1 — pan · Ctrl+2 — markers · Ctrl+3 — territories"
   },
   "confirm": {
     "cancelDrawingTitle": "Cancel drawing?",
@@ -43,8 +49,9 @@
     "deleteTerritoryMessage": "Delete “{{name}}”?"
   },
   "toolbar": {
-    "tooltipSelectMode": "Select mode",
-    "tooltipDrawTerritory": "Draw territory",
+    "tooltipSelectMode": "Pan mode (Ctrl+1)",
+    "tooltipMarkerMode": "Marker mode (Ctrl+2)",
+    "tooltipDrawTerritory": "Draw territory (Ctrl+3)",
     "drawingChip": "{{rings}} closed · {{points}} pts",
     "completeContour": "Complete ring",
     "statsChip": "{{markers}} markers · {{territories}} territories",

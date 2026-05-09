@@ -11,7 +11,6 @@ import type {
   DynastyEvent,
   CreateDynastyEvent,
   UpdateDynastyEvent,
-  Tag,
 } from '@campaigner/shared';
 import { apiClient, type ListWithTotal, type VoidResponse } from './client';
 import type { DynastiesListParams } from './types';
@@ -39,7 +38,7 @@ export const dynastiesApi = {
     });
   },
   setTags: (id: number, tagIds: number[], projectId: number) =>
-    apiClient.put<ApiResponse<Tag[]>>(`/dynasties/${id}/tags`, { tagIds }, { params: withBranchParams({}, projectId) }),
+    apiClient.put<ApiResponse<Dynasty>>(`/dynasties/${id}/tags`, { tagIds }, { params: withBranchParams({}, projectId) }),
   addMember: (dynastyId: number, data: CreateDynastyMember, projectId: number) =>
     apiClient.post<ApiResponse<DynastyMember>>(`/dynasties/${dynastyId}/members`, withBranchParams({ ...data }, projectId)),
   updateMember: (dynastyId: number, memberId: number, data: UpdateDynastyMember) =>

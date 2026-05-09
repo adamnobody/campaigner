@@ -146,7 +146,7 @@ export class MapService {
   createRootMapForProject(projectId: number, imagePath?: string, createdBranchId?: number | null): Map {
     const result = getDb().prepare(`
       INSERT INTO maps (project_id, parent_map_id, name, image_path, created_branch_id) VALUES (?, NULL, ?, ?, ?)
-    `).run(projectId, 'Мир', imagePath || null, createdBranchId ?? null);
+    `).run(projectId, 'World', imagePath || null, createdBranchId ?? null);
     return this.getMapByIdOrThrow(result.lastInsertRowid as number);
   }
 

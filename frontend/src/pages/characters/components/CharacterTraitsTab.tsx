@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { CharacterTrait } from '@campaigner/shared';
+import type { TFunction } from 'i18next';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import { shallow } from 'zustand/shallow';
-import type { CharacterTrait } from '@campaigner/shared';
 import { ExclusionCatalogTab, type ExclusionItem } from '@/components/exclusions/ExclusionCatalogTab';
 import { CreateTraitDialog } from './CreateTraitDialog';
 import { TraitFlipCard } from './TraitFlipCard';
 import { useCharacterTraitsStore } from '@/store/useCharacterTraitsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { localizedPredefinedTraitTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
 export interface CharacterTraitsTabProps {
   projectId: number;
@@ -18,11 +20,14 @@ export interface CharacterTraitsTabProps {
 
 type TraitCatalogRow = CharacterTrait & ExclusionItem;
 
-function mapTraitCatalogRow(trait: CharacterTrait): TraitCatalogRow {
+function mapTraitCatalogRow(trait: CharacterTrait, t: TFunction): TraitCatalogRow {
+  const loc = localizedPredefinedTraitTexts(trait, t);
   return {
     ...trait,
     isCustom: !trait.isPredefined,
     imagePath: trait.imagePath,
+    displayLabel: loc.displayLabel,
+    displayDescription: loc.displayDescription,
   };
 }
 
@@ -86,14 +91,23 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
     [traits, assignedTraitIds]
   );
 
+  const exclusionsCatalog = useMemo(
+    () =>
+      traits.map((trait) => ({
+        ...trait,
+        displayLabel: localizedPredefinedTraitTexts(trait, t).displayLabel,
+      })),
+    [traits, t]
+  );
+
   const items = useMemo<TraitCatalogRow[]>(
-    () => sortedTraits.map(mapTraitCatalogRow),
-    [sortedTraits]
+    () => sortedTraits.map((trait) => mapTraitCatalogRow(trait, t)),
+    [sortedTraits, t]
   );
 
   const assignedMainItems = useMemo<TraitCatalogRow[]>(
-    () => attachedTraits.map(mapTraitCatalogRow),
-    [attachedTraits]
+    () => attachedTraits.map((trait) => mapTraitCatalogRow(trait, t)),
+    [attachedTraits, t]
   );
 
   const assignedIds = useMemo(() => Array.from(assignedTraitIds), [assignedTraitIds]);
@@ -140,7 +154,7 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
       conflictAlertText={t('traits.conflictAlert')}
       exclusionsDialogLabel={t('traits.exclusionsLabel')}
       exclusionsSavedSnackbar={t('traits.exclusionsSaved')}
-      exclusionsCatalog={traits}
+      exclusionsCatalog={exclusionsCatalog}
       items={items}
       assignedMainItems={assignedMainItems}
       assignedIds={assignedIds}
@@ -163,13 +177,13 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
         onConfigureExclusions,
       }) => (
         <TraitFlipCard
-          name={item.name}
-          description={item.description}
+          name={item.displayLabel ?? item.name}
+          description={item.displayDescription ?? item.description}
           imageSrc={uploadAssetUrl(item.imagePath)}
           isAttached={isAttached}
           isCustom={item.isCustom}
           onDelete={
-            item.isCustom ? undefined : () => handleDeleteTrait(item.id, item.name)
+            item.isCustom ? undefined : () => handleDeleteTrait(item.id, item.displayLabel ?? item.name)
           }
           onConfigureExclusions={onConfigureExclusions}
           isBlocked={isBlocked}

@@ -40,7 +40,10 @@
     "linkNotePlaceholder": "Начните вводить название заметки…",
     "noteNoOptions": "Нет заметок",
     "linkedPrefix": "Привязана:",
-    "autocompleteClear": "Очистить"
+    "autocompleteClear": "Очистить",
+    "eraColorLabel": "Цвет эпохи",
+    "eraColorHelper": "Используется для заголовка эпохи и маркеров на линии времени, если указана эпоха.",
+    "eraColorPickerAria": "Свой цвет эпохи"
   },
   "tagField": {
     "label": "Теги",

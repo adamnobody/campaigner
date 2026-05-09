@@ -39,6 +39,7 @@
     "deleteNoteMessage": "Удалить «{{title}}»?"
   },
   "snackbar": {
+    "loadError": "Ошибка загрузки",
     "created": "Заметка «{{title}}» создана",
     "createError": "Ошибка создания",
     "deleted": "Удалено",

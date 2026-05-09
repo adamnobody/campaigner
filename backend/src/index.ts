@@ -64,8 +64,9 @@ const factionsDir = path.resolve(uploadsDir, 'factions');
 const dynastiesDir = path.resolve(uploadsDir, 'dynasties');
 const traitsDir = path.resolve(uploadsDir, 'traits');
 const ambitionsDir = path.resolve(uploadsDir, 'ambitions');
+const appearanceDir = path.resolve(uploadsDir, 'appearance');
 
-[dataDir, uploadsDir, mapsDir, charactersDir, factionsDir, dynastiesDir, traitsDir, ambitionsDir].forEach(dir => {
+[dataDir, uploadsDir, mapsDir, charactersDir, factionsDir, dynastiesDir, traitsDir, ambitionsDir, appearanceDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }

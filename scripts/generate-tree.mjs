@@ -3,44 +3,48 @@
  * Генерирует PROJECT_TREE.md — дерево файлов проекта для документации.
  * Запуск: npm run tree
  */
-import { readdirSync, writeFileSync, statSync } from 'node:fs';
+import { readdirSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
 const OUTPUT = 'PROJECT_TREE.md';
+const ALWAYS_IGNORE = new Set(['.git']);
 
-// Что игнорируем при обходе
-const IGNORE = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.next',
-  'coverage',
-  '.vite',
-  '.turbo',
-  '.cache',
-  'data',              // backend/data — локальная БД и uploads
-  'uploads',           // на всякий случай, если где-то всплывёт
-  '.DS_Store',
-  'PROJECT_TREE.md',   // сам себя не включаем
-]);
+function toGitPath(path) {
+  return path.split(/[\\/]+/).join('/');
+}
 
-// Файлы, которые тоже скрываем по имени
-const IGNORE_FILES = new Set([
-  '.env',
-  '.env.local',
-  '.env.development',
-  '.env.production',
-]);
+function getIgnoredPaths(paths) {
+  if (paths.length === 0) {
+    return new Set();
+  }
 
-function shouldIgnore(name) {
-  return IGNORE.has(name) || IGNORE_FILES.has(name);
+  const result = spawnSync('git', ['check-ignore', '--no-index', '-z', '--stdin'], {
+    cwd: ROOT,
+    input: paths.join('\0') + '\0',
+    encoding: 'utf8',
+  });
+
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(result.stderr || 'Failed to read ignored paths from git.');
+  }
+
+  return new Set(result.stdout.split('\0').filter(Boolean));
 }
 
 function buildTree(dir, prefix = '') {
-  const entries = readdirSync(dir, { withFileTypes: true })
-    .filter(e => !shouldIgnore(e.name))
+  const allEntries = readdirSync(dir, { withFileTypes: true })
+    .filter(entry => !ALWAYS_IGNORE.has(entry.name));
+  const ignored = getIgnoredPaths(allEntries.map(entry => (
+    toGitPath(relative(ROOT, join(dir, entry.name)))
+  )));
+
+  const entries = allEntries
+    .filter(entry => {
+      const relativePath = toGitPath(relative(ROOT, join(dir, entry.name)));
+      return !ignored.has(relativePath);
+    })
     .sort((a, b) => {
       // Папки сверху, потом файлы; внутри — по алфавиту
       if (a.isDirectory() !== b.isDirectory()) {

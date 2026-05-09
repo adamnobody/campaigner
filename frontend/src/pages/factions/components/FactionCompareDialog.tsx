@@ -54,7 +54,7 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
   onCompare,
 }) => {
   const theme = useTheme();
-  const { t } = useTranslation(['factions', 'common']);
+  const { t, i18n } = useTranslation(['factions', 'common']);
   const baseMetrics = useMemo(() => getMetricsForKind(kind), [kind]);
   const baseMetricsT = useMemo(
     () =>
@@ -73,16 +73,20 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [compareCache, setCompareCache] = useState<Record<string, FactionCompareResult>>({});
 
+  const numberLocale = i18n.resolvedLanguage || i18n.language || 'ru-RU';
   const compactNumberFormatter = useMemo(
     () =>
-      new Intl.NumberFormat('ru-RU', {
+      new Intl.NumberFormat(numberLocale, {
         notation: 'compact',
         maximumFractionDigits: 1,
       }),
-    []
+    [numberLocale]
   );
-  const fullNumberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), []);
-  const radarPercentFormatter = useMemo(() => new Intl.NumberFormat('ru-RU', { style: 'percent', maximumFractionDigits: 0 }), []);
+  const fullNumberFormatter = useMemo(() => new Intl.NumberFormat(numberLocale), [numberLocale]);
+  const radarPercentFormatter = useMemo(
+    () => new Intl.NumberFormat(numberLocale, { style: 'percent', maximumFractionDigits: 0 }),
+    [numberLocale]
+  );
   const tooltipStyle = useMemo(
     () => ({
       backgroundColor: theme.palette.background.paper,
@@ -132,6 +136,16 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
     return Array.from(names).sort();
   }, [sameKindFactions]);
 
+  const translatedResultMetrics = useMemo(() => {
+    if (!result) return [];
+    return result.metrics.map((metric) => ({
+      ...metric,
+      label: metric.key.startsWith('custom:')
+        ? metric.label
+        : t(`factions:metrics.keys.${metric.key}.label`, { defaultValue: metric.label }),
+    }));
+  }, [result, t]);
+
   const runCompare = async () => {
     const sortedFactionIds = [...selectedFactionIds].sort((a, b) => a - b);
     const sortedMetricKeys = [...selectedMetricKeys].sort((a, b) => a.localeCompare(b));
@@ -153,7 +167,7 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
 
   const radarData = useMemo(() => {
     if (!result) return [];
-    return result.metrics.map((metric) => {
+    return translatedResultMetrics.map((metric) => {
       const maxForMetric = Math.max(...metric.values.map((value) => value.value ?? 0), 0);
       const row: Record<string, number | string | null> = { metric: metric.label };
       for (const value of metric.values) {
@@ -165,7 +179,7 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
       }
       return row;
     });
-  }, [result]);
+  }, [result, translatedResultMetrics]);
 
   const radarTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
@@ -276,7 +290,7 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
         {result ? (
           chartType === 'bar' ? (
             <Box sx={{ display: 'grid', gap: 2 }}>
-              {result.metrics.map((metric) => (
+              {translatedResultMetrics.map((metric) => (
                 <Box key={metric.key} sx={{ height: 240 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
                     {metric.label}
@@ -301,7 +315,7 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
                             : fullNumberFormatter.format(value)
                         }
                       />
-                      <Bar dataKey="value" fill="#4e8a6e" />
+                      <Bar dataKey="value" name={t('factions:compare.valueLabel')} fill="#4e8a6e" />
                     </BarChart>
                   </ResponsiveContainer>
                 </Box>

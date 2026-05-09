@@ -23,6 +23,7 @@ import { useAmbitionsStore } from '@/store/useAmbitionsStore';
 import { apiClient } from '@/api/client';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { useTranslation } from 'react-i18next';
+import { localizedPredefinedAmbitionTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
 interface CreateAmbitionDialogProps {
   open: boolean;
@@ -91,8 +92,11 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
     () =>
       catalog
         .filter((ambition) => ambition.id !== editingAmbition?.id)
-        .map((ambition) => ({ id: ambition.id, name: ambition.name })),
-    [catalog, editingAmbition?.id]
+        .map((ambition) => ({
+          id: ambition.id,
+          label: localizedPredefinedAmbitionTexts(ambition, t).displayLabel,
+        })),
+    [catalog, editingAmbition?.id, t]
   );
   const selectedAmbitionOptions = useMemo(() => {
     const selected = new Set(excludedIds);
@@ -203,7 +207,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
             multiple
             options={availableAmbitionOptions}
             value={selectedAmbitionOptions}
-            getOptionLabel={(option) => option.name}
+            getOptionLabel={(option) => option.label}
             onChange={(_, value) => setExcludedIds(value.map((item) => item.id))}
             renderInput={(params) => (
               <TextField
@@ -216,7 +220,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
               value.map((option, index) => (
                 <Chip
                   icon={<BlockIcon sx={{ fontSize: 16 }} />}
-                  label={option.name}
+                  label={option.label}
                   size="small"
                   {...getTagProps({ index })}
                   key={option.id}

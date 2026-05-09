@@ -17,6 +17,7 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import PaletteIcon from '@mui/icons-material/Palette';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '@/store/useUIStore';
@@ -29,6 +30,7 @@ import CastleIcon from '@mui/icons-material/Castle';
 import HubIcon from '@mui/icons-material/Hub';
 
 type ProjectRoutePath =
+  | ''
   | 'map'
   | 'graph'
   | 'characters'
@@ -41,6 +43,7 @@ type ProjectRoutePath =
   | 'dynasties';
 
 const PROJECT_MENU_ICONS = {
+  '': DashboardIcon,
   map: MapIcon,
   graph: HubIcon,
   characters: PeopleIcon,
@@ -54,6 +57,7 @@ const PROJECT_MENU_ICONS = {
 };
 
 const PROJECT_MENU_PATHS: readonly ProjectRoutePath[] = [
+  '',
   'map',
   'graph',
   'characters',
@@ -197,7 +201,7 @@ export const Sidebar: React.FC = () => {
                 <ListItemButton
                   key={project.id}
                   selected={isActiveProject}
-                  onClick={() => navigate(`/project/${project.id}/map`)}
+                  onClick={() => navigate(`/project/${project.id}`)}
                   sx={{
                     '&.Mui-selected': {
                       backgroundColor: 'rgba(201, 169, 89, 0.1)',
@@ -252,8 +256,10 @@ export const Sidebar: React.FC = () => {
 
           <List>
             {projectMenuItems.map((item) => {
-              const fullPath = `/project/${projectId}/${item.path}`;
-              const isActive = location.pathname.startsWith(fullPath);
+              const fullPath = item.path ? `/project/${projectId}/${item.path}` : `/project/${projectId}`;
+              const isActive = item.path === ''
+                ? location.pathname === fullPath || location.pathname === `${fullPath}/`
+                : location.pathname.startsWith(fullPath);
               const Icon = item.Icon;
               const dataTour = tourAttrForSidebarPath(item.path);
 
@@ -274,7 +280,7 @@ export const Sidebar: React.FC = () => {
                   <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary' }}>
                     <Icon />
                   </ListItemIcon>
-                  <ListItemText primary={t(`menu.${item.path}`)} />
+                  <ListItemText primary={t(item.path ? `menu.${item.path}` : 'menu.overview')} />
                 </ListItemButton>
               );
             })}

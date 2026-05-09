@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { shallow } from 'zustand/shallow';
 import type { Ambition } from '@campaigner/shared';
 import { ExclusionCatalogTab, type ExclusionItem } from '@/components/exclusions/ExclusionCatalogTab';
@@ -9,6 +10,7 @@ import { CreateAmbitionDialog } from './CreateAmbitionDialog';
 import { useAmbitionsStore } from '@/store/useAmbitionsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { localizedPredefinedAmbitionTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
 interface FactionAmbitionsTabProps {
   projectId: number;
@@ -19,12 +21,18 @@ type AmbitionCatalogRow = Ambition & ExclusionItem;
 
 type CreateAmbitionExtra = { editingAmbition?: Ambition | null };
 
-function mapAmbitionCatalogRow(ambition: Ambition): AmbitionCatalogRow {
-  return { ...ambition, imagePath: ambition.iconPath };
+function mapAmbitionCatalogRow(ambition: Ambition, translate: TFunction): AmbitionCatalogRow {
+  const loc = localizedPredefinedAmbitionTexts(ambition, translate);
+  return {
+    ...ambition,
+    imagePath: ambition.iconPath,
+    displayLabel: loc.displayLabel,
+    displayDescription: loc.displayDescription,
+  };
 }
 
 export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projectId, factionId }) => {
-  const { t } = useTranslation(['factions', 'common']);
+  const { t, i18n } = useTranslation(['factions', 'common']);
   const [editingAmbition, setEditingAmbition] = useState<Ambition | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -75,11 +83,33 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
     }
   }, [factionId, fetchFactionAmbitions, clearFactionAmbitions]);
 
+  const sortLocale =
+    typeof i18n.resolvedLanguage === 'string'
+      ? i18n.resolvedLanguage
+      : i18n.language?.startsWith('ru')
+        ? 'ru'
+        : 'en';
+
+  const exclusionsCatalog = useMemo(
+    () =>
+      catalog.map((ambition) => ({
+        ...ambition,
+        displayLabel: localizedPredefinedAmbitionTexts(ambition, t).displayLabel,
+      })),
+    [catalog, t]
+  );
+
   const attachedAmbitions = useMemo(() => {
     return catalog
       .filter((ambition) => factionAmbitionIds.has(ambition.id))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-  }, [catalog, factionAmbitionIds]);
+      .sort((a, b) =>
+        localizedPredefinedAmbitionTexts(a, t).displayLabel.localeCompare(
+          localizedPredefinedAmbitionTexts(b, t).displayLabel,
+          sortLocale,
+          { sensitivity: 'base' }
+        )
+      );
+  }, [catalog, factionAmbitionIds, t, sortLocale]);
 
   const sortedCatalog = useMemo(() => {
     const attached: Ambition[] = [];
@@ -92,13 +122,13 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
   }, [catalog, factionAmbitionIds]);
 
   const items = useMemo<AmbitionCatalogRow[]>(
-    () => sortedCatalog.map(mapAmbitionCatalogRow),
-    [sortedCatalog]
+    () => sortedCatalog.map((ambition) => mapAmbitionCatalogRow(ambition, t)),
+    [sortedCatalog, t]
   );
 
   const assignedMainItems = useMemo<AmbitionCatalogRow[]>(
-    () => attachedAmbitions.map(mapAmbitionCatalogRow),
-    [attachedAmbitions]
+    () => attachedAmbitions.map((ambition) => mapAmbitionCatalogRow(ambition, t)),
+    [attachedAmbitions, t]
   );
 
   const assignedIds = useMemo(() => Array.from(factionAmbitionIds), [factionAmbitionIds]);
@@ -110,10 +140,11 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
     void toggleAssign(factionId, ambitionId);
   };
 
-  const handleDeleteAmbition = (ambition: Ambition) => {
+  const handleDeleteAmbition = (ambition: AmbitionCatalogRow) => {
+    const displayName = ambition.displayLabel ?? ambition.name;
     showConfirmDialog(
       t('factions:ambitions.confirmDeleteTitle'),
-      t('factions:ambitions.confirmDeleteMessage', { name: ambition.name }),
+      t('factions:ambitions.confirmDeleteMessage', { name: displayName }),
       async () => {
         try {
           await deleteAmbition(ambition.id);
@@ -143,7 +174,7 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
       conflictAlertText={t('factions:ambitions.conflictAlert')}
       exclusionsDialogLabel={t('factions:ambitions.exclusionsLabel')}
       exclusionsSavedSnackbar={t('factions:ambitions.exclusionsSaved')}
-      exclusionsCatalog={catalog}
+      exclusionsCatalog={exclusionsCatalog}
       items={items}
       assignedMainItems={assignedMainItems}
       assignedIds={assignedIds}
@@ -169,8 +200,8 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
         onConfigureExclusions,
       }) => (
         <AmbitionFlipCard
-          name={item.name}
-          description={item.description}
+          name={item.displayLabel ?? item.name}
+          description={item.displayDescription ?? item.description}
           imageSrc={uploadAssetUrl(item.iconPath)}
           isAttached={isAttached}
           isCustom={item.isCustom}

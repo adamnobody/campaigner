@@ -20,6 +20,9 @@ import settingsEn from './locales/en/settings.json';
 import projectSettingsEn from './locales/en/projectSettings.json';
 import appearanceEn from './locales/en/appearance.json';
 import onboardingEn from './locales/en/onboarding.json';
+import enCatalogTraits from './locales/en/builtins/catalogTraits.json';
+import enCatalogAmbitions from './locales/en/builtins/catalogAmbitions.json';
+import enPoliticalScalesBuiltin from './locales/en/builtins/politicalScalesBuiltin.json';
 
 import commonRu from './locales/ru/common.json';
 import navigationRu from './locales/ru/navigation.json';
@@ -73,8 +76,12 @@ void i18n.use(initReactI18next).init({
       common: commonEn,
       navigation: navigationEn,
       projects: projectsEn,
-      characters: charactersEn,
-      factions: factionsEn,
+      characters: { ...charactersEn, catalogTraits: enCatalogTraits },
+      factions: {
+        ...factionsEn,
+        catalogAmbitions: enCatalogAmbitions,
+        politicalScalesBuiltin: enPoliticalScalesBuiltin,
+      },
       dynasties: dynastiesEn,
       map: mapEn,
       graph: graphEn,

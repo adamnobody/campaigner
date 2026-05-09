@@ -45,6 +45,9 @@ type Props = {
 };
 
 const graphControlSx = { textTransform: 'none' as const, fontWeight: 500 };
+const filterSectionSummarySx = { px: 1.5, minHeight: 40 };
+const filterSectionDetailsSx = { px: 1.5, pt: 0, pb: 1.5 };
+const filterOptionSx = { m: 0 };
 
 export const GraphFiltersPanel: React.FC<Props> = ({
   enabledNodeTypes,
@@ -77,12 +80,12 @@ export const GraphFiltersPanel: React.FC<Props> = ({
       }}
     >
       <Typography sx={{ fontWeight: 700, mb: 1, flexShrink: 0 }}>{t('graph:filters.title')}</Typography>
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5, mr: -0.5 }}>
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5 }}>
         <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={filterSectionSummarySx}>
             <Typography variant="subtitle2">{t('graph:filters.nodeTypes')}</Typography>
           </AccordionSummary>
-          <AccordionDetails sx={{ px: 0, pt: 0 }}>
+          <AccordionDetails sx={filterSectionDetailsSx}>
             <Stack direction="row" spacing={0.75} sx={{ mb: 1 }}>
               <Button size="small" variant="outlined" onClick={onSelectAllNodeTypes} sx={graphControlSx}>
                 {t('graph:filters.selectAll')}
@@ -95,6 +98,7 @@ export const GraphFiltersPanel: React.FC<Props> = ({
               {GRAPH_NODE_TYPES.map((nodeType) => (
                 <FormControlLabel
                   key={nodeType}
+                  sx={filterOptionSx}
                   control={
                     <Checkbox size="small" checked={enabledNodeTypes.has(nodeType)} onChange={() => onToggleNodeType(nodeType)} />
                   }
@@ -106,10 +110,10 @@ export const GraphFiltersPanel: React.FC<Props> = ({
         </Accordion>
 
         <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={filterSectionSummarySx}>
             <Typography variant="subtitle2">{t('graph:filters.edgeKinds')}</Typography>
           </AccordionSummary>
-          <AccordionDetails sx={{ px: 0, pt: 0 }}>
+          <AccordionDetails sx={filterSectionDetailsSx}>
             <Stack direction="row" spacing={0.75} sx={{ mb: 1 }}>
               <Button size="small" variant="outlined" onClick={onSelectAllEdgeKinds} sx={graphControlSx}>
                 {t('graph:filters.selectAll')}
@@ -122,6 +126,7 @@ export const GraphFiltersPanel: React.FC<Props> = ({
               {GRAPH_EDGE_KINDS.map((edgeKind) => (
                 <FormControlLabel
                   key={edgeKind}
+                  sx={filterOptionSx}
                   control={<Checkbox size="small" checked={enabledEdgeKinds.has(edgeKind)} onChange={() => onToggleEdgeKind(edgeKind)} />}
                   label={<Typography variant="body2">{t(`graph:edgeKinds.${edgeKind}`)}</Typography>}
                 />
@@ -131,10 +136,10 @@ export const GraphFiltersPanel: React.FC<Props> = ({
         </Accordion>
 
         <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ px: 0, minHeight: 40 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={filterSectionSummarySx}>
             <Typography variant="subtitle2">{t('graph:filters.display')}</Typography>
           </AccordionSummary>
-          <AccordionDetails sx={{ px: 0, pt: 0 }}>
+          <AccordionDetails sx={filterSectionDetailsSx}>
             <Stack spacing={1.25}>
               <FormControl size="small" fullWidth>
                 <InputLabel>{nodeSizeLabel}</InputLabel>
@@ -208,6 +213,7 @@ export const GraphFiltersPanel: React.FC<Props> = ({
                 </Select>
               </FormControl>
               <FormControlLabel
+                sx={filterOptionSx}
                 control={
                   <Switch
                     checked={viewSettings.focusSelectedNeighborhood}

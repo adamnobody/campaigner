@@ -24,6 +24,7 @@ interface TimelineEventRow {
   eventDate: string;
   sortOrder: number;
   era: string;
+  eraColor?: string | null;
   linkedNoteId: number | null;
   createdAt: string;
   updatedAt: string;
@@ -33,13 +34,14 @@ interface TimelineEventRow {
 const SELECT_FIELDS = `
   id, project_id as projectId, title, description,
   event_date as eventDate, sort_order as sortOrder, era,
+  COALESCE(era_color, '') as eraColor,
   linked_note_id as linkedNoteId,
   created_at as createdAt, updated_at as updatedAt,
   created_branch_id as createdBranchId
 `;
 
 function mapRow(row: TimelineEventRow): TimelineEvent {
-  return { ...row, tags: [] };
+  return { ...row, eraColor: row.eraColor || '', tags: [] };
 }
 
 const UPDATE_FIELD_MAP: Record<string, string> = {
@@ -48,6 +50,7 @@ const UPDATE_FIELD_MAP: Record<string, string> = {
   eventDate: 'event_date',
   sortOrder: 'sort_order',
   era: 'era',
+  eraColor: 'era_color',
   linkedNoteId: 'linked_note_id',
 };
 
@@ -143,8 +146,8 @@ export class TimelineService {
     }
 
     const result = db.prepare(`
-      INSERT INTO timeline_events (project_id, title, description, event_date, sort_order, era, linked_note_id, created_branch_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO timeline_events (project_id, title, description, event_date, sort_order, era, era_color, linked_note_id, created_branch_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       data.projectId,
       data.title,
@@ -152,6 +155,7 @@ export class TimelineService {
       data.eventDate,
       sortOrder,
       data.era || '',
+      data.eraColor || '',
       data.linkedNoteId || null,
       createdBranchId,
     );
