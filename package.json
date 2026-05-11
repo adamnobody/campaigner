@@ -5,6 +5,12 @@
   "author": "adamnobody",
   "private": true,
   "main": "electron/main.js",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "campaignerElectron": {
+    "nodeRuntimeVersion": "22.14.0"
+  },
   "workspaces": [
     "shared",
     "backend",
@@ -33,12 +39,13 @@
     "perf:compare": "node scripts/perf/compare.mjs",
     "db:seed-demo": "node scripts/db/seed-demo.mjs",
     "db:explain-hot": "node scripts/db/explain-hot.mjs",
+    "electron:prepare-node": "node scripts/prepare-node-runtime.js",
+    "electron:rebuild-backend-native": "node scripts/rebuild-backend-native.mjs",
     "electron:dev": "npm run build && electron .",
-    "electron:build": "npm run build && electron-builder",
+    "electron:build": "npm run electron:prepare-node && npm run build && npm run electron:rebuild-backend-native && electron-builder",
     "electron:quick": "electron ."
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.3",
     "concurrently": "^9.2.1",
     "electron": "^41.2.0",
     "electron-builder": "^26.8.1",
@@ -57,6 +64,7 @@
     "appId": "com.campaigner.app",
     "productName": "Campaigner",
     "asar": true,
+    "asarUnpack": ["**/*.node"],
     "compression": "normal",
     "directories": {
       "output": "dist-electron"
@@ -96,6 +104,11 @@
         ]
       },
       {
+        "from": "build/node-runtime/win-x64",
+        "to": "node",
+        "filter": ["**/*"]
+      },
+      {
         "from": "node_modules",
         "to": "node_modules",
         "filter": [
@@ -103,7 +116,6 @@
           "!electron/**",
           "!electron-builder/**",
           "!@electron/**",
-          "!@electron/rebuild/**",
           "!electron-winstaller/**",
           "!electron-publish/**",
           "!app-builder-bin/**",
