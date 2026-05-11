@@ -429,21 +429,22 @@ projects
 
 ### 17.2 Как стартует backend
 
-- `main.js` ищет системный `node` (`where node`/`which node`);
-- спавнит `node backend/dist/index.js` с env:
-  - `PORT=3001`
-  - `DATABASE_PATH`
-  - `FRONTEND_DIST_PATH`
-  - `NODE_PATH`
-- окно открывает `http://localhost:3001` (backend раздаёт frontend dist).
+- **dev**: обычный Node.js (`process.env.npm_node_execpath` или `node`), без `ELECTRON_RUN_AS_NODE` и без `process.execPath` (Electron).
+- **production (NSIS)**: встроенный portable Node.js `resources/node/node.exe` (подготовка: `npm run electron:prepare-node`, копирование через `electron-builder` `extraResources`).
+- спавнит `backend/dist/index.js` с env:
+  - `PORT` — первый свободный порт начиная с 3001 (не фиксированный);
+  - `DATABASE_PATH`, `FRONTEND_DIST_PATH`, `NODE_PATH`, `FRONTEND_URL` (для CORS под выбранный порт);
+  - `NODE_ENV=production`;
+- окно открывает `http://127.0.0.1:<PORT>`.
+
+Перед production-сборкой: `npm run electron:rebuild-backend-native` — подтягивает/согласует prebuild `better-sqlite3` с тем же Node, что и bundled runtime (см. `campaignerElectron.nodeRuntimeVersion` в корневом `package.json`).
 
 ### 17.3 Health-check / readiness
 
-Явного HTTP health-check (`fetch /api/health`) в `main.js` нет.
-
-Текущая логика готовности:
-- ожидание строк в `stdout` сервера (`Server`/`listening`/`port`);
-- fallback-таймаут ~6 секунд, после которого окно открывается принудительно.
+- после `spawn` main-процесс опрашивает HTTP `GET http://127.0.0.1:<PORT>/` до 30 с;
+- при любом валидном HTTP-ответе сервер считается готовым;
+- при выходе процесса backend до готовности или по таймауту окно не открывается;
+- `stdout`/`stderr` backend пишутся в консоль и в `electron-debug.log` (userData).
 
 ### 17.4 Пути к данным
 
@@ -454,8 +455,9 @@ projects
 
 ### 17.5 Сборка desktop
 
-- пакет собирается через `electron-builder` (`npm run electron:build`);
-- в сборку включаются `backend/dist`, `frontend/dist`, `shared/dist`, `node_modules` (с фильтрами исключений).
+- `npm run electron:build` — `electron:prepare-node` → `npm run build` → `electron:rebuild-backend-native` → `electron-builder`;
+- в сборку включаются `backend/dist`, `frontend/dist`, `shared/dist`, `node_modules` (с фильтрами исключений), portable **Node** в `resources/node`, single-instance lock;
+- чистая типовая последовательность: `npm install` в корне → `npm run electron:build`.
 
 ---
 
