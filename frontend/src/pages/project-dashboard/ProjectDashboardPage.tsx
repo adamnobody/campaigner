@@ -150,7 +150,7 @@ function OverviewAnimatedBackground({ shouldAnimate, accentColor }: OverviewAnim
           opacity: 0.75,
           maskImage: 'radial-gradient(ellipse at 50% 50%, #000 50%, transparent 95%)',
           WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, #000 50%, transparent 95%)',
-          animation: shouldAnimate ? 'topoDriftA 30s ease-in-out infinite, topoBreath 22s ease-in-out infinite' : 'none',
+          animation: shouldAnimate ? 'topoDriftA 15s ease-in-out infinite, topoBreath 11s ease-in-out infinite' : 'none',
         }}
       />
       
@@ -165,7 +165,7 @@ function OverviewAnimatedBackground({ shouldAnimate, accentColor }: OverviewAnim
           opacity: 0.65,
           maskImage: 'radial-gradient(ellipse at 50% 50%, #000 40%, transparent 90%)',
           WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, #000 40%, transparent 90%)',
-          animation: shouldAnimate ? 'topoDriftB 40s ease-in-out infinite, topoBreath 28s ease-in-out infinite' : 'none',
+          animation: shouldAnimate ? 'topoDriftB 20s ease-in-out infinite, topoBreath 14s ease-in-out infinite' : 'none',
         }}
       />
       
