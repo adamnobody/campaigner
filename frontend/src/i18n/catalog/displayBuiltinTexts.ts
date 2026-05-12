@@ -20,7 +20,7 @@ export function traitSlugFromImagePath(imagePath: string | undefined | null): st
   return m ? m[1] : null;
 }
 
-/** Builtin ambition icons `/ambitions/name.svg|.jpg|.png`. */
+/** Builtin ambition images: `/ambitions/<slug>.jpg` (или иной путь в `iconPath`). */
 export function ambitionSlugFromIconPath(iconPath: string | undefined | null): string | null {
   if (!iconPath?.includes('/ambitions/')) return null;
   const m = /\/ambitions\/([^/.]+)/i.exec(iconPath);
