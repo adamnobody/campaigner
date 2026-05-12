@@ -235,6 +235,14 @@ function stopServer() {
   }
 }
 
+function resolveWindowIconPath() {
+  const bundled = path.join(__dirname, 'icon.ico');
+  if (!app.isPackaged) return bundled;
+  const unpacked = path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'icon.ico');
+  if (fs.existsSync(unpacked)) return unpacked;
+  return bundled;
+}
+
 async function startServer() {
   const nodeRuntime = resolveNodeRuntime();
 
@@ -337,7 +345,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: resolveWindowIconPath(),
     title: 'Campaigner',
     webPreferences: {
       nodeIntegration: false,
