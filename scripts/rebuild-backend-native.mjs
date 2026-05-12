@@ -35,9 +35,21 @@ function main() {
     PATH: `${nodeDir}${path.delimiter}${process.env.PATH || ''}`,
   };
 
-  console.log('[rebuild-backend-native] npm rebuild with PATH node →', node);
-  const r = spawnSync('npm', ['rebuild', 'better-sqlite3', '-w', '@campaigner/backend'], {
-    cwd: ROOT,
+  const electronRuntimeDir = path.join(ROOT, 'build', 'electron-runtime');
+  const sqlitePath = path.join(electronRuntimeDir, 'node_modules', 'better-sqlite3');
+
+  if (!fs.existsSync(sqlitePath)) {
+    console.error(
+      '[rebuild-backend-native] Missing',
+      sqlitePath,
+      '— run npm run electron:prepare-runtime-deps after npm run build.'
+    );
+    process.exit(1);
+  }
+
+  console.log('[rebuild-backend-native] npm rebuild better-sqlite3 with PATH node →', node);
+  const r = spawnSync('npm', ['rebuild', 'better-sqlite3'], {
+    cwd: electronRuntimeDir,
     stdio: 'inherit',
     env,
     shell: true,
