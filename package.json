@@ -63,8 +63,9 @@
   "build": {
     "appId": "com.campaigner.app",
     "productName": "Campaigner",
+    "icon": "electron/icon.ico",
     "asar": true,
-    "asarUnpack": ["**/*.node"],
+    "asarUnpack": ["**/*.node", "electron/icon.ico"],
     "compression": "normal",
     "directories": {
       "output": "dist-electron"
@@ -149,7 +150,10 @@
       "oneClick": true,
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
-      "shortcutName": "Campaigner"
+      "shortcutName": "Campaigner",
+      "installerIcon": "electron/icon.ico",
+      "uninstallerIcon": "electron/icon.ico",
+      "installerHeaderIcon": "electron/icon.ico"
     }
   }
 }

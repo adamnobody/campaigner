@@ -1,15 +1,16 @@
 import type Database from 'better-sqlite3';
 
-/** Файл в `frontend/public/ambitions/`. По умолчанию — `<slug>.svg`. */
+/** Файл в `frontend/public/ambitions/`. По умолчанию — `<slug>.jpg`. */
 type AmbitionSeed = {
   slug: string;
   name: string;
   description: string;
+  /** Имя файла с расширением, если не совпадает со стандартом `<slug>.jpg`. */
   iconFile?: string;
 };
 
 function builtinAmbitionIconPath(ambition: AmbitionSeed): string {
-  return `/ambitions/${ambition.iconFile ?? `${ambition.slug}.svg`}`;
+  return `/ambitions/${ambition.iconFile ?? `${ambition.slug}.jpg`}`;
 }
 
 const PREDEFINED_AMBITIONS: readonly AmbitionSeed[] = [
@@ -57,7 +58,6 @@ const PREDEFINED_AMBITIONS: readonly AmbitionSeed[] = [
     slug: 'izolyatsionizm',
     name: 'Изоляционизм',
     description: 'Свести внешние контакты к минимуму и сосредоточиться на внутренних делах.',
-    iconFile: 'izolyatsionizm.jpg',
   },
   {
     slug: 'magicheskoe-prevoskhodstvo',
@@ -158,7 +158,6 @@ const PREDEFINED_AMBITIONS: readonly AmbitionSeed[] = [
     slug: 'industrializatsiya',
     name: 'Индустриализация',
     description: 'Перейти к массовому производству и инфраструктурному росту.',
-    iconFile: 'industrializatsiya.jpg',
   },
 ];
 
