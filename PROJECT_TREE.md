@@ -39,7 +39,8 @@ campaigner
 │  │  │  │  ├─ 012_branch_scoped_creates.ts
 │  │  │  │  ├─ 013_branch_visibility_v020.ts
 │  │  │  │  ├─ 014_faction_relations_branch.ts
-│  │  │  │  └─ 015_graph_layouts.ts
+│  │  │  │  ├─ 015_graph_layouts.ts
+│  │  │  │  └─ 016_timeline_event_era_color.ts
 │  │  │  ├─ seeds
 │  │  │  │  └─ politicalScalesSeedData.ts
 │  │  │  ├─ connection.ts
@@ -130,75 +131,75 @@ campaigner
 ├─ frontend
 │  ├─ public
 │  │  ├─ ambitions
-│  │  │  ├─ demokratizatsiya.svg
-│  │  │  ├─ diplomaticheskaya-gegemoniya.svg
-│  │  │  ├─ ekologicheskaya-garmoniya.svg
+│  │  │  ├─ demokratizatsiya.jpg
+│  │  │  ├─ diplomaticheskaya-gegemoniya.jpg
+│  │  │  ├─ ekologicheskaya-garmoniya.jpg
 │  │  │  ├─ industrializatsiya.jpg
 │  │  │  ├─ izolyatsionizm.jpg
-│  │  │  ├─ kontrol-morskikh-putey.svg
-│  │  │  ├─ kontrol-torgovykh-marshrutov.svg
-│  │  │  ├─ kulturnaya-assimilyatsiya.svg
-│  │  │  ├─ magicheskoe-prevoskhodstvo.svg
-│  │  │  ├─ mest.svg
-│  │  │  ├─ nakoplenie-bogatstva.svg
-│  │  │  ├─ nauchnyy-progress.svg
-│  │  │  ├─ obedinenie-naroda.svg
-│  │  │  ├─ osvobozhdenie-poraboshchennykh.svg
-│  │  │  ├─ podderzhanie-mira.svg
-│  │  │  ├─ poraboshchenie-sosedey.svg
-│  │  │  ├─ razvitie-iskusstv.svg
-│  │  │  ├─ religioznaya-ekspansiya.svg
-│  │  │  ├─ religioznoe-obrashchenie-sosedey.svg
-│  │  │  ├─ restavratsiya-starogo-poryadka.svg
-│  │  │  ├─ sozdanie-koloniy.svg
-│  │  │  ├─ sverzhenie-soseda.svg
-│  │  │  ├─ tekhnologicheskiy-progress.svg
-│  │  │  ├─ territorialnaya-ekspansiya.svg
-│  │  │  ├─ torgovaya-dominatsiya.svg
-│  │  │  ├─ ustanovlenie-tiranii.svg
-│  │  │  ├─ voennoe-prevoskhodstvo.svg
-│  │  │  ├─ vyzhivanie.svg
-│  │  │  └─ zashchita-traditsiy.svg
+│  │  │  ├─ kontrol-morskikh-putey.jpg
+│  │  │  ├─ kontrol-torgovykh-marshrutov.jpg
+│  │  │  ├─ kulturnaya-assimilyatsiya.jpg
+│  │  │  ├─ magicheskoe-prevoskhodstvo.jpg
+│  │  │  ├─ mest.jpg
+│  │  │  ├─ nakoplenie-bogatstva.jpg
+│  │  │  ├─ nauchnyy-progress.jpg
+│  │  │  ├─ obedinenie-naroda.jpg
+│  │  │  ├─ osvobozhdenie-poraboshchennykh.jpg
+│  │  │  ├─ podderzhanie-mira.jpg
+│  │  │  ├─ poraboshchenie-sosedey.jpg
+│  │  │  ├─ razvitie-iskusstv.jpg
+│  │  │  ├─ religioznaya-ekspansiya.jpg
+│  │  │  ├─ religioznoe-obrashchenie-sosedey.jpg
+│  │  │  ├─ restavratsiya-starogo-poryadka.jpg
+│  │  │  ├─ sozdanie-koloniy.jpg
+│  │  │  ├─ sverzhenie-soseda.jpg
+│  │  │  ├─ tekhnologicheskiy-progress.jpg
+│  │  │  ├─ territorialnaya-ekspansiya.jpg
+│  │  │  ├─ torgovaya-dominatsiya.jpg
+│  │  │  ├─ ustanovlenie-tiranii.jpg
+│  │  │  ├─ voennoe-prevoskhodstvo.jpg
+│  │  │  ├─ vyzhivanie.jpg
+│  │  │  └─ zashchita-traditsiy.jpg
 │  │  ├─ fonts
 │  │  │  ├─ my-local-font.css
 │  │  │  └─ README.md
-│  │  └─ traits
-│  │     ├─ ambitsioznost.jpg
-│  │     ├─ apatiya.jpg
-│  │     ├─ chestnost.jpg
-│  │     ├─ chrevogudie.jpg
-│  │     ├─ dobrota.jpg
-│  │     ├─ doverchivost.jpg
-│  │     ├─ egoizm.jpg
-│  │     ├─ fanatizm.jpg
-│  │     ├─ kharizma.jpg
-│  │     ├─ khitrost.jpg
-│  │     ├─ khladnokrovie.jpg
-│  │     ├─ khrabrost.jpg
-│  │     ├─ kreativnost.jpg
-│  │     ├─ litsemerie.jpg
-│  │     ├─ lyubopytstvo.jpg
-│  │     ├─ malodushie.jpg
-│  │     ├─ melankholiya.jpg
-│  │     ├─ miloserdie.jpg
-│  │     ├─ mudrost.jpg
-│  │     ├─ nervoznost.jpg
-│  │     ├─ optimizm.jpg
-│  │     ├─ paranoyya.jpg
-│  │     ├─ pokhot.jpg
-│  │     ├─ raschetlivost.jpg
-│  │     ├─ reshitelnost.jpg
-│  │     ├─ samokontrol.jpg
-│  │     ├─ shchedrost.jpg
-│  │     ├─ umstvennaya-otstalost.jpg
-│  │     ├─ upryamstvo.jpg
-│  │     ├─ utonchennost.jpg
-│  │     ├─ vernost.jpg
-│  │     ├─ vysokomerie.jpg
-│  │     ├─ zhadnost.jpg
-│  │     ├─ zhestokost.jpg
-│  │     └─ zlost.jpg
-│  ├─ scripts
+│  │  ├─ traits
+│  │  │  ├─ ambitsioznost.jpg
+│  │  │  ├─ apatiya.jpg
+│  │  │  ├─ chestnost.jpg
+│  │  │  ├─ chrevogudie.jpg
+│  │  │  ├─ dobrota.jpg
+│  │  │  ├─ doverchivost.jpg
+│  │  │  ├─ egoizm.jpg
+│  │  │  ├─ fanatizm.jpg
+│  │  │  ├─ kharizma.jpg
+│  │  │  ├─ khitrost.jpg
+│  │  │  ├─ khladnokrovie.jpg
+│  │  │  ├─ khrabrost.jpg
+│  │  │  ├─ kreativnost.jpg
+│  │  │  ├─ litsemerie.jpg
+│  │  │  ├─ lyubopytstvo.jpg
+│  │  │  ├─ malodushie.jpg
+│  │  │  ├─ melankholiya.jpg
+│  │  │  ├─ miloserdie.jpg
+│  │  │  ├─ mudrost.jpg
+│  │  │  ├─ nervoznost.jpg
+│  │  │  ├─ optimizm.jpg
+│  │  │  ├─ paranoyya.jpg
+│  │  │  ├─ pokhot.jpg
+│  │  │  ├─ raschetlivost.jpg
+│  │  │  ├─ reshitelnost.jpg
+│  │  │  ├─ samokontrol.jpg
+│  │  │  ├─ shchedrost.jpg
+│  │  │  ├─ umstvennaya-otstalost.jpg
+│  │  │  ├─ upryamstvo.jpg
+│  │  │  ├─ utonchennost.jpg
+│  │  │  ├─ vernost.jpg
+│  │  │  ├─ vysokomerie.jpg
+│  │  │  ├─ zhadnost.jpg
+│  │  │  ├─ zhestokost.jpg
+│  │  │  └─ zlost.jpg
+│  │  └─ campaigner.png
 │  ├─ src
 │  │  ├─ api
 │  │  │  ├─ ambitions.ts
@@ -503,6 +504,9 @@ campaigner
 │  ├─ extract-political-scales-from-seed.mjs
 │  ├─ gen-en-builtins.mjs
 │  ├─ generate-tree.mjs
+│  ├─ prepare-electron-runtime-deps.mjs
+│  ├─ prepare-node-runtime.js
+│  ├─ rebuild-backend-native.mjs
 │  └─ smoke-runner.mjs
 ├─ shared
 │  ├─ src
