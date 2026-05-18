@@ -43,9 +43,12 @@
     "electron:rebuild-backend-native": "node scripts/rebuild-backend-native.mjs",
     "electron:dev": "npm run build && electron .",
     "electron:build": "npm run electron:prepare-node && npm run build && npm run electron:rebuild-backend-native && electron-builder",
-    "electron:quick": "electron ."
+    "electron:quick": "electron .",
+    "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
+    "tauri:build": "tauri build --config src-tauri/tauri.conf.json"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2",
     "concurrently": "^9.2.1",
     "electron": "^41.2.0",
     "electron-builder": "^26.8.1",
@@ -65,7 +68,10 @@
     "productName": "Campaigner",
     "icon": "electron/icon.ico",
     "asar": true,
-    "asarUnpack": ["**/*.node", "electron/icon.ico"],
+    "asarUnpack": [
+      "**/*.node",
+      "electron/icon.ico"
+    ],
     "compression": "normal",
     "directories": {
       "output": "dist-electron"
@@ -107,7 +113,9 @@
       {
         "from": "build/node-runtime/win-x64",
         "to": "node",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "node_modules",
