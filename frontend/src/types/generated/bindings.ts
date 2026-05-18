@@ -16,6 +16,13 @@ export const commands = {
 	notesUpdate: (input: UpdateNoteInput) => __TAURI_INVOKE<Note>("notes_update", { input }),
 	notesDelete: (input: DeleteNoteInput) => __TAURI_INVOKE<void>("notes_delete", { input }),
 	notesSetTags: (input: SetNoteTagsInput) => __TAURI_INVOKE<Tag[]>("notes_set_tags", { input }),
+	timelineList: (input: TimelineListInput) => __TAURI_INVOKE<TimelineEvent[]>("timeline_list", { input }),
+	timelineGet: (input: GetTimelineEventInput) => __TAURI_INVOKE<TimelineEvent>("timeline_get", { input }),
+	timelineCreate: (input: CreateTimelineEventInput) => __TAURI_INVOKE<TimelineEvent>("timeline_create", { input }),
+	timelineUpdate: (input: UpdateTimelineEventInput) => __TAURI_INVOKE<TimelineEvent>("timeline_update", { input }),
+	timelineDelete: (input: DeleteTimelineEventInput) => __TAURI_INVOKE<void>("timeline_delete", { input }),
+	timelineReorder: (input: ReorderTimelineInput) => __TAURI_INVOKE<TimelineEvent[]>("timeline_reorder", { input }),
+	timelineSetTags: (input: SetTimelineTagsInput) => __TAURI_INVOKE<Tag[]>("timeline_set_tags", { input }),
 	tagsList: (input: TagsListInput) => __TAURI_INVOKE<Tag[]>("tags_list", { input }),
 	tagsCreate: (input: CreateTagInput) => __TAURI_INVOKE<Tag>("tags_create", { input }),
 	tagsDelete: (input: DeleteTagInput) => __TAURI_INVOKE<void>("tags_delete", { input }),
@@ -52,6 +59,18 @@ export type CreateTagInput = {
 	color: string | null,
 };
 
+export type CreateTimelineEventInput = {
+	projectId: number,
+	title: string,
+	description: string | null,
+	eventDate: string,
+	sortOrder: number | null,
+	era: string | null,
+	eraColor: string | null,
+	linkedNoteId: number | null,
+	branchId: number | null,
+};
+
 export type DeleteNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -65,6 +84,11 @@ export type DeleteTagInput = {
 	id: number,
 };
 
+export type DeleteTimelineEventInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type GetNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -72,6 +96,11 @@ export type GetNoteInput = {
 
 export type GetProjectInput = {
 	id: number,
+};
+
+export type GetTimelineEventInput = {
+	id: number,
+	branchId: number | null,
 };
 
 export type Note = {
@@ -118,7 +147,19 @@ export type Project = {
 	updatedAt: string,
 };
 
+export type ReorderTimelineInput = {
+	projectId: number,
+	orderedIds: number[],
+	branchId: number | null,
+};
+
 export type SetNoteTagsInput = {
+	id: number,
+	tagIds: number[],
+	branchId: number | null,
+};
+
+export type SetTimelineTagsInput = {
 	id: number,
 	tagIds: number[],
 	branchId: number | null,
@@ -132,6 +173,27 @@ export type Tag = {
 
 export type TagsListInput = {
 	projectId: number,
+};
+
+export type TimelineEvent = {
+	id: number,
+	projectId: number,
+	title: string,
+	description: string,
+	eventDate: string,
+	sortOrder: number,
+	era: string,
+	eraColor: string,
+	linkedNoteId: number | null,
+	createdAt: string,
+	updatedAt: string,
+	tags: Tag[],
+};
+
+export type TimelineListInput = {
+	projectId: number,
+	era: string | null,
+	branchId: number | null,
 };
 
 export type UpdateNoteInput = {
@@ -151,5 +213,17 @@ export type UpdateProjectInput = {
 	description: string | null,
 	status: string | null,
 	mapImagePath: string | null,
+};
+
+export type UpdateTimelineEventInput = {
+	id: number,
+	title: string | null,
+	description: string | null,
+	eventDate: string | null,
+	sortOrder: number | null,
+	era: string | null,
+	eraColor: string | null,
+	linkedNoteId: number | null,
+	branchId: number | null,
 };
 

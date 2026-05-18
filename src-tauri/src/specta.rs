@@ -12,13 +12,20 @@ use crate::models::project::{
     CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
 };
 use crate::models::tag::{CreateTagInput, DeleteTagInput, Tag, TagsListInput};
+use crate::models::timeline::{
+    CreateTimelineEventInput, DeleteTimelineEventInput, GetTimelineEventInput,
+    ReorderTimelineInput, SetTimelineTagsInput, TimelineEvent, TimelineListInput,
+    UpdateTimelineEventInput,
+};
 
 mod codegen_commands {
     use super::{
-        AppHealthResponse, CreateNoteInput, CreateProjectInput, CreateTagInput, DeleteNoteInput,
-        DeleteProjectInput, DeleteTagInput, GetNoteInput, GetProjectInput, Note, NotesListInput,
-        NotesListResult, Project, SetNoteTagsInput, Tag, TagsListInput, UpdateNoteInput,
-        UpdateProjectInput,
+        AppHealthResponse, CreateNoteInput, CreateProjectInput, CreateTagInput,
+        CreateTimelineEventInput, DeleteNoteInput, DeleteProjectInput, DeleteTagInput,
+        DeleteTimelineEventInput, GetNoteInput, GetProjectInput, GetTimelineEventInput, Note,
+        NotesListInput, NotesListResult, Project, ReorderTimelineInput, SetNoteTagsInput,
+        SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent, TimelineListInput,
+        UpdateNoteInput, UpdateProjectInput, UpdateTimelineEventInput,
     };
 
     #[tauri::command]
@@ -178,6 +185,85 @@ mod codegen_commands {
     pub fn notes_set_tags(_input: SetNoteTagsInput) -> Vec<Tag> {
         Vec::new()
     }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn timeline_list(_input: TimelineListInput) -> Vec<TimelineEvent> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn timeline_get(_input: GetTimelineEventInput) -> TimelineEvent {
+        TimelineEvent {
+            id: 0,
+            project_id: 0,
+            title: String::new(),
+            description: String::new(),
+            event_date: String::new(),
+            sort_order: 0,
+            era: String::new(),
+            era_color: String::new(),
+            linked_note_id: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            tags: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn timeline_create(input: CreateTimelineEventInput) -> TimelineEvent {
+        TimelineEvent {
+            id: 0,
+            project_id: input.project_id,
+            title: input.title,
+            description: input.description.unwrap_or_default(),
+            event_date: input.event_date,
+            sort_order: input.sort_order.unwrap_or(0),
+            era: input.era.unwrap_or_default(),
+            era_color: input.era_color.unwrap_or_default(),
+            linked_note_id: input.linked_note_id,
+            created_at: String::new(),
+            updated_at: String::new(),
+            tags: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn timeline_update(input: UpdateTimelineEventInput) -> TimelineEvent {
+        TimelineEvent {
+            id: input.id,
+            project_id: 0,
+            title: input.title.unwrap_or_default(),
+            description: input.description.unwrap_or_default(),
+            event_date: input.event_date.unwrap_or_default(),
+            sort_order: input.sort_order.unwrap_or(0),
+            era: input.era.unwrap_or_default(),
+            era_color: input.era_color.unwrap_or_default(),
+            linked_note_id: input.linked_note_id.unwrap_or(None),
+            created_at: String::new(),
+            updated_at: String::new(),
+            tags: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn timeline_delete(_input: DeleteTimelineEventInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn timeline_reorder(_input: ReorderTimelineInput) -> Vec<TimelineEvent> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn timeline_set_tags(_input: SetTimelineTagsInput) -> Vec<Tag> {
+        Vec::new()
+    }
 }
 
 pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
@@ -195,6 +281,13 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::notes_update,
             codegen_commands::notes_delete,
             codegen_commands::notes_set_tags,
+            codegen_commands::timeline_list,
+            codegen_commands::timeline_get,
+            codegen_commands::timeline_create,
+            codegen_commands::timeline_update,
+            codegen_commands::timeline_delete,
+            codegen_commands::timeline_reorder,
+            codegen_commands::timeline_set_tags,
             codegen_commands::tags_list,
             codegen_commands::tags_create,
             codegen_commands::tags_delete
@@ -213,6 +306,14 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<UpdateNoteInput>()
         .typ::<DeleteNoteInput>()
         .typ::<SetNoteTagsInput>()
+        .typ::<TimelineEvent>()
+        .typ::<TimelineListInput>()
+        .typ::<GetTimelineEventInput>()
+        .typ::<CreateTimelineEventInput>()
+        .typ::<UpdateTimelineEventInput>()
+        .typ::<DeleteTimelineEventInput>()
+        .typ::<ReorderTimelineInput>()
+        .typ::<SetTimelineTagsInput>()
         .typ::<Tag>()
         .typ::<TagsListInput>()
         .typ::<CreateTagInput>()

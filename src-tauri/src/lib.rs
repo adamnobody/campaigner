@@ -37,7 +37,14 @@ pub fn run() {
             commands::notes::notes_set_tags_command,
             commands::tags::tags_list_command,
             commands::tags::tags_create_command,
-            commands::tags::tags_delete_command
+            commands::tags::tags_delete_command,
+            commands::timeline::timeline_list_command,
+            commands::timeline::timeline_get_command,
+            commands::timeline::timeline_create_command,
+            commands::timeline::timeline_update_command,
+            commands::timeline::timeline_delete_command,
+            commands::timeline::timeline_reorder_command,
+            commands::timeline::timeline_set_tags_command
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");
