@@ -13,8 +13,9 @@ rusqlite = { version = "0.39.0", features = ["bundled"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 specta = { version = "2.0.0-rc.25", features = ["derive"] }
+specta-typescript = "0.0.12"
 tauri = "2.11.2"
-tauri-specta = "2.0.0-rc.25"
+tauri-specta = { version = "2.0.0-rc.25", features = ["typescript"] }
 thiserror = "2.0.18"
 
 [build-dependencies]

@@ -4,8 +4,8 @@ use crate::db::connection::DatabaseState;
 use crate::error::{AppError, Result};
 use crate::models::app::AppHealthResponse;
 
-#[tauri::command]
-pub fn app_health(state: State<'_, DatabaseState>) -> Result<AppHealthResponse> {
+#[tauri::command(rename = "app_health")]
+pub fn app_health_command(state: State<'_, DatabaseState>) -> Result<AppHealthResponse> {
     let connection = state
         .connection
         .lock()
