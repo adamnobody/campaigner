@@ -571,13 +571,16 @@ campaigner
 │  │  ├─ 005_notes.sql
 │  │  ├─ 006_timeline.sql
 │  │  ├─ 007_characters.sql
-│  │  └─ 008_factions.sql
+│  │  ├─ 008_factions.sql
+│  │  └─ 009_dogmas.sql
 │  ├─ src
 │  │  ├─ bin
 │  │  │  └─ codegen.rs
 │  │  ├─ commands
 │  │  │  ├─ app.rs
+│  │  │  ├─ branches.rs
 │  │  │  ├─ characters.rs
+│  │  │  ├─ dogmas.rs
 │  │  │  ├─ factions.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ notes.rs
@@ -592,6 +595,7 @@ campaigner
 │  │  │  ├─ app.rs
 │  │  │  ├─ branch.rs
 │  │  │  ├─ character.rs
+│  │  │  ├─ dogma.rs
 │  │  │  ├─ faction.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ note.rs
@@ -602,6 +606,7 @@ campaigner
 │  │  ├─ repositories
 │  │  │  ├─ branches.rs
 │  │  │  ├─ characters.rs
+│  │  │  ├─ dogmas.rs
 │  │  │  ├─ factions.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ notes.rs

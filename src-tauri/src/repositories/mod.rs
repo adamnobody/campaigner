@@ -1,5 +1,6 @@
 pub mod branches;
 pub mod characters;
+pub mod dogmas;
 pub mod factions;
 pub mod notes;
 pub mod projects;

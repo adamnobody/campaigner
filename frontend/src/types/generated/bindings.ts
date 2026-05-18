@@ -9,6 +9,13 @@ export const commands = {
 	branchesCreate: (input: CreateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_create", { input }),
 	branchesUpdate: (input: UpdateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_update", { input }),
 	branchesDelete: (input: DeleteBranchInput) => __TAURI_INVOKE<void>("branches_delete", { input }),
+	dogmasList: (input: DogmasListInput) => __TAURI_INVOKE<DogmasListResult>("dogmas_list", { input }),
+	dogmasGet: (input: GetDogmaInput) => __TAURI_INVOKE<Dogma>("dogmas_get", { input }),
+	dogmasCreate: (input: CreateDogmaInput) => __TAURI_INVOKE<Dogma>("dogmas_create", { input }),
+	dogmasUpdate: (input: UpdateDogmaInput) => __TAURI_INVOKE<Dogma>("dogmas_update", { input }),
+	dogmasDelete: (input: DeleteDogmaInput) => __TAURI_INVOKE<void>("dogmas_delete", { input }),
+	dogmasReorder: (input: ReorderDogmasInput) => __TAURI_INVOKE<DogmasListResult>("dogmas_reorder", { input }),
+	dogmasSetTags: (input: SetDogmaTagsInput) => __TAURI_INVOKE<Tag[]>("dogmas_set_tags", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -181,6 +188,22 @@ export type CreateCharacterInput = {
 	branchId: number | null,
 };
 
+export type CreateDogmaInput = {
+	projectId: number,
+	title: string,
+	category: string,
+	description: string | null,
+	impact: string | null,
+	exceptions: string | null,
+	isPublic: boolean | null,
+	importance: string | null,
+	status: string | null,
+	sortOrder: number | null,
+	icon: string | null,
+	color: string | null,
+	branchId: number | null,
+};
+
 export type CreateFactionInput = {
 	projectId: number,
 	name: string,
@@ -317,6 +340,11 @@ export type DeleteCharacterInput = {
 	branchId: number | null,
 };
 
+export type DeleteDogmaInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type DeleteFactionInput = {
 	id: number,
 	branchId: number | null,
@@ -364,6 +392,41 @@ export type DeleteTagInput = {
 export type DeleteTimelineEventInput = {
 	id: number,
 	branchId: number | null,
+};
+
+export type Dogma = {
+	id: number,
+	projectId: number,
+	title: string,
+	category: string,
+	description: string,
+	impact: string,
+	exceptions: string,
+	isPublic: boolean,
+	importance: string,
+	status: string,
+	sortOrder: number,
+	icon: string,
+	color: string,
+	tags: Tag[],
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type DogmasListInput = {
+	projectId: number,
+	category: string | null,
+	importance: string | null,
+	status: string | null,
+	search: string | null,
+	limit: number | null,
+	offset: number | null,
+	branchId: number | null,
+};
+
+export type DogmasListResult = {
+	items: Dogma[],
+	total: number,
 };
 
 export type Faction = {
@@ -543,6 +606,11 @@ export type GetCharacterInput = {
 	branchId: number | null,
 };
 
+export type GetDogmaInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type GetFactionInput = {
 	id: number,
 	branchId: number | null,
@@ -635,6 +703,12 @@ export type RelationshipsListInput = {
 	branchId: number | null,
 };
 
+export type ReorderDogmasInput = {
+	projectId: number,
+	orderedIds: number[],
+	branchId: number | null,
+};
+
 export type ReorderTimelineInput = {
 	projectId: number,
 	orderedIds: number[],
@@ -659,6 +733,12 @@ export type ScenarioBranch = {
 };
 
 export type SetCharacterTagsInput = {
+	id: number,
+	tagIds: number[],
+	branchId: number | null,
+};
+
+export type SetDogmaTagsInput = {
 	id: number,
 	tagIds: number[],
 	branchId: number | null,
@@ -733,6 +813,22 @@ export type UpdateCharacterInput = {
 	notes: string | null,
 	stateId: number | null,
 	factionIds: number[] | null,
+	branchId: number | null,
+};
+
+export type UpdateDogmaInput = {
+	id: number,
+	title: string | null,
+	category: string | null,
+	description: string | null,
+	impact: string | null,
+	exceptions: string | null,
+	isPublic: boolean | null,
+	importance: string | null,
+	status: string | null,
+	sortOrder: number | null,
+	icon: string | null,
+	color: string | null,
 	branchId: number | null,
 };
 

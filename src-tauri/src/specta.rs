@@ -13,6 +13,10 @@ use crate::models::character::{
     GetCharacterInput, RelationshipsListInput, SetCharacterTagsInput, UpdateCharacterInput,
     UpdateRelationshipInput,
 };
+use crate::models::dogma::{
+    CreateDogmaInput, DeleteDogmaInput, Dogma, DogmasListInput, DogmasListResult, GetDogmaInput,
+    ReorderDogmasInput, SetDogmaTagsInput, UpdateDogmaInput,
+};
 use crate::models::faction::{
     CompareFactionsInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
     CreateFactionRankInput, CreateFactionRelationInput, DeleteFactionInput,
@@ -42,24 +46,26 @@ mod codegen_commands {
     use super::{
         AppHealthResponse, Character, CharacterGraph, CharacterRelationship, CharactersListInput,
         CharactersListResult, CompareFactionsInput, CreateBranchInput, CreateCharacterInput,
-        CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
+        CreateDogmaInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
         CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput, CreateProjectInput,
         CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteBranchInput,
-        DeleteCharacterInput, DeleteFactionInput, DeleteFactionMemberInput,
+        DeleteCharacterInput, DeleteDogmaInput, DeleteFactionInput, DeleteFactionMemberInput,
         DeleteFactionPolicyInput, DeleteFactionRankInput, DeleteFactionRelationInput,
         DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput,
-        DeleteTimelineEventInput, Faction, FactionCompareResult, FactionCustomMetric, FactionGraph,
-        FactionMember, FactionPolicy, FactionRank, FactionRelation, FactionsListInput,
-        FactionsListResult, FactionsRelationsListInput, GetCharacterInput, GetFactionInput,
+        DeleteTimelineEventInput, Dogma, DogmasListInput, DogmasListResult, Faction,
+        FactionCompareResult, FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy,
+        FactionRank, FactionRelation, FactionsListInput, FactionsListResult,
+        FactionsRelationsListInput, GetCharacterInput, GetDogmaInput, GetFactionInput,
         GetNoteInput, GetProjectInput, GetTimelineEventInput, ListBranchesInput,
         ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput, Note,
-        NotesListInput, NotesListResult, Project, RelationshipsListInput, ReorderTimelineInput,
-        ReplaceFactionCustomMetricsInput, ScenarioBranch, SetCharacterTagsInput,
-        SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput,
-        TimelineEvent, TimelineListInput, UpdateBranchInput, UpdateCharacterInput,
-        UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
-        UpdateFactionRankInput, UpdateFactionRelationInput, UpdateNoteInput, UpdateProjectInput,
-        UpdateRelationshipInput, UpdateTimelineEventInput,
+        NotesListInput, NotesListResult, Project, RelationshipsListInput, ReorderDogmasInput,
+        ReorderTimelineInput, ReplaceFactionCustomMetricsInput, ScenarioBranch,
+        SetCharacterTagsInput, SetDogmaTagsInput, SetFactionTagsInput, SetNoteTagsInput,
+        SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent, TimelineListInput,
+        UpdateBranchInput, UpdateCharacterInput, UpdateDogmaInput, UpdateFactionInput,
+        UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
+        UpdateFactionRelationInput, UpdateNoteInput, UpdateProjectInput, UpdateRelationshipInput,
+        UpdateTimelineEventInput,
     };
 
     #[tauri::command]
@@ -111,6 +117,75 @@ mod codegen_commands {
     #[tauri::command]
     #[specta::specta]
     pub fn branches_delete(_input: DeleteBranchInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dogmas_list(_input: DogmasListInput) -> DogmasListResult {
+        DogmasListResult {
+            items: Vec::new(),
+            total: 0,
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dogmas_get(_input: GetDogmaInput) -> Dogma {
+        Dogma {
+            id: 0,
+            project_id: 0,
+            title: String::new(),
+            category: "other".to_string(),
+            description: String::new(),
+            impact: String::new(),
+            exceptions: String::new(),
+            is_public: true,
+            importance: "major".to_string(),
+            status: "active".to_string(),
+            sort_order: 0,
+            icon: String::new(),
+            color: String::new(),
+            tags: Vec::new(),
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dogmas_create(_input: CreateDogmaInput) -> Dogma {
+        dogmas_get(GetDogmaInput {
+            id: 0,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dogmas_update(_input: UpdateDogmaInput) -> Dogma {
+        dogmas_get(GetDogmaInput {
+            id: 0,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dogmas_delete(_input: DeleteDogmaInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dogmas_reorder(_input: ReorderDogmasInput) -> DogmasListResult {
+        DogmasListResult {
+            items: Vec::new(),
+            total: 0,
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dogmas_set_tags(_input: SetDogmaTagsInput) -> Vec<Tag> {
+        Vec::new()
+    }
 
     #[tauri::command]
     #[specta::specta]
@@ -799,6 +874,13 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::branches_create,
             codegen_commands::branches_update,
             codegen_commands::branches_delete,
+            codegen_commands::dogmas_list,
+            codegen_commands::dogmas_get,
+            codegen_commands::dogmas_create,
+            codegen_commands::dogmas_update,
+            codegen_commands::dogmas_delete,
+            codegen_commands::dogmas_reorder,
+            codegen_commands::dogmas_set_tags,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -863,6 +945,15 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<CreateBranchInput>()
         .typ::<UpdateBranchInput>()
         .typ::<DeleteBranchInput>()
+        .typ::<Dogma>()
+        .typ::<DogmasListInput>()
+        .typ::<DogmasListResult>()
+        .typ::<GetDogmaInput>()
+        .typ::<CreateDogmaInput>()
+        .typ::<UpdateDogmaInput>()
+        .typ::<DeleteDogmaInput>()
+        .typ::<ReorderDogmasInput>()
+        .typ::<SetDogmaTagsInput>()
         .typ::<Project>()
         .typ::<GetProjectInput>()
         .typ::<CreateProjectInput>()
