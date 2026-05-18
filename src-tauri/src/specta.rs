@@ -4,6 +4,9 @@ use specta_typescript::Typescript;
 use tauri_specta::{collect_commands, Builder};
 
 use crate::models::app::AppHealthResponse;
+use crate::models::branch::{
+    CreateBranchInput, DeleteBranchInput, ListBranchesInput, ScenarioBranch, UpdateBranchInput,
+};
 use crate::models::character::{
     Character, CharacterGraph, CharacterRelationship, CharactersListInput, CharactersListResult,
     CreateCharacterInput, CreateRelationshipInput, DeleteCharacterInput, DeleteRelationshipInput,
@@ -38,23 +41,25 @@ use crate::models::timeline::{
 mod codegen_commands {
     use super::{
         AppHealthResponse, Character, CharacterGraph, CharacterRelationship, CharactersListInput,
-        CharactersListResult, CompareFactionsInput, CreateCharacterInput, CreateFactionInput,
-        CreateFactionMemberInput, CreateFactionPolicyInput, CreateFactionRankInput,
-        CreateFactionRelationInput, CreateNoteInput, CreateProjectInput, CreateRelationshipInput,
-        CreateTagInput, CreateTimelineEventInput, DeleteCharacterInput, DeleteFactionInput,
-        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
-        DeleteFactionRelationInput, DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput,
-        DeleteTagInput, DeleteTimelineEventInput, Faction, FactionCompareResult,
-        FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy, FactionRank,
-        FactionRelation, FactionsListInput, FactionsListResult, FactionsRelationsListInput,
-        GetCharacterInput, GetFactionInput, GetNoteInput, GetProjectInput, GetTimelineEventInput,
+        CharactersListResult, CompareFactionsInput, CreateBranchInput, CreateCharacterInput,
+        CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
+        CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput, CreateProjectInput,
+        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteBranchInput,
+        DeleteCharacterInput, DeleteFactionInput, DeleteFactionMemberInput,
+        DeleteFactionPolicyInput, DeleteFactionRankInput, DeleteFactionRelationInput,
+        DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput,
+        DeleteTimelineEventInput, Faction, FactionCompareResult, FactionCustomMetric, FactionGraph,
+        FactionMember, FactionPolicy, FactionRank, FactionRelation, FactionsListInput,
+        FactionsListResult, FactionsRelationsListInput, GetCharacterInput, GetFactionInput,
+        GetNoteInput, GetProjectInput, GetTimelineEventInput, ListBranchesInput,
         ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput, Note,
         NotesListInput, NotesListResult, Project, RelationshipsListInput, ReorderTimelineInput,
-        ReplaceFactionCustomMetricsInput, SetCharacterTagsInput, SetFactionTagsInput,
-        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
-        TimelineListInput, UpdateCharacterInput, UpdateFactionInput, UpdateFactionMemberInput,
-        UpdateFactionPolicyInput, UpdateFactionRankInput, UpdateFactionRelationInput,
-        UpdateNoteInput, UpdateProjectInput, UpdateRelationshipInput, UpdateTimelineEventInput,
+        ReplaceFactionCustomMetricsInput, ScenarioBranch, SetCharacterTagsInput,
+        SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput,
+        TimelineEvent, TimelineListInput, UpdateBranchInput, UpdateCharacterInput,
+        UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
+        UpdateFactionRankInput, UpdateFactionRelationInput, UpdateNoteInput, UpdateProjectInput,
+        UpdateRelationshipInput, UpdateTimelineEventInput,
     };
 
     #[tauri::command]
@@ -66,6 +71,46 @@ mod codegen_commands {
             app_version: String::new(),
         }
     }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn branches_list(_input: ListBranchesInput) -> Vec<ScenarioBranch> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn branches_create(input: CreateBranchInput) -> ScenarioBranch {
+        ScenarioBranch {
+            id: 0,
+            project_id: input.project_id,
+            name: input.name,
+            parent_branch_id: input.parent_branch_id,
+            base_revision: input.base_revision.unwrap_or(0),
+            is_main: false,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn branches_update(input: UpdateBranchInput) -> ScenarioBranch {
+        ScenarioBranch {
+            id: input.id,
+            project_id: 0,
+            name: input.name.unwrap_or_default(),
+            parent_branch_id: None,
+            base_revision: 0,
+            is_main: false,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn branches_delete(_input: DeleteBranchInput) {}
 
     #[tauri::command]
     #[specta::specta]
@@ -750,6 +795,10 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             codegen_commands::app_health,
+            codegen_commands::branches_list,
+            codegen_commands::branches_create,
+            codegen_commands::branches_update,
+            codegen_commands::branches_delete,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -809,6 +858,11 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::tags_delete
         ])
         .typ::<AppHealthResponse>()
+        .typ::<ScenarioBranch>()
+        .typ::<ListBranchesInput>()
+        .typ::<CreateBranchInput>()
+        .typ::<UpdateBranchInput>()
+        .typ::<DeleteBranchInput>()
         .typ::<Project>()
         .typ::<GetProjectInput>()
         .typ::<CreateProjectInput>()

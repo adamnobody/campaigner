@@ -1,7 +1,10 @@
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::error::{AppError, Result};
-use crate::models::branch::{BranchOverride, OverlayOperation, ScenarioBranch};
+use crate::models::branch::{
+    BranchOverride, CreateBranchInput, DeleteBranchInput, ListBranchesInput, OverlayOperation,
+    ScenarioBranch, UpdateBranchInput,
+};
 
 pub fn get_main_branch_id_for_project(
     connection: &Connection,
@@ -64,6 +67,85 @@ pub fn list_project_branches(
     let rows = statement.query_map(params![project_id], map_scenario_branch)?;
     rows.collect::<std::result::Result<Vec<_>, _>>()
         .map_err(Into::into)
+}
+
+pub fn list_branches(
+    connection: &Connection,
+    input: &ListBranchesInput,
+) -> Result<Vec<ScenarioBranch>> {
+    list_project_branches(connection, input.project_id)
+}
+
+pub fn create_branch(connection: &Connection, input: &CreateBranchInput) -> Result<ScenarioBranch> {
+    let name = input.name.trim();
+    if name.is_empty() {
+        return Err(AppError::internal(
+            "VALIDATION_ERROR",
+            "Branch name is required",
+        ));
+    }
+
+    connection.execute(
+        r#"
+        INSERT INTO scenario_branches (
+            project_id,
+            name,
+            parent_branch_id,
+            base_revision,
+            is_main,
+            created_at,
+            updated_at
+        )
+        VALUES (?1, ?2, ?3, ?4, 0, datetime('now'), datetime('now'))
+        "#,
+        params![
+            input.project_id,
+            name,
+            input.parent_branch_id,
+            input.base_revision.unwrap_or(0)
+        ],
+    )?;
+
+    let id = connection.last_insert_rowid() as i32;
+    get_branch_by_id(connection, id)?
+        .ok_or_else(|| AppError::internal("BRANCH_NOT_FOUND", "Scenario branch not found"))
+}
+
+pub fn update_branch(connection: &Connection, input: &UpdateBranchInput) -> Result<ScenarioBranch> {
+    get_branch_by_id(connection, input.id)?
+        .ok_or_else(|| AppError::internal("BRANCH_NOT_FOUND", "Scenario branch not found"))?;
+
+    if let Some(name) = input.name.as_deref() {
+        let trimmed = name.trim();
+        if !trimmed.is_empty() {
+            connection.execute(
+                r#"
+                UPDATE scenario_branches
+                SET name = ?1, updated_at = datetime('now')
+                WHERE id = ?2
+                "#,
+                params![trimmed, input.id],
+            )?;
+        }
+    }
+
+    get_branch_by_id(connection, input.id)?
+        .ok_or_else(|| AppError::internal("BRANCH_NOT_FOUND", "Scenario branch not found"))
+}
+
+pub fn delete_branch(connection: &Connection, input: &DeleteBranchInput) -> Result<()> {
+    let branch = get_branch_by_id(connection, input.id)?
+        .ok_or_else(|| AppError::internal("BRANCH_NOT_FOUND", "Scenario branch not found"))?;
+
+    if branch.is_main {
+        return Ok(());
+    }
+
+    connection.execute(
+        "DELETE FROM scenario_branches WHERE id = ?1",
+        params![input.id],
+    )?;
+    Ok(())
 }
 
 pub fn assert_branch_belongs_to_project(
@@ -290,5 +372,41 @@ mod tests {
 
         assert_eq!(effective.branch_id, 2);
         assert_eq!(effective.op, OverlayOperation::Upsert);
+    }
+
+    #[test]
+    fn branch_crud_matches_backend_semantics() {
+        let connection = setup_connection();
+
+        let created = create_branch(
+            &connection,
+            &CreateBranchInput {
+                project_id: 1,
+                name: "  Branch A  ".to_string(),
+                parent_branch_id: Some(1),
+                base_revision: None,
+            },
+        )
+        .expect("create branch");
+        assert_eq!(created.name, "Branch A");
+        assert_eq!(created.parent_branch_id, Some(1));
+        assert!(!created.is_main);
+        assert_eq!(created.base_revision, 0);
+
+        let updated = update_branch(
+            &connection,
+            &UpdateBranchInput {
+                id: created.id,
+                name: Some("Renamed".to_string()),
+            },
+        )
+        .expect("update branch");
+        assert_eq!(updated.name, "Renamed");
+
+        delete_branch(&connection, &DeleteBranchInput { id: 1 }).expect("delete main is noop");
+        assert!(get_branch_by_id(&connection, 1).unwrap().is_some());
+
+        delete_branch(&connection, &DeleteBranchInput { id: created.id }).expect("delete branch");
+        assert!(get_branch_by_id(&connection, created.id).unwrap().is_none());
     }
 }

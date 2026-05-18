@@ -5,6 +5,10 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	appHealth: () => __TAURI_INVOKE<AppHealthResponse>("app_health"),
+	branchesList: (input: ListBranchesInput) => __TAURI_INVOKE<ScenarioBranch[]>("branches_list", { input }),
+	branchesCreate: (input: CreateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_create", { input }),
+	branchesUpdate: (input: UpdateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_update", { input }),
+	branchesDelete: (input: DeleteBranchInput) => __TAURI_INVOKE<void>("branches_delete", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -152,6 +156,13 @@ export type CompareFactionsInput = {
 	metricKeys: string[],
 };
 
+export type CreateBranchInput = {
+	projectId: number,
+	name: string,
+	parentBranchId: number | null,
+	baseRevision: number | null,
+};
+
 export type CreateCharacterInput = {
 	projectId: number,
 	name: string,
@@ -295,6 +306,10 @@ export type CreateTimelineEventInput = {
 	eraColor: string | null,
 	linkedNoteId: number | null,
 	branchId: number | null,
+};
+
+export type DeleteBranchInput = {
+	id: number,
 };
 
 export type DeleteCharacterInput = {
@@ -552,6 +567,10 @@ export type IdNameRef = {
 	name: string,
 };
 
+export type ListBranchesInput = {
+	projectId: number,
+};
+
 export type ListFactionMembersInput = {
 	factionId: number,
 	branchId: number | null,
@@ -628,6 +647,17 @@ export type ReplaceFactionCustomMetricsInput = {
 	branchId: number | null,
 };
 
+export type ScenarioBranch = {
+	id: number,
+	projectId: number,
+	name: string,
+	parentBranchId: number | null,
+	baseRevision: number,
+	isMain: boolean,
+	createdAt: string,
+	updatedAt: string,
+};
+
 export type SetCharacterTagsInput = {
 	id: number,
 	tagIds: number[],
@@ -681,6 +711,11 @@ export type TimelineListInput = {
 	projectId: number,
 	era: string | null,
 	branchId: number | null,
+};
+
+export type UpdateBranchInput = {
+	id: number,
+	name: string | null,
 };
 
 export type UpdateCharacterInput = {

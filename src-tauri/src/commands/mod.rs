@@ -1,4 +1,5 @@
 pub mod app;
+pub mod branches;
 pub mod characters;
 pub mod factions;
 pub mod notes;

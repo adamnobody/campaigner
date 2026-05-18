@@ -24,6 +24,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::app_health_command,
+            commands::branches::branches_list_command,
+            commands::branches::branches_create_command,
+            commands::branches::branches_update_command,
+            commands::branches::branches_delete_command,
             commands::characters::characters_list_command,
             commands::characters::characters_get_command,
             commands::characters::characters_create_command,

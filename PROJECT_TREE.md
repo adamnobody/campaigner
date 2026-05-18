@@ -564,25 +564,56 @@ campaigner
 │  │  └─ icon.ico
 │  ├─ migrations
 │  │  ├─ 000_init.sql
-│  │  └─ 001_tags.sql
+│  │  ├─ 001_tags.sql
+│  │  ├─ 002_projects.sql
+│  │  ├─ 003_branch_foundation.sql
+│  │  ├─ 004_tag_associations.sql
+│  │  ├─ 005_notes.sql
+│  │  ├─ 006_timeline.sql
+│  │  ├─ 007_characters.sql
+│  │  └─ 008_factions.sql
 │  ├─ src
 │  │  ├─ bin
 │  │  │  └─ codegen.rs
 │  │  ├─ commands
 │  │  │  ├─ app.rs
+│  │  │  ├─ characters.rs
+│  │  │  ├─ factions.rs
 │  │  │  ├─ mod.rs
-│  │  │  └─ tags.rs
+│  │  │  ├─ notes.rs
+│  │  │  ├─ projects.rs
+│  │  │  ├─ tags.rs
+│  │  │  └─ timeline.rs
 │  │  ├─ db
 │  │  │  ├─ connection.rs
 │  │  │  ├─ migrations.rs
 │  │  │  └─ mod.rs
 │  │  ├─ models
 │  │  │  ├─ app.rs
+│  │  │  ├─ branch.rs
+│  │  │  ├─ character.rs
+│  │  │  ├─ faction.rs
 │  │  │  ├─ mod.rs
-│  │  │  └─ tag.rs
+│  │  │  ├─ note.rs
+│  │  │  ├─ project.rs
+│  │  │  ├─ tag_association.rs
+│  │  │  ├─ tag.rs
+│  │  │  └─ timeline.rs
 │  │  ├─ repositories
+│  │  │  ├─ branches.rs
+│  │  │  ├─ characters.rs
+│  │  │  ├─ factions.rs
 │  │  │  ├─ mod.rs
-│  │  │  └─ tags.rs
+│  │  │  ├─ notes.rs
+│  │  │  ├─ projects.rs
+│  │  │  ├─ tag_associations.rs
+│  │  │  ├─ tags.rs
+│  │  │  └─ timeline.rs
+│  │  ├─ services
+│  │  │  ├─ branch_overlay.rs
+│  │  │  ├─ branch_scope.rs
+│  │  │  ├─ mod.rs
+│  │  │  └─ tag_associations.rs
 │  │  ├─ error.rs
 │  │  ├─ lib.rs
 │  │  ├─ main.rs
@@ -595,6 +626,7 @@ campaigner
 │  └─ tauri.conf.json
 ├─ .gitignore
 ├─ LICENSE
+├─ MIGRATION-PROMPT.md
 ├─ package.json
 ├─ README.md
 ├─ start.bat
