@@ -23,6 +23,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::app_health_command,
+            commands::projects::projects_list_command,
+            commands::projects::projects_get_command,
+            commands::projects::projects_create_command,
+            commands::projects::projects_update_command,
+            commands::projects::projects_delete_command,
             commands::tags::tags_list_command,
             commands::tags::tags_create_command,
             commands::tags::tags_delete_command

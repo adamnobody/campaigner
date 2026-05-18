@@ -5,6 +5,11 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	appHealth: () => __TAURI_INVOKE<AppHealthResponse>("app_health"),
+	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
+	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
+	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
+	projectsUpdate: (input: UpdateProjectInput) => __TAURI_INVOKE<Project>("projects_update", { input }),
+	projectsDelete: (input: DeleteProjectInput) => __TAURI_INVOKE<void>("projects_delete", { input }),
 	tagsList: (input: TagsListInput) => __TAURI_INVOKE<Tag[]>("tags_list", { input }),
 	tagsCreate: (input: CreateTagInput) => __TAURI_INVOKE<Tag>("tags_create", { input }),
 	tagsDelete: (input: DeleteTagInput) => __TAURI_INVOKE<void>("tags_delete", { input }),
@@ -17,14 +22,39 @@ export type AppHealthResponse = {
 	appVersion: string,
 };
 
+export type CreateProjectInput = {
+	name: string,
+	description: string | null,
+	status: string | null,
+	mainBranchName: string | null,
+};
+
 export type CreateTagInput = {
 	projectId: number,
 	name: string,
 	color: string | null,
 };
 
+export type DeleteProjectInput = {
+	id: number,
+};
+
 export type DeleteTagInput = {
 	id: number,
+};
+
+export type GetProjectInput = {
+	id: number,
+};
+
+export type Project = {
+	id: number,
+	name: string,
+	description: string,
+	status: string,
+	mapImagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
 };
 
 export type Tag = {
@@ -35,5 +65,13 @@ export type Tag = {
 
 export type TagsListInput = {
 	projectId: number,
+};
+
+export type UpdateProjectInput = {
+	id: number,
+	name: string | null,
+	description: string | null,
+	status: string | null,
+	mapImagePath: string | null,
 };
 
