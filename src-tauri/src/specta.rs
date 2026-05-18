@@ -10,6 +10,17 @@ use crate::models::character::{
     GetCharacterInput, RelationshipsListInput, SetCharacterTagsInput, UpdateCharacterInput,
     UpdateRelationshipInput,
 };
+use crate::models::faction::{
+    CompareFactionsInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
+    CreateFactionRankInput, CreateFactionRelationInput, DeleteFactionInput,
+    DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
+    DeleteFactionRelationInput, Faction, FactionCompareResult, FactionCustomMetric, FactionGraph,
+    FactionMember, FactionPolicy, FactionRank, FactionRelation, FactionsListInput,
+    FactionsListResult, FactionsRelationsListInput, GetFactionInput, ListFactionMembersInput,
+    ListFactionPoliciesInput, ListFactionRanksInput, ReplaceFactionCustomMetricsInput,
+    SetFactionTagsInput, UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
+    UpdateFactionRankInput, UpdateFactionRelationInput,
+};
 use crate::models::note::{
     CreateNoteInput, DeleteNoteInput, GetNoteInput, Note, NotesListInput, NotesListResult,
     SetNoteTagsInput, UpdateNoteInput,
@@ -27,15 +38,23 @@ use crate::models::timeline::{
 mod codegen_commands {
     use super::{
         AppHealthResponse, Character, CharacterGraph, CharacterRelationship, CharactersListInput,
-        CharactersListResult, CreateCharacterInput, CreateNoteInput, CreateProjectInput,
-        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteCharacterInput,
-        DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput,
-        DeleteTimelineEventInput, GetCharacterInput, GetNoteInput, GetProjectInput,
-        GetTimelineEventInput, Note, NotesListInput, NotesListResult, Project,
-        RelationshipsListInput, ReorderTimelineInput, SetCharacterTagsInput, SetNoteTagsInput,
-        SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent, TimelineListInput,
-        UpdateCharacterInput, UpdateNoteInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput,
+        CharactersListResult, CompareFactionsInput, CreateCharacterInput, CreateFactionInput,
+        CreateFactionMemberInput, CreateFactionPolicyInput, CreateFactionRankInput,
+        CreateFactionRelationInput, CreateNoteInput, CreateProjectInput, CreateRelationshipInput,
+        CreateTagInput, CreateTimelineEventInput, DeleteCharacterInput, DeleteFactionInput,
+        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
+        DeleteFactionRelationInput, DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput,
+        DeleteTagInput, DeleteTimelineEventInput, Faction, FactionCompareResult,
+        FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy, FactionRank,
+        FactionRelation, FactionsListInput, FactionsListResult, FactionsRelationsListInput,
+        GetCharacterInput, GetFactionInput, GetNoteInput, GetProjectInput, GetTimelineEventInput,
+        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput, Note,
+        NotesListInput, NotesListResult, Project, RelationshipsListInput, ReorderTimelineInput,
+        ReplaceFactionCustomMetricsInput, SetCharacterTagsInput, SetFactionTagsInput,
+        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
+        TimelineListInput, UpdateCharacterInput, UpdateFactionInput, UpdateFactionMemberInput,
+        UpdateFactionPolicyInput, UpdateFactionRankInput, UpdateFactionRelationInput,
+        UpdateNoteInput, UpdateProjectInput, UpdateRelationshipInput, UpdateTimelineEventInput,
     };
 
     #[tauri::command]
@@ -285,6 +304,294 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
+    pub fn factions_list(_input: FactionsListInput) -> FactionsListResult {
+        FactionsListResult {
+            items: Vec::new(),
+            total: 0,
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_get(_input: GetFactionInput) -> Faction {
+        Faction {
+            id: 0,
+            project_id: 0,
+            name: String::new(),
+            kind: "faction".to_string(),
+            r#type: None,
+            motto: String::new(),
+            description: String::new(),
+            history: String::new(),
+            goals: String::new(),
+            headquarters: String::new(),
+            territory: String::new(),
+            ruling_dynasty_id: None,
+            ruler_character_id: None,
+            treasury: None,
+            population: None,
+            army_size: None,
+            navy_size: None,
+            territory_km2: None,
+            annual_income: None,
+            annual_expenses: None,
+            members_count: None,
+            influence: None,
+            status: "active".to_string(),
+            color: String::new(),
+            secondary_color: String::new(),
+            image_path: String::new(),
+            banner_path: String::new(),
+            founded_date: String::new(),
+            disbanded_date: String::new(),
+            parent_faction_id: None,
+            sort_order: 0,
+            created_at: String::new(),
+            updated_at: String::new(),
+            tags: Vec::new(),
+            custom_metrics: Vec::new(),
+            ranks: Vec::new(),
+            members: Vec::new(),
+            member_count: 0,
+            parent_faction: None,
+            child_factions: Vec::new(),
+            ruling_dynasty: None,
+            ruler: None,
+            territories: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_create(_input: CreateFactionInput) -> Faction {
+        factions_get(GetFactionInput {
+            id: 0,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_update(_input: UpdateFactionInput) -> Faction {
+        factions_get(GetFactionInput {
+            id: 0,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_delete(_input: DeleteFactionInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_set_tags(_input: SetFactionTagsInput) -> Vec<Tag> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_ranks_list(_input: ListFactionRanksInput) -> Vec<FactionRank> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_ranks_create(_input: CreateFactionRankInput) -> FactionRank {
+        FactionRank {
+            id: 0,
+            faction_id: 0,
+            name: String::new(),
+            level: 0,
+            description: String::new(),
+            permissions: String::new(),
+            icon: String::new(),
+            color: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_ranks_update(_input: UpdateFactionRankInput) -> FactionRank {
+        factions_ranks_create(CreateFactionRankInput {
+            faction_id: 0,
+            name: String::new(),
+            level: None,
+            description: None,
+            permissions: None,
+            icon: None,
+            color: None,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_ranks_delete(_input: DeleteFactionRankInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_members_list(_input: ListFactionMembersInput) -> Vec<FactionMember> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_members_create(_input: CreateFactionMemberInput) -> FactionMember {
+        FactionMember {
+            id: 0,
+            faction_id: 0,
+            character_id: 0,
+            rank_id: None,
+            role: String::new(),
+            joined_date: String::new(),
+            left_date: String::new(),
+            is_active: true,
+            notes: String::new(),
+            character_name: String::new(),
+            character_image_path: String::new(),
+            rank_name: String::new(),
+            rank_level: None,
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_members_update(_input: UpdateFactionMemberInput) -> FactionMember {
+        factions_members_create(CreateFactionMemberInput {
+            faction_id: 0,
+            character_id: 0,
+            rank_id: None,
+            role: None,
+            joined_date: None,
+            left_date: None,
+            is_active: None,
+            notes: None,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_members_delete(_input: DeleteFactionMemberInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_custom_metrics_replace(
+        _input: ReplaceFactionCustomMetricsInput,
+    ) -> Vec<FactionCustomMetric> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_compare(_input: CompareFactionsInput) -> FactionCompareResult {
+        FactionCompareResult {
+            factions: Vec::new(),
+            metrics: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_relations_list(_input: FactionsRelationsListInput) -> Vec<FactionRelation> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_relations_create(_input: CreateFactionRelationInput) -> FactionRelation {
+        FactionRelation {
+            id: 0,
+            project_id: 0,
+            source_faction_id: 0,
+            target_faction_id: 0,
+            relation_type: "neutral".to_string(),
+            custom_label: String::new(),
+            description: String::new(),
+            started_date: String::new(),
+            is_bidirectional: true,
+            created_at: String::new(),
+            source_faction_name: String::new(),
+            target_faction_name: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_relations_update(_input: UpdateFactionRelationInput) -> FactionRelation {
+        factions_relations_create(CreateFactionRelationInput {
+            project_id: 0,
+            source_faction_id: 0,
+            target_faction_id: 0,
+            relation_type: None,
+            custom_label: None,
+            description: None,
+            started_date: None,
+            is_bidirectional: None,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_relations_delete(_input: DeleteFactionRelationInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_graph(_input: FactionsRelationsListInput) -> FactionGraph {
+        FactionGraph {
+            nodes: Vec::new(),
+            edges: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_policies_list(_input: ListFactionPoliciesInput) -> Vec<FactionPolicy> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_policies_create(_input: CreateFactionPolicyInput) -> FactionPolicy {
+        FactionPolicy {
+            id: 0,
+            faction_id: 0,
+            title: String::new(),
+            r#type: "policy".to_string(),
+            status: "active".to_string(),
+            category: "other".to_string(),
+            enacted_date: None,
+            description: String::new(),
+            sort_order: 0,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_policies_update(_input: UpdateFactionPolicyInput) -> FactionPolicy {
+        factions_policies_create(CreateFactionPolicyInput {
+            faction_id: 0,
+            title: String::new(),
+            r#type: "policy".to_string(),
+            status: None,
+            category: None,
+            enacted_date: None,
+            description: None,
+            sort_order: None,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_policies_delete(_input: DeleteFactionPolicyInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
     pub fn notes_list(_input: NotesListInput) -> NotesListResult {
         NotesListResult {
             items: Vec::new(),
@@ -459,6 +766,31 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::characters_relationships_update,
             codegen_commands::characters_relationships_delete,
             codegen_commands::characters_graph,
+            codegen_commands::factions_list,
+            codegen_commands::factions_get,
+            codegen_commands::factions_create,
+            codegen_commands::factions_update,
+            codegen_commands::factions_delete,
+            codegen_commands::factions_set_tags,
+            codegen_commands::factions_ranks_list,
+            codegen_commands::factions_ranks_create,
+            codegen_commands::factions_ranks_update,
+            codegen_commands::factions_ranks_delete,
+            codegen_commands::factions_members_list,
+            codegen_commands::factions_members_create,
+            codegen_commands::factions_members_update,
+            codegen_commands::factions_members_delete,
+            codegen_commands::factions_custom_metrics_replace,
+            codegen_commands::factions_compare,
+            codegen_commands::factions_relations_list,
+            codegen_commands::factions_relations_create,
+            codegen_commands::factions_relations_update,
+            codegen_commands::factions_relations_delete,
+            codegen_commands::factions_graph,
+            codegen_commands::factions_policies_list,
+            codegen_commands::factions_policies_create,
+            codegen_commands::factions_policies_update,
+            codegen_commands::factions_policies_delete,
             codegen_commands::notes_list,
             codegen_commands::notes_get,
             codegen_commands::notes_create,
@@ -496,6 +828,39 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<UpdateRelationshipInput>()
         .typ::<DeleteRelationshipInput>()
         .typ::<CharacterGraph>()
+        .typ::<Faction>()
+        .typ::<FactionsListInput>()
+        .typ::<FactionsListResult>()
+        .typ::<GetFactionInput>()
+        .typ::<CreateFactionInput>()
+        .typ::<UpdateFactionInput>()
+        .typ::<DeleteFactionInput>()
+        .typ::<SetFactionTagsInput>()
+        .typ::<FactionRank>()
+        .typ::<ListFactionRanksInput>()
+        .typ::<CreateFactionRankInput>()
+        .typ::<UpdateFactionRankInput>()
+        .typ::<DeleteFactionRankInput>()
+        .typ::<FactionMember>()
+        .typ::<ListFactionMembersInput>()
+        .typ::<CreateFactionMemberInput>()
+        .typ::<UpdateFactionMemberInput>()
+        .typ::<DeleteFactionMemberInput>()
+        .typ::<FactionCustomMetric>()
+        .typ::<ReplaceFactionCustomMetricsInput>()
+        .typ::<CompareFactionsInput>()
+        .typ::<FactionCompareResult>()
+        .typ::<FactionRelation>()
+        .typ::<FactionsRelationsListInput>()
+        .typ::<CreateFactionRelationInput>()
+        .typ::<UpdateFactionRelationInput>()
+        .typ::<DeleteFactionRelationInput>()
+        .typ::<FactionGraph>()
+        .typ::<FactionPolicy>()
+        .typ::<ListFactionPoliciesInput>()
+        .typ::<CreateFactionPolicyInput>()
+        .typ::<UpdateFactionPolicyInput>()
+        .typ::<DeleteFactionPolicyInput>()
         .typ::<Note>()
         .typ::<NotesListInput>()
         .typ::<NotesListResult>()

@@ -21,6 +21,31 @@ export const commands = {
 	charactersRelationshipsUpdate: (input: UpdateRelationshipInput) => __TAURI_INVOKE<CharacterRelationship>("characters_relationships_update", { input }),
 	charactersRelationshipsDelete: (input: DeleteRelationshipInput) => __TAURI_INVOKE<void>("characters_relationships_delete", { input }),
 	charactersGraph: (input: RelationshipsListInput) => __TAURI_INVOKE<CharacterGraph>("characters_graph", { input }),
+	factionsList: (input: FactionsListInput) => __TAURI_INVOKE<FactionsListResult>("factions_list", { input }),
+	factionsGet: (input: GetFactionInput) => __TAURI_INVOKE<Faction>("factions_get", { input }),
+	factionsCreate: (input: CreateFactionInput) => __TAURI_INVOKE<Faction>("factions_create", { input }),
+	factionsUpdate: (input: UpdateFactionInput) => __TAURI_INVOKE<Faction>("factions_update", { input }),
+	factionsDelete: (input: DeleteFactionInput) => __TAURI_INVOKE<void>("factions_delete", { input }),
+	factionsSetTags: (input: SetFactionTagsInput) => __TAURI_INVOKE<Tag[]>("factions_set_tags", { input }),
+	factionsRanksList: (input: ListFactionRanksInput) => __TAURI_INVOKE<FactionRank[]>("factions_ranks_list", { input }),
+	factionsRanksCreate: (input: CreateFactionRankInput) => __TAURI_INVOKE<FactionRank>("factions_ranks_create", { input }),
+	factionsRanksUpdate: (input: UpdateFactionRankInput) => __TAURI_INVOKE<FactionRank>("factions_ranks_update", { input }),
+	factionsRanksDelete: (input: DeleteFactionRankInput) => __TAURI_INVOKE<void>("factions_ranks_delete", { input }),
+	factionsMembersList: (input: ListFactionMembersInput) => __TAURI_INVOKE<FactionMember[]>("factions_members_list", { input }),
+	factionsMembersCreate: (input: CreateFactionMemberInput) => __TAURI_INVOKE<FactionMember>("factions_members_create", { input }),
+	factionsMembersUpdate: (input: UpdateFactionMemberInput) => __TAURI_INVOKE<FactionMember>("factions_members_update", { input }),
+	factionsMembersDelete: (input: DeleteFactionMemberInput) => __TAURI_INVOKE<void>("factions_members_delete", { input }),
+	factionsCustomMetricsReplace: (input: ReplaceFactionCustomMetricsInput) => __TAURI_INVOKE<FactionCustomMetric[]>("factions_custom_metrics_replace", { input }),
+	factionsCompare: (input: CompareFactionsInput) => __TAURI_INVOKE<FactionCompareResult>("factions_compare", { input }),
+	factionsRelationsList: (input: FactionsRelationsListInput) => __TAURI_INVOKE<FactionRelation[]>("factions_relations_list", { input }),
+	factionsRelationsCreate: (input: CreateFactionRelationInput) => __TAURI_INVOKE<FactionRelation>("factions_relations_create", { input }),
+	factionsRelationsUpdate: (input: UpdateFactionRelationInput) => __TAURI_INVOKE<FactionRelation>("factions_relations_update", { input }),
+	factionsRelationsDelete: (input: DeleteFactionRelationInput) => __TAURI_INVOKE<void>("factions_relations_delete", { input }),
+	factionsGraph: (input: FactionsRelationsListInput) => __TAURI_INVOKE<FactionGraph>("factions_graph", { input }),
+	factionsPoliciesList: (input: ListFactionPoliciesInput) => __TAURI_INVOKE<FactionPolicy[]>("factions_policies_list", { input }),
+	factionsPoliciesCreate: (input: CreateFactionPolicyInput) => __TAURI_INVOKE<FactionPolicy>("factions_policies_create", { input }),
+	factionsPoliciesUpdate: (input: UpdateFactionPolicyInput) => __TAURI_INVOKE<FactionPolicy>("factions_policies_update", { input }),
+	factionsPoliciesDelete: (input: DeleteFactionPolicyInput) => __TAURI_INVOKE<void>("factions_policies_delete", { input }),
 	notesList: (input: NotesListInput) => __TAURI_INVOKE<NotesListResult>("notes_list", { input }),
 	notesGet: (input: GetNoteInput) => __TAURI_INVOKE<Note>("notes_get", { input }),
 	notesCreate: (input: CreateNoteInput) => __TAURI_INVOKE<Note>("notes_create", { input }),
@@ -122,6 +147,11 @@ export type CharactersListResult = {
 	totalPages: number,
 };
 
+export type CompareFactionsInput = {
+	factionIds: number[],
+	metricKeys: string[],
+};
+
 export type CreateCharacterInput = {
 	projectId: number,
 	name: string,
@@ -137,6 +167,86 @@ export type CreateCharacterInput = {
 	notes: string | null,
 	stateId: number | null,
 	factionIds: number[] | null,
+	branchId: number | null,
+};
+
+export type CreateFactionInput = {
+	projectId: number,
+	name: string,
+	kind: string | null,
+	type: string | null,
+	motto: string | null,
+	description: string | null,
+	history: string | null,
+	goals: string | null,
+	headquarters: string | null,
+	territory: string | null,
+	rulingDynastyId: number | null,
+	rulerCharacterId: number | null,
+	territoryIds: number[] | null,
+	treasury: number | null,
+	population: number | null,
+	armySize: number | null,
+	navySize: number | null,
+	territoryKm2: number | null,
+	annualIncome: number | null,
+	annualExpenses: number | null,
+	membersCount: number | null,
+	influence: number | null,
+	status: string | null,
+	color: string | null,
+	secondaryColor: string | null,
+	foundedDate: string | null,
+	disbandedDate: string | null,
+	parentFactionId: number | null,
+	sortOrder: number | null,
+	branchId: number | null,
+};
+
+export type CreateFactionMemberInput = {
+	factionId: number,
+	characterId: number,
+	rankId: number | null,
+	role: string | null,
+	joinedDate: string | null,
+	leftDate: string | null,
+	isActive: boolean | null,
+	notes: string | null,
+	branchId: number | null,
+};
+
+export type CreateFactionPolicyInput = {
+	factionId: number,
+	title: string,
+	type: string,
+	status: string | null,
+	category: string | null,
+	enactedDate: string | null,
+	description: string | null,
+	sortOrder: number | null,
+	branchId: number | null,
+};
+
+export type CreateFactionRankInput = {
+	factionId: number,
+	name: string,
+	level: number | null,
+	description: string | null,
+	permissions: string | null,
+	icon: string | null,
+	color: string | null,
+	branchId: number | null,
+};
+
+export type CreateFactionRelationInput = {
+	projectId: number,
+	sourceFactionId: number,
+	targetFactionId: number,
+	relationType: string | null,
+	customLabel: string | null,
+	description: string | null,
+	startedDate: string | null,
+	isBidirectional: boolean | null,
 	branchId: number | null,
 };
 
@@ -192,6 +302,32 @@ export type DeleteCharacterInput = {
 	branchId: number | null,
 };
 
+export type DeleteFactionInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type DeleteFactionMemberInput = {
+	factionId: number,
+	memberId: number,
+};
+
+export type DeleteFactionPolicyInput = {
+	factionId: number,
+	policyId: number,
+	branchId: number | null,
+};
+
+export type DeleteFactionRankInput = {
+	factionId: number,
+	rankId: number,
+	branchId: number | null,
+};
+
+export type DeleteFactionRelationInput = {
+	relationId: number,
+};
+
 export type DeleteNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -215,7 +351,184 @@ export type DeleteTimelineEventInput = {
 	branchId: number | null,
 };
 
+export type Faction = {
+	id: number,
+	projectId: number,
+	name: string,
+	kind: string,
+	type: string | null,
+	motto: string,
+	description: string,
+	history: string,
+	goals: string,
+	headquarters: string,
+	territory: string,
+	rulingDynastyId: number | null,
+	rulerCharacterId: number | null,
+	treasury: number | null,
+	population: number | null,
+	armySize: number | null,
+	navySize: number | null,
+	territoryKm2: number | null,
+	annualIncome: number | null,
+	annualExpenses: number | null,
+	membersCount: number | null,
+	influence: number | null,
+	status: string,
+	color: string,
+	secondaryColor: string,
+	imagePath: string,
+	bannerPath: string,
+	foundedDate: string,
+	disbandedDate: string,
+	parentFactionId: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+	tags: Tag[],
+	customMetrics: FactionCustomMetric[],
+	ranks: FactionRank[],
+	members: FactionMember[],
+	memberCount: number,
+	parentFaction: IdNameRef | null,
+	childFactions: IdNameRef[],
+	rulingDynasty: IdNameRef | null,
+	ruler: IdNameRef | null,
+	territories: IdNameRef[],
+};
+
+export type FactionCompareEntity = {
+	id: number,
+	name: string,
+	kind: string,
+};
+
+export type FactionCompareMetric = {
+	key: string,
+	label: string,
+	unit: string | null,
+	values: FactionCompareMetricValue[],
+};
+
+export type FactionCompareMetricValue = {
+	factionId: number,
+	value: number | null,
+};
+
+export type FactionCompareResult = {
+	factions: FactionCompareEntity[],
+	metrics: FactionCompareMetric[],
+};
+
+export type FactionCustomMetric = {
+	id: number,
+	factionId: number,
+	name: string,
+	value: number | null,
+	unit: string | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type FactionGraph = {
+	nodes: FactionGraphNode[],
+	edges: FactionRelation[],
+};
+
+export type FactionGraphNode = {
+	id: number,
+	name: string,
+	kind: string,
+	type: string | null,
+	status: string,
+	color: string,
+	imagePath: string,
+	memberCount: number,
+};
+
+export type FactionMember = {
+	id: number,
+	factionId: number,
+	characterId: number,
+	rankId: number | null,
+	role: string,
+	joinedDate: string,
+	leftDate: string,
+	isActive: boolean,
+	notes: string,
+	characterName: string,
+	characterImagePath: string,
+	rankName: string,
+	rankLevel: number | null,
+};
+
+export type FactionPolicy = {
+	id: number,
+	factionId: number,
+	title: string,
+	type: string,
+	status: string,
+	category: string,
+	enactedDate: string | null,
+	description: string,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type FactionRank = {
+	id: number,
+	factionId: number,
+	name: string,
+	level: number,
+	description: string,
+	permissions: string,
+	icon: string,
+	color: string,
+};
+
+export type FactionRelation = {
+	id: number,
+	projectId: number,
+	sourceFactionId: number,
+	targetFactionId: number,
+	relationType: string,
+	customLabel: string,
+	description: string,
+	startedDate: string,
+	isBidirectional: boolean,
+	createdAt: string,
+	sourceFactionName: string,
+	targetFactionName: string,
+};
+
+export type FactionsListInput = {
+	projectId: number,
+	kind: string | null,
+	status: string | null,
+	search: string | null,
+	limit: number | null,
+	offset: number | null,
+	branchId: number | null,
+};
+
+export type FactionsListResult = {
+	items: Faction[],
+	total: number,
+};
+
+export type FactionsRelationsListInput = {
+	projectId: number,
+	branchId: number | null,
+};
+
 export type GetCharacterInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type GetFactionInput = {
 	id: number,
 	branchId: number | null,
 };
@@ -231,6 +544,26 @@ export type GetProjectInput = {
 
 export type GetTimelineEventInput = {
 	id: number,
+	branchId: number | null,
+};
+
+export type IdNameRef = {
+	id: number,
+	name: string,
+};
+
+export type ListFactionMembersInput = {
+	factionId: number,
+	branchId: number | null,
+};
+
+export type ListFactionPoliciesInput = {
+	factionId: number,
+	branchId: number | null,
+};
+
+export type ListFactionRanksInput = {
+	factionId: number,
 	branchId: number | null,
 };
 
@@ -289,7 +622,19 @@ export type ReorderTimelineInput = {
 	branchId: number | null,
 };
 
+export type ReplaceFactionCustomMetricsInput = {
+	factionId: number,
+	metrics: UpsertFactionCustomMetricInput[],
+	branchId: number | null,
+};
+
 export type SetCharacterTagsInput = {
+	id: number,
+	tagIds: number[],
+	branchId: number | null,
+};
+
+export type SetFactionTagsInput = {
 	id: number,
 	tagIds: number[],
 	branchId: number | null,
@@ -356,6 +701,84 @@ export type UpdateCharacterInput = {
 	branchId: number | null,
 };
 
+export type UpdateFactionInput = {
+	id: number,
+	name: string | null,
+	kind: string | null,
+	type: string | null,
+	motto: string | null,
+	description: string | null,
+	history: string | null,
+	goals: string | null,
+	headquarters: string | null,
+	territory: string | null,
+	rulingDynastyId: number | null,
+	rulerCharacterId: number | null,
+	territoryIds: number[] | null,
+	treasury: number | null,
+	population: number | null,
+	armySize: number | null,
+	navySize: number | null,
+	territoryKm2: number | null,
+	annualIncome: number | null,
+	annualExpenses: number | null,
+	membersCount: number | null,
+	influence: number | null,
+	status: string | null,
+	color: string | null,
+	secondaryColor: string | null,
+	foundedDate: string | null,
+	disbandedDate: string | null,
+	parentFactionId: number | null,
+	sortOrder: number | null,
+	branchId: number | null,
+};
+
+export type UpdateFactionMemberInput = {
+	factionId: number,
+	memberId: number,
+	rankId: number | null,
+	role: string | null,
+	joinedDate: string | null,
+	leftDate: string | null,
+	isActive: boolean | null,
+	notes: string | null,
+};
+
+export type UpdateFactionPolicyInput = {
+	factionId: number,
+	policyId: number,
+	title: string | null,
+	type: string | null,
+	status: string | null,
+	category: string | null,
+	enactedDate: string | null,
+	description: string | null,
+	sortOrder: number | null,
+	branchId: number | null,
+};
+
+export type UpdateFactionRankInput = {
+	factionId: number,
+	rankId: number,
+	name: string | null,
+	level: number | null,
+	description: string | null,
+	permissions: string | null,
+	icon: string | null,
+	color: string | null,
+	branchId: number | null,
+};
+
+export type UpdateFactionRelationInput = {
+	relationId: number,
+	relationType: string | null,
+	customLabel: string | null,
+	description: string | null,
+	startedDate: string | null,
+	isBidirectional: boolean | null,
+};
+
 export type UpdateNoteInput = {
 	id: number,
 	title: string | null,
@@ -394,5 +817,13 @@ export type UpdateTimelineEventInput = {
 	eraColor: string | null,
 	linkedNoteId: number | null,
 	branchId: number | null,
+};
+
+export type UpsertFactionCustomMetricInput = {
+	id: number | null,
+	name: string,
+	value: number | null,
+	unit: string | null,
+	sortOrder: number | null,
 };
 
