@@ -1,9 +1,10 @@
 mod commands;
 mod db;
 mod error;
-mod models;
+pub mod models;
 mod paths;
-mod repositories;
+pub mod repositories;
+pub mod services;
 pub mod specta;
 
 use db::connection::{open_database, DatabaseState};
