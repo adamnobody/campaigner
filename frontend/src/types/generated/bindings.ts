@@ -10,6 +10,12 @@ export const commands = {
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
 	projectsUpdate: (input: UpdateProjectInput) => __TAURI_INVOKE<Project>("projects_update", { input }),
 	projectsDelete: (input: DeleteProjectInput) => __TAURI_INVOKE<void>("projects_delete", { input }),
+	notesList: (input: NotesListInput) => __TAURI_INVOKE<NotesListResult>("notes_list", { input }),
+	notesGet: (input: GetNoteInput) => __TAURI_INVOKE<Note>("notes_get", { input }),
+	notesCreate: (input: CreateNoteInput) => __TAURI_INVOKE<Note>("notes_create", { input }),
+	notesUpdate: (input: UpdateNoteInput) => __TAURI_INVOKE<Note>("notes_update", { input }),
+	notesDelete: (input: DeleteNoteInput) => __TAURI_INVOKE<void>("notes_delete", { input }),
+	notesSetTags: (input: SetNoteTagsInput) => __TAURI_INVOKE<Tag[]>("notes_set_tags", { input }),
 	tagsList: (input: TagsListInput) => __TAURI_INVOKE<Tag[]>("tags_list", { input }),
 	tagsCreate: (input: CreateTagInput) => __TAURI_INVOKE<Tag>("tags_create", { input }),
 	tagsDelete: (input: DeleteTagInput) => __TAURI_INVOKE<void>("tags_delete", { input }),
@@ -20,6 +26,17 @@ export type AppHealthResponse = {
 	status: string,
 	database: string,
 	appVersion: string,
+};
+
+export type CreateNoteInput = {
+	projectId: number,
+	folderId: number | null,
+	title: string,
+	content: string | null,
+	format: string | null,
+	noteType: string | null,
+	isPinned: boolean | null,
+	branchId: number | null,
 };
 
 export type CreateProjectInput = {
@@ -35,6 +52,11 @@ export type CreateTagInput = {
 	color: string | null,
 };
 
+export type DeleteNoteInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type DeleteProjectInput = {
 	id: number,
 };
@@ -43,8 +65,47 @@ export type DeleteTagInput = {
 	id: number,
 };
 
+export type GetNoteInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type GetProjectInput = {
 	id: number,
+};
+
+export type Note = {
+	id: number,
+	projectId: number,
+	folderId: number | null,
+	title: string,
+	content: string,
+	format: string,
+	noteType: string,
+	isPinned: boolean,
+	createdAt: string,
+	updatedAt: string,
+	tags: Tag[],
+};
+
+export type NotesListInput = {
+	projectId: number,
+	page: number | null,
+	limit: number | null,
+	search: string | null,
+	sortBy: string | null,
+	sortOrder: string | null,
+	noteType: string | null,
+	folderId: number | null,
+	branchId: number | null,
+};
+
+export type NotesListResult = {
+	items: Note[],
+	total: number,
+	page: number,
+	limit: number,
+	totalPages: number,
 };
 
 export type Project = {
@@ -57,6 +118,12 @@ export type Project = {
 	updatedAt: string,
 };
 
+export type SetNoteTagsInput = {
+	id: number,
+	tagIds: number[],
+	branchId: number | null,
+};
+
 export type Tag = {
 	id: number,
 	name: string,
@@ -65,6 +132,17 @@ export type Tag = {
 
 export type TagsListInput = {
 	projectId: number,
+};
+
+export type UpdateNoteInput = {
+	id: number,
+	title: string | null,
+	content: string | null,
+	format: string | null,
+	noteType: string | null,
+	folderId: number | null,
+	isPinned: boolean | null,
+	branchId: number | null,
 };
 
 export type UpdateProjectInput = {

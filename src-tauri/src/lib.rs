@@ -29,6 +29,12 @@ pub fn run() {
             commands::projects::projects_create_command,
             commands::projects::projects_update_command,
             commands::projects::projects_delete_command,
+            commands::notes::notes_list_command,
+            commands::notes::notes_get_command,
+            commands::notes::notes_create_command,
+            commands::notes::notes_update_command,
+            commands::notes::notes_delete_command,
+            commands::notes::notes_set_tags_command,
             commands::tags::tags_list_command,
             commands::tags::tags_create_command,
             commands::tags::tags_delete_command
