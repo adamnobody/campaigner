@@ -23,7 +23,7 @@ export const getAppHealth = async (): Promise<AppHealthResponse> => {
   const response = await transport.request<AppHealthResponse | ExpressHealthResponse>({
     http: {
       method: 'GET',
-      path: '/health',
+      path: '/api/health',
     },
     tauri: {
       command: 'app_health',

@@ -5,6 +5,9 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	appHealth: () => __TAURI_INVOKE<AppHealthResponse>("app_health"),
+	tagsList: (input: TagsListInput) => __TAURI_INVOKE<Tag[]>("tags_list", { input }),
+	tagsCreate: (input: CreateTagInput) => __TAURI_INVOKE<Tag>("tags_create", { input }),
+	tagsDelete: (input: DeleteTagInput) => __TAURI_INVOKE<void>("tags_delete", { input }),
 };
 
 /* Types */
@@ -12,5 +15,25 @@ export type AppHealthResponse = {
 	status: string,
 	database: string,
 	appVersion: string,
+};
+
+export type CreateTagInput = {
+	projectId: number,
+	name: string,
+	color: string | null,
+};
+
+export type DeleteTagInput = {
+	id: number,
+};
+
+export type Tag = {
+	id: number,
+	name: string,
+	color: string,
+};
+
+export type TagsListInput = {
+	projectId: number,
 };
 

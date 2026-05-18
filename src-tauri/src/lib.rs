@@ -3,6 +3,7 @@ mod db;
 mod error;
 mod models;
 mod paths;
+mod repositories;
 pub mod specta;
 
 use db::connection::{open_database, DatabaseState};
@@ -20,7 +21,12 @@ pub fn run() {
             app.manage(DatabaseState::new(connection));
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![commands::app::app_health_command])
+        .invoke_handler(tauri::generate_handler![
+            commands::app::app_health_command,
+            commands::tags::tags_list_command,
+            commands::tags::tags_create_command,
+            commands::tags::tags_delete_command
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");
 }
