@@ -10,6 +10,17 @@ export const commands = {
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
 	projectsUpdate: (input: UpdateProjectInput) => __TAURI_INVOKE<Project>("projects_update", { input }),
 	projectsDelete: (input: DeleteProjectInput) => __TAURI_INVOKE<void>("projects_delete", { input }),
+	charactersList: (input: CharactersListInput) => __TAURI_INVOKE<CharactersListResult>("characters_list", { input }),
+	charactersGet: (input: GetCharacterInput) => __TAURI_INVOKE<Character>("characters_get", { input }),
+	charactersCreate: (input: CreateCharacterInput) => __TAURI_INVOKE<Character>("characters_create", { input }),
+	charactersUpdate: (input: UpdateCharacterInput) => __TAURI_INVOKE<Character>("characters_update", { input }),
+	charactersDelete: (input: DeleteCharacterInput) => __TAURI_INVOKE<void>("characters_delete", { input }),
+	charactersSetTags: (input: SetCharacterTagsInput) => __TAURI_INVOKE<Tag[]>("characters_set_tags", { input }),
+	charactersRelationshipsList: (input: RelationshipsListInput) => __TAURI_INVOKE<CharacterRelationship[]>("characters_relationships_list", { input }),
+	charactersRelationshipsCreate: (input: CreateRelationshipInput) => __TAURI_INVOKE<CharacterRelationship>("characters_relationships_create", { input }),
+	charactersRelationshipsUpdate: (input: UpdateRelationshipInput) => __TAURI_INVOKE<CharacterRelationship>("characters_relationships_update", { input }),
+	charactersRelationshipsDelete: (input: DeleteRelationshipInput) => __TAURI_INVOKE<void>("characters_relationships_delete", { input }),
+	charactersGraph: (input: RelationshipsListInput) => __TAURI_INVOKE<CharacterGraph>("characters_graph", { input }),
 	notesList: (input: NotesListInput) => __TAURI_INVOKE<NotesListResult>("notes_list", { input }),
 	notesGet: (input: GetNoteInput) => __TAURI_INVOKE<Note>("notes_get", { input }),
 	notesCreate: (input: CreateNoteInput) => __TAURI_INVOKE<Note>("notes_create", { input }),
@@ -35,6 +46,100 @@ export type AppHealthResponse = {
 	appVersion: string,
 };
 
+export type Character = {
+	id: number,
+	projectId: number,
+	stateId: number | null,
+	name: string,
+	title: string,
+	race: string,
+	characterClass: string,
+	level: number | null,
+	status: string,
+	bio: string,
+	appearance: string,
+	personality: string,
+	backstory: string,
+	notes: string,
+	imagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
+	tags: Tag[],
+	factionIds: number[],
+};
+
+export type CharacterGraph = {
+	nodes: CharacterGraphNode[],
+	edges: CharacterGraphEdge[],
+};
+
+export type CharacterGraphEdge = {
+	id: number,
+	source: number,
+	target: number,
+	relationshipType: string,
+	customLabel: string,
+	isBidirectional: boolean,
+};
+
+export type CharacterGraphNode = {
+	id: number,
+	name: string,
+	title: string,
+	status: string,
+	imagePath: string | null,
+};
+
+export type CharacterRelationship = {
+	id: number,
+	projectId: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationshipType: string,
+	customLabel: string,
+	description: string,
+	isBidirectional: boolean,
+	createdAt: string,
+	sourceCharacterName: string | null,
+	targetCharacterName: string | null,
+};
+
+export type CharactersListInput = {
+	projectId: number,
+	page: number | null,
+	limit: number | null,
+	search: string | null,
+	sortBy: string | null,
+	sortOrder: string | null,
+	branchId: number | null,
+};
+
+export type CharactersListResult = {
+	items: Character[],
+	total: number,
+	page: number,
+	limit: number,
+	totalPages: number,
+};
+
+export type CreateCharacterInput = {
+	projectId: number,
+	name: string,
+	title: string | null,
+	race: string | null,
+	characterClass: string | null,
+	level: number | null,
+	status: string | null,
+	bio: string | null,
+	appearance: string | null,
+	personality: string | null,
+	backstory: string | null,
+	notes: string | null,
+	stateId: number | null,
+	factionIds: number[] | null,
+	branchId: number | null,
+};
+
 export type CreateNoteInput = {
 	projectId: number,
 	folderId: number | null,
@@ -51,6 +156,17 @@ export type CreateProjectInput = {
 	description: string | null,
 	status: string | null,
 	mainBranchName: string | null,
+};
+
+export type CreateRelationshipInput = {
+	projectId: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationshipType: string,
+	customLabel: string | null,
+	description: string | null,
+	isBidirectional: boolean | null,
+	branchId: number | null,
 };
 
 export type CreateTagInput = {
@@ -71,6 +187,11 @@ export type CreateTimelineEventInput = {
 	branchId: number | null,
 };
 
+export type DeleteCharacterInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type DeleteNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -80,11 +201,21 @@ export type DeleteProjectInput = {
 	id: number,
 };
 
+export type DeleteRelationshipInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type DeleteTagInput = {
 	id: number,
 };
 
 export type DeleteTimelineEventInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type GetCharacterInput = {
 	id: number,
 	branchId: number | null,
 };
@@ -147,9 +278,20 @@ export type Project = {
 	updatedAt: string,
 };
 
+export type RelationshipsListInput = {
+	projectId: number,
+	branchId: number | null,
+};
+
 export type ReorderTimelineInput = {
 	projectId: number,
 	orderedIds: number[],
+	branchId: number | null,
+};
+
+export type SetCharacterTagsInput = {
+	id: number,
+	tagIds: number[],
 	branchId: number | null,
 };
 
@@ -196,6 +338,24 @@ export type TimelineListInput = {
 	branchId: number | null,
 };
 
+export type UpdateCharacterInput = {
+	id: number,
+	name: string | null,
+	title: string | null,
+	race: string | null,
+	characterClass: string | null,
+	level: number | null,
+	status: string | null,
+	bio: string | null,
+	appearance: string | null,
+	personality: string | null,
+	backstory: string | null,
+	notes: string | null,
+	stateId: number | null,
+	factionIds: number[] | null,
+	branchId: number | null,
+};
+
 export type UpdateNoteInput = {
 	id: number,
 	title: string | null,
@@ -213,6 +373,15 @@ export type UpdateProjectInput = {
 	description: string | null,
 	status: string | null,
 	mapImagePath: string | null,
+};
+
+export type UpdateRelationshipInput = {
+	id: number,
+	relationshipType: string | null,
+	customLabel: string | null,
+	description: string | null,
+	isBidirectional: boolean | null,
+	branchId: number | null,
 };
 
 export type UpdateTimelineEventInput = {

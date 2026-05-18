@@ -24,6 +24,17 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::app::app_health_command,
+            commands::characters::characters_list_command,
+            commands::characters::characters_get_command,
+            commands::characters::characters_create_command,
+            commands::characters::characters_update_command,
+            commands::characters::characters_delete_command,
+            commands::characters::characters_set_tags_command,
+            commands::characters::characters_relationships_list_command,
+            commands::characters::characters_relationships_create_command,
+            commands::characters::characters_relationships_update_command,
+            commands::characters::characters_relationships_delete_command,
+            commands::characters::characters_graph_command,
             commands::projects::projects_list_command,
             commands::projects::projects_get_command,
             commands::projects::projects_create_command,
