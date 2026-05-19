@@ -29,8 +29,7 @@ import type {
 } from '@/types/generated/bindings';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
-import type { VoidResponse } from './client';
-import { httpPostMultipart } from './transport/httpMultipart';
+import type { VoidResponse } from './types';
 import type { CharacterListParams } from './types';
 import { withBranchParams } from './withBranchParams';
 
@@ -274,19 +273,11 @@ export const charactersApi = {
   },
   uploadImage: async (id: number, file: File, projectId: number) => {
     const query = withBranchParams({}, projectId);
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const response = await uploadFileViaTransport<TauriCharacter>('characters_upload_image', file, {
-        id,
-        branchId: query.branchId ?? null,
-      });
-      return { data: { success: true, data: toCharacter(response) } };
-    }
-
-    const formData = new FormData();
-    formData.append('characterImage', file);
-    return httpPostMultipart<ApiResponse<Character>>(`/characters/${id}/image`, formData, {
-      params: query,
+    const response = await uploadFileViaTransport<TauriCharacter>('characters_upload_image', file, {
+      id,
+      branchId: query.branchId ?? null,
     });
+    return { data: { success: true, data: toCharacter(response) } };
   },
   setTags: async (id: number, tagIds: number[], projectId: number): Promise<ApiResult<Tag[]>> => {
     const query = withBranchParams({}, projectId);

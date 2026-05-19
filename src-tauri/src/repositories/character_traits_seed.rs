@@ -1,6 +1,6 @@
 // GENERATED — DO NOT EDIT
 // Source: shared/seeds/characterTraits.ts via scripts/gen-rust-seeds.mjs
-// manifest-hash: 25a1a8477f6da5fef8db269546574cce164d480a4259bb58c30bc140695c1b63
+// manifest-hash: f14d556da23e674b
 
 use rusqlite::{params, Connection};
 

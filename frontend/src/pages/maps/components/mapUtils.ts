@@ -70,7 +70,7 @@ export interface MapData {
   parentMarkerId: number | null; name: string; imagePath: string | null;
 }
 
-/** Stored names for automatic root maps (historical backend RU literal + canonical EN); display via `map:breadcrumb.worldMap`. */
+/** Stored names for automatic root maps (historical RU literal + canonical EN); display via `map:breadcrumb.worldMap`. */
 const STORED_WORLD_ROOT_MAP_LABELS_LOWER = new Set(['мир', 'world']);
 
 export function localizedRootMapDisplayedName(

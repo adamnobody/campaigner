@@ -4,59 +4,29 @@
   "description": "Campaign - worldbuilding management application",
   "author": "adamnobody",
   "private": true,
-  "main": "electron/main.js",
   "engines": {
     "node": ">=22.0.0 <23.0.0"
   },
-  "campaignerElectron": {
-    "nodeRuntimeVersion": "22.14.0"
-  },
   "workspaces": [
     "shared",
-    "backend",
     "frontend"
   ],
   "scripts": {
-    "dev": "npm run build:shared && concurrently \"npm run dev:shared\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "start:all": "concurrently -n BE,FE -c blue,green \"npm run start --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "dev": "npm run dev --workspace=frontend",
     "dev:shared": "cd shared && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "npm run dev:http --workspace=frontend",
     "dev:frontend:tauri": "npm run dev:tauri --workspace=frontend",
-    "build": "npm run build:shared && npm run build:backend && npm run build:frontend",
+    "build": "npm run build:shared && npm run build:frontend",
     "build:shared": "cd shared && npm run build",
-    "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
-    "db:migrate": "cd backend && npm run migrate",
-    "doctor": "node scripts/doctor.mjs",
-    "chunker": "node scripts/chunker.mjs",
-    "smoke": "node scripts/smoke/index.mjs",
-    "smoke:frontend": "node scripts/smoke/frontend.mjs",
-    "smoke:final": "npm run smoke && npm run smoke:frontend",
-    "smoke:up": "node scripts/smoke-runner.mjs",
     "tree": "node scripts/generate-tree.mjs",
-    "backend:start:once": "cd backend && npx tsx src/index.ts",
-    "perf:baseline": "node scripts/perf/baseline.mjs",
-    "perf:compare": "node scripts/perf/compare.mjs",
-    "db:seed-demo": "node scripts/db/seed-demo.mjs",
-    "db:explain-hot": "node scripts/db/explain-hot.mjs",
-    "electron:prepare-node": "node scripts/prepare-node-runtime.js",
-    "electron:rebuild-backend-native": "node scripts/rebuild-backend-native.mjs",
-    "electron:dev": "npm run build && electron .",
-    "electron:build": "npm run electron:prepare-node && npm run build && npm run electron:rebuild-backend-native && electron-builder",
-    "electron:quick": "electron .",
     "tauri:codegen": "node scripts/gen-rust-seeds.mjs && cargo run --manifest-path src-tauri/Cargo.toml --bin codegen",
     "tauri:vite:dev": "node ./src-tauri/dev-frontend.mjs",
     "tauri:vite:build": "node ./src-tauri/build-frontend.mjs",
     "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
-    "tauri:build": "tauri build --config src-tauri/tauri.conf.json",
-    "lint:api-client": "node scripts/lint-no-api-client.mjs"
+    "tauri:build": "tauri build --config src-tauri/tauri.conf.json"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.2",
-    "concurrently": "^9.2.1",
-    "electron": "^41.2.0",
-    "electron-builder": "^26.8.1",
     "kill-port": "^2.0.1",
     "typescript": "^5.4.5"
   },
@@ -68,106 +38,5 @@
     "recharts": "^3.8.1",
     "remark-gfm": "^4.0.1",
     "tiktoken": "^1.0.22"
-  },
-  "build": {
-    "appId": "com.campaigner.app",
-    "productName": "Campaigner",
-    "icon": "electron/icon.ico",
-    "asar": true,
-    "asarUnpack": [
-      "**/*.node",
-      "electron/icon.ico"
-    ],
-    "compression": "normal",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "files": [
-      "electron/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "backend/dist",
-        "to": "backend/dist",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "shared/dist",
-        "to": "shared/dist",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "shared/package.json",
-        "to": "shared/package.json"
-      },
-      {
-        "from": "backend/package.json",
-        "to": "backend/package.json"
-      },
-      {
-        "from": "frontend/dist",
-        "to": "frontend/dist",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "build/node-runtime/win-x64",
-        "to": "node",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "node_modules",
-        "to": "node_modules",
-        "filter": [
-          "**/*",
-          "!electron/**",
-          "!electron-builder/**",
-          "!@electron/**",
-          "!electron-winstaller/**",
-          "!electron-publish/**",
-          "!app-builder-bin/**",
-          "!app-builder-lib/**",
-          "!7zip-bin/**",
-          "!vite/**",
-          "!@esbuild/**",
-          "!esbuild/**",
-          "!typescript/**",
-          "!@types/**",
-          "!concurrently/**",
-          "!kill-port/**",
-          "!dmg-builder/**",
-          "!builder-util/**",
-          "!builder-util-runtime/**",
-          "!@vitejs/**",
-          "!tsx/**",
-          "!@rollup/**",
-          "!rollup/**",
-          "!postcss/**",
-          "!autoprefixer/**"
-        ]
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "electron/icon.ico",
-      "signAndEditExecutable": false
-    },
-    "nsis": {
-      "oneClick": true,
-      "allowToChangeInstallationDirectory": false,
-      "createDesktopShortcut": true,
-      "shortcutName": "Campaigner",
-      "installerIcon": "electron/icon.ico",
-      "uninstallerIcon": "electron/icon.ico",
-      "installerHeaderIcon": "electron/icon.ico"
-    }
   }
 }

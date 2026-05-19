@@ -308,7 +308,7 @@ mod tests {
     }
 
     #[test]
-    fn resolves_created_branch_id_backend_compatible() {
+    fn resolves_created_branch_id_legacy_compatible() {
         let connection = setup_connection();
 
         let fallback = resolve_created_branch_id(&connection, 1, None).unwrap();

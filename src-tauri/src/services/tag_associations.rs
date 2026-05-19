@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn set_tags_and_get_tags_follow_backend_replacement_semantics() {
+    fn set_tags_and_get_tags_follow_legacy_replacement_semantics() {
         let connection = setup_connection();
         let first = set_tags_for_entity(
             &connection,

@@ -73,17 +73,6 @@ export const ProjectSettingsPage: React.FC = () => {
         );
         return;
       }
-      const blob = res.data;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const safeName = (currentProject?.name || 'project').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
-      a.download = `campaigner-${safeName}-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showSnackbar(t('projectSettings:snackbar.exported'), 'success');
     } catch {
       showSnackbar(t('projectSettings:snackbar.exportError'), 'error');
     } finally {

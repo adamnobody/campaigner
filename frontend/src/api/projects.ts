@@ -16,9 +16,7 @@ import type {
 } from '@/types/generated/bindings';
 import { commands } from '@/types/generated/bindings';
 import { transport } from './transport';
-import { httpGetBlob, httpPostMultipart } from './transport/httpMultipart';
 import { uploadFileViaTransport } from './uploadFile';
-import { TransportError } from './transport/types';
 
 type ApiResult<T> = {
   data: ApiResponse<T>;
@@ -70,13 +68,6 @@ const toProjectsResponse = (
       data: response.map(toProject),
     },
   };
-};
-
-const tauriNotPorted = (feature: string): never => {
-  throw new TransportError(
-    'TAURI_NOT_PORTED',
-    `${feature} is not available in the Tauri build yet. Use the HTTP dev stack or track migration in MIGRATION_CHECKLIST.md.`,
-  );
 };
 
 export const projectsApi = {
@@ -176,70 +167,44 @@ export const projectsApi = {
   },
 
   uploadMap: async (id: number, file: File) => {
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const response = await uploadFileViaTransport<TauriProject>('projects_upload_map_image', file, {
-        projectId: id,
-      });
-      return toProjectResponse(response);
-    }
-
-    const formData = new FormData();
-    formData.append('mapImage', file);
-    const response = await httpPostMultipart<ApiResponse<Project>>(`/projects/${id}/map`, formData);
-    return { data: response.data };
+    const response = await uploadFileViaTransport<TauriProject>('projects_upload_map_image', file, {
+      projectId: id,
+    });
+    return toProjectResponse(response);
   },
 
   exportProject: async (id: number) => {
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const { save } = await import('@tauri-apps/plugin-dialog');
-      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
 
-      const payload = await commands.projectsExport(id);
+    const payload = await commands.projectsExport(id);
 
-      const safeName = (payload.project?.name || 'project').replace(/[^a-zA-Z0-9-_]+/g, '-');
-      const filename = `campaigner-${safeName}-${Date.now()}.json`;
+    const safeName = (payload.project?.name || 'project').replace(/[^a-zA-Z0-9-_]+/g, '-');
+    const filename = `campaigner-${safeName}-${Date.now()}.json`;
 
-      const targetPath = await save({
-        defaultPath: filename,
-        filters: [{ name: 'Campaigner JSON', extensions: ['json'] }],
-      });
-      if (!targetPath) {
-        return { cancelled: true } as const;
-      }
-
-      await writeTextFile(
-        targetPath,
-        JSON.stringify({ success: true, data: payload }, null, 2),
-      );
-      return { cancelled: false, path: targetPath } as const;
+    const targetPath = await save({
+      defaultPath: filename,
+      filters: [{ name: 'Campaigner JSON', extensions: ['json'] }],
+    });
+    if (!targetPath) {
+      return { cancelled: true } as const;
     }
 
-    return httpGetBlob(`/projects/${id}/export`);
+    await writeTextFile(
+      targetPath,
+      JSON.stringify({ success: true, data: payload }, null, 2),
+    );
+    return { cancelled: false, path: targetPath } as const;
   },
 
   importProject: async (data: ImportedProjectPayload, opts?: { locale?: AppLanguage }) => {
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const input: ImportProjectInput_Deserialize = {
-        payload: data as ImportProjectInput_Deserialize['payload'],
-        locale: opts?.locale ?? null,
-        appendImportNameSuffix: true,
-      };
-      const project = await commands.projectsImport(input);
-      return toProjectResponse(project);
-    }
-
-    const response = await transport.request<ApiResponse<Project>>({
-      http: {
-        method: 'POST',
-        path: '/projects/import',
-        body: {
-          ...data,
-          ...(opts?.locale ? { importLocale: opts.locale } : {}),
-        },
-      },
-    });
-
-    return { data: response };
+    const input: ImportProjectInput_Deserialize = {
+      payload: data as ImportProjectInput_Deserialize['payload'],
+      locale: opts?.locale ?? null,
+      appendImportNameSuffix: true,
+    };
+    const project = await commands.projectsImport(input);
+    return toProjectResponse(project);
   },
 
   createDemoProject: async (body?: { locale?: AppLanguage }) => {

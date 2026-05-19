@@ -1,4 +1,13 @@
 import type { CreateTag } from '@campaigner/shared';
+import type { ApiResponse } from '@campaigner/shared';
+
+export type ListWithTotal<T> = {
+  success: boolean;
+  data: T;
+  total: number;
+};
+
+export type VoidResponse = ApiResponse<undefined>;
 
 export interface CreateTagRequest extends CreateTag {
   projectId: number;

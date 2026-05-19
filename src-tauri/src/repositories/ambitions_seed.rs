@@ -1,6 +1,6 @@
 // GENERATED — DO NOT EDIT
 // Source: shared/seeds/ambitions.ts via scripts/gen-rust-seeds.mjs
-// manifest-hash: 8af6c931daf0eb14ec78ea2f5cd29fcf9fd2ac2c6156cd8556f445928faf1294
+// manifest-hash: 1f881d81d1d2d426
 
 use rusqlite::{params, Connection};
 

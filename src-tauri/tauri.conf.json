@@ -22,7 +22,7 @@
         "enable": true,
         "scope": ["$APPDATA/**", "$APPLOCALDATA/**"]
       },
-      "csp": "default-src 'self' http://localhost:5173 https://localhost:5173 tauri: asset:; img-src 'self' data: blob: asset: http://localhost:5173 https://localhost:5173 http://localhost:3001 https://localhost:3001 tauri:; connect-src 'self' http://localhost:5173 https://localhost:5173 http://localhost:3001 https://localhost:3001 tauri: ipc:; style-src 'self' 'unsafe-inline' asset:"
+      "csp": "default-src 'self' http://localhost:5173 https://localhost:5173 tauri: asset: campaigner:; img-src 'self' data: blob: asset: http://localhost:5173 https://localhost:5173 tauri: campaigner:; connect-src 'self' http://localhost:5173 https://localhost:5173 tauri: ipc: campaigner:; style-src 'self' 'unsafe-inline' asset:"
     }
   },
   "bundle": {

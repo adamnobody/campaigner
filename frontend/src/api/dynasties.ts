@@ -37,11 +37,9 @@ import type {
   UpdateDynastyInput as TauriUpdateDynastyInput,
   UpdateDynastyMemberInput as TauriUpdateDynastyMemberInput,
 } from '@/types/generated/bindings';
-import type { ListWithTotal, VoidResponse } from './client';
-import { httpPostMultipart } from './transport/httpMultipart';
+import type { DynastiesListParams, ListWithTotal, VoidResponse } from './types';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
-import type { DynastiesListParams } from './types';
 import { withBranchParams } from './withBranchParams';
 
 type ApiResult<T> = {
@@ -349,17 +347,11 @@ export const dynastiesApi = {
 
   uploadImage: async (id: number, file: File, projectId: number) => {
     const query = withBranchParams({}, projectId);
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const response = await uploadFileViaTransport<TauriDynasty>('dynasties_upload_image', file, {
-        id,
-        branchId: query.branchId ?? null,
-      });
-      return { data: { success: true, data: toDynasty(response) } };
-    }
-
-    const fd = new FormData();
-    fd.append('image', file);
-    return httpPostMultipart<ApiResponse<Dynasty>>(`/dynasties/${id}/image`, fd, { params: query });
+    const response = await uploadFileViaTransport<TauriDynasty>('dynasties_upload_image', file, {
+      id,
+      branchId: query.branchId ?? null,
+    });
+    return { data: { success: true, data: toDynasty(response) } };
   },
 
   setTags: async (id: number, tagIds: number[], projectId: number): Promise<ApiResult<Dynasty>> => {

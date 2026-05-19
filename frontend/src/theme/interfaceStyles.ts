@@ -95,7 +95,7 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     id: 'high-fantasy',
     label: 'High Fantasy',
     shortDescription: 'Brighter epic look with a legendary atmosphere.',
-    spotlight: 'Airy panels, soft glows, and expressive typography.',
+    spotlight: 'Airy panels, soft glows, and vivid typography.',
     recommendedPalettes: ['moonstone-silver', 'parchment-ivory'],
     compatiblePalettes: ['obsidian-gold', 'sable-rose', 'deep-amber'],
     defaults: {

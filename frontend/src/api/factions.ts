@@ -58,9 +58,7 @@ import type {
   UpdateFactionRankInput as TauriUpdateFactionRankInput,
   UpdateFactionRelationInput as TauriUpdateFactionRelationInput,
 } from '@/types/generated/bindings';
-import type { ListWithTotal } from './client';
-import { httpPostMultipart } from './transport/httpMultipart';
-import type { FactionsListParams } from './types';
+import type { FactionsListParams, ListWithTotal } from './types';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
 import { withBranchParams } from './withBranchParams';
@@ -397,31 +395,19 @@ export const factionsApi = {
   },
   uploadImage: async (id: number, file: File, projectId: number) => {
     const query = withBranchParams({}, projectId);
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const response = await uploadFileViaTransport<TauriFaction>('factions_upload_image', file, {
-        id,
-        branchId: query.branchId ?? null,
-      });
-      return { data: { success: true, data: toFaction(response) } };
-    }
-
-    const fd = new FormData();
-    fd.append('image', file);
-    return httpPostMultipart<ApiResponse<Faction>>(`/factions/${id}/image`, fd, { params: query });
+    const response = await uploadFileViaTransport<TauriFaction>('factions_upload_image', file, {
+      id,
+      branchId: query.branchId ?? null,
+    });
+    return { data: { success: true, data: toFaction(response) } };
   },
   uploadBanner: async (id: number, file: File, projectId: number) => {
     const query = withBranchParams({}, projectId);
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const response = await uploadFileViaTransport<TauriFaction>('factions_upload_banner', file, {
-        id,
-        branchId: query.branchId ?? null,
-      });
-      return { data: { success: true, data: toFaction(response) } };
-    }
-
-    const fd = new FormData();
-    fd.append('banner', file);
-    return httpPostMultipart<ApiResponse<Faction>>(`/factions/${id}/banner`, fd, { params: query });
+    const response = await uploadFileViaTransport<TauriFaction>('factions_upload_banner', file, {
+      id,
+      branchId: query.branchId ?? null,
+    });
+    return { data: { success: true, data: toFaction(response) } };
   },
   setTags: async (id: number, tagIds: number[], projectId: number): Promise<ApiResult<Tag[]>> => {
     const query = withBranchParams({}, projectId);

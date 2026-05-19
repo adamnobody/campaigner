@@ -4,146 +4,13 @@
 
 ```
 campaigner
-├─ backend
-│  ├─ src
-│  │  ├─ controllers
-│  │  │  ├─ ambition.controller.ts
-│  │  │  ├─ branch.controller.ts
-│  │  │  ├─ character-traits.controller.ts
-│  │  │  ├─ character.controller.ts
-│  │  │  ├─ dogma.controller.ts
-│  │  │  ├─ dynasty.controller.ts
-│  │  │  ├─ faction.controller.ts
-│  │  │  ├─ graphLayout.controller.ts
-│  │  │  ├─ map.controller.ts
-│  │  │  ├─ note.controller.ts
-│  │  │  ├─ political-scale.controller.ts
-│  │  │  ├─ project.controller.ts
-│  │  │  ├─ search.controller.ts
-│  │  │  ├─ tag.controller.ts
-│  │  │  ├─ timeline.controller.ts
-│  │  │  └─ wiki.controller.ts
-│  │  ├─ db
-│  │  │  ├─ migrations
-│  │  │  │  ├─ 001_create_maps_table.ts
-│  │  │  │  ├─ 002_tag_associations_dynasty.ts
-│  │  │  │  ├─ 003_dynasty_members_graph.ts
-│  │  │  │  ├─ 004_faction_policies.ts
-│  │  │  │  ├─ 005_faction_ambitions.ts
-│  │  │  │  ├─ 006_trait_and_ambition_exclusions.ts
-│  │  │  │  ├─ 007_faction_types_and_character_affiliations.ts
-│  │  │  │  ├─ 008_faction_kind_and_membership_sync.ts
-│  │  │  │  ├─ 009_faction_metrics.ts
-│  │  │  │  ├─ 010_political_scales.ts
-│  │  │  │  ├─ 011_state_relations.ts
-│  │  │  │  ├─ 012_branch_scoped_creates.ts
-│  │  │  │  ├─ 013_branch_visibility_v020.ts
-│  │  │  │  ├─ 014_faction_relations_branch.ts
-│  │  │  │  ├─ 015_graph_layouts.ts
-│  │  │  │  └─ 016_timeline_event_era_color.ts
-│  │  │  ├─ seeds
-│  │  │  │  └─ politicalScalesSeedData.ts
-│  │  │  ├─ connection.ts
-│  │  │  ├─ migrate.ts
-│  │  │  └─ schema.ts
-│  │  ├─ middleware
-│  │  │  ├─ createUpload.ts
-│  │  │  ├─ errorHandler.ts
-│  │  │  ├─ requestMetrics.ts
-│  │  │  ├─ upload.ts
-│  │  │  └─ validateRequest.ts
-│  │  ├─ routes
-│  │  │  ├─ ambition.routes.ts
-│  │  │  ├─ branch.routes.ts
-│  │  │  ├─ character-traits.routes.ts
-│  │  │  ├─ character.routes.ts
-│  │  │  ├─ commonSchemas.ts
-│  │  │  ├─ dogma.routes.ts
-│  │  │  ├─ dynasty.routes.ts
-│  │  │  ├─ faction.routes.ts
-│  │  │  ├─ map.routes.ts
-│  │  │  ├─ note.routes.ts
-│  │  │  ├─ noteListQuerySchema.test.ts
-│  │  │  ├─ political-scale.routes.ts
-│  │  │  ├─ project.routes.ts
-│  │  │  ├─ querySchemas.ts
-│  │  │  ├─ search.routes.ts
-│  │  │  ├─ tag.routes.ts
-│  │  │  ├─ timeline.routes.ts
-│  │  │  ├─ upload.routes.ts
-│  │  │  └─ wiki.routes.ts
-│  │  ├─ services
-│  │  │  ├─ dynasty
-│  │  │  │  ├─ dynasty.mappers.ts
-│  │  │  │  ├─ dynasty.service.ts
-│  │  │  │  ├─ dynasty.types.ts
-│  │  │  │  └─ index.ts
-│  │  │  ├─ faction
-│  │  │  │  ├─ faction-policy.service.ts
-│  │  │  │  ├─ faction.mappers.ts
-│  │  │  │  ├─ faction.service.ts
-│  │  │  │  ├─ faction.types.ts
-│  │  │  │  └─ index.ts
-│  │  │  ├─ map
-│  │  │  │  ├─ index.ts
-│  │  │  │  ├─ map.service.ts
-│  │  │  │  └─ map.types.ts
-│  │  │  ├─ political-scale
-│  │  │  │  ├─ index.ts
-│  │  │  │  ├─ political-scale-assignment.service.ts
-│  │  │  │  └─ political-scale.service.ts
-│  │  │  ├─ project
-│  │  │  │  ├─ assetHelpers.ts
-│  │  │  │  ├─ demoProject.payload.ts
-│  │  │  │  ├─ graphLayoutImport.helpers.ts
-│  │  │  │  ├─ index.ts
-│  │  │  │  ├─ project.service.ts
-│  │  │  │  ├─ project.types.ts
-│  │  │  │  ├─ projectExport.service.ts
-│  │  │  │  └─ projectImport.service.ts
-│  │  │  ├─ ambition.service.ts
-│  │  │  ├─ branch.service.ts
-│  │  │  ├─ branchOverlay.service.ts
-│  │  │  ├─ branchScope.ts
-│  │  │  ├─ character-trait.service.ts
-│  │  │  ├─ character.service.ts
-│  │  │  ├─ dogma.service.ts
-│  │  │  ├─ graphLayout.service.ts
-│  │  │  ├─ note.service.ts
-│  │  │  ├─ search.service.ts
-│  │  │  ├─ tag.service.ts
-│  │  │  ├─ timeline.service.ts
-│  │  │  └─ wiki.service.ts
-│  │  ├─ utils
-│  │  │  ├─ apiResponse.ts
-│  │  │  ├─ asyncHandler.ts
-│  │  │  ├─ branchRequest.ts
-│  │  │  ├─ dbHelpers.ts
-│  │  │  └─ parseId.ts
-│  │  └─ index.ts
-│  ├─ .env.example
-│  ├─ package.json
-│  └─ tsconfig.json
 ├─ data
 ├─ docs
 │  ├─ architecture
-│  │  └─ conventions.md
-│  ├─ ideas
-│  │  ├─ ideas-backlog.md
-│  │  ├─ ideas-dumb.md
-│  │  └─ ideas-prompt.md
-│  ├─ migration
-│  │  ├─ baseline-2026-05-14
-│  │  │  ├─ baseline-build.txt
-│  │  │  ├─ baseline-doctor.txt
-│  │  │  ├─ baseline-smoke-frontend.txt
-│  │  │  ├─ baseline-smoke.txt
-│  │  │  └─ notes.md
-│  │  └─ README.md
-│  └─ performance-regression-checklist.md
-├─ electron
-│  ├─ icon.ico
-│  └─ main.js
+│  └─ ideas
+│     ├─ ideas-backlog.md
+│     ├─ ideas-dumb.md
+│     └─ ideas-prompt.md
 ├─ frontend
 │  ├─ public
 │  │  ├─ ambitions
@@ -219,7 +86,6 @@ campaigner
 │  ├─ src
 │  │  ├─ api
 │  │  │  ├─ transport
-│  │  │  │  ├─ http.ts
 │  │  │  │  ├─ index.ts
 │  │  │  │  ├─ tauri.ts
 │  │  │  │  └─ types.ts
@@ -228,7 +94,6 @@ campaigner
 │  │  │  ├─ branches.ts
 │  │  │  ├─ characters.ts
 │  │  │  ├─ characterTraits.ts
-│  │  │  ├─ client.ts
 │  │  │  ├─ dogmas.ts
 │  │  │  ├─ dynasties.ts
 │  │  │  ├─ factions.ts
@@ -241,6 +106,7 @@ campaigner
 │  │  │  ├─ tags.ts
 │  │  │  ├─ timeline.ts
 │  │  │  ├─ types.ts
+│  │  │  ├─ uploadFile.ts
 │  │  │  ├─ uploads.ts
 │  │  │  ├─ wiki.ts
 │  │  │  └─ withBranchParams.ts
@@ -263,6 +129,7 @@ campaigner
 │  │  │  │  ├─ ThemePreviewCard.tsx
 │  │  │  │  └─ ThemeSliderControl.tsx
 │  │  │  └─ ui
+│  │  │     ├─ AssetAvatar.tsx
 │  │  │     ├─ BranchEntityMissingDialog.tsx
 │  │  │     ├─ ConfirmDialog.tsx
 │  │  │     ├─ DndButton.tsx
@@ -284,6 +151,7 @@ campaigner
 │  │  │     ├─ splashTipKeys.ts
 │  │  │     └─ StyleCustomizer.tsx
 │  │  ├─ hooks
+│  │  │  ├─ useAssetUrl.ts
 │  │  │  ├─ useDebounce.ts
 │  │  │  ├─ useHistory.ts
 │  │  │  ├─ useHotkeys.ts
@@ -413,6 +281,7 @@ campaigner
 │  │  │  │  │  └─ mapUtils.ts
 │  │  │  │  ├─ hooks
 │  │  │  │  │  ├─ useMapData.ts
+│  │  │  │  │  ├─ useMapInitialFit.ts
 │  │  │  │  │  ├─ useMapInteractions.ts
 │  │  │  │  │  ├─ useMapMarkerCrud.ts
 │  │  │  │  │  ├─ useMapNavigation.ts
@@ -484,55 +353,25 @@ campaigner
 │  │  ├─ App.tsx
 │  │  ├─ main.tsx
 │  │  └─ vite-env.d.ts
+│  ├─ .env.tauri
 │  ├─ index.html
 │  ├─ package.json
 │  ├─ tsconfig.json
 │  └─ vite.config.ts
 ├─ scripts
 │  ├─ db
-│  │  ├─ explain-hot.mjs
-│  │  └─ seed-demo.mjs
 │  ├─ en-catalog
 │  │  ├─ ambitions-en.json
 │  │  ├─ political-axes-en.json
 │  │  ├─ political-zones-en-by-ru-label.json
 │  │  └─ traits-en.json
-│  ├─ perf
-│  │  ├─ reports
-│  │  │  ├─ release-after.json
-│  │  │  └─ release-before.json
-│  │  ├─ baseline.mjs
-│  │  └─ compare.mjs
-│  ├─ smoke
-│  │  ├─ scenarios
-│  │  │  ├─ characters.mjs
-│  │  │  ├─ dogmas.mjs
-│  │  │  ├─ dynasties.mjs
-│  │  │  ├─ factions.mjs
-│  │  │  ├─ health.mjs
-│  │  │  ├─ maps.mjs
-│  │  │  ├─ notes.mjs
-│  │  │  ├─ perf.mjs
-│  │  │  ├─ project-transfer.mjs
-│  │  │  ├─ projects.mjs
-│  │  │  ├─ search.mjs
-│  │  │  ├─ tags.mjs
-│  │  │  ├─ timeline.mjs
-│  │  │  └─ wiki.mjs
-│  │  ├─ cleanup.mjs
-│  │  ├─ context.mjs
-│  │  ├─ frontend.mjs
-│  │  ├─ index.mjs
-│  │  └─ lib.mjs
+│  ├─ lib
 │  ├─ _political-rows-from-seed.json
-│  ├─ chunker.mjs
-│  ├─ doctor.mjs
-│  ├─ extract-political-scales-from-seed.mjs
 │  ├─ gen-en-builtins.mjs
+│  ├─ gen-rust-seeds.mjs
 │  ├─ generate-tree.mjs
-│  ├─ prepare-node-runtime.js
-│  ├─ rebuild-backend-native.mjs
-│  └─ smoke-runner.mjs
+│  ├─ tauri-vite-build.mjs
+│  └─ tauri-vite-dev.mjs
 ├─ shared
 │  ├─ src
 │  │  ├─ schemas
@@ -553,6 +392,13 @@ campaigner
 │  │  │  ├─ project.schema.ts
 │  │  │  ├─ timeline.schema.ts
 │  │  │  └─ wiki.schema.ts
+│  │  ├─ seeds
+│  │  │  ├─ ambitions.ts
+│  │  │  ├─ characterTraits.ts
+│  │  │  ├─ index.ts
+│  │  │  ├─ manifestHash.ts
+│  │  │  ├─ politicalScales.ts
+│  │  │  └─ stableStringify.ts
 │  │  ├─ types
 │  │  │  └─ index.ts
 │  │  ├─ constants.ts
@@ -560,6 +406,8 @@ campaigner
 │  ├─ package.json
 │  └─ tsconfig.json
 ├─ src-tauri
+│  ├─ capabilities
+│  │  └─ default.json
 │  ├─ icons
 │  │  └─ icon.ico
 │  ├─ migrations
@@ -572,68 +420,115 @@ campaigner
 │  │  ├─ 006_timeline.sql
 │  │  ├─ 007_characters.sql
 │  │  ├─ 008_factions.sql
-│  │  └─ 009_dogmas.sql
+│  │  ├─ 009_dogmas.sql
+│  │  ├─ 010_ambitions.sql
+│  │  ├─ 011_character_traits.sql
+│  │  ├─ 012_political_scales.sql
+│  │  ├─ 013_graph_layouts.sql
+│  │  ├─ 014_dynasties.sql
+│  │  ├─ 015_maps.sql
+│  │  └─ 016_wiki_links.sql
 │  ├─ src
 │  │  ├─ bin
 │  │  │  └─ codegen.rs
 │  │  ├─ commands
+│  │  │  ├─ ambitions.rs
 │  │  │  ├─ app.rs
 │  │  │  ├─ branches.rs
+│  │  │  ├─ character_traits.rs
 │  │  │  ├─ characters.rs
 │  │  │  ├─ dogmas.rs
+│  │  │  ├─ dynasties.rs
 │  │  │  ├─ factions.rs
+│  │  │  ├─ graph_layouts.rs
+│  │  │  ├─ maps.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ notes.rs
+│  │  │  ├─ political_scales.rs
+│  │  │  ├─ project_io.rs
 │  │  │  ├─ projects.rs
+│  │  │  ├─ search.rs
 │  │  │  ├─ tags.rs
-│  │  │  └─ timeline.rs
+│  │  │  ├─ timeline.rs
+│  │  │  ├─ uploads.rs
+│  │  │  └─ wiki.rs
 │  │  ├─ db
 │  │  │  ├─ connection.rs
 │  │  │  ├─ migrations.rs
 │  │  │  └─ mod.rs
 │  │  ├─ models
+│  │  │  ├─ ambition.rs
 │  │  │  ├─ app.rs
 │  │  │  ├─ branch.rs
+│  │  │  ├─ character_trait.rs
 │  │  │  ├─ character.rs
 │  │  │  ├─ dogma.rs
+│  │  │  ├─ dynasty.rs
 │  │  │  ├─ faction.rs
+│  │  │  ├─ graph_layout.rs
+│  │  │  ├─ map.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ note.rs
+│  │  │  ├─ political_scale.rs
+│  │  │  ├─ project_io.rs
 │  │  │  ├─ project.rs
+│  │  │  ├─ search.rs
 │  │  │  ├─ tag_association.rs
 │  │  │  ├─ tag.rs
-│  │  │  └─ timeline.rs
+│  │  │  ├─ timeline.rs
+│  │  │  ├─ upload.rs
+│  │  │  └─ wiki_link.rs
 │  │  ├─ repositories
+│  │  │  ├─ ambitions_seed.rs
+│  │  │  ├─ ambitions.rs
 │  │  │  ├─ branches.rs
+│  │  │  ├─ character_traits_seed.rs
+│  │  │  ├─ character_traits.rs
 │  │  │  ├─ characters.rs
 │  │  │  ├─ dogmas.rs
+│  │  │  ├─ dynasties.rs
 │  │  │  ├─ factions.rs
+│  │  │  ├─ graph_layouts.rs
+│  │  │  ├─ maps.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ notes.rs
+│  │  │  ├─ political_scales_seed.rs
+│  │  │  ├─ political_scales.rs
+│  │  │  ├─ project_io.rs
 │  │  │  ├─ projects.rs
+│  │  │  ├─ search.rs
 │  │  │  ├─ tag_associations.rs
 │  │  │  ├─ tags.rs
-│  │  │  └─ timeline.rs
+│  │  │  ├─ timeline.rs
+│  │  │  └─ wiki.rs
 │  │  ├─ services
 │  │  │  ├─ branch_overlay.rs
 │  │  │  ├─ branch_scope.rs
 │  │  │  ├─ mod.rs
 │  │  │  └─ tag_associations.rs
+│  │  ├─ uploads
+│  │  │  ├─ filename.rs
+│  │  │  ├─ mod.rs
+│  │  │  ├─ service.rs
+│  │  │  ├─ storage.rs
+│  │  │  ├─ validation.rs
+│  │  │  └─ web_path.rs
+│  │  ├─ asset_protocol.rs
 │  │  ├─ error.rs
 │  │  ├─ lib.rs
 │  │  ├─ main.rs
 │  │  ├─ paths.rs
 │  │  └─ specta.rs
 │  ├─ .gitignore
+│  ├─ build-frontend.mjs
 │  ├─ build.rs
 │  ├─ Cargo.lock
 │  ├─ Cargo.toml
+│  ├─ dev-frontend.mjs
 │  └─ tauri.conf.json
 ├─ .gitignore
 ├─ LICENSE
-├─ MIGRATION-PROMPT.md
 ├─ package.json
 ├─ README.md
-├─ start.bat
 └─ tsconfig.json
 ```

@@ -92,7 +92,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sanitize_matches_express_rules() {
+    fn sanitize_matches_expected_rules() {
         assert_eq!(sanitize_base_name("My Photo.PNG"), "my-photo");
         assert_eq!(sanitize_base_name("---"), "file");
     }

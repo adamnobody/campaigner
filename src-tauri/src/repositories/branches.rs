@@ -396,7 +396,7 @@ mod tests {
     }
 
     #[test]
-    fn branch_crud_matches_backend_semantics() {
+    fn branch_crud_matches_legacy_semantics() {
         let connection = setup_connection();
 
         let created = create_branch(

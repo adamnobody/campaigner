@@ -1,6 +1,6 @@
 // GENERATED — DO NOT EDIT
 // Source: shared/seeds/politicalScales.ts via scripts/gen-rust-seeds.mjs
-// manifest-hash: f1013f5431d348658e5e4deb87db057550078d1db49415256dbd46898762a948
+// manifest-hash: 5a47fe2f3d676ba4
 
 use rusqlite::{params, Connection};
 

@@ -33,8 +33,7 @@ import type {
   UpdateMapMarkerInput as TauriUpdateMapMarkerInput,
   UpdateMapTerritoryInput as TauriUpdateMapTerritoryInput,
 } from '@/types/generated/bindings';
-import type { VoidResponse } from './client';
-import { httpPostMultipart } from './transport/httpMultipart';
+import type { VoidResponse } from './types';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
 import { withBranchParams } from './withBranchParams';
@@ -398,17 +397,10 @@ export const mapApi = {
   },
 
   uploadMapImage: async (mapId: number, file: File) => {
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const response = await uploadFileViaTransport<TauriMapRecord>('maps_upload_image', file, {
-        mapId,
-      });
-      return toSingleMapResponse(response);
-    }
-
-    const formData = new FormData();
-    formData.append('image', file);
-    const response = await httpPostMultipart<ApiResponse<Map>>(`/maps/${mapId}/image`, formData);
-    return { data: response.data };
+    const response = await uploadFileViaTransport<TauriMapRecord>('maps_upload_image', file, {
+      mapId,
+    });
+    return toSingleMapResponse(response);
   },
 
   getMarkersByMapId: async (mapId: number, projectId?: number): Promise<ApiResult<MapMarker[]>> => {

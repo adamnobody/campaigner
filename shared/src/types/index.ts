@@ -221,7 +221,7 @@ export type PoliticalScaleAssignmentUpsertRow = z.infer<typeof politicalScaleAss
 export type PutPoliticalScaleAssignmentsBody = z.input<typeof putPoliticalScaleAssignmentsBodySchema>;
 
 // ==================== Common ====================
-// In backend responses `Tag` always includes `id` and `color` (color falls back to '#808080').
+// In API responses `Tag` always includes `id` and `color` (color falls back to '#808080').
 export type Tag = Omit<z.infer<typeof tagSchema>, 'id' | 'color'> & {
   id: number;
   color: string;

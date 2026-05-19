@@ -172,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_tags_deduplicates_same_tag_id_like_backend() {
+    fn replace_tags_deduplicates_same_tag_id_like_legacy() {
         let connection = setup_connection();
         let input = SetEntityTagsInput {
             project_id: 1,
