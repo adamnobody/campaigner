@@ -164,6 +164,32 @@ export const preloadImage = (src: string): Promise<void> =>
     setTimeout(resolve, 3000);
   });
 
+export type MapViewTransform = { x: number; y: number; scale: number };
+
+/** Fit map image in viewport (aspect ratio preserved, scale capped at 1). */
+export function computeFitView(
+  mapWidth: number,
+  mapHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  paddingRatio = 0.05,
+): MapViewTransform {
+  const padding = Math.min(viewportWidth, viewportHeight) * paddingRatio;
+  const availableWidth = viewportWidth - padding * 2;
+  const availableHeight = viewportHeight - padding * 2;
+
+  const scaleX = availableWidth / mapWidth;
+  const scaleY = availableHeight / mapHeight;
+  const scale = Math.round(Math.min(scaleX, scaleY, 1) * 10000) / 10000;
+
+  const scaledWidth = mapWidth * scale;
+  const scaledHeight = mapHeight * scale;
+  const x = (viewportWidth - scaledWidth) / 2;
+  const y = (viewportHeight - scaledHeight) / 2;
+
+  return { x, y, scale };
+}
+
 export const pointsToSvgPath = (points: { x: number; y: number }[]): string => {
   if (points.length < 2) return '';
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';

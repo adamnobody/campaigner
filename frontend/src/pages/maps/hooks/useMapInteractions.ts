@@ -24,6 +24,7 @@ type UseMapInteractionsArgs = {
   panOriginRef: React.MutableRefObject<{ x: number; y: number }>;
   panRef: React.MutableRefObject<{ x: number; y: number }>;
   applyTransform: () => void;
+  markUserViewAdjusted: () => void;
   imgRef: React.RefObject<HTMLImageElement>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Array<{ x: number; y: number }>>>;
   drawingPoints: Array<{ x: number; y: number }>;
@@ -65,6 +66,7 @@ export function useMapInteractions({
   panOriginRef,
   panRef,
   applyTransform,
+  markUserViewAdjusted,
   imgRef,
   setDrawingPoints,
   drawingPoints,
@@ -161,6 +163,7 @@ export function useMapInteractions({
         y: panOriginRef.current.y + e.clientY - panStartRef.current.y,
       };
       applyTransform();
+      markUserViewAdjusted();
       return;
     }
 
@@ -238,6 +241,7 @@ export function useMapInteractions({
     panOriginRef,
     panRef,
     panStartRef,
+    markUserViewAdjusted,
     setDrawingPoints,
     setEditingTerritoryPoints,
     zoomDisplay,

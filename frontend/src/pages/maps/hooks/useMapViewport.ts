@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect, type RefObject } from 'react';
-import { MIN_ZOOM, MAX_ZOOM, ZOOM_SPEED } from '../components/mapUtils';
+import { MIN_ZOOM, MAX_ZOOM, ZOOM_SPEED, computeFitView } from '../components/mapUtils';
 
 type Params = {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -18,6 +18,7 @@ export function useMapViewport({ containerRef, transformRef, wheelEnabled }: Par
   const panOriginRef = useRef({ x: 0, y: 0 });
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
+  const userViewAdjustedRef = useRef(false);
 
   const applyTransform = useCallback(() => {
     const el = transformRef.current;
@@ -26,6 +27,27 @@ export function useMapViewport({ containerRef, transformRef, wheelEnabled }: Par
         `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`;
     }
   }, [transformRef]);
+
+  const markUserViewAdjusted = useCallback(() => {
+    userViewAdjustedRef.current = true;
+  }, []);
+
+  const clearUserViewAdjusted = useCallback(() => {
+    userViewAdjustedRef.current = false;
+  }, []);
+
+  const hasUserView = useCallback(() => userViewAdjustedRef.current, []);
+
+  const fitToScreen = useCallback(
+    (mapWidth: number, mapHeight: number, viewportWidth: number, viewportHeight: number) => {
+      const { x, y, scale } = computeFitView(mapWidth, mapHeight, viewportWidth, viewportHeight);
+      panRef.current = { x, y };
+      zoomRef.current = scale;
+      applyTransform();
+      setZoomDisplay(scale);
+    },
+    [applyTransform],
+  );
 
   useEffect(() => {
     if (!wheelEnabled) return;
@@ -52,6 +74,7 @@ export function useMapViewport({ containerRef, transformRef, wheelEnabled }: Par
       zoomRef.current = newZoom;
       applyTransform();
       setZoomDisplay(newZoom);
+      userViewAdjustedRef.current = true;
     };
 
     container.addEventListener('wheel', onWheel, { passive: false });
@@ -72,24 +95,26 @@ export function useMapViewport({ containerRef, transformRef, wheelEnabled }: Par
       zoomRef.current = newZoom;
       applyTransform();
       setZoomDisplay(newZoom);
+      userViewAdjustedRef.current = true;
     },
-    [applyTransform, containerRef]
+    [applyTransform, containerRef],
   );
 
   const zoomIn = useCallback(
     () => zoomToCenter(Math.min(MAX_ZOOM, zoomRef.current + 0.2)),
-    [zoomToCenter]
+    [zoomToCenter],
   );
   const zoomOut = useCallback(
     () => zoomToCenter(Math.max(MIN_ZOOM, zoomRef.current - 0.2)),
-    [zoomToCenter]
+    [zoomToCenter],
   );
 
-  const resetView = useCallback(() => {
+  const resetView = useCallback((fromUser = false) => {
     zoomRef.current = 1;
     panRef.current = { x: 0, y: 0 };
     applyTransform();
     setZoomDisplay(1);
+    if (fromUser) userViewAdjustedRef.current = true;
   }, [applyTransform]);
 
   return {
@@ -103,5 +128,9 @@ export function useMapViewport({ containerRef, transformRef, wheelEnabled }: Par
     zoomIn,
     zoomOut,
     resetView,
+    fitToScreen,
+    hasUserView,
+    markUserViewAdjusted,
+    clearUserViewAdjusted,
   };
 }
