@@ -49,7 +49,8 @@
     "tauri:vite:dev": "node ./src-tauri/dev-frontend.mjs",
     "tauri:vite:build": "node ./src-tauri/build-frontend.mjs",
     "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
-    "tauri:build": "tauri build --config src-tauri/tauri.conf.json"
+    "tauri:build": "tauri build --config src-tauri/tauri.conf.json",
+    "lint:api-client": "node scripts/lint-no-api-client.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.2",
