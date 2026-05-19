@@ -13,6 +13,21 @@ use crate::models::upload::{
     UploadSavedPath,
 };
 use crate::uploads::service;
+use crate::uploads::web_path;
+
+#[tauri::command(rename = "uploads_resolve_path")]
+pub fn uploads_resolve_path_command(app: AppHandle, relative_path: String) -> Result<String> {
+    let disk_path = web_path::resolve_disk_path(&app, &relative_path)?;
+    let normalized = disk_path
+        .to_str()
+        .ok_or_else(|| AppError::internal("PATH_RESOLVE_ERROR", "Upload path is not valid UTF-8"))?
+        .to_string();
+
+    Ok(normalized
+        .strip_prefix("\\\\?\\")
+        .map(str::to_string)
+        .unwrap_or(normalized))
+}
 
 #[tauri::command(rename = "uploads_save_map_image")]
 pub fn uploads_save_map_image_command(

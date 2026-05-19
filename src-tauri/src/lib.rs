@@ -156,6 +156,7 @@ pub fn run() {
             commands::wiki::wiki_links_create_command,
             commands::wiki::wiki_links_delete_command,
             commands::wiki::wiki_categories_list_command,
+            commands::uploads::uploads_resolve_path_command,
             commands::uploads::uploads_save_map_image_command,
             commands::uploads::uploads_save_character_image_command,
             commands::uploads::uploads_save_trait_image_command,
