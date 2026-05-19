@@ -85,6 +85,8 @@ export const commands = {
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
 	projectsCreateDemo: (input: CreateDemoProjectInput) => __TAURI_INVOKE<Project>("projects_create_demo", { input }),
+	projectsExport: (projectId: number) => __TAURI_INVOKE<ImportedProjectPayload_Serialize>("projects_export", { projectId }),
+	projectsImport: (input: ImportProjectInput_Deserialize) => __TAURI_INVOKE<Project>("projects_import", { input }),
 	projectsUpdate: (input: UpdateProjectInput) => __TAURI_INVOKE<Project>("projects_update", { input }),
 	projectsDelete: (input: DeleteProjectInput) => __TAURI_INVOKE<void>("projects_delete", { input }),
 	searchQuery: (input: SearchQueryInput) => __TAURI_INVOKE<SearchResult[]>("search_query", { input }),
@@ -927,6 +929,501 @@ export type Dynasty_Serialize = {
 	linkedFactionName?: string | null,
 };
 
+export type ExportCharacterRow = ExportCharacterRow_Serialize | ExportCharacterRow_Deserialize;
+
+export type ExportCharacterRow_Deserialize = {
+	id: number,
+	name: string,
+	title: string,
+	race: string,
+	characterClass: string,
+	level: number | null,
+	status: string,
+	bio: string,
+	appearance: string,
+	personality: string,
+	backstory: string,
+	notes: string,
+	stateId: number | null,
+	factionIds?: number[],
+	imagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
+	imageBase64: string | null,
+};
+
+export type ExportCharacterRow_Serialize = {
+	id: number,
+	name: string,
+	title: string,
+	race: string,
+	characterClass: string,
+	level: number | null,
+	status: string,
+	bio: string,
+	appearance: string,
+	personality: string,
+	backstory: string,
+	notes: string,
+	stateId?: number | null,
+	factionIds?: number[],
+	imagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
+	imageBase64?: string | null,
+};
+
+export type ExportDogmaRow = ExportDogmaRow_Serialize | ExportDogmaRow_Deserialize;
+
+export type ExportDogmaRow_Deserialize = {
+	id: number,
+	title: string,
+	category: string,
+	description: string,
+	impact: string,
+	exceptions: string,
+	isPublic?: boolean,
+	importance: string,
+	status: string,
+	sortOrder: number,
+	icon: string,
+	color: string,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportDogmaRow_Serialize = {
+	id: number,
+	title: string,
+	category: string,
+	description: string,
+	impact: string,
+	exceptions: string,
+	isPublic: boolean,
+	importance: string,
+	status: string,
+	sortOrder: number,
+	icon: string,
+	color: string,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportDynastyEventRow = {
+	id: number,
+	dynastyId: number,
+	title: string,
+	description: string,
+	eventDate: string,
+	importance: string,
+	sortOrder: number,
+	createdAt: string,
+};
+
+export type ExportDynastyFamilyLinkRow = {
+	id: number,
+	dynastyId: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationType: string,
+	customLabel: string,
+};
+
+export type ExportDynastyMemberRow = ExportDynastyMemberRow_Serialize | ExportDynastyMemberRow_Deserialize;
+
+export type ExportDynastyMemberRow_Deserialize = {
+	id: number,
+	dynastyId: number,
+	characterId: number,
+	generation: number,
+	role: string,
+	birthDate: string,
+	deathDate: string,
+	isMainLine?: boolean,
+	notes: string,
+};
+
+export type ExportDynastyMemberRow_Serialize = {
+	id: number,
+	dynastyId: number,
+	characterId: number,
+	generation: number,
+	role: string,
+	birthDate: string,
+	deathDate: string,
+	isMainLine: boolean,
+	notes: string,
+};
+
+export type ExportDynastyRow = {
+	id: number,
+	name: string,
+	motto: string,
+	description: string,
+	history: string,
+	status: string,
+	color: string,
+	secondaryColor: string,
+	imagePath: string | null,
+	foundedDate: string,
+	extinctDate: string,
+	founderId: number | null,
+	currentLeaderId: number | null,
+	heirId: number | null,
+	linkedFactionId: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportFactionCustomMetricRow = {
+	id: number,
+	factionId: number,
+	name: string,
+	value: number | null,
+	unit: string | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportFactionMemberRow = ExportFactionMemberRow_Serialize | ExportFactionMemberRow_Deserialize;
+
+export type ExportFactionMemberRow_Deserialize = {
+	id: number,
+	factionId: number,
+	characterId: number,
+	rankId: number | null,
+	role: string,
+	joinedDate: string,
+	leftDate: string,
+	isActive?: boolean,
+	notes: string,
+};
+
+export type ExportFactionMemberRow_Serialize = {
+	id: number,
+	factionId: number,
+	characterId: number,
+	rankId: number | null,
+	role: string,
+	joinedDate: string,
+	leftDate: string,
+	isActive: boolean,
+	notes: string,
+};
+
+export type ExportFactionRankRow = {
+	id: number,
+	factionId: number,
+	name: string,
+	level: number,
+	description: string,
+	permissions: string,
+	icon: string,
+	color: string,
+};
+
+export type ExportFactionRelationRow = ExportFactionRelationRow_Serialize | ExportFactionRelationRow_Deserialize;
+
+export type ExportFactionRelationRow_Deserialize = {
+	id: number,
+	sourceFactionId: number,
+	targetFactionId: number,
+	relationType: string,
+	customLabel: string,
+	description: string,
+	startedDate: string,
+	isBidirectional?: boolean,
+	createdAt: string,
+};
+
+export type ExportFactionRelationRow_Serialize = {
+	id: number,
+	sourceFactionId: number,
+	targetFactionId: number,
+	relationType: string,
+	customLabel: string,
+	description: string,
+	startedDate: string,
+	isBidirectional: boolean,
+	createdAt: string,
+};
+
+export type ExportFactionRow = ExportFactionRow_Serialize | ExportFactionRow_Deserialize;
+
+export type ExportFactionRow_Deserialize = {
+	id: number,
+	name: string,
+	kind: string,
+	type: string | null,
+	motto: string,
+	description: string,
+	history: string,
+	goals: string,
+	headquarters: string,
+	territory: string,
+	treasury: number | null,
+	population: number | null,
+	armySize: number | null,
+	navySize: number | null,
+	territoryKm2: number | null,
+	annualIncome: number | null,
+	annualExpenses: number | null,
+	membersCount: number | null,
+	influence: number | null,
+	customMetrics?: ExportFactionCustomMetricRow[],
+	status: string,
+	color: string,
+	secondaryColor: string,
+	imagePath: string | null,
+	bannerPath: string | null,
+	foundedDate: string,
+	disbandedDate: string,
+	parentFactionId: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportFactionRow_Serialize = {
+	id: number,
+	name: string,
+	kind: string,
+	type?: string | null,
+	motto: string,
+	description: string,
+	history: string,
+	goals: string,
+	headquarters: string,
+	territory: string,
+	treasury?: number | null,
+	population?: number | null,
+	armySize?: number | null,
+	navySize?: number | null,
+	territoryKm2?: number | null,
+	annualIncome?: number | null,
+	annualExpenses?: number | null,
+	membersCount?: number | null,
+	influence?: number | null,
+	customMetrics?: ExportFactionCustomMetricRow[],
+	status: string,
+	color: string,
+	secondaryColor: string,
+	imagePath: string | null,
+	bannerPath: string | null,
+	foundedDate: string,
+	disbandedDate: string,
+	parentFactionId: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportFolderRow = {
+	id: number,
+	name: string,
+	parentId: number | null,
+	createdAt: string,
+};
+
+export type ExportGraphLayoutRow = ExportGraphLayoutRow_Serialize | ExportGraphLayoutRow_Deserialize;
+
+export type ExportGraphLayoutRow_Deserialize = {
+	branchId: number,
+	graphType: string,
+	layoutData: GraphLayoutDataV1_Deserialize,
+};
+
+export type ExportGraphLayoutRow_Serialize = {
+	branchId: number,
+	graphType: string,
+	layoutData: GraphLayoutDataV1_Serialize,
+};
+
+export type ExportMapRow = ExportMapRow_Serialize | ExportMapRow_Deserialize;
+
+export type ExportMapRow_Deserialize = {
+	id: number,
+	projectId: number,
+	parentMapId: number | null,
+	parentMarkerId: number | null,
+	name: string,
+	imagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
+	imageBase64: string | null,
+};
+
+export type ExportMapRow_Serialize = {
+	id: number,
+	projectId: number,
+	parentMapId: number | null,
+	parentMarkerId: number | null,
+	name: string,
+	imagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
+	imageBase64?: string | null,
+};
+
+export type ExportMarkerRow = {
+	id: number,
+	mapId: number,
+	title: string,
+	description: string,
+	positionX: number | null,
+	positionY: number | null,
+	color: string,
+	icon: string,
+	linkedNoteId: number | null,
+	childMapId: number | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportNoteRow = ExportNoteRow_Serialize | ExportNoteRow_Deserialize;
+
+export type ExportNoteRow_Deserialize = {
+	id: number,
+	folderId: number | null,
+	title: string,
+	content: string,
+	format: string,
+	noteType: string,
+	isPinned?: boolean,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportNoteRow_Serialize = {
+	id: number,
+	folderId: number | null,
+	title: string,
+	content: string,
+	format: string,
+	noteType: string,
+	isPinned: boolean,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportProjectMeta = ExportProjectMeta_Serialize | ExportProjectMeta_Deserialize;
+
+export type ExportProjectMeta_Deserialize = {
+	name: string,
+	description: string | null,
+	status: string | null,
+	mapImageBase64: string | null,
+};
+
+export type ExportProjectMeta_Serialize = {
+	name: string,
+	description?: string | null,
+	status?: string | null,
+	mapImageBase64?: string | null,
+};
+
+export type ExportRelationshipRow = ExportRelationshipRow_Serialize | ExportRelationshipRow_Deserialize;
+
+export type ExportRelationshipRow_Deserialize = {
+	id: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationshipType: string,
+	customLabel: string,
+	description: string,
+	isBidirectional?: boolean,
+	createdAt: string,
+};
+
+export type ExportRelationshipRow_Serialize = {
+	id: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationshipType: string,
+	customLabel: string,
+	description: string,
+	isBidirectional: boolean,
+	createdAt: string,
+};
+
+export type ExportScenarioBranchRow = {
+	id: number,
+	projectId: number,
+	name: string,
+	parentBranchId: number | null,
+	baseRevision: number,
+	isMain: boolean,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportTagAssociationRow = {
+	tagId: number,
+	entityType: string,
+	entityId: number,
+};
+
+export type ExportTagRow = {
+	id: number,
+	name: string,
+	color: string,
+};
+
+export type ExportTerritoryRow = {
+	id: number,
+	mapId: number,
+	name: string,
+	description: string,
+	color: string,
+	opacity: number | null,
+	borderColor: string,
+	borderWidth: number | null,
+	points: string,
+	factionId: number | null,
+	smoothing: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportTimelineEventRow = ExportTimelineEventRow_Serialize | ExportTimelineEventRow_Deserialize;
+
+export type ExportTimelineEventRow_Deserialize = {
+	id: number,
+	title: string,
+	description: string,
+	eventDate: string,
+	sortOrder: number,
+	era: string,
+	eraColor: string | null,
+	linkedNoteId: number | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportTimelineEventRow_Serialize = {
+	id: number,
+	title: string,
+	description: string,
+	eventDate: string,
+	sortOrder: number,
+	era: string,
+	eraColor?: string | null,
+	linkedNoteId: number | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type ExportWikiLinkRow = {
+	id: number,
+	sourceNoteId: number,
+	targetNoteId: number,
+	label: string,
+	createdAt: string,
+};
+
 export type Faction = {
 	id: number,
 	projectId: number,
@@ -1228,6 +1725,80 @@ export type GraphLayoutViewport = {
 export type IdNameRef = {
 	id: number,
 	name: string,
+};
+
+export type ImportProjectInput = ImportProjectInput_Serialize | ImportProjectInput_Deserialize;
+
+export type ImportProjectInput_Deserialize = {
+	payload: ImportedProjectPayload_Deserialize,
+	locale: string | null,
+	appendImportNameSuffix?: boolean,
+};
+
+export type ImportProjectInput_Serialize = {
+	payload: ImportedProjectPayload_Serialize,
+	locale: string | null,
+	appendImportNameSuffix: boolean,
+};
+
+export type ImportedProjectPayload = ImportedProjectPayload_Serialize | ImportedProjectPayload_Deserialize;
+
+export type ImportedProjectPayload_Deserialize = {
+	version: string,
+	exportedAt: string | null,
+	project: ExportProjectMeta_Deserialize,
+	characters?: ExportCharacterRow_Deserialize[],
+	relationships?: ExportRelationshipRow_Deserialize[],
+	notes?: ExportNoteRow_Deserialize[],
+	folders?: ExportFolderRow[],
+	maps?: ExportMapRow_Deserialize[],
+	markers?: ExportMarkerRow[],
+	territories?: ExportTerritoryRow[],
+	timelineEvents?: ExportTimelineEventRow_Deserialize[],
+	tags?: ExportTagRow[],
+	tagAssociations?: ExportTagAssociationRow[],
+	wikiLinks?: ExportWikiLinkRow[],
+	dogmas?: ExportDogmaRow_Deserialize[],
+	factions?: ExportFactionRow_Deserialize[],
+	factionCustomMetrics?: ExportFactionCustomMetricRow[],
+	factionRanks?: ExportFactionRankRow[],
+	factionMembers?: ExportFactionMemberRow_Deserialize[],
+	factionRelations?: ExportFactionRelationRow_Deserialize[],
+	dynasties?: ExportDynastyRow[],
+	dynastyMembers?: ExportDynastyMemberRow_Deserialize[],
+	dynastyFamilyLinks?: ExportDynastyFamilyLinkRow[],
+	dynastyEvents?: ExportDynastyEventRow[],
+	scenarioBranches?: ExportScenarioBranchRow[],
+	graphLayouts?: ExportGraphLayoutRow_Deserialize[],
+};
+
+export type ImportedProjectPayload_Serialize = {
+	version: string,
+	exportedAt?: string | null,
+	project: ExportProjectMeta_Serialize,
+	characters: ExportCharacterRow_Serialize[],
+	relationships: ExportRelationshipRow_Serialize[],
+	notes: ExportNoteRow_Serialize[],
+	folders: ExportFolderRow[],
+	maps: ExportMapRow_Serialize[],
+	markers: ExportMarkerRow[],
+	territories: ExportTerritoryRow[],
+	timelineEvents: ExportTimelineEventRow_Serialize[],
+	tags: ExportTagRow[],
+	tagAssociations: ExportTagAssociationRow[],
+	wikiLinks: ExportWikiLinkRow[],
+	dogmas: ExportDogmaRow_Serialize[],
+	factions: ExportFactionRow_Serialize[],
+	factionCustomMetrics: ExportFactionCustomMetricRow[],
+	factionRanks: ExportFactionRankRow[],
+	factionMembers: ExportFactionMemberRow_Serialize[],
+	factionRelations: ExportFactionRelationRow_Serialize[],
+	dynasties: ExportDynastyRow[],
+	dynastyMembers: ExportDynastyMemberRow_Serialize[],
+	dynastyFamilyLinks: ExportDynastyFamilyLinkRow[],
+	dynastyEvents: ExportDynastyEventRow[],
+	scenarioBranches: ExportScenarioBranchRow[],
+	graphLayouts: ExportGraphLayoutRow_Serialize[],
 };
 
 export type ListBranchesInput = {

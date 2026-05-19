@@ -15,6 +15,8 @@ use tauri::Manager;
 
 pub fn run() {
     asset_protocol::register_campaigner_protocol(tauri::Builder::default())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let connection = open_database(app.handle())
                 .map_err(|err| std::io::Error::other(err.to_string()))?;
@@ -128,6 +130,8 @@ pub fn run() {
             commands::projects::projects_create_demo_command,
             commands::projects::projects_update_command,
             commands::projects::projects_delete_command,
+            commands::project_io::projects_export_command,
+            commands::project_io::projects_import_command,
             commands::search::search_query_command,
             commands::political_scales::political_scales_list_command,
             commands::political_scales::political_scales_create_command,

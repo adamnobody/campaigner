@@ -10,6 +10,7 @@ pub mod graph_layouts;
 pub mod maps;
 pub mod notes;
 pub mod political_scales;
+pub mod project_io;
 pub mod projects;
 pub mod search;
 pub mod tags;

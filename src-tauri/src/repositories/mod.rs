@@ -12,6 +12,7 @@ pub mod maps;
 pub mod notes;
 pub mod political_scales;
 mod political_scales_seed;
+pub mod project_io;
 pub mod projects;
 pub mod search;
 pub mod tag_associations;

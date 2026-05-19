@@ -70,6 +70,7 @@ use crate::models::project::{
     CreateDemoProjectInput, CreateProjectInput, DeleteProjectInput, GetProjectInput, Project,
     UpdateProjectInput,
 };
+use crate::models::project_io::{ExportProjectMeta, ImportProjectInput, ImportedProjectPayload};
 use crate::models::search::{SearchQueryInput, SearchResult, SearchResultType};
 use crate::models::tag::{CreateTagInput, DeleteTagInput, Tag, TagsListInput};
 use crate::models::timeline::{
@@ -107,14 +108,15 @@ mod codegen_commands {
         DeletePoliticalScaleInput, DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput,
         DeleteTimelineEventInput, DeleteWikiLinkInput, Dogma, DogmasListInput, DogmasListResult,
         DynastiesListInput, DynastiesListResult, Dynasty, DynastyEvent, DynastyFamilyLink,
-        DynastyMember, DynastyUploadImageInput, Faction, FactionCompareResult, FactionCustomMetric,
-        FactionGraph, FactionMember, FactionPolicy, FactionRank, FactionRelation,
-        FactionUploadBannerInput, FactionUploadImageInput, FactionsListInput, FactionsListResult,
-        FactionsRelationsListInput, GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput,
-        GetCharacterInput, GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput,
-        GetFactionInput, GetGraphLayoutInput, GetMapInput, GetMapTreeInput, GetNoteInput,
-        GetProjectInput, GetRootMapInput, GetTimelineEventInput, GraphLayoutDataV1,
-        GraphLayoutResponse, ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
+        DynastyMember, DynastyUploadImageInput, ExportProjectMeta, Faction, FactionCompareResult,
+        FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy, FactionRank,
+        FactionRelation, FactionUploadBannerInput, FactionUploadImageInput, FactionsListInput,
+        FactionsListResult, FactionsRelationsListInput, GetAmbitionsCatalogInput,
+        GetAssignedCharacterTraitsInput, GetCharacterInput, GetDogmaInput, GetDynastyInput,
+        GetFactionAmbitionsInput, GetFactionInput, GetGraphLayoutInput, GetMapInput,
+        GetMapTreeInput, GetNoteInput, GetProjectInput, GetRootMapInput, GetTimelineEventInput,
+        GraphLayoutDataV1, GraphLayoutResponse, ImportProjectInput, ImportedProjectPayload,
+        ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
         ListFactionPoliciesInput, ListFactionRanksInput, ListMapMarkersInput,
         ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput,
         ListTerritorySummariesInput, ListWikiCategoriesInput, ListWikiLinksInput, MapMarker,
@@ -835,6 +837,59 @@ mod codegen_commands {
         Project {
             id: 0,
             name: "Demo".to_string(),
+            description: String::new(),
+            status: "active".to_string(),
+            map_image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn projects_export(_project_id: i32) -> ImportedProjectPayload {
+        ImportedProjectPayload {
+            version: "2.1".to_string(),
+            exported_at: None,
+            project: ExportProjectMeta {
+                name: "Export".to_string(),
+                description: None,
+                status: Some("active".to_string()),
+                map_image_base64: None,
+            },
+            characters: Vec::new(),
+            relationships: Vec::new(),
+            notes: Vec::new(),
+            folders: Vec::new(),
+            maps: Vec::new(),
+            markers: Vec::new(),
+            territories: Vec::new(),
+            timeline_events: Vec::new(),
+            tags: Vec::new(),
+            tag_associations: Vec::new(),
+            wiki_links: Vec::new(),
+            dogmas: Vec::new(),
+            factions: Vec::new(),
+            faction_custom_metrics: Vec::new(),
+            faction_ranks: Vec::new(),
+            faction_members: Vec::new(),
+            faction_relations: Vec::new(),
+            dynasties: Vec::new(),
+            dynasty_members: Vec::new(),
+            dynasty_family_links: Vec::new(),
+            dynasty_events: Vec::new(),
+            scenario_branches: Vec::new(),
+            graph_layouts: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn projects_import(input: ImportProjectInput) -> Project {
+        let _ = input;
+        Project {
+            id: 0,
+            name: "Import".to_string(),
             description: String::new(),
             status: "active".to_string(),
             map_image_path: None,
@@ -1705,6 +1760,8 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::projects_get,
             codegen_commands::projects_create,
             codegen_commands::projects_create_demo,
+            codegen_commands::projects_export,
+            codegen_commands::projects_import,
             codegen_commands::projects_update,
             codegen_commands::projects_delete,
             codegen_commands::search_query,

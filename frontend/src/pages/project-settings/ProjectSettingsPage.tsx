@@ -63,6 +63,16 @@ export const ProjectSettingsPage: React.FC = () => {
     setExporting(true);
     try {
       const res = await projectsApi.exportProject(pid);
+      if ('cancelled' in res) {
+        if (res.cancelled) {
+          return;
+        }
+        showSnackbar(
+          t('projectSettings:snackbar.exportedPath', { path: res.path, defaultValue: res.path }),
+          'success',
+        );
+        return;
+      }
       const blob = res.data;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

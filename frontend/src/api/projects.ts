@@ -10,9 +10,11 @@ import type {
   CreateProjectInput,
   DeleteProjectInput,
   GetProjectInput,
+  ImportProjectInput_Deserialize,
   Project as TauriProject,
   UpdateProjectInput,
 } from '@/types/generated/bindings';
+import { commands } from '@/types/generated/bindings';
 import { transport } from './transport';
 import { httpGetBlob, httpPostMultipart } from './transport/httpMultipart';
 import { uploadFileViaTransport } from './uploadFile';
@@ -187,18 +189,43 @@ export const projectsApi = {
     return { data: response.data };
   },
 
-  // HTTP-only: full project export not ported to Tauri yet.
   exportProject: async (id: number) => {
     if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      tauriNotPorted('Project export');
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+
+      const payload = await commands.projectsExport(id);
+
+      const safeName = (payload.project?.name || 'project').replace(/[^a-zA-Z0-9-_]+/g, '-');
+      const filename = `campaigner-${safeName}-${Date.now()}.json`;
+
+      const targetPath = await save({
+        defaultPath: filename,
+        filters: [{ name: 'Campaigner JSON', extensions: ['json'] }],
+      });
+      if (!targetPath) {
+        return { cancelled: true } as const;
+      }
+
+      await writeTextFile(
+        targetPath,
+        JSON.stringify({ success: true, data: payload }, null, 2),
+      );
+      return { cancelled: false, path: targetPath } as const;
     }
+
     return httpGetBlob(`/projects/${id}/export`);
   },
 
-  // HTTP-only: full project import not ported to Tauri yet.
   importProject: async (data: ImportedProjectPayload, opts?: { locale?: AppLanguage }) => {
     if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      tauriNotPorted('Project import');
+      const input: ImportProjectInput_Deserialize = {
+        payload: data as ImportProjectInput_Deserialize['payload'],
+        locale: opts?.locale ?? null,
+        appendImportNameSuffix: true,
+      };
+      const project = await commands.projectsImport(input);
+      return toProjectResponse(project);
     }
 
     const response = await transport.request<ApiResponse<Project>>({
