@@ -44,7 +44,7 @@
     "electron:dev": "npm run build && electron .",
     "electron:build": "npm run electron:prepare-node && npm run build && npm run electron:rebuild-backend-native && electron-builder",
     "electron:quick": "electron .",
-    "tauri:codegen": "cargo run --manifest-path src-tauri/Cargo.toml --bin codegen",
+    "tauri:codegen": "node scripts/gen-rust-seeds.mjs && cargo run --manifest-path src-tauri/Cargo.toml --bin codegen",
     "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
     "tauri:build": "tauri build --config src-tauri/tauri.conf.json"
   },

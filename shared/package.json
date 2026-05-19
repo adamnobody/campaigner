@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./seeds": {
+      "types": "./dist/seeds/index.d.ts",
+      "default": "./dist/seeds/index.js"
     }
   },
   "scripts": {

@@ -23,6 +23,7 @@ pub fn get_catalog(
     connection: &Connection,
     input: &GetAmbitionsCatalogInput,
 ) -> Result<Vec<Ambition>> {
+    super::ambitions_seed::seed_builtin_catalog(connection)?;
     let mut statement = connection.prepare(
         r#"
         SELECT id, name, description, icon_path, is_custom, project_id, created_at, updated_at

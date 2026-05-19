@@ -1,8 +1,11 @@
+// GENERATED — DO NOT EDIT
+// Source: shared/seeds/characterTraits.ts via scripts/gen-rust-seeds.mjs
+// manifest-hash: 25a1a8477f6da5fef8db269546574cce164d480a4259bb58c30bc140695c1b63
+
 use rusqlite::{params, Connection};
 
 use crate::error::Result;
 
-/// Mirrors `PREDEFINED_TRAITS` in `backend/src/services/character-trait.service.ts`.
 const PREDEFINED_TRAITS: &[(&str, &str, &str)] = &[
     (
         "dobrota",
@@ -181,7 +184,6 @@ const PREDEFINED_TRAITS: &[(&str, &str, &str)] = &[
     ),
 ];
 
-/// Mirrors `DEFAULT_TRAIT_EXCLUSION_PAIRS` in backend character-trait.service.ts.
 const DEFAULT_TRAIT_EXCLUSION_PAIRS: &[(&str, &str)] = &[
     ("Доброта", "Злость"),
     ("Доброта", "Жестокость"),
