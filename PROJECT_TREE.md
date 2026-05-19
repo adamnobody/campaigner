@@ -6,7 +6,6 @@
 campaigner
 ├─ data
 ├─ docs
-│  ├─ architecture
 │  └─ ideas
 │     ├─ ideas-backlog.md
 │     ├─ ideas-dumb.md
@@ -370,6 +369,7 @@ campaigner
 │  ├─ gen-en-builtins.mjs
 │  ├─ gen-rust-seeds.mjs
 │  ├─ generate-tree.mjs
+│  ├─ prepare-electron-runtime-deps.mjs
 │  ├─ tauri-vite-build.mjs
 │  └─ tauri-vite-dev.mjs
 ├─ shared
