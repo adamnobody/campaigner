@@ -27,6 +27,13 @@ use crate::models::dogma::{
     CreateDogmaInput, DeleteDogmaInput, Dogma, DogmasListInput, DogmasListResult, GetDogmaInput,
     ReorderDogmasInput, SetDogmaTagsInput, UpdateDogmaInput,
 };
+use crate::models::dynasty::{
+    AddDynastyEventInput, AddDynastyFamilyLinkInput, AddDynastyMemberInput, CreateDynastyInput,
+    DeleteDynastyEventInput, DeleteDynastyFamilyLinkInput, DeleteDynastyInput, DynastiesListInput,
+    DynastiesListResult, Dynasty, DynastyEvent, DynastyFamilyLink, DynastyMember, GetDynastyInput,
+    RemoveDynastyMemberInput, ReorderDynastyEventsInput, SaveDynastyGraphPositionsInput,
+    SetDynastyTagsInput, UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput,
+};
 use crate::models::faction::{
     CompareFactionsInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
     CreateFactionRankInput, CreateFactionRelationInput, DeleteFactionInput,
@@ -64,38 +71,44 @@ use crate::models::timeline::{
 
 mod codegen_commands {
     use super::{
-        Ambition, AppHealthResponse, AssignCharacterTraitInput, AssignFactionAmbitionInput,
-        Character, CharacterGraph, CharacterRelationship, CharacterTrait, CharactersListInput,
+        AddDynastyEventInput, AddDynastyFamilyLinkInput, AddDynastyMemberInput, Ambition,
+        AppHealthResponse, AssignCharacterTraitInput, AssignFactionAmbitionInput, Character,
+        CharacterGraph, CharacterRelationship, CharacterTrait, CharactersListInput,
         CharactersListResult, CompareFactionsInput, CreateAmbitionInput, CreateBranchInput,
-        CreateCharacterInput, CreateCharacterTraitInput, CreateDogmaInput, CreateFactionInput,
-        CreateFactionMemberInput, CreateFactionPolicyInput, CreateFactionRankInput,
-        CreateFactionRelationInput, CreateNoteInput, CreatePoliticalScaleInput, CreateProjectInput,
-        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteAmbitionInput,
-        DeleteBranchInput, DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput,
-        DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
-        DeleteFactionRankInput, DeleteFactionRelationInput, DeleteGraphLayoutInput,
-        DeleteNoteInput, DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput,
-        DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput,
-        Dogma, DogmasListInput, DogmasListResult, Faction, FactionCompareResult,
-        FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy, FactionRank,
-        FactionRelation, FactionsListInput, FactionsListResult, FactionsRelationsListInput,
+        CreateCharacterInput, CreateCharacterTraitInput, CreateDogmaInput, CreateDynastyInput,
+        CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
+        CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput,
+        CreatePoliticalScaleInput, CreateProjectInput, CreateRelationshipInput, CreateTagInput,
+        CreateTimelineEventInput, DeleteAmbitionInput, DeleteBranchInput, DeleteCharacterInput,
+        DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
+        DeleteDynastyFamilyLinkInput, DeleteDynastyInput, DeleteFactionInput,
+        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
+        DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteNoteInput,
+        DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
+        DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, Dogma, DogmasListInput,
+        DogmasListResult, DynastiesListInput, DynastiesListResult, Dynasty, DynastyEvent,
+        DynastyFamilyLink, DynastyMember, Faction, FactionCompareResult, FactionCustomMetric,
+        FactionGraph, FactionMember, FactionPolicy, FactionRank, FactionRelation,
+        FactionsListInput, FactionsListResult, FactionsRelationsListInput,
         GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput, GetCharacterInput,
-        GetDogmaInput, GetFactionAmbitionsInput, GetFactionInput, GetGraphLayoutInput,
-        GetNoteInput, GetProjectInput, GetTimelineEventInput, GraphLayoutDataV1,
-        GraphLayoutResponse, ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
-        ListFactionPoliciesInput, ListFactionRanksInput, ListPoliticalScaleAssignmentsInput,
-        ListPoliticalScalesInput, Note, NotesListInput, NotesListResult, PoliticalScale,
-        PoliticalScaleAssignment, Project, RelationshipsListInput, ReorderDogmasInput,
+        GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput, GetFactionInput,
+        GetGraphLayoutInput, GetNoteInput, GetProjectInput, GetTimelineEventInput,
+        GraphLayoutDataV1, GraphLayoutResponse, ListBranchesInput, ListCharacterTraitsInput,
+        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput,
+        ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput, Note, NotesListInput,
+        NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project, RelationshipsListInput,
+        RemoveDynastyMemberInput, ReorderDogmasInput, ReorderDynastyEventsInput,
         ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
-        ReplacePoliticalScaleAssignmentsInput, ScenarioBranch, SetCharacterTagsInput,
-        SetDogmaTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
-        TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
-        UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
-        UpdateBranchInput, UpdateCharacterInput, UpdateCharacterTraitExclusionsInput,
-        UpdateDogmaInput, UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
-        UpdateFactionRankInput, UpdateFactionRelationInput, UpdateNoteInput,
-        UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput, UpsertGraphLayoutInput,
+        ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
+        SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
+        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
+        TimelineListInput, UnassignCharacterTraitInput, UnassignFactionAmbitionInput,
+        UpdateAmbitionExclusionsInput, UpdateAmbitionInput, UpdateBranchInput,
+        UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
+        UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
+        UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
+        UpdateFactionRelationInput, UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput,
+        UpdateRelationshipInput, UpdateTimelineEventInput, UpsertGraphLayoutInput,
     };
 
     #[tauri::command]
@@ -215,6 +228,173 @@ mod codegen_commands {
     #[specta::specta]
     pub fn dogmas_set_tags(_input: SetDogmaTagsInput) -> Vec<Tag> {
         Vec::new()
+    }
+
+    fn empty_dynasty() -> Dynasty {
+        Dynasty {
+            id: 0,
+            project_id: 0,
+            name: String::new(),
+            motto: String::new(),
+            description: String::new(),
+            history: String::new(),
+            status: "active".to_string(),
+            color: String::new(),
+            secondary_color: String::new(),
+            image_path: None,
+            founded_date: String::new(),
+            extinct_date: String::new(),
+            founder_id: None,
+            current_leader_id: None,
+            heir_id: None,
+            linked_faction_id: None,
+            sort_order: 0,
+            created_at: String::new(),
+            updated_at: String::new(),
+            member_count: None,
+            tags: None,
+            members: None,
+            family_links: None,
+            events: None,
+            founder_name: None,
+            current_leader_name: None,
+            heir_name: None,
+            linked_faction_name: None,
+        }
+    }
+
+    fn empty_dynasty_member() -> DynastyMember {
+        DynastyMember {
+            id: 0,
+            dynasty_id: 0,
+            character_id: 0,
+            generation: 0,
+            role: String::new(),
+            birth_date: String::new(),
+            death_date: String::new(),
+            is_main_line: true,
+            notes: String::new(),
+            graph_x: None,
+            graph_y: None,
+            character_name: None,
+            character_image_path: None,
+            character_status: None,
+        }
+    }
+
+    fn empty_dynasty_family_link() -> DynastyFamilyLink {
+        DynastyFamilyLink {
+            id: 0,
+            dynasty_id: 0,
+            source_character_id: 0,
+            target_character_id: 0,
+            relation_type: "parent".to_string(),
+            custom_label: String::new(),
+            source_character_name: None,
+            target_character_name: None,
+        }
+    }
+
+    fn empty_dynasty_event() -> DynastyEvent {
+        DynastyEvent {
+            id: 0,
+            dynasty_id: 0,
+            title: String::new(),
+            description: String::new(),
+            event_date: String::new(),
+            importance: "normal".to_string(),
+            sort_order: 0,
+            created_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_list(_input: DynastiesListInput) -> DynastiesListResult {
+        DynastiesListResult {
+            items: Vec::new(),
+            total: 0,
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_get(_input: GetDynastyInput) -> Dynasty {
+        empty_dynasty()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_create(_input: CreateDynastyInput) -> Dynasty {
+        empty_dynasty()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_update(_input: UpdateDynastyInput) -> Dynasty {
+        empty_dynasty()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_delete(_input: DeleteDynastyInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_set_tags(_input: SetDynastyTagsInput) -> Dynasty {
+        empty_dynasty()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_add_member(_input: AddDynastyMemberInput) -> DynastyMember {
+        empty_dynasty_member()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_update_member(_input: UpdateDynastyMemberInput) -> DynastyMember {
+        empty_dynasty_member()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_remove_member(_input: RemoveDynastyMemberInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_save_graph_positions(_input: SaveDynastyGraphPositionsInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_add_family_link(_input: AddDynastyFamilyLinkInput) -> DynastyFamilyLink {
+        empty_dynasty_family_link()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_delete_family_link(_input: DeleteDynastyFamilyLinkInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_add_event(_input: AddDynastyEventInput) -> DynastyEvent {
+        empty_dynasty_event()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_update_event(_input: UpdateDynastyEventInput) -> DynastyEvent {
+        empty_dynasty_event()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_delete_event(_input: DeleteDynastyEventInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_reorder_events(_input: ReorderDynastyEventsInput) -> Dynasty {
+        empty_dynasty()
     }
 
     #[tauri::command]
@@ -1128,6 +1308,22 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::dogmas_delete,
             codegen_commands::dogmas_reorder,
             codegen_commands::dogmas_set_tags,
+            codegen_commands::dynasties_list,
+            codegen_commands::dynasties_get,
+            codegen_commands::dynasties_create,
+            codegen_commands::dynasties_update,
+            codegen_commands::dynasties_delete,
+            codegen_commands::dynasties_set_tags,
+            codegen_commands::dynasties_add_member,
+            codegen_commands::dynasties_update_member,
+            codegen_commands::dynasties_remove_member,
+            codegen_commands::dynasties_save_graph_positions,
+            codegen_commands::dynasties_add_family_link,
+            codegen_commands::dynasties_delete_family_link,
+            codegen_commands::dynasties_add_event,
+            codegen_commands::dynasties_update_event,
+            codegen_commands::dynasties_delete_event,
+            codegen_commands::dynasties_reorder_events,
             codegen_commands::ambitions_get_catalog,
             codegen_commands::ambitions_create,
             codegen_commands::ambitions_update,
@@ -1226,6 +1422,27 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<DeleteDogmaInput>()
         .typ::<ReorderDogmasInput>()
         .typ::<SetDogmaTagsInput>()
+        .typ::<Dynasty>()
+        .typ::<DynastyMember>()
+        .typ::<DynastyFamilyLink>()
+        .typ::<DynastyEvent>()
+        .typ::<DynastiesListInput>()
+        .typ::<DynastiesListResult>()
+        .typ::<GetDynastyInput>()
+        .typ::<CreateDynastyInput>()
+        .typ::<UpdateDynastyInput>()
+        .typ::<DeleteDynastyInput>()
+        .typ::<SetDynastyTagsInput>()
+        .typ::<AddDynastyMemberInput>()
+        .typ::<UpdateDynastyMemberInput>()
+        .typ::<RemoveDynastyMemberInput>()
+        .typ::<SaveDynastyGraphPositionsInput>()
+        .typ::<AddDynastyFamilyLinkInput>()
+        .typ::<DeleteDynastyFamilyLinkInput>()
+        .typ::<AddDynastyEventInput>()
+        .typ::<UpdateDynastyEventInput>()
+        .typ::<DeleteDynastyEventInput>()
+        .typ::<ReorderDynastyEventsInput>()
         .typ::<Ambition>()
         .typ::<GetAmbitionsCatalogInput>()
         .typ::<CreateAmbitionInput>()

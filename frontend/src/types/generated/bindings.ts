@@ -16,6 +16,22 @@ export const commands = {
 	dogmasDelete: (input: DeleteDogmaInput) => __TAURI_INVOKE<void>("dogmas_delete", { input }),
 	dogmasReorder: (input: ReorderDogmasInput) => __TAURI_INVOKE<DogmasListResult>("dogmas_reorder", { input }),
 	dogmasSetTags: (input: SetDogmaTagsInput) => __TAURI_INVOKE<Tag[]>("dogmas_set_tags", { input }),
+	dynastiesList: (input: DynastiesListInput) => __TAURI_INVOKE<DynastiesListResult_Serialize>("dynasties_list", { input }),
+	dynastiesGet: (input: GetDynastyInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_get", { input }),
+	dynastiesCreate: (input: CreateDynastyInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_create", { input }),
+	dynastiesUpdate: (input: UpdateDynastyInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_update", { input }),
+	dynastiesDelete: (input: DeleteDynastyInput) => __TAURI_INVOKE<void>("dynasties_delete", { input }),
+	dynastiesSetTags: (input: SetDynastyTagsInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_set_tags", { input }),
+	dynastiesAddMember: (input: AddDynastyMemberInput) => __TAURI_INVOKE<DynastyMember_Serialize>("dynasties_add_member", { input }),
+	dynastiesUpdateMember: (input: UpdateDynastyMemberInput) => __TAURI_INVOKE<DynastyMember_Serialize>("dynasties_update_member", { input }),
+	dynastiesRemoveMember: (input: RemoveDynastyMemberInput) => __TAURI_INVOKE<void>("dynasties_remove_member", { input }),
+	dynastiesSaveGraphPositions: (input: SaveDynastyGraphPositionsInput) => __TAURI_INVOKE<void>("dynasties_save_graph_positions", { input }),
+	dynastiesAddFamilyLink: (input: AddDynastyFamilyLinkInput) => __TAURI_INVOKE<DynastyFamilyLink_Serialize>("dynasties_add_family_link", { input }),
+	dynastiesDeleteFamilyLink: (input: DeleteDynastyFamilyLinkInput) => __TAURI_INVOKE<void>("dynasties_delete_family_link", { input }),
+	dynastiesAddEvent: (input: AddDynastyEventInput) => __TAURI_INVOKE<DynastyEvent>("dynasties_add_event", { input }),
+	dynastiesUpdateEvent: (input: UpdateDynastyEventInput) => __TAURI_INVOKE<DynastyEvent>("dynasties_update_event", { input }),
+	dynastiesDeleteEvent: (input: DeleteDynastyEventInput) => __TAURI_INVOKE<void>("dynasties_delete_event", { input }),
+	dynastiesReorderEvents: (input: ReorderDynastyEventsInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_reorder_events", { input }),
 	ambitionsGetCatalog: (input: GetAmbitionsCatalogInput) => __TAURI_INVOKE<Ambition[]>("ambitions_get_catalog", { input }),
 	ambitionsCreate: (input: CreateAmbitionInput) => __TAURI_INVOKE<Ambition>("ambitions_create", { input }),
 	ambitionsUpdate: (input: UpdateAmbitionInput) => __TAURI_INVOKE<Ambition>("ambitions_update", { input }),
@@ -101,6 +117,37 @@ export const commands = {
 };
 
 /* Types */
+export type AddDynastyEventInput = {
+	dynastyId: number,
+	title: string,
+	description: string | null,
+	eventDate: string,
+	importance: string | null,
+	sortOrder: number | null,
+	branchId: number | null,
+};
+
+export type AddDynastyFamilyLinkInput = {
+	dynastyId: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationType: string,
+	customLabel: string | null,
+	branchId: number | null,
+};
+
+export type AddDynastyMemberInput = {
+	dynastyId: number,
+	characterId: number,
+	generation: number | null,
+	role: string | null,
+	birthDate: string | null,
+	deathDate: string | null,
+	isMainLine: boolean | null,
+	notes: string | null,
+	branchId: number | null,
+};
+
 export type Ambition = {
 	id: number,
 	name: string,
@@ -277,6 +324,25 @@ export type CreateDogmaInput = {
 	sortOrder: number | null,
 	icon: string | null,
 	color: string | null,
+	branchId: number | null,
+};
+
+export type CreateDynastyInput = {
+	projectId: number,
+	name: string,
+	motto: string | null,
+	description: string | null,
+	history: string | null,
+	status: string | null,
+	color: string | null,
+	secondaryColor: string | null,
+	foundedDate: string | null,
+	extinctDate: string | null,
+	founderId: number | null,
+	currentLeaderId: number | null,
+	heirId: number | null,
+	linkedFactionId: number | null,
+	sortOrder: number | null,
 	branchId: number | null,
 };
 
@@ -461,6 +527,21 @@ export type DeleteDogmaInput = {
 	branchId: number | null,
 };
 
+export type DeleteDynastyEventInput = {
+	dynastyId: number,
+	eventId: number,
+};
+
+export type DeleteDynastyFamilyLinkInput = {
+	dynastyId: number,
+	linkId: number,
+};
+
+export type DeleteDynastyInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type DeleteFactionInput = {
 	id: number,
 	branchId: number | null,
@@ -557,6 +638,168 @@ export type DogmasListInput = {
 export type DogmasListResult = {
 	items: Dogma[],
 	total: number,
+};
+
+export type DynastiesListInput = {
+	projectId: number,
+	search: string | null,
+	status: string | null,
+	limit: number | null,
+	offset: number | null,
+	branchId: number | null,
+};
+
+export type DynastiesListResult = DynastiesListResult_Serialize | DynastiesListResult_Deserialize;
+
+export type DynastiesListResult_Deserialize = {
+	items: Dynasty_Deserialize[],
+	total: number,
+};
+
+export type DynastiesListResult_Serialize = {
+	items: Dynasty_Serialize[],
+	total: number,
+};
+
+export type Dynasty = Dynasty_Serialize | Dynasty_Deserialize;
+
+export type DynastyEvent = {
+	id: number,
+	dynastyId: number,
+	title: string,
+	description: string,
+	eventDate: string,
+	importance: string,
+	sortOrder: number,
+	createdAt: string,
+};
+
+export type DynastyFamilyLink = DynastyFamilyLink_Serialize | DynastyFamilyLink_Deserialize;
+
+export type DynastyFamilyLink_Deserialize = {
+	id: number,
+	dynastyId: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationType: string,
+	customLabel: string,
+	sourceCharacterName: string | null,
+	targetCharacterName: string | null,
+};
+
+export type DynastyFamilyLink_Serialize = {
+	id: number,
+	dynastyId: number,
+	sourceCharacterId: number,
+	targetCharacterId: number,
+	relationType: string,
+	customLabel: string,
+	sourceCharacterName?: string | null,
+	targetCharacterName?: string | null,
+};
+
+export type DynastyGraphPosition = {
+	characterId: number,
+	graphX: number | null,
+	graphY: number | null,
+};
+
+export type DynastyMember = DynastyMember_Serialize | DynastyMember_Deserialize;
+
+export type DynastyMember_Deserialize = {
+	id: number,
+	dynastyId: number,
+	characterId: number,
+	generation: number,
+	role: string,
+	birthDate: string,
+	deathDate: string,
+	isMainLine: boolean,
+	notes: string,
+	graphX: number | null,
+	graphY: number | null,
+	characterName: string | null,
+	characterImagePath: string | null,
+	characterStatus: string | null,
+};
+
+export type DynastyMember_Serialize = {
+	id: number,
+	dynastyId: number,
+	characterId: number,
+	generation: number,
+	role: string,
+	birthDate: string,
+	deathDate: string,
+	isMainLine: boolean,
+	notes: string,
+	graphX: number | null,
+	graphY: number | null,
+	characterName?: string | null,
+	characterImagePath?: string | null,
+	characterStatus?: string | null,
+};
+
+export type Dynasty_Deserialize = {
+	id: number,
+	projectId: number,
+	name: string,
+	motto: string,
+	description: string,
+	history: string,
+	status: string,
+	color: string,
+	secondaryColor: string,
+	imagePath: string | null,
+	foundedDate: string,
+	extinctDate: string,
+	founderId: number | null,
+	currentLeaderId: number | null,
+	heirId: number | null,
+	linkedFactionId: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+	memberCount: number | null,
+	tags: Tag[] | null,
+	members: DynastyMember_Deserialize[] | null,
+	familyLinks: DynastyFamilyLink_Deserialize[] | null,
+	events: DynastyEvent[] | null,
+	founderName: string | null,
+	currentLeaderName: string | null,
+	heirName: string | null,
+	linkedFactionName: string | null,
+};
+
+export type Dynasty_Serialize = {
+	id: number,
+	projectId: number,
+	name: string,
+	motto: string,
+	description: string,
+	history: string,
+	status: string,
+	color: string,
+	secondaryColor: string,
+	imagePath: string | null,
+	foundedDate: string,
+	extinctDate: string,
+	founderId: number | null,
+	currentLeaderId: number | null,
+	heirId: number | null,
+	linkedFactionId: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+	memberCount?: number | null,
+	tags?: Tag[] | null,
+	members?: DynastyMember_Serialize[] | null,
+	familyLinks?: DynastyFamilyLink_Serialize[] | null,
+	events?: DynastyEvent[] | null,
+	founderName?: string | null,
+	currentLeaderName?: string | null,
+	heirName?: string | null,
+	linkedFactionName?: string | null,
 };
 
 export type Faction = {
@@ -745,6 +988,11 @@ export type GetCharacterInput = {
 };
 
 export type GetDogmaInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type GetDynastyInput = {
 	id: number,
 	branchId: number | null,
 };
@@ -968,8 +1216,19 @@ export type RelationshipsListInput = {
 	branchId: number | null,
 };
 
+export type RemoveDynastyMemberInput = {
+	dynastyId: number,
+	memberId: number,
+};
+
 export type ReorderDogmasInput = {
 	projectId: number,
+	orderedIds: number[],
+	branchId: number | null,
+};
+
+export type ReorderDynastyEventsInput = {
+	dynastyId: number,
 	orderedIds: number[],
 	branchId: number | null,
 };
@@ -990,6 +1249,12 @@ export type ReplacePoliticalScaleAssignmentsInput = {
 	entityType: string,
 	entityId: number,
 	assignments: PoliticalScaleAssignmentUpsertRow[],
+};
+
+export type SaveDynastyGraphPositionsInput = {
+	dynastyId: number,
+	positions: DynastyGraphPosition[],
+	branchId: number | null,
 };
 
 export type ScaleZone = ScaleZone_Serialize | ScaleZone_Deserialize;
@@ -1026,6 +1291,12 @@ export type SetCharacterTagsInput = {
 };
 
 export type SetDogmaTagsInput = {
+	id: number,
+	tagIds: number[],
+	branchId: number | null,
+};
+
+export type SetDynastyTagsInput = {
 	id: number,
 	tagIds: number[],
 	branchId: number | null,
@@ -1144,6 +1415,46 @@ export type UpdateDogmaInput = {
 	icon: string | null,
 	color: string | null,
 	branchId: number | null,
+};
+
+export type UpdateDynastyEventInput = {
+	dynastyId: number,
+	eventId: number,
+	title: string | null,
+	description: string | null,
+	eventDate: string | null,
+	importance: string | null,
+	sortOrder: number | null,
+};
+
+export type UpdateDynastyInput = {
+	id: number,
+	name: string | null,
+	motto: string | null,
+	description: string | null,
+	history: string | null,
+	status: string | null,
+	color: string | null,
+	secondaryColor: string | null,
+	foundedDate: string | null,
+	extinctDate: string | null,
+	founderId: number | null,
+	currentLeaderId: number | null,
+	heirId: number | null,
+	linkedFactionId: number | null,
+	sortOrder: number | null,
+	branchId: number | null,
+};
+
+export type UpdateDynastyMemberInput = {
+	dynastyId: number,
+	memberId: number,
+	generation: number | null,
+	role: string | null,
+	birthDate: string | null,
+	deathDate: string | null,
+	isMainLine: boolean | null,
+	notes: string | null,
 };
 
 export type UpdateFactionInput = {

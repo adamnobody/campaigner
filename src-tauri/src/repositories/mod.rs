@@ -5,6 +5,7 @@ pub mod character_traits;
 mod character_traits_seed;
 pub mod characters;
 pub mod dogmas;
+pub mod dynasties;
 pub mod factions;
 pub mod graph_layouts;
 pub mod notes;
