@@ -70,7 +70,7 @@ export interface MapData {
   parentMarkerId: number | null; name: string; imagePath: string | null;
 }
 
-/** Stored names for automatic root maps (historical backend RU literal + canonical EN); display via `map:breadcrumb.worldMap`. */
+/** Stored names for automatic root maps (historical RU literal + canonical EN); display via `map:breadcrumb.worldMap`. */
 const STORED_WORLD_ROOT_MAP_LABELS_LOWER = new Set(['мир', 'world']);
 
 export function localizedRootMapDisplayedName(
@@ -163,6 +163,32 @@ export const preloadImage = (src: string): Promise<void> =>
     img.src = src;
     setTimeout(resolve, 3000);
   });
+
+export type MapViewTransform = { x: number; y: number; scale: number };
+
+/** Fit map image in viewport (aspect ratio preserved, scale capped at 1). */
+export function computeFitView(
+  mapWidth: number,
+  mapHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  paddingRatio = 0.05,
+): MapViewTransform {
+  const padding = Math.min(viewportWidth, viewportHeight) * paddingRatio;
+  const availableWidth = viewportWidth - padding * 2;
+  const availableHeight = viewportHeight - padding * 2;
+
+  const scaleX = availableWidth / mapWidth;
+  const scaleY = availableHeight / mapHeight;
+  const scale = Math.round(Math.min(scaleX, scaleY, 1) * 10000) / 10000;
+
+  const scaledWidth = mapWidth * scale;
+  const scaledHeight = mapHeight * scale;
+  const x = (viewportWidth - scaledWidth) / 2;
+  const y = (viewportHeight - scaledHeight) / 2;
+
+  return { x, y, scale };
+}
 
 export const pointsToSvgPath = (points: { x: number; y: number }[]): string => {
   if (points.length < 2) return '';

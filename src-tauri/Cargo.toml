@@ -1,0 +1,29 @@
+[package]
+name = "campaigner-tauri"
+version = "0.1.0"
+description = "Tauri foundation for Campaigner"
+edition = "2021"
+default-run = "campaigner-tauri"
+
+[lib]
+name = "campaigner_tauri"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+rusqlite = { version = "0.39.0", features = ["bundled"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+specta = { version = "2.0.0-rc.25", features = ["derive"] }
+specta-typescript = "0.0.12"
+tauri = { version = "2.11.2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+http = "1"
+tauri-specta = { version = "2.0.0-rc.25", features = ["typescript"] }
+thiserror = "2.0.18"
+tracing = "0.1"
+
+[build-dependencies]
+tauri-build = { version = "2.6.2", features = [] }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Fade } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import MapIcon from '@mui/icons-material/Map';
 
@@ -120,12 +121,13 @@ export const HomeBackground: React.FC<HomeBackgroundProps> = ({
   parallaxLayerRef,
 }) => {
   const theme = useTheme();
+  const resolvedBackgroundUrl = useAssetUrl(homeBackgroundImage);
 
   return (
     <>
       {/* Custom Background Image */}
-      {homeBackgroundImage && (
-        <Fade in={!!homeBackgroundImage} timeout={1000}>
+      {resolvedBackgroundUrl && (
+        <Fade in={!!resolvedBackgroundUrl} timeout={1000}>
           <Box
             ref={parallaxLayerRef}
             sx={{
@@ -136,7 +138,7 @@ export const HomeBackground: React.FC<HomeBackgroundProps> = ({
               height: 'calc(100% + 40px)',
               zIndex: 0,
               pointerEvents: 'none',
-              backgroundImage: `url(${homeBackgroundImage})`,
+              backgroundImage: `url(${resolvedBackgroundUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',

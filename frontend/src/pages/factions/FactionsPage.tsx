@@ -29,6 +29,7 @@ import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { routes } from '@/utils/routes';
@@ -310,8 +311,8 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
 
                   <Box sx={{ p: 2.5 }}>
                     <Box display="flex" gap={2} alignItems="flex-start">
-                      <Avatar
-                        src={entity.imagePath || undefined}
+                      <AssetAvatar
+                        assetPath={entity.imagePath}
                         sx={{
                           width: 56,
                           height: 56,
@@ -326,7 +327,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                         {(entity.type
                           ? (entity.kind === 'state' ? STATE_TYPE_ICONS[entity.type] : FACTION_TYPE_ICONS[entity.type])
                           : FACTION_KIND_ICONS[entity.kind]) || '🏴'}
-                      </Avatar>
+                      </AssetAvatar>
 
                       <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                         <Typography

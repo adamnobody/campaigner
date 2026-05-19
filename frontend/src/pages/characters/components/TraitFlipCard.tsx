@@ -5,6 +5,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import BlockIcon from '@mui/icons-material/Block';
 import { ExclusionOverlay } from '@/components/ui/ExclusionOverlay';
 import { FlipCard } from '@/components/ui/FlipCard';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 
 export interface TraitFlipCardProps {
   name: string;
@@ -36,11 +37,12 @@ export const TraitFlipCard: React.FC<TraitFlipCardProps> = ({
 }) => {
   const theme = useTheme();
   const { t } = useTranslation(['characters', 'common']);
+  const resolvedImageSrc = useAssetUrl(imageSrc);
   const firstLetter = [...name][0] ?? '?';
 
   return (
     <FlipCard
-      frontImage={imageSrc}
+      frontImage={resolvedImageSrc}
       frontFallbackLetter={firstLetter}
       frontTitle={name}
       backTitle={name}

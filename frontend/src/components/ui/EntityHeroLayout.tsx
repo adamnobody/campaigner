@@ -1,6 +1,8 @@
 import React from 'react';
 import { Box, Typography, useTheme, alpha } from '@mui/material';
 
+import { useAssetUrl } from '@/hooks/useAssetUrl';
+
 interface EntityHeroLayoutProps {
   bannerUrl?: string | null;
   avatarNode?: React.ReactNode;
@@ -17,6 +19,7 @@ export const EntityHeroLayout: React.FC<EntityHeroLayoutProps> = ({
   actionButtons,
 }) => {
   const theme = useTheme();
+  const resolvedBannerUrl = useAssetUrl(bannerUrl);
 
   return (
     <Box sx={{ mb: 4, position: 'relative' }}>
@@ -42,10 +45,10 @@ export const EntityHeroLayout: React.FC<EntityHeroLayoutProps> = ({
           },
         }}
       >
-        {bannerUrl && (
+        {resolvedBannerUrl && (
           <Box
             component="img"
-            src={bannerUrl}
+            src={resolvedBannerUrl}
             alt="Banner"
             sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />

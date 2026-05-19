@@ -9,7 +9,6 @@ import { CreateTraitDialog } from './CreateTraitDialog';
 import { TraitFlipCard } from './TraitFlipCard';
 import { useCharacterTraitsStore } from '@/store/useCharacterTraitsStore';
 import { useUIStore } from '@/store/useUIStore';
-import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { localizedPredefinedTraitTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
 export interface CharacterTraitsTabProps {
@@ -179,7 +178,7 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
         <TraitFlipCard
           name={item.displayLabel ?? item.name}
           description={item.displayDescription ?? item.description}
-          imageSrc={uploadAssetUrl(item.imagePath)}
+          imageSrc={item.imagePath}
           isAttached={isAttached}
           isCustom={item.isCustom}
           onDelete={

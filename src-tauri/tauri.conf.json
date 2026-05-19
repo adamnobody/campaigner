@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Campaigner",
+  "version": "0.1.0",
+  "identifier": "com.campaigner.app",
+  "build": {
+    "beforeDevCommand": "npm run tauri:vite:dev",
+    "beforeBuildCommand": "npm run tauri:vite:build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Campaigner",
+        "width": 1280,
+        "height": 800
+      }
+    ],
+    "security": {
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/**", "$APPLOCALDATA/**"]
+      },
+      "csp": "default-src 'self' http://localhost:5173 https://localhost:5173 tauri: asset: campaigner:; img-src 'self' data: blob: asset: http://localhost:5173 https://localhost:5173 tauri: campaigner:; connect-src 'self' http://localhost:5173 https://localhost:5173 tauri: ipc: campaigner:; style-src 'self' 'unsafe-inline' asset:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.ico"]
+  }
+}

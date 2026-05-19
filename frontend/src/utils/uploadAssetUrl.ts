@@ -1,13 +1,24 @@
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+
+const stripExtendedPathPrefix = (absolutePath: string): string => {
+  if (absolutePath.startsWith('\\\\?\\')) {
+    return absolutePath.slice(4);
+  }
+  return absolutePath;
+};
+
 /**
- * Resolves a backend upload path for use in <img src> / Avatar src.
- * Stored paths look like `/uploads/characters/...`. The API serves the same files under
- * `/api/uploads/...` (see backend index). In Vite dev, `/api` is proxied to the backend;
- * using `/api` + path matches MapPage (`/api${imagePath}`) and avoids 404 on :5173.
+ * Resolves an upload path for use in &lt;img src&gt;, Avatar src, or CSS url().
+ * Tauri: absolute path via `uploads_resolve_path` + `convertFileSrc`.
  */
-export function uploadAssetUrl(path: string | null | undefined): string | undefined {
+export async function resolveUploadAssetUrl(
+  path: string | null | undefined,
+): Promise<string | undefined> {
   if (path == null || path === '') return undefined;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  if (path.startsWith('/api/')) return path;
-  if (path.startsWith('/uploads')) return `/api${path}`;
+  if (path.startsWith('/uploads')) {
+    const absolutePath = await invoke<string>('uploads_resolve_path', { relativePath: path });
+    return convertFileSrc(stripExtendedPathPrefix(absolutePath));
+  }
   return path;
 }

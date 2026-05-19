@@ -19,7 +19,7 @@ export default defineConfig({
           if (id.includes('dagre')) return 'dagre';
           // Markdown stack stays in vendor: a separate chunk caused Rollup
           // "markdown <-> vendor" circular chunk warnings with the default bucket.
-          if (id.includes('axios') || id.includes('zustand') || id.includes('zod')) return 'app-utils';
+          if (id.includes('zustand') || id.includes('zod')) return 'app-utils';
           return 'vendor';
         },
       },
@@ -33,18 +33,6 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // Fail fast if 5173 is taken (e.g. stale Vite). A silent fallback port breaks
-    // CORS: backend only allows FRONTEND_URL (default http://localhost:5173).
     strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-      '/uploads': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
   },
 });

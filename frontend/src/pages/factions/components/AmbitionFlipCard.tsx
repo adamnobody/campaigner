@@ -6,6 +6,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import { useTranslation } from 'react-i18next';
 import { ExclusionOverlay } from '@/components/ui/ExclusionOverlay';
 import { FlipCard } from '@/components/ui/FlipCard';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 
 export interface AmbitionFlipCardProps {
   name: string;
@@ -38,11 +39,12 @@ export const AmbitionFlipCard: React.FC<AmbitionFlipCardProps> = ({
 }) => {
   const theme = useTheme();
   const { t } = useTranslation(['factions', 'common']);
+  const resolvedImageSrc = useAssetUrl(imageSrc);
   const firstLetter = [...name][0] ?? '?';
 
   return (
     <FlipCard
-      frontImage={imageSrc}
+      frontImage={resolvedImageSrc}
       frontFallbackLetter={firstLetter}
       frontTitle={name}
       backTitle={name}

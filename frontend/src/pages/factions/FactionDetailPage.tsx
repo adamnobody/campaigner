@@ -42,6 +42,7 @@ import { MetricInput } from '@/pages/factions/components/MetricInput';
 import { CustomMetricsEditor } from '@/pages/factions/components/CustomMetricsEditor';
 import { FactionCompareDialog } from '@/pages/factions/components/FactionCompareDialog';
 import { FactionPoliticalScalesSection } from '@/pages/factions/components/FactionPoliticalScalesSection';
+import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
 import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -800,7 +801,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         bannerUrl={currentFaction?.bannerPath}
         avatarNode={
           currentFaction?.imagePath ? (
-            <Avatar src={currentFaction.imagePath} sx={{ width: 120, height: 120, borderRadius: 3 }} variant="rounded" />
+            <AssetAvatar assetPath={currentFaction.imagePath} sx={{ width: 120, height: 120, borderRadius: 3 }} variant="rounded" />
           ) : (
             <Avatar sx={{ width: 120, height: 120, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, fontSize: '3rem' }} variant="rounded">
               {(

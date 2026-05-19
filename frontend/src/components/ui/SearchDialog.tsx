@@ -40,7 +40,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => 
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Reset on open
   useEffect(() => {

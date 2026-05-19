@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMapTerritoriesRefreshStore } from '@/store/useMapTerritoriesRefreshStore';
 import { Box, Typography, Button, alpha } from '@mui/material';
@@ -23,8 +23,10 @@ import { MapTerritorySvg } from './components/MapTerritorySvg';
 import { MapMarkerOnMap } from './components/MapMarkerOnMap';
 import { MapToolbar } from './components/MapToolbar';
 import { useMapViewport } from './hooks/useMapViewport';
+import { useMapInitialFit } from './hooks/useMapInitialFit';
 import { useMapTerritoryDrawing } from './hooks/useMapTerritoryDrawing';
 import { shallow } from 'zustand/shallow';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 import { useMapData } from './hooks/useMapData';
 import { useMapNavigation } from './hooks/useMapNavigation';
 import { useMapMarkerCrud } from './hooks/useMapMarkerCrud';
@@ -69,6 +71,7 @@ export const MapPage: React.FC = () => {
     buildRingsSnapshotForCreateDialog,
   } = useMapTerritoryDrawing(mode, showSnackbar);
   const resetViewRef = useRef<() => void>(() => {});
+  const forceMapFitRef = useRef(false);
 
   const territoryRefreshVersion = useMapTerritoriesRefreshStore((s) => s.version);
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
@@ -141,12 +144,33 @@ export const MapPage: React.FC = () => {
     zoomIn,
     zoomOut,
     resetView,
+    fitToScreen,
+    hasUserView,
+    markUserViewAdjusted,
+    clearUserViewAdjusted,
   } = useMapViewport({
     containerRef,
     transformRef,
     wheelEnabled: !loading,
   });
   resetViewRef.current = resetView;
+
+  const mapImagePath = currentMap?.imagePath ?? project?.mapImagePath ?? null;
+  const mapImageUrl = useAssetUrl(mapImagePath);
+
+  useMapInitialFit({
+    containerRef,
+    mapImageReady: Boolean(mapImageUrl && imgSize),
+    mapWidth: imgSize?.w ?? null,
+    mapHeight: imgSize?.h ?? null,
+    mapId: currentMap?.id,
+    loading,
+    transitioning,
+    fitToScreen,
+    hasUserView,
+    forceFitRef: forceMapFitRef,
+    onMapIdChange: clearUserViewAdjusted,
+  });
 
   const {
     mapBreadcrumbs,
@@ -298,6 +322,7 @@ export const MapPage: React.FC = () => {
     panOriginRef,
     panRef,
     applyTransform,
+    markUserViewAdjusted,
     imgRef,
     setDrawingPoints,
     drawingPoints,
@@ -400,9 +425,14 @@ export const MapPage: React.FC = () => {
   const getLinkedNote = useCallback((noteId: number | null) =>
     noteId ? notesMap.get(noteId) : undefined, [notesMap]);
 
-  const mapImageUrl = useMemo(() =>
-    currentMap?.imagePath ? `/api${currentMap.imagePath}` : project?.mapImagePath || null,
-    [currentMap?.imagePath, project?.mapImagePath]);
+  const handleUploadMapWithFit = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      forceMapFitRef.current = true;
+      setImgSize(null);
+      void handleUploadMap(e);
+    },
+    [handleUploadMap, setImgSize],
+  );
 
   // ==================== Child map ops ====================
   const handleCreateChildMap = useCallback(async (marker: Marker) => {
@@ -460,10 +490,10 @@ export const MapPage: React.FC = () => {
         zoomDisplay={zoomDisplay}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
-        onResetView={resetView}
+        onResetView={() => resetView(true)}
         markersCount={markers.length}
         territoriesCount={territories.length}
-        onUploadMap={handleUploadMap}
+        onUploadMap={handleUploadMapWithFit}
       />
       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.42)', mb: 0.25, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}>
         {editingTerritoryPoints
@@ -583,7 +613,7 @@ export const MapPage: React.FC = () => {
               <Typography sx={{ color: 'rgba(255,255,255,0.3)', mb: 2 }}>{t('map:page.noMapImage')}</Typography>
               <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />}>
                 {t('map:page.uploadMapImage')}
-                <input type="file" hidden accept="image/*" onChange={handleUploadMap} />
+                <input type="file" hidden accept="image/*" onChange={handleUploadMapWithFit} />
               </Button>
             </Box>
           )}

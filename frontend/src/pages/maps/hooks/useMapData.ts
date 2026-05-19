@@ -7,6 +7,7 @@ import { notesApi } from '@/api/notes';
 import { factionsApi } from '@/api/factions';
 import { useBranchStore } from '@/store/useBranchStore';
 import { isNotFoundError } from '@/utils/error';
+import { resolveUploadAssetUrl } from '@/utils/uploadAssetUrl';
 import {
   extractData,
   normalizeMap,
@@ -74,7 +75,10 @@ export function useMapData({
       const newFactions = parseFactions(extractData(factionsRes));
 
       if (mapData.imagePath) {
-        await preloadImage(`/api${mapData.imagePath}`);
+        const imageUrl = await resolveUploadAssetUrl(mapData.imagePath);
+        if (imageUrl) {
+          await preloadImage(imageUrl);
+        }
       }
 
       setCurrentMap(mapData);
