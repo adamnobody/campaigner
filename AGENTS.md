@@ -45,14 +45,19 @@
 
 ### Переменные окружения для миграции
 
-- `VITE_TRANSPORT=http` — фронт ходит в Express (по умолчанию во время миграции).
-- `VITE_TRANSPORT=tauri` — фронт ходит через `invoke` в Rust.
+Транспорт задаётся **только через Vite env-файлы** (не через shell — `npm run tauri:dev` не пробрасывает `$env:VITE_TRANSPORT` в Vite):
 
-**Windows (PowerShell)** — переменные окружения задаются так, а не через `VAR=value cmd`:
+| Режим | Команда | Env |
+|--------|---------|-----|
+| HTTP (браузер + Express) | `npm run dev` / `npm run dev:http --workspace=frontend` | `frontend/.env.development` → `http` |
+| Tauri IPC | `npm run tauri:dev` | `beforeDevCommand` (cwd `frontend/`) → `vite --mode tauri` → `frontend/.env.tauri` |
+| Tauri release bundle | `npm run tauri:build` | `vite build --mode tauri` → `frontend/.env.tauri` |
+
+Опционально: `frontend/.env.local` (gitignored) для локальных переопределений.
 
 ```powershell
 $env:API_BASE="http://localhost:3001/api"; npm run smoke
-$env:VITE_TRANSPORT="tauri"; npm run tauri:dev
+npm run tauri:dev
 Архитектурные правила
 Общие
 Не ломать существующее поведение без явного запроса: рефакторинг и оптимизации должны сохранять функциональность.
