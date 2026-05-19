@@ -20,7 +20,7 @@ import { LIMITS } from '@campaigner/shared';
 import { DndButton } from '@/components/ui/DndButton';
 import { useUIStore } from '@/store/useUIStore';
 import { useAmbitionsStore } from '@/store/useAmbitionsStore';
-import { apiClient } from '@/api/client';
+import { uploadsApi } from '@/api/uploads';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { useTranslation } from 'react-i18next';
 import { localizedPredefinedAmbitionTexts } from '@/i18n/catalog/displayBuiltinTexts';
@@ -30,11 +30,6 @@ interface CreateAmbitionDialogProps {
   onClose: () => void;
   projectId: number;
   editingAmbition?: Ambition | null;
-}
-
-interface UploadAmbitionResponse {
-  success: boolean;
-  data?: { path?: string };
 }
 
 const ACCEPTED_MIME_TYPES = [
@@ -140,11 +135,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
     try {
       let iconPath = editingAmbition?.iconPath ?? '';
       if (file) {
-        const formData = new FormData();
-        formData.append('ambitionImage', file);
-        const uploadRes = await apiClient.post<UploadAmbitionResponse>('/upload/ambitions', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const uploadRes = await uploadsApi.uploadAmbitionImage(file);
         iconPath = uploadRes.data?.data?.path ?? iconPath;
       }
 

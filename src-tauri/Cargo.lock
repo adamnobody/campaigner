@@ -243,6 +243,7 @@ dependencies = [
 name = "campaigner-tauri"
 version = "0.1.0"
 dependencies = [
+ "http",
  "rusqlite",
  "serde",
  "serde_json",

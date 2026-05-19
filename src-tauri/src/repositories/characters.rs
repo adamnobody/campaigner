@@ -889,3 +889,23 @@ fn map_relationship(row: RelationshipRow) -> CharacterRelationship {
         target_character_name: row.target_character_name,
     }
 }
+
+pub fn update_character_image_path(
+    connection: &Connection,
+    id: i32,
+    image_path: &str,
+) -> Result<()> {
+    let updated = connection.execute(
+        "UPDATE characters SET image_path = ?1, updated_at = datetime('now') WHERE id = ?2",
+        params![image_path, id],
+    )?;
+
+    if updated == 0 {
+        return Err(AppError::internal(
+            "CHARACTER_NOT_FOUND",
+            "Character not found",
+        ));
+    }
+
+    Ok(())
+}

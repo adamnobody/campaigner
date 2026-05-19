@@ -61,6 +61,7 @@ import type {
 import { apiClient, type ListWithTotal } from './client';
 import type { FactionsListParams } from './types';
 import { transport } from './transport';
+import { uploadFileViaTransport } from './uploadFile';
 import { withBranchParams } from './withBranchParams';
 
 type ApiResult<T> = { data: ApiResponse<T> };
@@ -393,20 +394,38 @@ export const factionsApi = {
     });
     return { data: undefined as void };
   },
-  uploadImage: (id: number, file: File, projectId: number) => {
+  uploadImage: async (id: number, file: File, projectId: number) => {
+    const query = withBranchParams({}, projectId);
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      const response = await uploadFileViaTransport<TauriFaction>('factions_upload_image', file, {
+        id,
+        branchId: query.branchId ?? null,
+      });
+      return { data: { success: true, data: toFaction(response) } };
+    }
+
     const fd = new FormData();
     fd.append('image', file);
     return apiClient.post<ApiResponse<Faction>>(`/factions/${id}/image`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      params: withBranchParams({}, projectId),
+      params: query,
     });
   },
-  uploadBanner: (id: number, file: File, projectId: number) => {
+  uploadBanner: async (id: number, file: File, projectId: number) => {
+    const query = withBranchParams({}, projectId);
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      const response = await uploadFileViaTransport<TauriFaction>('factions_upload_banner', file, {
+        id,
+        branchId: query.branchId ?? null,
+      });
+      return { data: { success: true, data: toFaction(response) } };
+    }
+
     const fd = new FormData();
     fd.append('banner', file);
     return apiClient.post<ApiResponse<Faction>>(`/factions/${id}/banner`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      params: withBranchParams({}, projectId),
+      params: query,
     });
   },
   setTags: async (id: number, tagIds: number[], projectId: number): Promise<ApiResult<Tag[]>> => {

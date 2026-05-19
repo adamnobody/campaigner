@@ -14,7 +14,10 @@
         "width": 1280,
         "height": 800
       }
-    ]
+    ],
+    "security": {
+      "csp": "default-src 'self' http://localhost:5173 https://localhost:5173 tauri:; img-src 'self' data: blob: http://localhost:5173 https://localhost:5173 http://localhost:3001 https://localhost:3001 campaigner: https://campaigner.localhost http://campaigner.localhost; connect-src 'self' http://localhost:5173 https://localhost:5173 http://localhost:3001 https://localhost:3001 tauri: ipc:; style-src 'self' 'unsafe-inline'"
+    }
   },
   "bundle": {
     "active": true,

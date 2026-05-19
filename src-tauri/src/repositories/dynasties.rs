@@ -1225,3 +1225,16 @@ mod tests {
         assert_eq!(child_list.total, 1);
     }
 }
+
+pub fn update_dynasty_image_path(connection: &Connection, id: i32, image_path: &str) -> Result<()> {
+    let updated = connection.execute(
+        "UPDATE dynasties SET image_path = ?1, updated_at = datetime('now') WHERE id = ?2",
+        params![image_path, id],
+    )?;
+
+    if updated == 0 {
+        return Err(AppError::internal("DYNASTY_NOT_FOUND", "Dynasty not found"));
+    }
+
+    Ok(())
+}

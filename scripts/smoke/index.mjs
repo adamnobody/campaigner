@@ -26,6 +26,7 @@ import {
 } from './scenarios/factions.mjs';
 import { smokeDynasties } from './scenarios/dynasties.mjs';
 import { smokeMaps } from './scenarios/maps.mjs';
+import { smokeUploads } from './scenarios/uploads.mjs';
 import { smokeProjectTransfer } from './scenarios/project-transfer.mjs';
 import { smokePerfMetrics } from './scenarios/perf.mjs';
 
@@ -57,6 +58,7 @@ async function main() {
     await smokeFactionRelations(ctx);
     await smokeDynasties(ctx);
     await smokeMaps(ctx);
+    await smokeUploads(ctx);
     await smokeProjectTransfer(ctx);
     await smokePerfMetrics(ctx);
 

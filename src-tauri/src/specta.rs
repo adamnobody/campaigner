@@ -76,6 +76,11 @@ use crate::models::timeline::{
     ReorderTimelineInput, SetTimelineTagsInput, TimelineEvent, TimelineListInput,
     UpdateTimelineEventInput,
 };
+use crate::models::upload::{
+    CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
+    FactionUploadImageInput, MapUploadImageInput, ProjectUploadMapImageInput, UploadFileInput,
+    UploadSavedPath,
+};
 use crate::models::wiki_link::{
     CreateWikiLinkInput, DeleteWikiLinkInput, ListWikiCategoriesInput, ListWikiLinksInput,
     WikiCategory, WikiLink,
@@ -85,10 +90,10 @@ mod codegen_commands {
     use super::{
         AddDynastyEventInput, AddDynastyFamilyLinkInput, AddDynastyMemberInput, Ambition,
         AppHealthResponse, AssignCharacterTraitInput, AssignFactionAmbitionInput, Character,
-        CharacterGraph, CharacterRelationship, CharacterTrait, CharactersListInput,
-        CharactersListResult, CompareFactionsInput, CreateAmbitionInput, CreateBranchInput,
-        CreateCharacterInput, CreateCharacterTraitInput, CreateDogmaInput, CreateDynastyInput,
-        CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
+        CharacterGraph, CharacterRelationship, CharacterTrait, CharacterUploadImageInput,
+        CharactersListInput, CharactersListResult, CompareFactionsInput, CreateAmbitionInput,
+        CreateBranchInput, CreateCharacterInput, CreateCharacterTraitInput, CreateDogmaInput,
+        CreateDynastyInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
         CreateFactionRankInput, CreateFactionRelationInput, CreateMapInput, CreateMapMarkerInput,
         CreateMapTerritoryInput, CreateNoteInput, CreatePoliticalScaleInput, CreateProjectInput,
         CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, CreateWikiLinkInput,
@@ -100,9 +105,10 @@ mod codegen_commands {
         DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
         DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, DeleteWikiLinkInput,
         Dogma, DogmasListInput, DogmasListResult, DynastiesListInput, DynastiesListResult, Dynasty,
-        DynastyEvent, DynastyFamilyLink, DynastyMember, Faction, FactionCompareResult,
-        FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy, FactionRank,
-        FactionRelation, FactionsListInput, FactionsListResult, FactionsRelationsListInput,
+        DynastyEvent, DynastyFamilyLink, DynastyMember, DynastyUploadImageInput, Faction,
+        FactionCompareResult, FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy,
+        FactionRank, FactionRelation, FactionUploadBannerInput, FactionUploadImageInput,
+        FactionsListInput, FactionsListResult, FactionsRelationsListInput,
         GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput, GetCharacterInput,
         GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput, GetFactionInput,
         GetGraphLayoutInput, GetMapInput, GetMapTreeInput, GetNoteInput, GetProjectInput,
@@ -111,22 +117,23 @@ mod codegen_commands {
         ListFactionPoliciesInput, ListFactionRanksInput, ListMapMarkersInput,
         ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput,
         ListTerritorySummariesInput, ListWikiCategoriesInput, ListWikiLinksInput, MapMarker,
-        MapRecord, MapTerritory, MapTerritorySummary, Note, NotesListInput, NotesListResult,
-        PoliticalScale, PoliticalScaleAssignment, Project, RelationshipsListInput,
-        RemoveDynastyMemberInput, ReorderDogmasInput, ReorderDynastyEventsInput,
-        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
-        ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
-        SearchQueryInput, SearchResult, SetCharacterTagsInput, SetDogmaTagsInput,
-        SetDynastyTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
-        TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
-        UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
-        UpdateBranchInput, UpdateCharacterInput, UpdateCharacterTraitExclusionsInput,
-        UpdateDogmaInput, UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput,
-        UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
-        UpdateFactionRankInput, UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput,
-        UpdateMapTerritoryInput, UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput,
-        UpdateRelationshipInput, UpdateTimelineEventInput, UpsertGraphLayoutInput, WikiCategory,
-        WikiLink,
+        MapRecord, MapTerritory, MapTerritorySummary, MapUploadImageInput, Note, NotesListInput,
+        NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
+        ProjectUploadMapImageInput, RelationshipsListInput, RemoveDynastyMemberInput,
+        ReorderDogmasInput, ReorderDynastyEventsInput, ReorderTimelineInput,
+        ReplaceFactionCustomMetricsInput, ReplacePoliticalScaleAssignmentsInput,
+        SaveDynastyGraphPositionsInput, ScenarioBranch, SearchQueryInput, SearchResult,
+        SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
+        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
+        TimelineListInput, UnassignCharacterTraitInput, UnassignFactionAmbitionInput,
+        UpdateAmbitionExclusionsInput, UpdateAmbitionInput, UpdateBranchInput,
+        UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
+        UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
+        UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
+        UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput, UpdateMapTerritoryInput,
+        UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
+        UpdateTimelineEventInput, UploadFileInput, UploadSavedPath, UpsertGraphLayoutInput,
+        WikiCategory, WikiLink,
     };
 
     #[tauri::command]
@@ -1453,6 +1460,125 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
+    pub fn uploads_save_map_image(_input: UploadFileInput) -> UploadSavedPath {
+        UploadSavedPath {
+            path: "/uploads/maps/map-0.png".to_string(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn uploads_save_character_image(_input: UploadFileInput) -> UploadSavedPath {
+        UploadSavedPath {
+            path: "/uploads/characters/character-0.png".to_string(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn uploads_save_trait_image(_input: UploadFileInput) -> UploadSavedPath {
+        UploadSavedPath {
+            path: "/uploads/traits/trait-0.png".to_string(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn uploads_save_ambition_image(_input: UploadFileInput) -> UploadSavedPath {
+        UploadSavedPath {
+            path: "/uploads/ambitions/ambition-0.png".to_string(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn uploads_save_appearance_image(_input: UploadFileInput) -> UploadSavedPath {
+        UploadSavedPath {
+            path: "/uploads/appearance/appearance-0.png".to_string(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn characters_upload_image(_input: CharacterUploadImageInput) -> Character {
+        Character {
+            id: 0,
+            project_id: 0,
+            state_id: None,
+            name: String::new(),
+            title: String::new(),
+            race: String::new(),
+            character_class: String::new(),
+            level: None,
+            status: String::new(),
+            bio: String::new(),
+            appearance: String::new(),
+            personality: String::new(),
+            backstory: String::new(),
+            notes: String::new(),
+            image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+            tags: Vec::new(),
+            faction_ids: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_upload_image(_input: FactionUploadImageInput) -> Faction {
+        factions_get(GetFactionInput {
+            id: 0,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn factions_upload_banner(_input: FactionUploadBannerInput) -> Faction {
+        factions_get(GetFactionInput {
+            id: 0,
+            branch_id: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn dynasties_upload_image(_input: DynastyUploadImageInput) -> Dynasty {
+        empty_dynasty()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_upload_image(_input: MapUploadImageInput) -> MapRecord {
+        MapRecord {
+            id: 0,
+            project_id: 0,
+            parent_map_id: None,
+            parent_marker_id: None,
+            name: String::new(),
+            image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn projects_upload_map_image(_input: ProjectUploadMapImageInput) -> Project {
+        Project {
+            id: 0,
+            name: String::new(),
+            description: String::new(),
+            status: String::new(),
+            map_image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
     pub fn wiki_links_list(_input: ListWikiLinksInput) -> Vec<WikiLink> {
         Vec::new()
     }
@@ -1560,6 +1686,17 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::projects_update,
             codegen_commands::projects_delete,
             codegen_commands::search_query,
+            codegen_commands::uploads_save_map_image,
+            codegen_commands::uploads_save_character_image,
+            codegen_commands::uploads_save_trait_image,
+            codegen_commands::uploads_save_ambition_image,
+            codegen_commands::uploads_save_appearance_image,
+            codegen_commands::characters_upload_image,
+            codegen_commands::factions_upload_image,
+            codegen_commands::factions_upload_banner,
+            codegen_commands::dynasties_upload_image,
+            codegen_commands::maps_upload_image,
+            codegen_commands::projects_upload_map_image,
             codegen_commands::characters_list,
             codegen_commands::characters_get,
             codegen_commands::characters_create,
@@ -1783,6 +1920,14 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<SearchQueryInput>()
         .typ::<SearchResult>()
         .typ::<SearchResultType>()
+        .typ::<UploadFileInput>()
+        .typ::<UploadSavedPath>()
+        .typ::<CharacterUploadImageInput>()
+        .typ::<FactionUploadImageInput>()
+        .typ::<FactionUploadBannerInput>()
+        .typ::<DynastyUploadImageInput>()
+        .typ::<MapUploadImageInput>()
+        .typ::<ProjectUploadMapImageInput>()
         .typ::<WikiLink>()
         .typ::<WikiCategory>()
         .typ::<ListWikiLinksInput>()

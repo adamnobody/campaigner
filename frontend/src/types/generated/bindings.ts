@@ -87,6 +87,17 @@ export const commands = {
 	projectsUpdate: (input: UpdateProjectInput) => __TAURI_INVOKE<Project>("projects_update", { input }),
 	projectsDelete: (input: DeleteProjectInput) => __TAURI_INVOKE<void>("projects_delete", { input }),
 	searchQuery: (input: SearchQueryInput) => __TAURI_INVOKE<SearchResult[]>("search_query", { input }),
+	uploadsSaveMapImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_map_image", { input }),
+	uploadsSaveCharacterImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_character_image", { input }),
+	uploadsSaveTraitImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_trait_image", { input }),
+	uploadsSaveAmbitionImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_ambition_image", { input }),
+	uploadsSaveAppearanceImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_appearance_image", { input }),
+	charactersUploadImage: (input: CharacterUploadImageInput) => __TAURI_INVOKE<Character>("characters_upload_image", { input }),
+	factionsUploadImage: (input: FactionUploadImageInput) => __TAURI_INVOKE<Faction>("factions_upload_image", { input }),
+	factionsUploadBanner: (input: FactionUploadBannerInput) => __TAURI_INVOKE<Faction>("factions_upload_banner", { input }),
+	dynastiesUploadImage: (input: DynastyUploadImageInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_upload_image", { input }),
+	mapsUploadImage: (input: MapUploadImageInput) => __TAURI_INVOKE<MapRecord>("maps_upload_image", { input }),
+	projectsUploadMapImage: (input: ProjectUploadMapImageInput) => __TAURI_INVOKE<Project>("projects_upload_map_image", { input }),
 	charactersList: (input: CharactersListInput) => __TAURI_INVOKE<CharactersListResult>("characters_list", { input }),
 	charactersGet: (input: GetCharacterInput) => __TAURI_INVOKE<Character>("characters_get", { input }),
 	charactersCreate: (input: CreateCharacterInput) => __TAURI_INVOKE<Character>("characters_create", { input }),
@@ -274,6 +285,14 @@ export type CharacterTrait = {
 	sortOrder: number,
 	createdAt: string | null,
 	updatedAt: string | null,
+};
+
+export type CharacterUploadImageInput = {
+	id: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
+	branchId: number | null,
 };
 
 export type CharactersListInput = {
@@ -832,6 +851,14 @@ export type DynastyMember_Serialize = {
 	characterStatus?: string | null,
 };
 
+export type DynastyUploadImageInput = {
+	id: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
+	branchId: number | null,
+};
+
 export type Dynasty_Deserialize = {
 	id: number,
 	projectId: number,
@@ -1044,6 +1071,22 @@ export type FactionRelation = {
 	createdAt: string,
 	sourceFactionName: string,
 	targetFactionName: string,
+};
+
+export type FactionUploadBannerInput = {
+	id: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
+	branchId: number | null,
+};
+
+export type FactionUploadImageInput = {
+	id: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
+	branchId: number | null,
 };
 
 export type FactionsListInput = {
@@ -1298,6 +1341,13 @@ export type MapTerritorySummary = {
 	occupantKind: string | null,
 };
 
+export type MapUploadImageInput = {
+	mapId: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
+};
+
 export type Note = {
 	id: number,
 	projectId: number,
@@ -1399,6 +1449,13 @@ export type Project = {
 	mapImagePath: string | null,
 	createdAt: string,
 	updatedAt: string,
+};
+
+export type ProjectUploadMapImageInput = {
+	projectId: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
 };
 
 export type RelationshipsListInput = {
@@ -1843,6 +1900,16 @@ export type UpdateTimelineEventInput = {
 	eraColor: string | null,
 	linkedNoteId: number | null,
 	branchId: number | null,
+};
+
+export type UploadFileInput = {
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
+};
+
+export type UploadSavedPath = {
+	path: string,
 };
 
 export type UpsertFactionCustomMetricInput = {

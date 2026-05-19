@@ -28,6 +28,7 @@ import type {
   UpdateRelationshipInput as TauriUpdateRelationshipInput,
 } from '@/types/generated/bindings';
 import { transport } from './transport';
+import { uploadFileViaTransport } from './uploadFile';
 import { apiClient, type VoidResponse } from './client';
 import type { CharacterListParams } from './types';
 import { withBranchParams } from './withBranchParams';
@@ -270,12 +271,21 @@ export const charactersApi = {
 
     return { data: undefined as void };
   },
-  uploadImage: (id: number, file: File, projectId: number) => {
+  uploadImage: async (id: number, file: File, projectId: number) => {
+    const query = withBranchParams({}, projectId);
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      const response = await uploadFileViaTransport<TauriCharacter>('characters_upload_image', file, {
+        id,
+        branchId: query.branchId ?? null,
+      });
+      return { data: { success: true, data: toCharacter(response) } };
+    }
+
     const formData = new FormData();
     formData.append('characterImage', file);
     return apiClient.post<ApiResponse<Character>>(`/characters/${id}/image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      params: withBranchParams({}, projectId),
+      params: query,
     });
   },
   setTags: async (id: number, tagIds: number[], projectId: number): Promise<ApiResult<Tag[]>> => {

@@ -19,7 +19,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { DndButton } from '@/components/ui/DndButton';
 import { useCharacterTraitsStore } from '@/store/useCharacterTraitsStore';
 import { useUIStore } from '@/store/useUIStore';
-import { apiClient } from '@/api/client';
+import { uploadsApi } from '@/api/uploads';
 import { LIMITS } from '@campaigner/shared';
 import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { localizedPredefinedTraitTexts } from '@/i18n/catalog/displayBuiltinTexts';
@@ -28,13 +28,6 @@ interface CreateTraitDialogProps {
   open: boolean;
   onClose: () => void;
   projectId: number;
-}
-
-interface UploadTraitResponse {
-  success: boolean;
-  data?: {
-    path?: string;
-  };
 }
 
 const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -132,11 +125,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
       let imagePath = '';
 
       if (file) {
-        const formData = new FormData();
-        formData.append('traitImage', file);
-        const uploadRes = await apiClient.post<UploadTraitResponse>('/upload/traits', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const uploadRes = await uploadsApi.uploadTraitImage(file);
         imagePath = uploadRes.data?.data?.path ?? '';
       }
 

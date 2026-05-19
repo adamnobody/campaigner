@@ -35,6 +35,7 @@ import type {
 } from '@/types/generated/bindings';
 import { apiClient, type VoidResponse } from './client';
 import { transport } from './transport';
+import { uploadFileViaTransport } from './uploadFile';
 import { withBranchParams } from './withBranchParams';
 
 type ApiResult<T> = {
@@ -395,12 +396,20 @@ export const mapApi = {
     return { data: { success: true } as VoidResponse };
   },
 
-  uploadMapImage: (mapId: number, file: File) => {
+  uploadMapImage: async (mapId: number, file: File) => {
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      const response = await uploadFileViaTransport<TauriMapRecord>('maps_upload_image', file, {
+        mapId,
+      });
+      return toSingleMapResponse(response);
+    }
+
     const formData = new FormData();
     formData.append('image', file);
-    return apiClient.post<ApiResponse<Map>>(`/maps/${mapId}/image`, formData, {
+    const response = await apiClient.post<ApiResponse<Map>>(`/maps/${mapId}/image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return { data: response.data };
   },
 
   getMarkersByMapId: async (mapId: number, projectId?: number): Promise<ApiResult<MapMarker[]>> => {

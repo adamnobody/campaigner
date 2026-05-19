@@ -39,6 +39,7 @@ import type {
 } from '@/types/generated/bindings';
 import { apiClient, type ListWithTotal, type VoidResponse } from './client';
 import { transport } from './transport';
+import { uploadFileViaTransport } from './uploadFile';
 import type { DynastiesListParams } from './types';
 import { withBranchParams } from './withBranchParams';
 
@@ -345,12 +346,21 @@ export const dynastiesApi = {
     };
   },
 
-  uploadImage: (id: number, file: File, projectId: number) => {
+  uploadImage: async (id: number, file: File, projectId: number) => {
+    const query = withBranchParams({}, projectId);
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      const response = await uploadFileViaTransport<TauriDynasty>('dynasties_upload_image', file, {
+        id,
+        branchId: query.branchId ?? null,
+      });
+      return { data: { success: true, data: toDynasty(response) } };
+    }
+
     const fd = new FormData();
     fd.append('image', file);
     return apiClient.post<ApiResponse<Dynasty>>(`/dynasties/${id}/image`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      params: withBranchParams({}, projectId),
+      params: query,
     });
   },
 

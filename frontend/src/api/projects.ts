@@ -14,6 +14,7 @@ import type {
   UpdateProjectInput,
 } from '@/types/generated/bindings';
 import { transport } from './transport';
+import { uploadFileViaTransport } from './uploadFile';
 import { apiClient } from './client';
 
 type ApiResult<T> = {
@@ -160,12 +161,20 @@ export const projectsApi = {
     return { data: undefined as void };
   },
 
-  uploadMap: (id: number, file: File) => {
+  uploadMap: async (id: number, file: File) => {
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      const response = await uploadFileViaTransport<TauriProject>('projects_upload_map_image', file, {
+        projectId: id,
+      });
+      return toProjectResponse(response);
+    }
+
     const formData = new FormData();
     formData.append('mapImage', file);
-    return apiClient.post<ApiResponse<Project>>(`/projects/${id}/map`, formData, {
+    const response = await apiClient.post<ApiResponse<Project>>(`/projects/${id}/map`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return { data: response.data };
   },
   exportProject: (id: number) => apiClient.get<Blob>(`/projects/${id}/export`, { responseType: 'blob' }),
   importProject: (data: ImportedProjectPayload, opts?: { locale?: AppLanguage }) =>

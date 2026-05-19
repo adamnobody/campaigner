@@ -2357,3 +2357,33 @@ fn metric_unit_for_key(metric_key: &str) -> Option<String> {
         _ => None,
     }
 }
+
+pub fn update_faction_image_path(connection: &Connection, id: i32, image_path: &str) -> Result<()> {
+    let updated = connection.execute(
+        "UPDATE factions SET image_path = ?1, updated_at = datetime('now') WHERE id = ?2",
+        params![image_path, id],
+    )?;
+
+    if updated == 0 {
+        return Err(AppError::internal("FACTION_NOT_FOUND", "Faction not found"));
+    }
+
+    Ok(())
+}
+
+pub fn update_faction_banner_path(
+    connection: &Connection,
+    id: i32,
+    banner_path: &str,
+) -> Result<()> {
+    let updated = connection.execute(
+        "UPDATE factions SET banner_path = ?1, updated_at = datetime('now') WHERE id = ?2",
+        params![banner_path, id],
+    )?;
+
+    if updated == 0 {
+        return Err(AppError::internal("FACTION_NOT_FOUND", "Faction not found"));
+    }
+
+    Ok(())
+}

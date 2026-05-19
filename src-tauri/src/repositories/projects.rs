@@ -131,6 +131,23 @@ pub fn delete_project(connection: &Connection, input: &DeleteProjectInput) -> Re
     Ok(())
 }
 
+pub fn update_project_map_image_path(
+    connection: &Connection,
+    project_id: i32,
+    map_image_path: &str,
+) -> Result<()> {
+    let updated = connection.execute(
+        "UPDATE projects SET map_image_path = ?1, updated_at = datetime('now') WHERE id = ?2",
+        params![map_image_path, project_id],
+    )?;
+
+    if updated == 0 {
+        return Err(AppError::internal("PROJECT_NOT_FOUND", "Project not found"));
+    }
+
+    Ok(())
+}
+
 fn map_project_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Project> {
     Ok(Project {
         id: row.get("id")?,

@@ -15,4 +15,5 @@ pub mod search;
 pub mod tag;
 pub mod tag_association;
 pub mod timeline;
+pub mod upload;
 pub mod wiki_link;

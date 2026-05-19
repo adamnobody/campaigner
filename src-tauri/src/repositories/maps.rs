@@ -1284,6 +1284,19 @@ fn map_territory_row_to_territory(row: TerritoryRow) -> MapTerritory {
     }
 }
 
+pub fn update_map_image_path(connection: &Connection, map_id: i32, image_path: &str) -> Result<()> {
+    let updated = connection.execute(
+        "UPDATE maps SET image_path = ?1, updated_at = datetime('now') WHERE id = ?2",
+        params![image_path, map_id],
+    )?;
+
+    if updated == 0 {
+        return Err(AppError::internal("MAP_NOT_FOUND", "Map not found"));
+    }
+
+    Ok(())
+}
+
 fn map_branch_override_row(row: &Row<'_>) -> rusqlite::Result<BranchOverride> {
     let op = row.get::<_, String>("op")?;
     let operation = match op.as_str() {

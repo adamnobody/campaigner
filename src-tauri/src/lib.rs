@@ -1,3 +1,4 @@
+mod asset_protocol;
 mod commands;
 mod db;
 mod error;
@@ -6,13 +7,14 @@ mod paths;
 pub mod repositories;
 pub mod services;
 pub mod specta;
+mod uploads;
 
 use db::connection::{open_database, DatabaseState};
 use db::migrations::run_migrations;
 use tauri::Manager;
 
 pub fn run() {
-    tauri::Builder::default()
+    asset_protocol::register_campaigner_protocol(tauri::Builder::default())
         .setup(|app| {
             let connection = open_database(app.handle())
                 .map_err(|err| std::io::Error::other(err.to_string()))?;
@@ -152,7 +154,18 @@ pub fn run() {
             commands::wiki::wiki_links_list_command,
             commands::wiki::wiki_links_create_command,
             commands::wiki::wiki_links_delete_command,
-            commands::wiki::wiki_categories_list_command
+            commands::wiki::wiki_categories_list_command,
+            commands::uploads::uploads_save_map_image_command,
+            commands::uploads::uploads_save_character_image_command,
+            commands::uploads::uploads_save_trait_image_command,
+            commands::uploads::uploads_save_ambition_image_command,
+            commands::uploads::uploads_save_appearance_image_command,
+            commands::uploads::characters_upload_image_command,
+            commands::uploads::factions_upload_image_command,
+            commands::uploads::factions_upload_banner_command,
+            commands::uploads::dynasties_upload_image_command,
+            commands::uploads::maps_upload_image_command,
+            commands::uploads::projects_upload_map_image_command
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");
