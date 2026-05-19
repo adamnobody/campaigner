@@ -3,6 +3,11 @@ use std::path::Path;
 use specta_typescript::Typescript;
 use tauri_specta::{collect_commands, Builder};
 
+use crate::models::ambition::{
+    Ambition, AssignFactionAmbitionInput, CreateAmbitionInput, DeleteAmbitionInput,
+    GetAmbitionsCatalogInput, GetFactionAmbitionsInput, UnassignFactionAmbitionInput,
+    UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
+};
 use crate::models::app::AppHealthResponse;
 use crate::models::branch::{
     CreateBranchInput, DeleteBranchInput, ListBranchesInput, ScenarioBranch, UpdateBranchInput,
@@ -44,28 +49,30 @@ use crate::models::timeline::{
 
 mod codegen_commands {
     use super::{
-        AppHealthResponse, Character, CharacterGraph, CharacterRelationship, CharactersListInput,
-        CharactersListResult, CompareFactionsInput, CreateBranchInput, CreateCharacterInput,
-        CreateDogmaInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
+        Ambition, AppHealthResponse, AssignFactionAmbitionInput, Character, CharacterGraph,
+        CharacterRelationship, CharactersListInput, CharactersListResult, CompareFactionsInput,
+        CreateAmbitionInput, CreateBranchInput, CreateCharacterInput, CreateDogmaInput,
+        CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
         CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput, CreateProjectInput,
-        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteBranchInput,
-        DeleteCharacterInput, DeleteDogmaInput, DeleteFactionInput, DeleteFactionMemberInput,
-        DeleteFactionPolicyInput, DeleteFactionRankInput, DeleteFactionRelationInput,
-        DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput,
-        DeleteTimelineEventInput, Dogma, DogmasListInput, DogmasListResult, Faction,
-        FactionCompareResult, FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy,
-        FactionRank, FactionRelation, FactionsListInput, FactionsListResult,
-        FactionsRelationsListInput, GetCharacterInput, GetDogmaInput, GetFactionInput,
-        GetNoteInput, GetProjectInput, GetTimelineEventInput, ListBranchesInput,
-        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput, Note,
-        NotesListInput, NotesListResult, Project, RelationshipsListInput, ReorderDogmasInput,
-        ReorderTimelineInput, ReplaceFactionCustomMetricsInput, ScenarioBranch,
-        SetCharacterTagsInput, SetDogmaTagsInput, SetFactionTagsInput, SetNoteTagsInput,
-        SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent, TimelineListInput,
-        UpdateBranchInput, UpdateCharacterInput, UpdateDogmaInput, UpdateFactionInput,
-        UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
-        UpdateFactionRelationInput, UpdateNoteInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput,
+        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteAmbitionInput,
+        DeleteBranchInput, DeleteCharacterInput, DeleteDogmaInput, DeleteFactionInput,
+        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
+        DeleteFactionRelationInput, DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput,
+        DeleteTagInput, DeleteTimelineEventInput, Dogma, DogmasListInput, DogmasListResult,
+        Faction, FactionCompareResult, FactionCustomMetric, FactionGraph, FactionMember,
+        FactionPolicy, FactionRank, FactionRelation, FactionsListInput, FactionsListResult,
+        FactionsRelationsListInput, GetAmbitionsCatalogInput, GetCharacterInput, GetDogmaInput,
+        GetFactionAmbitionsInput, GetFactionInput, GetNoteInput, GetProjectInput,
+        GetTimelineEventInput, ListBranchesInput, ListFactionMembersInput,
+        ListFactionPoliciesInput, ListFactionRanksInput, Note, NotesListInput, NotesListResult,
+        Project, RelationshipsListInput, ReorderDogmasInput, ReorderTimelineInput,
+        ReplaceFactionCustomMetricsInput, ScenarioBranch, SetCharacterTagsInput, SetDogmaTagsInput,
+        SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput,
+        TimelineEvent, TimelineListInput, UnassignFactionAmbitionInput,
+        UpdateAmbitionExclusionsInput, UpdateAmbitionInput, UpdateBranchInput,
+        UpdateCharacterInput, UpdateDogmaInput, UpdateFactionInput, UpdateFactionMemberInput,
+        UpdateFactionPolicyInput, UpdateFactionRankInput, UpdateFactionRelationInput,
+        UpdateNoteInput, UpdateProjectInput, UpdateRelationshipInput, UpdateTimelineEventInput,
     };
 
     #[tauri::command]
@@ -186,6 +193,70 @@ mod codegen_commands {
     pub fn dogmas_set_tags(_input: SetDogmaTagsInput) -> Vec<Tag> {
         Vec::new()
     }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_get_catalog(_input: GetAmbitionsCatalogInput) -> Vec<Ambition> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_create(_input: CreateAmbitionInput) -> Ambition {
+        Ambition {
+            id: 0,
+            name: String::new(),
+            description: String::new(),
+            icon_path: String::new(),
+            is_custom: true,
+            exclusions: Vec::new(),
+            project_id: Some(0),
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_update(_input: UpdateAmbitionInput) -> Ambition {
+        ambitions_create(CreateAmbitionInput {
+            project_id: 0,
+            name: String::new(),
+            description: None,
+            icon_path: None,
+            excluded_ids: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_update_exclusions(_input: UpdateAmbitionExclusionsInput) -> Ambition {
+        ambitions_create(CreateAmbitionInput {
+            project_id: 0,
+            name: String::new(),
+            description: None,
+            icon_path: None,
+            excluded_ids: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_delete(_input: DeleteAmbitionInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_get_faction_ambitions(_input: GetFactionAmbitionsInput) -> Vec<Ambition> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_assign_faction_ambition(_input: AssignFactionAmbitionInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn ambitions_unassign_faction_ambition(_input: UnassignFactionAmbitionInput) {}
 
     #[tauri::command]
     #[specta::specta]
@@ -881,6 +952,14 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::dogmas_delete,
             codegen_commands::dogmas_reorder,
             codegen_commands::dogmas_set_tags,
+            codegen_commands::ambitions_get_catalog,
+            codegen_commands::ambitions_create,
+            codegen_commands::ambitions_update,
+            codegen_commands::ambitions_update_exclusions,
+            codegen_commands::ambitions_delete,
+            codegen_commands::ambitions_get_faction_ambitions,
+            codegen_commands::ambitions_assign_faction_ambition,
+            codegen_commands::ambitions_unassign_faction_ambition,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -954,6 +1033,15 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<DeleteDogmaInput>()
         .typ::<ReorderDogmasInput>()
         .typ::<SetDogmaTagsInput>()
+        .typ::<Ambition>()
+        .typ::<GetAmbitionsCatalogInput>()
+        .typ::<CreateAmbitionInput>()
+        .typ::<UpdateAmbitionInput>()
+        .typ::<UpdateAmbitionExclusionsInput>()
+        .typ::<DeleteAmbitionInput>()
+        .typ::<GetFactionAmbitionsInput>()
+        .typ::<AssignFactionAmbitionInput>()
+        .typ::<UnassignFactionAmbitionInput>()
         .typ::<Project>()
         .typ::<GetProjectInput>()
         .typ::<CreateProjectInput>()

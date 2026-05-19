@@ -23,6 +23,14 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::ambitions::ambitions_get_catalog_command,
+            commands::ambitions::ambitions_create_command,
+            commands::ambitions::ambitions_update_command,
+            commands::ambitions::ambitions_update_exclusions_command,
+            commands::ambitions::ambitions_delete_command,
+            commands::ambitions::ambitions_get_faction_ambitions_command,
+            commands::ambitions::ambitions_assign_faction_ambition_command,
+            commands::ambitions::ambitions_unassign_faction_ambition_command,
             commands::app::app_health_command,
             commands::branches::branches_list_command,
             commands::branches::branches_create_command,

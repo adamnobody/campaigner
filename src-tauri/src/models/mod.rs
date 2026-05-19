@@ -1,3 +1,4 @@
+pub mod ambition;
 pub mod app;
 pub mod branch;
 pub mod character;

@@ -16,6 +16,14 @@ export const commands = {
 	dogmasDelete: (input: DeleteDogmaInput) => __TAURI_INVOKE<void>("dogmas_delete", { input }),
 	dogmasReorder: (input: ReorderDogmasInput) => __TAURI_INVOKE<DogmasListResult>("dogmas_reorder", { input }),
 	dogmasSetTags: (input: SetDogmaTagsInput) => __TAURI_INVOKE<Tag[]>("dogmas_set_tags", { input }),
+	ambitionsGetCatalog: (input: GetAmbitionsCatalogInput) => __TAURI_INVOKE<Ambition[]>("ambitions_get_catalog", { input }),
+	ambitionsCreate: (input: CreateAmbitionInput) => __TAURI_INVOKE<Ambition>("ambitions_create", { input }),
+	ambitionsUpdate: (input: UpdateAmbitionInput) => __TAURI_INVOKE<Ambition>("ambitions_update", { input }),
+	ambitionsUpdateExclusions: (input: UpdateAmbitionExclusionsInput) => __TAURI_INVOKE<Ambition>("ambitions_update_exclusions", { input }),
+	ambitionsDelete: (input: DeleteAmbitionInput) => __TAURI_INVOKE<void>("ambitions_delete", { input }),
+	ambitionsGetFactionAmbitions: (input: GetFactionAmbitionsInput) => __TAURI_INVOKE<Ambition[]>("ambitions_get_faction_ambitions", { input }),
+	ambitionsAssignFactionAmbition: (input: AssignFactionAmbitionInput) => __TAURI_INVOKE<void>("ambitions_assign_faction_ambition", { input }),
+	ambitionsUnassignFactionAmbition: (input: UnassignFactionAmbitionInput) => __TAURI_INVOKE<void>("ambitions_unassign_faction_ambition", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -76,10 +84,27 @@ export const commands = {
 };
 
 /* Types */
+export type Ambition = {
+	id: number,
+	name: string,
+	description: string,
+	iconPath: string,
+	isCustom: boolean,
+	exclusions: number[],
+	projectId: number | null,
+	createdAt: string | null,
+	updatedAt: string | null,
+};
+
 export type AppHealthResponse = {
 	status: string,
 	database: string,
 	appVersion: string,
+};
+
+export type AssignFactionAmbitionInput = {
+	factionId: number,
+	ambitionId: number,
 };
 
 export type Character = {
@@ -161,6 +186,14 @@ export type CharactersListResult = {
 export type CompareFactionsInput = {
 	factionIds: number[],
 	metricKeys: string[],
+};
+
+export type CreateAmbitionInput = {
+	projectId: number,
+	name: string,
+	description: string | null,
+	iconPath: string | null,
+	excludedIds: number[] | null,
 };
 
 export type CreateBranchInput = {
@@ -329,6 +362,10 @@ export type CreateTimelineEventInput = {
 	eraColor: string | null,
 	linkedNoteId: number | null,
 	branchId: number | null,
+};
+
+export type DeleteAmbitionInput = {
+	id: number,
 };
 
 export type DeleteBranchInput = {
@@ -601,6 +638,10 @@ export type FactionsRelationsListInput = {
 	branchId: number | null,
 };
 
+export type GetAmbitionsCatalogInput = {
+	projectId: number,
+};
+
 export type GetCharacterInput = {
 	id: number,
 	branchId: number | null,
@@ -609,6 +650,10 @@ export type GetCharacterInput = {
 export type GetDogmaInput = {
 	id: number,
 	branchId: number | null,
+};
+
+export type GetFactionAmbitionsInput = {
+	factionId: number,
 };
 
 export type GetFactionInput = {
@@ -791,6 +836,23 @@ export type TimelineListInput = {
 	projectId: number,
 	era: string | null,
 	branchId: number | null,
+};
+
+export type UnassignFactionAmbitionInput = {
+	factionId: number,
+	ambitionId: number,
+};
+
+export type UpdateAmbitionExclusionsInput = {
+	id: number,
+	excludedIds: number[],
+};
+
+export type UpdateAmbitionInput = {
+	id: number,
+	name: string | null,
+	description: string | null,
+	iconPath: string | null,
 };
 
 export type UpdateBranchInput = {
