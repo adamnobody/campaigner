@@ -67,7 +67,8 @@ use crate::models::political_scale::{
     ReplacePoliticalScaleAssignmentsInput, ScaleZone, UpdatePoliticalScaleInput,
 };
 use crate::models::project::{
-    CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
+    CreateDemoProjectInput, CreateProjectInput, DeleteProjectInput, GetProjectInput, Project,
+    UpdateProjectInput,
 };
 use crate::models::search::{SearchQueryInput, SearchResult, SearchResultType};
 use crate::models::tag::{CreateTagInput, DeleteTagInput, Tag, TagsListInput};
@@ -92,28 +93,28 @@ mod codegen_commands {
         AppHealthResponse, AssignCharacterTraitInput, AssignFactionAmbitionInput, Character,
         CharacterGraph, CharacterRelationship, CharacterTrait, CharacterUploadImageInput,
         CharactersListInput, CharactersListResult, CompareFactionsInput, CreateAmbitionInput,
-        CreateBranchInput, CreateCharacterInput, CreateCharacterTraitInput, CreateDogmaInput,
-        CreateDynastyInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
-        CreateFactionRankInput, CreateFactionRelationInput, CreateMapInput, CreateMapMarkerInput,
-        CreateMapTerritoryInput, CreateNoteInput, CreatePoliticalScaleInput, CreateProjectInput,
-        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, CreateWikiLinkInput,
-        DeleteAmbitionInput, DeleteBranchInput, DeleteCharacterInput, DeleteCharacterTraitInput,
-        DeleteDogmaInput, DeleteDynastyEventInput, DeleteDynastyFamilyLinkInput,
-        DeleteDynastyInput, DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
-        DeleteFactionRankInput, DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteMapInput,
-        DeleteMapMarkerInput, DeleteMapTerritoryInput, DeleteNoteInput,
-        DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
-        DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, DeleteWikiLinkInput,
-        Dogma, DogmasListInput, DogmasListResult, DynastiesListInput, DynastiesListResult, Dynasty,
-        DynastyEvent, DynastyFamilyLink, DynastyMember, DynastyUploadImageInput, Faction,
-        FactionCompareResult, FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy,
-        FactionRank, FactionRelation, FactionUploadBannerInput, FactionUploadImageInput,
-        FactionsListInput, FactionsListResult, FactionsRelationsListInput,
-        GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput, GetCharacterInput,
-        GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput, GetFactionInput,
-        GetGraphLayoutInput, GetMapInput, GetMapTreeInput, GetNoteInput, GetProjectInput,
-        GetRootMapInput, GetTimelineEventInput, GraphLayoutDataV1, GraphLayoutResponse,
-        ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
+        CreateBranchInput, CreateCharacterInput, CreateCharacterTraitInput, CreateDemoProjectInput,
+        CreateDogmaInput, CreateDynastyInput, CreateFactionInput, CreateFactionMemberInput,
+        CreateFactionPolicyInput, CreateFactionRankInput, CreateFactionRelationInput,
+        CreateMapInput, CreateMapMarkerInput, CreateMapTerritoryInput, CreateNoteInput,
+        CreatePoliticalScaleInput, CreateProjectInput, CreateRelationshipInput, CreateTagInput,
+        CreateTimelineEventInput, CreateWikiLinkInput, DeleteAmbitionInput, DeleteBranchInput,
+        DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
+        DeleteDynastyFamilyLinkInput, DeleteDynastyInput, DeleteFactionInput,
+        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
+        DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteMapInput, DeleteMapMarkerInput,
+        DeleteMapTerritoryInput, DeleteNoteInput, DeletePoliticalScaleAssignmentInput,
+        DeletePoliticalScaleInput, DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput,
+        DeleteTimelineEventInput, DeleteWikiLinkInput, Dogma, DogmasListInput, DogmasListResult,
+        DynastiesListInput, DynastiesListResult, Dynasty, DynastyEvent, DynastyFamilyLink,
+        DynastyMember, DynastyUploadImageInput, Faction, FactionCompareResult, FactionCustomMetric,
+        FactionGraph, FactionMember, FactionPolicy, FactionRank, FactionRelation,
+        FactionUploadBannerInput, FactionUploadImageInput, FactionsListInput, FactionsListResult,
+        FactionsRelationsListInput, GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput,
+        GetCharacterInput, GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput,
+        GetFactionInput, GetGraphLayoutInput, GetMapInput, GetMapTreeInput, GetNoteInput,
+        GetProjectInput, GetRootMapInput, GetTimelineEventInput, GraphLayoutDataV1,
+        GraphLayoutResponse, ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
         ListFactionPoliciesInput, ListFactionRanksInput, ListMapMarkersInput,
         ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput,
         ListTerritorySummariesInput, ListWikiCategoriesInput, ListWikiLinksInput, MapMarker,
@@ -830,6 +831,20 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
+    pub fn projects_create_demo(_input: CreateDemoProjectInput) -> Project {
+        Project {
+            id: 0,
+            name: "Demo".to_string(),
+            description: String::new(),
+            status: "active".to_string(),
+            map_image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
     pub fn projects_update(input: UpdateProjectInput) -> Project {
         Project {
             id: input.id,
@@ -1460,6 +1475,12 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
+    pub fn uploads_resolve_path(relative_path: String) -> String {
+        relative_path
+    }
+
+    #[tauri::command]
+    #[specta::specta]
     pub fn uploads_save_map_image(_input: UploadFileInput) -> UploadSavedPath {
         UploadSavedPath {
             path: "/uploads/maps/map-0.png".to_string(),
@@ -1683,9 +1704,11 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
+            codegen_commands::projects_create_demo,
             codegen_commands::projects_update,
             codegen_commands::projects_delete,
             codegen_commands::search_query,
+            codegen_commands::uploads_resolve_path,
             codegen_commands::uploads_save_map_image,
             codegen_commands::uploads_save_character_image,
             codegen_commands::uploads_save_trait_image,

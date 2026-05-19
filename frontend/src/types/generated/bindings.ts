@@ -84,9 +84,11 @@ export const commands = {
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
+	projectsCreateDemo: (input: CreateDemoProjectInput) => __TAURI_INVOKE<Project>("projects_create_demo", { input }),
 	projectsUpdate: (input: UpdateProjectInput) => __TAURI_INVOKE<Project>("projects_update", { input }),
 	projectsDelete: (input: DeleteProjectInput) => __TAURI_INVOKE<void>("projects_delete", { input }),
 	searchQuery: (input: SearchQueryInput) => __TAURI_INVOKE<SearchResult[]>("search_query", { input }),
+	uploadsResolvePath: (relativePath: string) => __TAURI_INVOKE<string>("uploads_resolve_path", { relativePath }),
 	uploadsSaveMapImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_map_image", { input }),
 	uploadsSaveCharacterImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_character_image", { input }),
 	uploadsSaveTraitImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_trait_image", { input }),
@@ -357,6 +359,10 @@ export type CreateCharacterTraitInput = {
 	description: string | null,
 	imagePath: string | null,
 	excludedIds: number[] | null,
+};
+
+export type CreateDemoProjectInput = {
+	locale: string | null,
 };
 
 export type CreateDogmaInput = {
