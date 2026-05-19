@@ -19,7 +19,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { routes } from '@/utils/routes';
 
 export const CharactersPage: React.FC = () => {
@@ -239,8 +239,8 @@ export const CharactersPage: React.FC = () => {
                 </IconButton>
 
                 {ch.imagePath ? (
-                  <Avatar
-                    src={uploadAssetUrl(ch.imagePath)}
+                  <AssetAvatar
+                    assetPath={ch.imagePath}
                     sx={{ width: 52, height: 52, borderRadius: 1.5 }}
                     variant="rounded"
                   />

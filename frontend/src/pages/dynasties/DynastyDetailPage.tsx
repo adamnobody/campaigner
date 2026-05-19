@@ -25,6 +25,7 @@ import { useBranchStore } from '@/store/useBranchStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useFactionStore } from '@/store/useFactionStore';
 import { useTagStore } from '@/store/useTagStore';
+import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
@@ -398,8 +399,8 @@ export const DynastyDetailPage: React.FC = () => {
       <EntityHeroLayout
         avatarNode={
           <Box sx={{ position: 'relative', display: 'inline-block' }}>
-            <Avatar
-              src={currentDynasty?.imagePath || undefined}
+            <AssetAvatar
+              assetPath={currentDynasty?.imagePath}
               sx={{
                 width: 140, height: 140,
                 borderRadius: 3,
@@ -412,7 +413,7 @@ export const DynastyDetailPage: React.FC = () => {
               variant="rounded"
             >
               👑
-            </Avatar>
+            </AssetAvatar>
             {!isNew && (
               <Tooltip title={t('dynasties:detail.uploadCoatTooltip')}>
                 <IconButton

@@ -25,6 +25,7 @@ import { MapToolbar } from './components/MapToolbar';
 import { useMapViewport } from './hooks/useMapViewport';
 import { useMapTerritoryDrawing } from './hooks/useMapTerritoryDrawing';
 import { shallow } from 'zustand/shallow';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 import { useMapData } from './hooks/useMapData';
 import { useMapNavigation } from './hooks/useMapNavigation';
 import { useMapMarkerCrud } from './hooks/useMapMarkerCrud';
@@ -400,9 +401,8 @@ export const MapPage: React.FC = () => {
   const getLinkedNote = useCallback((noteId: number | null) =>
     noteId ? notesMap.get(noteId) : undefined, [notesMap]);
 
-  const mapImageUrl = useMemo(() =>
-    currentMap?.imagePath ? `/api${currentMap.imagePath}` : project?.mapImagePath || null,
-    [currentMap?.imagePath, project?.mapImagePath]);
+  const mapImagePath = currentMap?.imagePath ?? project?.mapImagePath ?? null;
+  const mapImageUrl = useAssetUrl(mapImagePath);
 
   // ==================== Child map ops ====================
   const handleCreateChildMap = useCallback(async (marker: Marker) => {

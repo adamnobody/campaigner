@@ -21,7 +21,7 @@ import { useCharacterTraitsStore } from '@/store/useCharacterTraitsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { uploadsApi } from '@/api/uploads';
 import { LIMITS } from '@campaigner/shared';
-import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 import { localizedPredefinedTraitTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
 interface CreateTraitDialogProps {
@@ -50,6 +50,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
     if (!file) return undefined;
     return URL.createObjectURL(file);
   }, [file]);
+  const resolvedPreviewUrl = useAssetUrl(previewUrl);
 
   useEffect(() => {
     return () => {
@@ -226,7 +227,7 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
           >
             <Box
               component="img"
-              src={uploadAssetUrl(previewUrl) ?? previewUrl}
+              src={resolvedPreviewUrl ?? previewUrl}
               alt={t('traits.previewAlt')}
               sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />

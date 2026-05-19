@@ -21,7 +21,7 @@ import { DndButton } from '@/components/ui/DndButton';
 import { useUIStore } from '@/store/useUIStore';
 import { useAmbitionsStore } from '@/store/useAmbitionsStore';
 import { uploadsApi } from '@/api/uploads';
-import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 import { useTranslation } from 'react-i18next';
 import { localizedPredefinedAmbitionTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
@@ -67,6 +67,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
     if (file) return URL.createObjectURL(file);
     return editingAmbition?.iconPath || undefined;
   }, [file, editingAmbition?.iconPath]);
+  const resolvedPreviewUrl = useAssetUrl(previewUrl);
 
   useEffect(() => {
     return () => {
@@ -246,7 +247,7 @@ export const CreateAmbitionDialog: React.FC<CreateAmbitionDialogProps> = ({
           >
             <Box
               component="img"
-              src={uploadAssetUrl(previewUrl) ?? previewUrl}
+              src={resolvedPreviewUrl ?? previewUrl}
               alt={t('factions:ambitionDialog.previewAlt')}
               sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />

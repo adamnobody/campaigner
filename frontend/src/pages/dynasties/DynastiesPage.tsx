@@ -16,6 +16,7 @@ import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { routes } from '@/utils/routes';
@@ -220,8 +221,8 @@ export const DynastiesPage: React.FC = () => {
                   </Box>
 
                   {/* Crest */}
-                  <Avatar
-                    src={dynasty.imagePath || undefined}
+                  <AssetAvatar
+                    assetPath={dynasty.imagePath}
                     sx={{
                       width: 72, height: 72, mx: 'auto', mb: 1.5,
                       borderRadius: '50%',
@@ -232,7 +233,7 @@ export const DynastiesPage: React.FC = () => {
                     }}
                   >
                     👑
-                  </Avatar>
+                  </AssetAvatar>
 
                   {/* Name */}
                   <Typography sx={{

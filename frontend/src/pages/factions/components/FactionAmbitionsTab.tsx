@@ -9,7 +9,6 @@ import { AmbitionFlipCard } from './AmbitionFlipCard';
 import { CreateAmbitionDialog } from './CreateAmbitionDialog';
 import { useAmbitionsStore } from '@/store/useAmbitionsStore';
 import { useUIStore } from '@/store/useUIStore';
-import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { localizedPredefinedAmbitionTexts } from '@/i18n/catalog/displayBuiltinTexts';
 
 interface FactionAmbitionsTabProps {
@@ -202,7 +201,7 @@ export const FactionAmbitionsTab: React.FC<FactionAmbitionsTabProps> = ({ projec
         <AmbitionFlipCard
           name={item.displayLabel ?? item.name}
           description={item.displayDescription ?? item.description}
-          imageSrc={uploadAssetUrl(item.iconPath)}
+          imageSrc={item.iconPath}
           isAttached={isAttached}
           isCustom={item.isCustom}
           attachActionsDisabled={attachDisabled}

@@ -63,6 +63,7 @@ import { FONT_PRESET_OPTIONS } from '@/pages/appearance/components/fontPresets';
 import { useDebouncedDraft } from '@/pages/appearance/components/useDebouncedDraft';
 import { CreateColorThemeDialog, type CreateColorThemeValues } from '@/pages/appearance/components/CreateColorThemeDialog';
 import { uploadsApi } from '@/api/uploads';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 import {
   INTERFACE_STYLE_ORDER,
   INTERFACE_STYLE_PROFILES,
@@ -247,6 +248,7 @@ export const AppearanceSettingsPage: React.FC = () => {
     setDraftValue: setHomeBackgroundImageDraft,
     flushDraft: flushHomeBackgroundImageDraft,
   } = useDebouncedDraft(homeBackgroundImage || '', setHomeBackgroundImage);
+  const resolvedHomeBackgroundDraftUrl = useAssetUrl(homeBackgroundImageDraft || null);
   const {
     draft: customFontCssUrlDraft,
     isPending: isCustomFontCssUrlPending,
@@ -1022,10 +1024,10 @@ export const AppearanceSettingsPage: React.FC = () => {
                       p: 3,
                       borderRadius: 3,
                       border: `2px dashed ${alpha(theme.palette.divider, 0.4)}`,
-                      background: homeBackgroundImageDraft
+                      background: resolvedHomeBackgroundDraftUrl
                         ? `
                           linear-gradient(rgba(0,0,0,0.32), rgba(0,0,0,0.48)),
-                          url(${homeBackgroundImageDraft})
+                          url(${resolvedHomeBackgroundDraftUrl})
                         `
                         : alpha(theme.palette.action.hover, 0.05),
                       backgroundSize: 'cover',

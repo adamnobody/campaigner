@@ -22,7 +22,7 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CharacterTraitsTab } from '@/pages/characters/components/CharacterTraitsTab';
-import { uploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { factionsApi } from '@/api/factions';
 import { useUIStore } from '@/store/useUIStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
@@ -347,7 +347,7 @@ export const CharacterDetailPage: React.FC = () => {
       <EntityHeroLayout
         avatarNode={
           currentCharacter?.imagePath ? (
-            <Avatar src={uploadAssetUrl(currentCharacter.imagePath)} sx={{ width: 140, height: 140, borderRadius: 3 }} variant="rounded" />
+            <AssetAvatar assetPath={currentCharacter.imagePath} sx={{ width: 140, height: 140, borderRadius: 3 }} variant="rounded" />
           ) : (
             <Avatar sx={{ width: 140, height: 140, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }} variant="rounded">
               <PersonIcon sx={{ fontSize: 64 }} />
