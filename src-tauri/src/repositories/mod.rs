@@ -1,5 +1,7 @@
 pub mod ambitions;
 pub mod branches;
+pub mod character_traits;
+mod character_traits_seed;
 pub mod characters;
 pub mod dogmas;
 pub mod factions;

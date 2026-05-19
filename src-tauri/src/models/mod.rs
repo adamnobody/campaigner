@@ -2,6 +2,7 @@ pub mod ambition;
 pub mod app;
 pub mod branch;
 pub mod character;
+pub mod character_trait;
 pub mod dogma;
 pub mod faction;
 pub mod note;

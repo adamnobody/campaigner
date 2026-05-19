@@ -24,6 +24,13 @@ export const commands = {
 	ambitionsGetFactionAmbitions: (input: GetFactionAmbitionsInput) => __TAURI_INVOKE<Ambition[]>("ambitions_get_faction_ambitions", { input }),
 	ambitionsAssignFactionAmbition: (input: AssignFactionAmbitionInput) => __TAURI_INVOKE<void>("ambitions_assign_faction_ambition", { input }),
 	ambitionsUnassignFactionAmbition: (input: UnassignFactionAmbitionInput) => __TAURI_INVOKE<void>("ambitions_unassign_faction_ambition", { input }),
+	characterTraitsList: (input: ListCharacterTraitsInput) => __TAURI_INVOKE<CharacterTrait[]>("character_traits_list", { input }),
+	characterTraitsGetAssigned: (input: GetAssignedCharacterTraitsInput) => __TAURI_INVOKE<number[]>("character_traits_get_assigned", { input }),
+	characterTraitsAssign: (input: AssignCharacterTraitInput) => __TAURI_INVOKE<void>("character_traits_assign", { input }),
+	characterTraitsUnassign: (input: UnassignCharacterTraitInput) => __TAURI_INVOKE<void>("character_traits_unassign", { input }),
+	characterTraitsCreate: (input: CreateCharacterTraitInput) => __TAURI_INVOKE<CharacterTrait>("character_traits_create", { input }),
+	characterTraitsUpdateExclusions: (input: UpdateCharacterTraitExclusionsInput) => __TAURI_INVOKE<CharacterTrait>("character_traits_update_exclusions", { input }),
+	characterTraitsDelete: (input: DeleteCharacterTraitInput) => __TAURI_INVOKE<void>("character_traits_delete", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -102,6 +109,11 @@ export type AppHealthResponse = {
 	appVersion: string,
 };
 
+export type AssignCharacterTraitInput = {
+	characterId: number,
+	traitId: number,
+};
+
 export type AssignFactionAmbitionInput = {
 	factionId: number,
 	ambitionId: number,
@@ -165,6 +177,19 @@ export type CharacterRelationship = {
 	targetCharacterName: string | null,
 };
 
+export type CharacterTrait = {
+	id: number,
+	projectId: number,
+	name: string,
+	description: string,
+	imagePath: string,
+	isPredefined: boolean,
+	exclusions: number[],
+	sortOrder: number,
+	createdAt: string | null,
+	updatedAt: string | null,
+};
+
 export type CharactersListInput = {
 	projectId: number,
 	page: number | null,
@@ -219,6 +244,14 @@ export type CreateCharacterInput = {
 	stateId: number | null,
 	factionIds: number[] | null,
 	branchId: number | null,
+};
+
+export type CreateCharacterTraitInput = {
+	projectId: number,
+	name: string,
+	description: string | null,
+	imagePath: string | null,
+	excludedIds: number[] | null,
 };
 
 export type CreateDogmaInput = {
@@ -375,6 +408,10 @@ export type DeleteBranchInput = {
 export type DeleteCharacterInput = {
 	id: number,
 	branchId: number | null,
+};
+
+export type DeleteCharacterTraitInput = {
+	id: number,
 };
 
 export type DeleteDogmaInput = {
@@ -642,6 +679,10 @@ export type GetAmbitionsCatalogInput = {
 	projectId: number,
 };
 
+export type GetAssignedCharacterTraitsInput = {
+	characterId: number,
+};
+
 export type GetCharacterInput = {
 	id: number,
 	branchId: number | null,
@@ -681,6 +722,10 @@ export type IdNameRef = {
 };
 
 export type ListBranchesInput = {
+	projectId: number,
+};
+
+export type ListCharacterTraitsInput = {
 	projectId: number,
 };
 
@@ -838,6 +883,11 @@ export type TimelineListInput = {
 	branchId: number | null,
 };
 
+export type UnassignCharacterTraitInput = {
+	characterId: number,
+	traitId: number,
+};
+
 export type UnassignFactionAmbitionInput = {
 	factionId: number,
 	ambitionId: number,
@@ -876,6 +926,11 @@ export type UpdateCharacterInput = {
 	stateId: number | null,
 	factionIds: number[] | null,
 	branchId: number | null,
+};
+
+export type UpdateCharacterTraitExclusionsInput = {
+	id: number,
+	excludedIds: number[],
 };
 
 export type UpdateDogmaInput = {
