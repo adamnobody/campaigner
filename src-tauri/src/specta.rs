@@ -49,6 +49,13 @@ use crate::models::graph_layout::{
     DeleteGraphLayoutInput, GetGraphLayoutInput, GraphLayoutDataV1, GraphLayoutNodeState,
     GraphLayoutResponse, GraphLayoutViewport, UpsertGraphLayoutInput,
 };
+use crate::models::map::{
+    CreateMapInput, CreateMapMarkerInput, CreateMapTerritoryInput, DeleteMapInput,
+    DeleteMapMarkerInput, DeleteMapTerritoryInput, GetMapInput, GetMapTreeInput, GetRootMapInput,
+    ListMapMarkersInput, ListMapTerritoriesInput, ListTerritorySummariesInput, MapMarker,
+    MapRecord, MapTerritory, MapTerritoryPoint, MapTerritorySummary, UpdateMapInput,
+    UpdateMapMarkerInput, UpdateMapTerritoryInput,
+};
 use crate::models::note::{
     CreateNoteInput, DeleteNoteInput, GetNoteInput, Note, NotesListInput, NotesListResult,
     SetNoteTagsInput, UpdateNoteInput,
@@ -77,13 +84,14 @@ mod codegen_commands {
         CharactersListResult, CompareFactionsInput, CreateAmbitionInput, CreateBranchInput,
         CreateCharacterInput, CreateCharacterTraitInput, CreateDogmaInput, CreateDynastyInput,
         CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
-        CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput,
-        CreatePoliticalScaleInput, CreateProjectInput, CreateRelationshipInput, CreateTagInput,
-        CreateTimelineEventInput, DeleteAmbitionInput, DeleteBranchInput, DeleteCharacterInput,
-        DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
-        DeleteDynastyFamilyLinkInput, DeleteDynastyInput, DeleteFactionInput,
-        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
-        DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteNoteInput,
+        CreateFactionRankInput, CreateFactionRelationInput, CreateMapInput, CreateMapMarkerInput,
+        CreateMapTerritoryInput, CreateNoteInput, CreatePoliticalScaleInput, CreateProjectInput,
+        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteAmbitionInput,
+        DeleteBranchInput, DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput,
+        DeleteDynastyEventInput, DeleteDynastyFamilyLinkInput, DeleteDynastyInput,
+        DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
+        DeleteFactionRankInput, DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteMapInput,
+        DeleteMapMarkerInput, DeleteMapTerritoryInput, DeleteNoteInput,
         DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
         DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, Dogma, DogmasListInput,
         DogmasListResult, DynastiesListInput, DynastiesListResult, Dynasty, DynastyEvent,
@@ -92,13 +100,15 @@ mod codegen_commands {
         FactionsListInput, FactionsListResult, FactionsRelationsListInput,
         GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput, GetCharacterInput,
         GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput, GetFactionInput,
-        GetGraphLayoutInput, GetNoteInput, GetProjectInput, GetTimelineEventInput,
-        GraphLayoutDataV1, GraphLayoutResponse, ListBranchesInput, ListCharacterTraitsInput,
-        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput,
-        ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput, Note, NotesListInput,
-        NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project, RelationshipsListInput,
-        RemoveDynastyMemberInput, ReorderDogmasInput, ReorderDynastyEventsInput,
-        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
+        GetGraphLayoutInput, GetMapInput, GetMapTreeInput, GetNoteInput, GetProjectInput,
+        GetRootMapInput, GetTimelineEventInput, GraphLayoutDataV1, GraphLayoutResponse,
+        ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
+        ListFactionPoliciesInput, ListFactionRanksInput, ListMapMarkersInput,
+        ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput,
+        ListTerritorySummariesInput, MapMarker, MapRecord, MapTerritory, MapTerritorySummary, Note,
+        NotesListInput, NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
+        RelationshipsListInput, RemoveDynastyMemberInput, ReorderDogmasInput,
+        ReorderDynastyEventsInput, ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
         ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
         SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
         SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
@@ -107,8 +117,9 @@ mod codegen_commands {
         UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
         UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
         UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
-        UpdateFactionRelationInput, UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput,
-        UpdateRelationshipInput, UpdateTimelineEventInput, UpsertGraphLayoutInput,
+        UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput, UpdateMapTerritoryInput,
+        UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
+        UpdateTimelineEventInput, UpsertGraphLayoutInput,
     };
 
     #[tauri::command]
@@ -633,6 +644,141 @@ mod codegen_commands {
     #[tauri::command]
     #[specta::specta]
     pub fn graph_layout_delete(_input: DeleteGraphLayoutInput) {}
+
+    fn empty_map_record() -> MapRecord {
+        MapRecord {
+            id: 0,
+            project_id: 0,
+            parent_map_id: None,
+            parent_marker_id: None,
+            name: String::new(),
+            image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    fn empty_map_marker() -> MapMarker {
+        MapMarker {
+            id: 0,
+            map_id: 0,
+            title: String::new(),
+            description: String::new(),
+            position_x: 0.0,
+            position_y: 0.0,
+            color: "#FF6B6B".to_string(),
+            icon: "custom".to_string(),
+            linked_note_id: None,
+            child_map_id: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    fn empty_map_territory() -> MapTerritory {
+        MapTerritory {
+            id: 0,
+            map_id: 0,
+            name: String::new(),
+            description: String::new(),
+            color: "#4ECDC4".to_string(),
+            opacity: 0.25,
+            border_color: "#4ECDC4".to_string(),
+            border_width: 2.0,
+            smoothing: 0.0,
+            rings: Vec::new(),
+            faction_id: None,
+            sort_order: 0,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_get_root(_input: GetRootMapInput) -> Option<MapRecord> {
+        None
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_get_tree(_input: GetMapTreeInput) -> Vec<MapRecord> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_get(_input: GetMapInput) -> MapRecord {
+        empty_map_record()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_create(_input: CreateMapInput) -> MapRecord {
+        empty_map_record()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_update(_input: UpdateMapInput) -> MapRecord {
+        empty_map_record()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_delete(_input: DeleteMapInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_markers_list(_input: ListMapMarkersInput) -> Vec<MapMarker> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_markers_create(_input: CreateMapMarkerInput) -> MapMarker {
+        empty_map_marker()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_markers_update(_input: UpdateMapMarkerInput) -> MapMarker {
+        empty_map_marker()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_markers_delete(_input: DeleteMapMarkerInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_territories_list(_input: ListMapTerritoriesInput) -> Vec<MapTerritory> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_territories_create(_input: CreateMapTerritoryInput) -> MapTerritory {
+        empty_map_territory()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_territories_update(_input: UpdateMapTerritoryInput) -> MapTerritory {
+        empty_map_territory()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_territories_delete(_input: DeleteMapTerritoryInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn maps_territory_summaries_list(
+        _input: ListTerritorySummariesInput,
+    ) -> Vec<MapTerritorySummary> {
+        Vec::new()
+    }
 
     #[tauri::command]
     #[specta::specta]
@@ -1349,6 +1495,21 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::graph_layout_get,
             codegen_commands::graph_layout_upsert,
             codegen_commands::graph_layout_delete,
+            codegen_commands::maps_get_root,
+            codegen_commands::maps_get_tree,
+            codegen_commands::maps_get,
+            codegen_commands::maps_create,
+            codegen_commands::maps_update,
+            codegen_commands::maps_delete,
+            codegen_commands::maps_markers_list,
+            codegen_commands::maps_markers_create,
+            codegen_commands::maps_markers_update,
+            codegen_commands::maps_markers_delete,
+            codegen_commands::maps_territories_list,
+            codegen_commands::maps_territories_create,
+            codegen_commands::maps_territories_update,
+            codegen_commands::maps_territories_delete,
+            codegen_commands::maps_territory_summaries_list,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -1478,6 +1639,26 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<UpsertGraphLayoutInput>()
         .typ::<DeleteGraphLayoutInput>()
         .typ::<GraphLayoutResponse>()
+        .typ::<MapRecord>()
+        .typ::<MapMarker>()
+        .typ::<MapTerritory>()
+        .typ::<MapTerritoryPoint>()
+        .typ::<MapTerritorySummary>()
+        .typ::<GetRootMapInput>()
+        .typ::<GetMapTreeInput>()
+        .typ::<GetMapInput>()
+        .typ::<CreateMapInput>()
+        .typ::<UpdateMapInput>()
+        .typ::<DeleteMapInput>()
+        .typ::<ListMapMarkersInput>()
+        .typ::<CreateMapMarkerInput>()
+        .typ::<UpdateMapMarkerInput>()
+        .typ::<DeleteMapMarkerInput>()
+        .typ::<ListMapTerritoriesInput>()
+        .typ::<CreateMapTerritoryInput>()
+        .typ::<UpdateMapTerritoryInput>()
+        .typ::<DeleteMapTerritoryInput>()
+        .typ::<ListTerritorySummariesInput>()
         .typ::<Project>()
         .typ::<GetProjectInput>()
         .typ::<CreateProjectInput>()

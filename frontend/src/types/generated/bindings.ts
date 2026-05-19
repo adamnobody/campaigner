@@ -57,6 +57,30 @@ export const commands = {
 	graphLayoutGet: (input: GetGraphLayoutInput) => __TAURI_INVOKE<GraphLayoutResponse_Serialize>("graph_layout_get", { input }),
 	graphLayoutUpsert: (input: UpsertGraphLayoutInput_Deserialize) => __TAURI_INVOKE<GraphLayoutResponse_Serialize>("graph_layout_upsert", { input }),
 	graphLayoutDelete: (input: DeleteGraphLayoutInput) => __TAURI_INVOKE<void>("graph_layout_delete", { input }),
+	mapsGetRoot: (input: GetRootMapInput) => __TAURI_INVOKE<{
+	id: number,
+	projectId: number,
+	parentMapId: number | null,
+	parentMarkerId: number | null,
+	name: string,
+	imagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
+} | null>("maps_get_root", { input }),
+	mapsGetTree: (input: GetMapTreeInput) => __TAURI_INVOKE<MapRecord[]>("maps_get_tree", { input }),
+	mapsGet: (input: GetMapInput) => __TAURI_INVOKE<MapRecord>("maps_get", { input }),
+	mapsCreate: (input: CreateMapInput) => __TAURI_INVOKE<MapRecord>("maps_create", { input }),
+	mapsUpdate: (input: UpdateMapInput) => __TAURI_INVOKE<MapRecord>("maps_update", { input }),
+	mapsDelete: (input: DeleteMapInput) => __TAURI_INVOKE<void>("maps_delete", { input }),
+	mapsMarkersList: (input: ListMapMarkersInput) => __TAURI_INVOKE<MapMarker[]>("maps_markers_list", { input }),
+	mapsMarkersCreate: (input: CreateMapMarkerInput) => __TAURI_INVOKE<MapMarker>("maps_markers_create", { input }),
+	mapsMarkersUpdate: (input: UpdateMapMarkerInput) => __TAURI_INVOKE<MapMarker>("maps_markers_update", { input }),
+	mapsMarkersDelete: (input: DeleteMapMarkerInput) => __TAURI_INVOKE<void>("maps_markers_delete", { input }),
+	mapsTerritoriesList: (input: ListMapTerritoriesInput) => __TAURI_INVOKE<MapTerritory[]>("maps_territories_list", { input }),
+	mapsTerritoriesCreate: (input: CreateMapTerritoryInput) => __TAURI_INVOKE<MapTerritory>("maps_territories_create", { input }),
+	mapsTerritoriesUpdate: (input: UpdateMapTerritoryInput) => __TAURI_INVOKE<MapTerritory>("maps_territories_update", { input }),
+	mapsTerritoriesDelete: (input: DeleteMapTerritoryInput) => __TAURI_INVOKE<void>("maps_territories_delete", { input }),
+	mapsTerritorySummariesList: (input: ListTerritorySummariesInput) => __TAURI_INVOKE<MapTerritorySummary[]>("maps_territory_summaries_list", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -426,6 +450,43 @@ export type CreateFactionRelationInput = {
 	branchId: number | null,
 };
 
+export type CreateMapInput = {
+	projectId: number,
+	parentMapId: number | null,
+	parentMarkerId: number | null,
+	name: string,
+	imagePath: string | null,
+	branchId: number | null,
+};
+
+export type CreateMapMarkerInput = {
+	mapId: number,
+	title: string,
+	description: string | null,
+	positionX: number | null,
+	positionY: number | null,
+	color: string | null,
+	icon: string | null,
+	linkedNoteId: number | null,
+	childMapId: number | null,
+	branchId: number | null,
+};
+
+export type CreateMapTerritoryInput = {
+	mapId: number,
+	name: string,
+	description: string | null,
+	color: string | null,
+	opacity: number | null,
+	borderColor: string | null,
+	borderWidth: number | null,
+	smoothing: number | null,
+	rings: MapTerritoryPoint[][],
+	factionId: number | null,
+	sortOrder: number | null,
+	branchId: number | null,
+};
+
 export type CreateNoteInput = {
 	projectId: number,
 	folderId: number | null,
@@ -571,6 +632,20 @@ export type DeleteFactionRelationInput = {
 export type DeleteGraphLayoutInput = {
 	projectId: number,
 	graphType: string,
+	branchId: number | null,
+};
+
+export type DeleteMapInput = {
+	id: number,
+};
+
+export type DeleteMapMarkerInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type DeleteMapTerritoryInput = {
+	id: number,
 	branchId: number | null,
 };
 
@@ -1012,6 +1087,15 @@ export type GetGraphLayoutInput = {
 	branchId: number | null,
 };
 
+export type GetMapInput = {
+	id: number,
+};
+
+export type GetMapTreeInput = {
+	projectId: number,
+	branchId: number | null,
+};
+
 export type GetNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -1019,6 +1103,11 @@ export type GetNoteInput = {
 
 export type GetProjectInput = {
 	id: number,
+};
+
+export type GetRootMapInput = {
+	projectId: number,
+	branchId: number | null,
 };
 
 export type GetTimelineEventInput = {
@@ -1098,6 +1187,16 @@ export type ListFactionRanksInput = {
 	branchId: number | null,
 };
 
+export type ListMapMarkersInput = {
+	mapId: number,
+	branchId: number | null,
+};
+
+export type ListMapTerritoriesInput = {
+	mapId: number,
+	branchId: number | null,
+};
+
 export type ListPoliticalScaleAssignmentsInput = {
 	entityType: string,
 	entityId: number,
@@ -1106,6 +1205,69 @@ export type ListPoliticalScaleAssignmentsInput = {
 export type ListPoliticalScalesInput = {
 	entityType: string,
 	worldId: number,
+};
+
+export type ListTerritorySummariesInput = {
+	projectId: number,
+	branchId: number | null,
+};
+
+export type MapMarker = {
+	id: number,
+	mapId: number,
+	title: string,
+	description: string,
+	positionX: number | null,
+	positionY: number | null,
+	color: string,
+	icon: string,
+	linkedNoteId: number | null,
+	childMapId: number | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type MapRecord = {
+	id: number,
+	projectId: number,
+	parentMapId: number | null,
+	parentMarkerId: number | null,
+	name: string,
+	imagePath: string | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type MapTerritory = {
+	id: number,
+	mapId: number,
+	name: string,
+	description: string,
+	color: string,
+	opacity: number | null,
+	borderColor: string,
+	borderWidth: number | null,
+	smoothing: number | null,
+	rings: MapTerritoryPoint[][],
+	factionId: number | null,
+	sortOrder: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type MapTerritoryPoint = {
+	x: number | null,
+	y: number | null,
+};
+
+export type MapTerritorySummary = {
+	id: number,
+	name: string,
+	mapId: number,
+	mapName: string,
+	factionId: number | null,
+	occupantName: string | null,
+	occupantKind: string | null,
 };
 
 export type Note = {
@@ -1533,6 +1695,40 @@ export type UpdateFactionRelationInput = {
 	description: string | null,
 	startedDate: string | null,
 	isBidirectional: boolean | null,
+};
+
+export type UpdateMapInput = {
+	id: number,
+	name: string | null,
+	imagePath: string | null,
+};
+
+export type UpdateMapMarkerInput = {
+	id: number,
+	title: string | null,
+	description: string | null,
+	positionX: number | null,
+	positionY: number | null,
+	color: string | null,
+	icon: string | null,
+	linkedNoteId: number | null,
+	childMapId: number | null,
+	branchId: number | null,
+};
+
+export type UpdateMapTerritoryInput = {
+	id: number,
+	name: string | null,
+	description: string | null,
+	color: string | null,
+	opacity: number | null,
+	borderColor: string | null,
+	borderWidth: number | null,
+	smoothing: number | null,
+	rings: MapTerritoryPoint[][] | null,
+	factionId: number | null,
+	sortOrder: number | null,
+	branchId: number | null,
 };
 
 export type UpdateNoteInput = {

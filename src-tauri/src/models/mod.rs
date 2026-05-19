@@ -7,6 +7,7 @@ pub mod dogma;
 pub mod dynasty;
 pub mod faction;
 pub mod graph_layout;
+pub mod map;
 pub mod note;
 pub mod political_scale;
 pub mod project;

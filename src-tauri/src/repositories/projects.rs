@@ -4,6 +4,7 @@ use crate::error::{AppError, Result};
 use crate::models::project::{
     CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
 };
+use crate::repositories::maps;
 
 pub fn list_projects(connection: &Connection) -> Result<Vec<Project>> {
     let mut statement = connection.prepare(
@@ -65,6 +66,30 @@ pub fn create_project(connection: &Connection, input: &CreateProjectInput) -> Re
             "Created project id is out of supported range",
         )
     })?;
+
+    let main_branch_name = input
+        .main_branch_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("Canon branch");
+
+    connection.execute(
+        r#"
+        INSERT INTO scenario_branches (project_id, name, is_main, created_at, updated_at)
+        VALUES (?1, ?2, 1, datetime('now'), datetime('now'))
+        "#,
+        params![id, main_branch_name],
+    )?;
+
+    let main_branch_id = i32::try_from(connection.last_insert_rowid()).map_err(|_| {
+        AppError::internal(
+            "BRANCH_ID_RANGE_ERROR",
+            "Created main branch id is out of supported range",
+        )
+    })?;
+
+    maps::create_root_map_for_project(connection, id, None, Some(main_branch_id))?;
 
     get_project(connection, &GetProjectInput { id })
 }
