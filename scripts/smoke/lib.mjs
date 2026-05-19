@@ -82,18 +82,15 @@ export function getEntityList(result, context = 'list') {
 }
 
 export async function ensureOverlayBranch(ctx) {
-  if (ctx.overlayBranchId) return ctx.overlayBranchId;
   if (!ctx.projectId) {
     throw new Error('ensureOverlayBranch: projectId is required in smoke context');
   }
-
   const listRes = await api(`/branches?projectId=${ctx.projectId}`);
   assertStatus(listRes, 200, 'list branches');
   const branches = getEntityList(listRes, 'list branches');
-  const existing = branches.find((b) => b && b.isMain !== true);
-  if (existing?.id) {
-    ctx.overlayBranchId = existing.id;
-    return existing.id;
+  const mainBranch = branches.find((branch) => branch && Boolean(branch.isMain));
+  if (!mainBranch?.id) {
+    throw new Error(`list branches: main branch not found ${JSON.stringify(listRes.data, null, 2)}`);
   }
 
   const createRes = await api('/branches', {
@@ -101,6 +98,7 @@ export async function ensureOverlayBranch(ctx) {
     body: JSON.stringify({
       projectId: ctx.projectId,
       name: `Smoke Branch ${Date.now()}`,
+      parentBranchId: mainBranch.id,
     }),
   });
   assertStatus(createRes, 201, 'create overlay branch');
@@ -108,6 +106,5 @@ export async function ensureOverlayBranch(ctx) {
   if (!branchId) {
     throw new Error(`create overlay branch: missing id ${JSON.stringify(createRes.data, null, 2)}`);
   }
-  ctx.overlayBranchId = branchId;
   return branchId;
 }

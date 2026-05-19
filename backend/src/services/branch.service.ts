@@ -6,7 +6,7 @@ import { GraphLayoutService } from './graphLayout.service.js';
 export class BranchService {
   static getAll(projectId: number): ScenarioBranch[] {
     const db = getDb();
-    return db.prepare(`
+    const rows = db.prepare(`
       SELECT
         id,
         project_id as projectId,
@@ -20,6 +20,7 @@ export class BranchService {
       WHERE project_id = ?
       ORDER BY is_main DESC, created_at ASC
     `).all(projectId) as ScenarioBranch[];
+    return rows.map((row) => ({ ...row, isMain: Boolean(row.isMain) }));
   }
 
   static create(data: CreateScenarioBranch): ScenarioBranch {
