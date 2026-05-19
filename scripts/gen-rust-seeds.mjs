@@ -322,3 +322,23 @@ generateAmbitionsSeed(
   seeds.builtinAmbitionIconPath,
   seeds.ambitionsManifestHash(),
 );
+
+const fmtResult = spawnSync(
+  'cargo',
+  [
+    'fmt',
+    '--',
+    'src/repositories/character_traits_seed.rs',
+    'src/repositories/political_scales_seed.rs',
+    'src/repositories/ambitions_seed.rs',
+  ],
+  {
+    cwd: path.join(root, 'src-tauri'),
+    stdio: 'inherit',
+    shell: true,
+  },
+);
+
+if (fmtResult.status !== 0) {
+  process.exit(fmtResult.status ?? 1);
+}

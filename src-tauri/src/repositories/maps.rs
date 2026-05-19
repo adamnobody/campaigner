@@ -895,10 +895,7 @@ fn parse_territory_rings(value: &str) -> Vec<Vec<MapTerritoryPoint>> {
         }
         if let Some(Value::Object(first)) = items.first() {
             if first.contains_key("x") && first.contains_key("y") {
-                return vec![items
-                    .iter()
-                    .filter_map(parse_territory_point)
-                    .collect()];
+                return vec![items.iter().filter_map(parse_territory_point).collect()];
             }
         }
         if items.first().and_then(|item| item.as_array()).is_some() {
@@ -906,11 +903,7 @@ fn parse_territory_rings(value: &str) -> Vec<Vec<MapTerritoryPoint>> {
                 .iter()
                 .filter_map(|ring| {
                     let ring = ring.as_array()?;
-                    Some(
-                        ring.iter()
-                            .filter_map(parse_territory_point)
-                            .collect(),
-                    )
+                    Some(ring.iter().filter_map(parse_territory_point).collect())
                 })
                 .collect();
         }
@@ -922,11 +915,7 @@ fn parse_territory_rings(value: &str) -> Vec<Vec<MapTerritoryPoint>> {
                 .iter()
                 .filter_map(|ring| {
                     let ring = ring.as_array()?;
-                    Some(
-                        ring.iter()
-                            .filter_map(parse_territory_point)
-                            .collect(),
-                    )
+                    Some(ring.iter().filter_map(parse_territory_point).collect())
                 })
                 .collect();
         }
