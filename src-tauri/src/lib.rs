@@ -147,7 +147,11 @@ pub fn run() {
             commands::timeline::timeline_update_command,
             commands::timeline::timeline_delete_command,
             commands::timeline::timeline_reorder_command,
-            commands::timeline::timeline_set_tags_command
+            commands::timeline::timeline_set_tags_command,
+            commands::wiki::wiki_links_list_command,
+            commands::wiki::wiki_links_create_command,
+            commands::wiki::wiki_links_delete_command,
+            commands::wiki::wiki_categories_list_command
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");

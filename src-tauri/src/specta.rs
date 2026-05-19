@@ -75,6 +75,10 @@ use crate::models::timeline::{
     ReorderTimelineInput, SetTimelineTagsInput, TimelineEvent, TimelineListInput,
     UpdateTimelineEventInput,
 };
+use crate::models::wiki_link::{
+    CreateWikiLinkInput, DeleteWikiLinkInput, ListWikiCategoriesInput, ListWikiLinksInput,
+    WikiCategory, WikiLink,
+};
 
 mod codegen_commands {
     use super::{
@@ -86,18 +90,18 @@ mod codegen_commands {
         CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
         CreateFactionRankInput, CreateFactionRelationInput, CreateMapInput, CreateMapMarkerInput,
         CreateMapTerritoryInput, CreateNoteInput, CreatePoliticalScaleInput, CreateProjectInput,
-        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteAmbitionInput,
-        DeleteBranchInput, DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput,
-        DeleteDynastyEventInput, DeleteDynastyFamilyLinkInput, DeleteDynastyInput,
-        DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
+        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, CreateWikiLinkInput,
+        DeleteAmbitionInput, DeleteBranchInput, DeleteCharacterInput, DeleteCharacterTraitInput,
+        DeleteDogmaInput, DeleteDynastyEventInput, DeleteDynastyFamilyLinkInput,
+        DeleteDynastyInput, DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
         DeleteFactionRankInput, DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteMapInput,
         DeleteMapMarkerInput, DeleteMapTerritoryInput, DeleteNoteInput,
         DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
-        DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, Dogma, DogmasListInput,
-        DogmasListResult, DynastiesListInput, DynastiesListResult, Dynasty, DynastyEvent,
-        DynastyFamilyLink, DynastyMember, Faction, FactionCompareResult, FactionCustomMetric,
-        FactionGraph, FactionMember, FactionPolicy, FactionRank, FactionRelation,
-        FactionsListInput, FactionsListResult, FactionsRelationsListInput,
+        DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, DeleteWikiLinkInput,
+        Dogma, DogmasListInput, DogmasListResult, DynastiesListInput, DynastiesListResult, Dynasty,
+        DynastyEvent, DynastyFamilyLink, DynastyMember, Faction, FactionCompareResult,
+        FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy, FactionRank,
+        FactionRelation, FactionsListInput, FactionsListResult, FactionsRelationsListInput,
         GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput, GetCharacterInput,
         GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput, GetFactionInput,
         GetGraphLayoutInput, GetMapInput, GetMapTreeInput, GetNoteInput, GetProjectInput,
@@ -105,10 +109,11 @@ mod codegen_commands {
         ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
         ListFactionPoliciesInput, ListFactionRanksInput, ListMapMarkersInput,
         ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput,
-        ListTerritorySummariesInput, MapMarker, MapRecord, MapTerritory, MapTerritorySummary, Note,
-        NotesListInput, NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
-        RelationshipsListInput, RemoveDynastyMemberInput, ReorderDogmasInput,
-        ReorderDynastyEventsInput, ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
+        ListTerritorySummariesInput, ListWikiCategoriesInput, ListWikiLinksInput, MapMarker,
+        MapRecord, MapTerritory, MapTerritorySummary, Note, NotesListInput, NotesListResult,
+        PoliticalScale, PoliticalScaleAssignment, Project, RelationshipsListInput,
+        RemoveDynastyMemberInput, ReorderDogmasInput, ReorderDynastyEventsInput,
+        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
         ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
         SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
         SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
@@ -119,7 +124,7 @@ mod codegen_commands {
         UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
         UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput, UpdateMapTerritoryInput,
         UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput, UpsertGraphLayoutInput,
+        UpdateTimelineEventInput, UpsertGraphLayoutInput, WikiCategory, WikiLink,
     };
 
     #[tauri::command]
@@ -1437,6 +1442,37 @@ mod codegen_commands {
     pub fn timeline_set_tags(_input: SetTimelineTagsInput) -> Vec<Tag> {
         Vec::new()
     }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn wiki_links_list(_input: ListWikiLinksInput) -> Vec<WikiLink> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn wiki_links_create(_input: CreateWikiLinkInput) -> WikiLink {
+        WikiLink {
+            id: 0,
+            project_id: 0,
+            source_note_id: 0,
+            target_note_id: 0,
+            label: String::new(),
+            created_at: String::new(),
+            source_title: None,
+            target_title: None,
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn wiki_links_delete(_input: DeleteWikiLinkInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn wiki_categories_list(_input: ListWikiCategoriesInput) -> Vec<WikiCategory> {
+        Vec::new()
+    }
 }
 
 pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
@@ -1566,7 +1602,11 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::timeline_set_tags,
             codegen_commands::tags_list,
             codegen_commands::tags_create,
-            codegen_commands::tags_delete
+            codegen_commands::tags_delete,
+            codegen_commands::wiki_links_list,
+            codegen_commands::wiki_links_create,
+            codegen_commands::wiki_links_delete,
+            codegen_commands::wiki_categories_list
         ])
         .typ::<AppHealthResponse>()
         .typ::<ScenarioBranch>()
@@ -1731,5 +1771,11 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<TagsListInput>()
         .typ::<CreateTagInput>()
         .typ::<DeleteTagInput>()
+        .typ::<WikiLink>()
+        .typ::<WikiCategory>()
+        .typ::<ListWikiLinksInput>()
+        .typ::<CreateWikiLinkInput>()
+        .typ::<DeleteWikiLinkInput>()
+        .typ::<ListWikiCategoriesInput>()
         .export(Typescript::default(), path)
 }

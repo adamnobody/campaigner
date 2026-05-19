@@ -13,3 +13,4 @@ pub mod political_scales;
 pub mod projects;
 pub mod tags;
 pub mod timeline;
+pub mod wiki;

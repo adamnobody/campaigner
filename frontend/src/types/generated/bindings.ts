@@ -138,6 +138,10 @@ export const commands = {
 	tagsList: (input: TagsListInput) => __TAURI_INVOKE<Tag[]>("tags_list", { input }),
 	tagsCreate: (input: CreateTagInput) => __TAURI_INVOKE<Tag>("tags_create", { input }),
 	tagsDelete: (input: DeleteTagInput) => __TAURI_INVOKE<void>("tags_delete", { input }),
+	wikiLinksList: (input: ListWikiLinksInput) => __TAURI_INVOKE<WikiLink[]>("wiki_links_list", { input }),
+	wikiLinksCreate: (input: CreateWikiLinkInput) => __TAURI_INVOKE<WikiLink>("wiki_links_create", { input }),
+	wikiLinksDelete: (input: DeleteWikiLinkInput) => __TAURI_INVOKE<void>("wiki_links_delete", { input }),
+	wikiCategoriesList: (input: ListWikiCategoriesInput) => __TAURI_INVOKE<WikiCategory[]>("wiki_categories_list", { input }),
 };
 
 /* Types */
@@ -566,6 +570,14 @@ export type CreateTimelineEventInput = {
 	branchId: number | null,
 };
 
+export type CreateWikiLinkInput = {
+	projectId: number,
+	sourceNoteId: number,
+	targetNoteId: number,
+	label: string | null,
+	branchId: number | null,
+};
+
 export type DeleteAmbitionInput = {
 	id: number,
 };
@@ -678,6 +690,10 @@ export type DeleteTagInput = {
 export type DeleteTimelineEventInput = {
 	id: number,
 	branchId: number | null,
+};
+
+export type DeleteWikiLinkInput = {
+	id: number,
 };
 
 export type Dogma = {
@@ -1209,6 +1225,17 @@ export type ListPoliticalScalesInput = {
 
 export type ListTerritorySummariesInput = {
 	projectId: number,
+	branchId: number | null,
+};
+
+export type ListWikiCategoriesInput = {
+	projectId: number,
+	branchId: number | null,
+};
+
+export type ListWikiLinksInput = {
+	projectId: number,
+	noteId: number | null,
 	branchId: number | null,
 };
 
@@ -1821,5 +1848,21 @@ export type UpsertGraphLayoutInput_Serialize = {
 	graphType: string,
 	layoutData: GraphLayoutDataV1_Serialize,
 	branchId: number | null,
+};
+
+export type WikiCategory = {
+	name: string,
+	count: number,
+};
+
+export type WikiLink = {
+	id: number,
+	projectId: number,
+	sourceNoteId: number,
+	targetNoteId: number,
+	label: string,
+	createdAt: string,
+	sourceTitle: string | null,
+	targetTitle: string | null,
 };
 

@@ -30,7 +30,8 @@ function fileHeader(domainFile, hash) {
 
 function writeFile(targetPath, content) {
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-  fs.writeFileSync(targetPath, content, 'utf8');
+  const normalized = content.endsWith('\n') ? content : `${content}\n`;
+  fs.writeFileSync(targetPath, normalized, 'utf8');
   console.log(`Wrote ${path.relative(root, targetPath)}`);
 }
 
@@ -275,7 +276,9 @@ fn seed_builtin_exclusions(connection: &Connection) -> Result<()> {
     )?;
 
     let rows = statement
-        .query_map([], |row| Ok((row.get::<_, i32>(0)?, row.get::<_, String>(1)?)))?
+        .query_map([], |row| {
+            Ok((row.get::<_, i32>(0)?, row.get::<_, String>(1)?))
+        })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
 
     let by_name: std::collections::HashMap<&str, i32> =

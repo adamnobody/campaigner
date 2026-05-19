@@ -215,7 +215,9 @@ fn seed_builtin_exclusions(connection: &Connection) -> Result<()> {
     )?;
 
     let rows = statement
-        .query_map([], |row| Ok((row.get::<_, i32>(0)?, row.get::<_, String>(1)?)))?
+        .query_map([], |row| {
+            Ok((row.get::<_, i32>(0)?, row.get::<_, String>(1)?))
+        })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
 
     let by_name: std::collections::HashMap<&str, i32> =

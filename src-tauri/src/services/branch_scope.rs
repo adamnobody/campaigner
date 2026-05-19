@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use rusqlite::{types::Value as SqlValue, Connection};
 
 use crate::error::Result;
 use crate::models::branch::ScenarioBranch;
@@ -88,6 +88,95 @@ pub fn is_entity_visible_in_branch(
     }
 
     Ok(false)
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BranchVisibilitySql {
+    pub sql: String,
+    pub params: Vec<SqlValue>,
+}
+
+pub fn branch_entity_visibility_sql(
+    connection: &Connection,
+    project_id: i32,
+    requested_branch_id: Option<i32>,
+    created_branch_column: &str,
+    created_at_column: &str,
+) -> Result<BranchVisibilitySql> {
+    let branch_id = effective_branch_id_for_read(connection, project_id, requested_branch_id)?;
+    let Some(branch_id) = branch_id else {
+        return Ok(BranchVisibilitySql::default());
+    };
+
+    let main_id = branches::get_main_branch_id_for_project(connection, project_id)?;
+    let Some(main_id) = main_id else {
+        return Ok(BranchVisibilitySql::default());
+    };
+
+    if branch_id == main_id {
+        return Ok(BranchVisibilitySql {
+            sql: format!(" AND ({created_branch_column} IS NULL OR {created_branch_column} = ?)"),
+            params: vec![SqlValue::Integer(i64::from(main_id))],
+        });
+    }
+
+    let chain = get_ancestry_to_root(connection, branch_id)?;
+    if chain.is_empty() || chain[0].id != branch_id {
+        return Ok(BranchVisibilitySql {
+            sql: " AND 1=0".to_string(),
+            params: vec![],
+        });
+    }
+
+    let mut parts = vec![
+        format!("{created_branch_column} IS NULL"),
+        format!("{created_branch_column} = ?"),
+    ];
+    let mut params = vec![SqlValue::Integer(i64::from(branch_id))];
+
+    for index in 0..chain.len().saturating_sub(1) {
+        let child = &chain[index];
+        let parent = &chain[index + 1];
+        parts.push(format!(
+            "({created_branch_column} = ? AND datetime({created_at_column}) <= datetime(?))"
+        ));
+        params.push(SqlValue::Integer(i64::from(parent.id)));
+        params.push(SqlValue::Text(child.created_at.clone()));
+    }
+
+    Ok(BranchVisibilitySql {
+        sql: format!(" AND ({})", parts.join(" OR ")),
+        params,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn visibility_triple(
+    connection: &Connection,
+    project_id: i32,
+    requested_branch_id: Option<i32>,
+    wl_col: &str,
+    wl_at: &str,
+    sn_col: &str,
+    sn_at: &str,
+    tn_col: &str,
+    tn_at: &str,
+) -> Result<BranchVisibilitySql> {
+    let link_scope =
+        branch_entity_visibility_sql(connection, project_id, requested_branch_id, wl_col, wl_at)?;
+    let source_scope =
+        branch_entity_visibility_sql(connection, project_id, requested_branch_id, sn_col, sn_at)?;
+    let target_scope =
+        branch_entity_visibility_sql(connection, project_id, requested_branch_id, tn_col, tn_at)?;
+
+    let mut params = link_scope.params;
+    params.extend(source_scope.params);
+    params.extend(target_scope.params);
+
+    Ok(BranchVisibilitySql {
+        sql: format!("{}{}{}", link_scope.sql, source_scope.sql, target_scope.sql),
+        params,
+    })
 }
 
 fn get_ancestry_to_root(connection: &Connection, branch_id: i32) -> Result<Vec<ScenarioBranch>> {
