@@ -107,6 +107,16 @@ pub fn create_branch(connection: &Connection, input: &CreateBranchInput) -> Resu
     )?;
 
     let id = connection.last_insert_rowid() as i32;
+
+    if let Some(parent_branch_id) = input.parent_branch_id {
+        super::graph_layouts::copy_layouts_from_parent(
+            connection,
+            input.project_id,
+            parent_branch_id,
+            id,
+        )?;
+    }
+
     get_branch_by_id(connection, id)?
         .ok_or_else(|| AppError::internal("BRANCH_NOT_FOUND", "Scenario branch not found"))
 }
@@ -321,6 +331,17 @@ mod tests {
                   patch_json TEXT NOT NULL,
                   created_at TEXT NOT NULL,
                   updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE graph_layouts (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  project_id INTEGER NOT NULL,
+                  branch_id INTEGER NOT NULL,
+                  graph_type TEXT NOT NULL,
+                  layout_data TEXT NOT NULL DEFAULT '{}',
+                  created_at TEXT DEFAULT (datetime('now')),
+                  updated_at TEXT DEFAULT (datetime('now')),
+                  UNIQUE(project_id, branch_id, graph_type)
                 );
                 "#,
             )
