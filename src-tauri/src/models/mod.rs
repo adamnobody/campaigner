@@ -6,6 +6,7 @@ pub mod character_trait;
 pub mod dogma;
 pub mod faction;
 pub mod note;
+pub mod political_scale;
 pub mod project;
 pub mod tag;
 pub mod tag_association;

@@ -6,6 +6,7 @@ pub mod characters;
 pub mod dogmas;
 pub mod factions;
 pub mod notes;
+pub mod political_scales;
 pub mod projects;
 pub mod tags;
 pub mod timeline;

@@ -42,6 +42,12 @@ use crate::models::note::{
     CreateNoteInput, DeleteNoteInput, GetNoteInput, Note, NotesListInput, NotesListResult,
     SetNoteTagsInput, UpdateNoteInput,
 };
+use crate::models::political_scale::{
+    CreatePoliticalScaleInput, DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput,
+    ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput, PoliticalScale,
+    PoliticalScaleAssignment, PoliticalScaleAssignmentUpsertRow,
+    ReplacePoliticalScaleAssignmentsInput, ScaleZone, UpdatePoliticalScaleInput,
+};
 use crate::models::project::{
     CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
 };
@@ -59,27 +65,32 @@ mod codegen_commands {
         CharactersListResult, CompareFactionsInput, CreateAmbitionInput, CreateBranchInput,
         CreateCharacterInput, CreateCharacterTraitInput, CreateDogmaInput, CreateFactionInput,
         CreateFactionMemberInput, CreateFactionPolicyInput, CreateFactionRankInput,
-        CreateFactionRelationInput, CreateNoteInput, CreateProjectInput, CreateRelationshipInput,
-        CreateTagInput, CreateTimelineEventInput, DeleteAmbitionInput, DeleteBranchInput,
-        DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput, DeleteFactionInput,
-        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
-        DeleteFactionRelationInput, DeleteNoteInput, DeleteProjectInput, DeleteRelationshipInput,
-        DeleteTagInput, DeleteTimelineEventInput, Dogma, DogmasListInput, DogmasListResult,
-        Faction, FactionCompareResult, FactionCustomMetric, FactionGraph, FactionMember,
-        FactionPolicy, FactionRank, FactionRelation, FactionsListInput, FactionsListResult,
-        FactionsRelationsListInput, GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput,
-        GetCharacterInput, GetDogmaInput, GetFactionAmbitionsInput, GetFactionInput, GetNoteInput,
-        GetProjectInput, GetTimelineEventInput, ListBranchesInput, ListCharacterTraitsInput,
-        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput, Note,
-        NotesListInput, NotesListResult, Project, RelationshipsListInput, ReorderDogmasInput,
-        ReorderTimelineInput, ReplaceFactionCustomMetricsInput, ScenarioBranch,
-        SetCharacterTagsInput, SetDogmaTagsInput, SetFactionTagsInput, SetNoteTagsInput,
-        SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent, TimelineListInput,
-        UnassignCharacterTraitInput, UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput,
-        UpdateAmbitionInput, UpdateBranchInput, UpdateCharacterInput,
-        UpdateCharacterTraitExclusionsInput, UpdateDogmaInput, UpdateFactionInput,
-        UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
-        UpdateFactionRelationInput, UpdateNoteInput, UpdateProjectInput, UpdateRelationshipInput,
+        CreateFactionRelationInput, CreateNoteInput, CreatePoliticalScaleInput, CreateProjectInput,
+        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteAmbitionInput,
+        DeleteBranchInput, DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput,
+        DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
+        DeleteFactionRankInput, DeleteFactionRelationInput, DeleteNoteInput,
+        DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
+        DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, Dogma, DogmasListInput,
+        DogmasListResult, Faction, FactionCompareResult, FactionCustomMetric, FactionGraph,
+        FactionMember, FactionPolicy, FactionRank, FactionRelation, FactionsListInput,
+        FactionsListResult, FactionsRelationsListInput, GetAmbitionsCatalogInput,
+        GetAssignedCharacterTraitsInput, GetCharacterInput, GetDogmaInput,
+        GetFactionAmbitionsInput, GetFactionInput, GetNoteInput, GetProjectInput,
+        GetTimelineEventInput, ListBranchesInput, ListCharacterTraitsInput,
+        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput,
+        ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput, Note, NotesListInput,
+        NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project, RelationshipsListInput,
+        ReorderDogmasInput,
+        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
+        ReplacePoliticalScaleAssignmentsInput, ScenarioBranch, SetCharacterTagsInput,
+        SetDogmaTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
+        TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
+        UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
+        UpdateBranchInput, UpdateCharacterInput, UpdateCharacterTraitExclusionsInput,
+        UpdateDogmaInput, UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
+        UpdateFactionRankInput, UpdateFactionRelationInput, UpdateNoteInput,
+        UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
         UpdateTimelineEventInput,
     };
 
@@ -320,6 +331,78 @@ mod codegen_commands {
     #[tauri::command]
     #[specta::specta]
     pub fn character_traits_delete(_input: DeleteCharacterTraitInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn political_scales_list(_input: ListPoliticalScalesInput) -> Vec<PoliticalScale> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn political_scales_create(_input: CreatePoliticalScaleInput) -> PoliticalScale {
+        PoliticalScale {
+            id: 0,
+            code: String::new(),
+            entity_type: "faction".to_string(),
+            category: String::new(),
+            name: String::new(),
+            left_pole_label: String::new(),
+            right_pole_label: String::new(),
+            left_pole_description: String::new(),
+            right_pole_description: String::new(),
+            icon: None,
+            zones: None,
+            is_system: false,
+            world_id: Some(0),
+            order: 0,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn political_scales_update(_input: UpdatePoliticalScaleInput) -> PoliticalScale {
+        political_scales_create(CreatePoliticalScaleInput {
+            world_id: 0,
+            code: "custom".to_string(),
+            entity_type: "faction".to_string(),
+            category: "other".to_string(),
+            name: String::new(),
+            left_pole_label: String::new(),
+            right_pole_label: String::new(),
+            left_pole_description: None,
+            right_pole_description: None,
+            icon: None,
+            zones: None,
+            order: None,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn political_scales_delete(_input: DeletePoliticalScaleInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn political_scale_assignments_list(
+        _input: ListPoliticalScaleAssignmentsInput,
+    ) -> Vec<PoliticalScaleAssignment> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn political_scale_assignments_replace(
+        _input: ReplacePoliticalScaleAssignmentsInput,
+    ) -> Vec<PoliticalScaleAssignment> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn political_scale_assignments_delete(_input: DeletePoliticalScaleAssignmentInput) {}
 
     #[tauri::command]
     #[specta::specta]
@@ -1030,6 +1113,13 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::character_traits_create,
             codegen_commands::character_traits_update_exclusions,
             codegen_commands::character_traits_delete,
+            codegen_commands::political_scales_list,
+            codegen_commands::political_scales_create,
+            codegen_commands::political_scales_update,
+            codegen_commands::political_scales_delete,
+            codegen_commands::political_scale_assignments_list,
+            codegen_commands::political_scale_assignments_replace,
+            codegen_commands::political_scale_assignments_delete,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -1120,6 +1210,17 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<CreateCharacterTraitInput>()
         .typ::<UpdateCharacterTraitExclusionsInput>()
         .typ::<DeleteCharacterTraitInput>()
+        .typ::<ScaleZone>()
+        .typ::<PoliticalScale>()
+        .typ::<PoliticalScaleAssignment>()
+        .typ::<ListPoliticalScalesInput>()
+        .typ::<CreatePoliticalScaleInput>()
+        .typ::<UpdatePoliticalScaleInput>()
+        .typ::<DeletePoliticalScaleInput>()
+        .typ::<ListPoliticalScaleAssignmentsInput>()
+        .typ::<PoliticalScaleAssignmentUpsertRow>()
+        .typ::<ReplacePoliticalScaleAssignmentsInput>()
+        .typ::<DeletePoliticalScaleAssignmentInput>()
         .typ::<Project>()
         .typ::<GetProjectInput>()
         .typ::<CreateProjectInput>()

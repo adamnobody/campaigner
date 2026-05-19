@@ -6,6 +6,8 @@ pub mod characters;
 pub mod dogmas;
 pub mod factions;
 pub mod notes;
+pub mod political_scales;
+mod political_scales_seed;
 pub mod projects;
 pub mod tag_associations;
 pub mod tags;

@@ -31,6 +31,13 @@ export const commands = {
 	characterTraitsCreate: (input: CreateCharacterTraitInput) => __TAURI_INVOKE<CharacterTrait>("character_traits_create", { input }),
 	characterTraitsUpdateExclusions: (input: UpdateCharacterTraitExclusionsInput) => __TAURI_INVOKE<CharacterTrait>("character_traits_update_exclusions", { input }),
 	characterTraitsDelete: (input: DeleteCharacterTraitInput) => __TAURI_INVOKE<void>("character_traits_delete", { input }),
+	politicalScalesList: (input: ListPoliticalScalesInput) => __TAURI_INVOKE<PoliticalScale_Serialize[]>("political_scales_list", { input }),
+	politicalScalesCreate: (input: CreatePoliticalScaleInput_Deserialize) => __TAURI_INVOKE<PoliticalScale_Serialize>("political_scales_create", { input }),
+	politicalScalesUpdate: (input: UpdatePoliticalScaleInput_Deserialize) => __TAURI_INVOKE<PoliticalScale_Serialize>("political_scales_update", { input }),
+	politicalScalesDelete: (input: DeletePoliticalScaleInput) => __TAURI_INVOKE<void>("political_scales_delete", { input }),
+	politicalScaleAssignmentsList: (input: ListPoliticalScaleAssignmentsInput) => __TAURI_INVOKE<PoliticalScaleAssignment[]>("political_scale_assignments_list", { input }),
+	politicalScaleAssignmentsReplace: (input: ReplacePoliticalScaleAssignmentsInput) => __TAURI_INVOKE<PoliticalScaleAssignment[]>("political_scale_assignments_replace", { input }),
+	politicalScaleAssignmentsDelete: (input: DeletePoliticalScaleAssignmentInput) => __TAURI_INVOKE<void>("political_scale_assignments_delete", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -361,6 +368,38 @@ export type CreateNoteInput = {
 	branchId: number | null,
 };
 
+export type CreatePoliticalScaleInput = CreatePoliticalScaleInput_Serialize | CreatePoliticalScaleInput_Deserialize;
+
+export type CreatePoliticalScaleInput_Deserialize = {
+	worldId: number,
+	code: string,
+	entityType: string,
+	category: string,
+	name: string,
+	leftPoleLabel: string,
+	rightPoleLabel: string,
+	leftPoleDescription: string | null,
+	rightPoleDescription: string | null,
+	icon: string | null,
+	zones: ScaleZone_Deserialize[] | null,
+	order: number | null,
+};
+
+export type CreatePoliticalScaleInput_Serialize = {
+	worldId: number,
+	code: string,
+	entityType: string,
+	category: string,
+	name: string,
+	leftPoleLabel: string,
+	rightPoleLabel: string,
+	leftPoleDescription: string | null,
+	rightPoleDescription: string | null,
+	icon: string | null,
+	zones: ScaleZone_Serialize[] | null,
+	order: number | null,
+};
+
 export type CreateProjectInput = {
 	name: string,
 	description: string | null,
@@ -448,6 +487,14 @@ export type DeleteFactionRelationInput = {
 export type DeleteNoteInput = {
 	id: number,
 	branchId: number | null,
+};
+
+export type DeletePoliticalScaleAssignmentInput = {
+	id: number,
+};
+
+export type DeletePoliticalScaleInput = {
+	id: number,
 };
 
 export type DeleteProjectInput = {
@@ -744,6 +791,16 @@ export type ListFactionRanksInput = {
 	branchId: number | null,
 };
 
+export type ListPoliticalScaleAssignmentsInput = {
+	entityType: string,
+	entityId: number,
+};
+
+export type ListPoliticalScalesInput = {
+	entityType: string,
+	worldId: number,
+};
+
 export type Note = {
 	id: number,
 	projectId: number,
@@ -778,6 +835,65 @@ export type NotesListResult = {
 	totalPages: number,
 };
 
+export type PoliticalScale = PoliticalScale_Serialize | PoliticalScale_Deserialize;
+
+export type PoliticalScaleAssignment = {
+	id: number,
+	scaleId: number,
+	entityType: string,
+	entityId: number,
+	value: number,
+	enabled: boolean,
+	note: string | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type PoliticalScaleAssignmentUpsertRow = {
+	scaleId: number,
+	value: number,
+	enabled: boolean,
+	note: string | null,
+};
+
+export type PoliticalScale_Deserialize = {
+	id: number,
+	code: string,
+	entityType: string,
+	category: string,
+	name: string,
+	leftPoleLabel: string,
+	rightPoleLabel: string,
+	leftPoleDescription: string,
+	rightPoleDescription: string,
+	icon: string | null,
+	zones: ScaleZone_Deserialize[] | null,
+	isSystem: boolean,
+	worldId: number | null,
+	order: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type PoliticalScale_Serialize = {
+	id: number,
+	code: string,
+	entityType: string,
+	category: string,
+	name: string,
+	leftPoleLabel: string,
+	rightPoleLabel: string,
+	leftPoleDescription: string,
+	rightPoleDescription: string,
+	icon: string | null,
+	zones: ScaleZone_Serialize[] | null,
+	isSystem: boolean,
+	worldId: number | null,
+	order: number,
+	createdAt: string,
+	updatedAt: string,
+};
+
 export type Project = {
 	id: number,
 	name: string,
@@ -809,6 +925,28 @@ export type ReplaceFactionCustomMetricsInput = {
 	factionId: number,
 	metrics: UpsertFactionCustomMetricInput[],
 	branchId: number | null,
+};
+
+export type ReplacePoliticalScaleAssignmentsInput = {
+	entityType: string,
+	entityId: number,
+	assignments: PoliticalScaleAssignmentUpsertRow[],
+};
+
+export type ScaleZone = ScaleZone_Serialize | ScaleZone_Deserialize;
+
+export type ScaleZone_Deserialize = {
+	from: number,
+	to: number,
+	label: string,
+	description: string | null,
+};
+
+export type ScaleZone_Serialize = {
+	from: number,
+	to: number,
+	label: string,
+	description?: string | null,
 };
 
 export type ScenarioBranch = {
@@ -1036,6 +1174,34 @@ export type UpdateNoteInput = {
 	folderId: number | null,
 	isPinned: boolean | null,
 	branchId: number | null,
+};
+
+export type UpdatePoliticalScaleInput = UpdatePoliticalScaleInput_Serialize | UpdatePoliticalScaleInput_Deserialize;
+
+export type UpdatePoliticalScaleInput_Deserialize = {
+	id: number,
+	category: string | null,
+	name: string | null,
+	leftPoleLabel: string | null,
+	rightPoleLabel: string | null,
+	leftPoleDescription: string | null,
+	rightPoleDescription: string | null,
+	icon: string | null,
+	zones: ScaleZone_Deserialize[] | null,
+	order: number | null,
+};
+
+export type UpdatePoliticalScaleInput_Serialize = {
+	id: number,
+	category: string | null,
+	name: string | null,
+	leftPoleLabel: string | null,
+	rightPoleLabel: string | null,
+	leftPoleDescription: string | null,
+	rightPoleDescription: string | null,
+	icon: string | null,
+	zones: ScaleZone_Serialize[] | null,
+	order: number | null,
 };
 
 export type UpdateProjectInput = {
