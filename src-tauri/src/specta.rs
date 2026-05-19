@@ -69,6 +69,7 @@ use crate::models::political_scale::{
 use crate::models::project::{
     CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
 };
+use crate::models::search::{SearchQueryInput, SearchResult, SearchResultType};
 use crate::models::tag::{CreateTagInput, DeleteTagInput, Tag, TagsListInput};
 use crate::models::timeline::{
     CreateTimelineEventInput, DeleteTimelineEventInput, GetTimelineEventInput,
@@ -115,16 +116,17 @@ mod codegen_commands {
         RemoveDynastyMemberInput, ReorderDogmasInput, ReorderDynastyEventsInput,
         ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
         ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
-        SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
-        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
-        TimelineListInput, UnassignCharacterTraitInput, UnassignFactionAmbitionInput,
-        UpdateAmbitionExclusionsInput, UpdateAmbitionInput, UpdateBranchInput,
-        UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
-        UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
-        UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
-        UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput, UpdateMapTerritoryInput,
-        UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput, UpsertGraphLayoutInput, WikiCategory, WikiLink,
+        SearchQueryInput, SearchResult, SetCharacterTagsInput, SetDogmaTagsInput,
+        SetDynastyTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
+        TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
+        UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
+        UpdateBranchInput, UpdateCharacterInput, UpdateCharacterTraitExclusionsInput,
+        UpdateDogmaInput, UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput,
+        UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
+        UpdateFactionRankInput, UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput,
+        UpdateMapTerritoryInput, UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput,
+        UpdateRelationshipInput, UpdateTimelineEventInput, UpsertGraphLayoutInput, WikiCategory,
+        WikiLink,
     };
 
     #[tauri::command]
@@ -1445,6 +1447,12 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
+    pub fn search_query(_input: SearchQueryInput) -> Vec<SearchResult> {
+        Vec::new()
+    }
+
+    #[tauri::command]
+    #[specta::specta]
     pub fn wiki_links_list(_input: ListWikiLinksInput) -> Vec<WikiLink> {
         Vec::new()
     }
@@ -1551,6 +1559,7 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::projects_create,
             codegen_commands::projects_update,
             codegen_commands::projects_delete,
+            codegen_commands::search_query,
             codegen_commands::characters_list,
             codegen_commands::characters_get,
             codegen_commands::characters_create,
@@ -1771,6 +1780,9 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<TagsListInput>()
         .typ::<CreateTagInput>()
         .typ::<DeleteTagInput>()
+        .typ::<SearchQueryInput>()
+        .typ::<SearchResult>()
+        .typ::<SearchResultType>()
         .typ::<WikiLink>()
         .typ::<WikiCategory>()
         .typ::<ListWikiLinksInput>()

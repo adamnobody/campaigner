@@ -86,6 +86,7 @@ export const commands = {
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
 	projectsUpdate: (input: UpdateProjectInput) => __TAURI_INVOKE<Project>("projects_update", { input }),
 	projectsDelete: (input: DeleteProjectInput) => __TAURI_INVOKE<void>("projects_delete", { input }),
+	searchQuery: (input: SearchQueryInput) => __TAURI_INVOKE<SearchResult[]>("search_query", { input }),
 	charactersList: (input: CharactersListInput) => __TAURI_INVOKE<CharactersListResult>("characters_list", { input }),
 	charactersGet: (input: GetCharacterInput) => __TAURI_INVOKE<Character>("characters_get", { input }),
 	charactersCreate: (input: CreateCharacterInput) => __TAURI_INVOKE<Character>("characters_create", { input }),
@@ -1472,6 +1473,24 @@ export type ScenarioBranch = {
 	createdAt: string,
 	updatedAt: string,
 };
+
+export type SearchQueryInput = {
+	projectId: number,
+	q: string,
+	branchId: number | null,
+	limit: number | null,
+};
+
+export type SearchResult = {
+	type: SearchResultType,
+	id: number,
+	title: string,
+	subtitle: string,
+	icon: string,
+	url: string,
+};
+
+export type SearchResultType = "character" | "note" | "marker" | "event" | "dogma" | "tag" | "faction";
 
 export type SetCharacterTagsInput = {
 	id: number,

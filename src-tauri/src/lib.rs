@@ -125,6 +125,7 @@ pub fn run() {
             commands::projects::projects_create_command,
             commands::projects::projects_update_command,
             commands::projects::projects_delete_command,
+            commands::search::search_query_command,
             commands::political_scales::political_scales_list_command,
             commands::political_scales::political_scales_create_command,
             commands::political_scales::political_scales_update_command,

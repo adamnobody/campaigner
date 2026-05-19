@@ -11,6 +11,7 @@ pub mod maps;
 pub mod notes;
 pub mod political_scales;
 pub mod projects;
+pub mod search;
 pub mod tags;
 pub mod timeline;
 pub mod wiki;
