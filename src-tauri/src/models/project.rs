@@ -43,3 +43,9 @@ pub struct UpdateProjectInput {
 pub struct DeleteProjectInput {
     pub id: i32,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateDemoProjectInput {
+    pub locale: Option<String>,
+}

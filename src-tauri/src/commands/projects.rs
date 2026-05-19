@@ -3,7 +3,8 @@ use tauri::State;
 use crate::db::connection::DatabaseState;
 use crate::error::{AppError, Result};
 use crate::models::project::{
-    CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
+    CreateDemoProjectInput, CreateProjectInput, DeleteProjectInput, GetProjectInput, Project,
+    UpdateProjectInput,
 };
 use crate::repositories::projects;
 
@@ -54,6 +55,21 @@ pub fn projects_update_command(
         .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
 
     projects::update_project(&connection, &input)
+}
+
+#[tauri::command(rename = "projects_create_demo")]
+pub fn projects_create_demo_command(
+    state: State<'_, DatabaseState>,
+    input: CreateDemoProjectInput,
+) -> Result<Project> {
+    let connection = state
+        .connection
+        .lock()
+        .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
+
+    let locale = input.locale.as_deref().unwrap_or("en");
+    let locale = if locale == "ru" { "ru" } else { "en" };
+    projects::create_demo_project(&connection, locale)
 }
 
 #[tauri::command(rename = "projects_delete")]

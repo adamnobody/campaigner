@@ -1,10 +1,12 @@
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::error::{AppError, Result};
+use crate::models::note::CreateNoteInput;
 use crate::models::project::{
     CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
 };
-use crate::repositories::maps;
+use crate::models::timeline::CreateTimelineEventInput;
+use crate::repositories::{character_traits_seed, maps, notes, timeline};
 
 pub fn list_projects(connection: &Connection) -> Result<Vec<Project>> {
     let mut statement = connection.prepare(
@@ -123,6 +125,112 @@ pub fn update_project(connection: &Connection, input: &UpdateProjectInput) -> Re
     )?;
 
     get_project(connection, &GetProjectInput { id: input.id })
+}
+
+pub fn create_demo_project(connection: &Connection, locale: &str) -> Result<Project> {
+    let is_ru = locale == "ru";
+    let project = create_project(
+        connection,
+        &CreateProjectInput {
+            name: if is_ru {
+                "Обучающая кампания".to_string()
+            } else {
+                "Tutorial campaign".to_string()
+            },
+            description: Some(if is_ru {
+                "Интерактивное обучение базовым механикам Campaigner".to_string()
+            } else {
+                "Hands-on introduction to Campaigner: maps, notes, wiki, and timeline.".to_string()
+            }),
+            status: Some("active".to_string()),
+            main_branch_name: Some(if is_ru {
+                "Каноничная ветвь".to_string()
+            } else {
+                "Canonical branch".to_string()
+            }),
+        },
+    )?;
+
+    character_traits_seed::seed_predefined(connection, project.id)?;
+
+    let main_branch_id: i32 = connection.query_row(
+        "SELECT id FROM scenario_branches WHERE project_id = ?1 AND is_main = 1 LIMIT 1",
+        params![project.id],
+        |row| row.get(0),
+    )?;
+
+    let welcome_note = notes::create_note(
+        connection,
+        &CreateNoteInput {
+            project_id: project.id,
+            folder_id: None,
+            title: if is_ru {
+                "Добро пожаловать".to_string()
+            } else {
+                "Welcome".to_string()
+            },
+            content: Some(if is_ru {
+                "Это обучающая кампания. Пройдите шаги, чтобы освоить карты, заметки, вики и таймлайн.".to_string()
+            } else {
+                "This is a tutorial project. Follow the tour to learn maps, notes, wiki pages, and the timeline.".to_string()
+            }),
+            format: Some("md".to_string()),
+            note_type: Some("wiki".to_string()),
+            is_pinned: Some(true),
+            branch_id: Some(main_branch_id),
+        },
+    )?;
+
+    notes::create_note(
+        connection,
+        &CreateNoteInput {
+            project_id: project.id,
+            folder_id: None,
+            title: if is_ru {
+                "Краткие подсказки".to_string()
+            } else {
+                "Quick tips".to_string()
+            },
+            content: Some(if is_ru {
+                "Откройте карту, создайте маркеры и привяжите к ним заметки. События таймлайна можно связать со страницами вики — так проще держать хронологию и лор в одном месте.".to_string()
+            } else {
+                "Open the map, add markers, and link them to notes. Timeline events can link to wiki pages so chronology and lore stay connected.".to_string()
+            }),
+            format: Some("md".to_string()),
+            note_type: Some("note".to_string()),
+            is_pinned: Some(false),
+            branch_id: Some(main_branch_id),
+        },
+    )?;
+
+    timeline::create_timeline_event(
+        connection,
+        &CreateTimelineEventInput {
+            project_id: project.id,
+            title: if is_ru {
+                "Начало обучения".to_string()
+            } else {
+                "Start of tutorial".to_string()
+            },
+            description: Some(if is_ru {
+                "Первый шаг в Campaigner".to_string()
+            } else {
+                "Your first step in Campaigner".to_string()
+            }),
+            event_date: "0001-01-01".to_string(),
+            sort_order: Some(0),
+            era: Some(if is_ru {
+                "Обучение".to_string()
+            } else {
+                "Tutorial".to_string()
+            }),
+            era_color: Some("#4CAF93".to_string()),
+            linked_note_id: Some(welcome_note.id),
+            branch_id: Some(main_branch_id),
+        },
+    )?;
+
+    Ok(project)
 }
 
 pub fn delete_project(connection: &Connection, input: &DeleteProjectInput) -> Result<()> {
