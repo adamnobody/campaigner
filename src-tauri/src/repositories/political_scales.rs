@@ -538,8 +538,13 @@ fn zones_to_json(zones: Option<&Vec<ScaleZone>>) -> Result<Option<String>> {
 
 fn parse_zones(json: Option<String>) -> Option<Vec<ScaleZone>> {
     let json = json?;
-    let parsed = serde_json::from_str::<Vec<ScaleZone>>(&json).ok()?;
-    Some(parsed)
+    if let Ok(parsed) = serde_json::from_str::<Vec<ScaleZone>>(&json) {
+        return Some(parsed);
+    }
+
+    // Legacy rows from an older seed generator that double-escaped JSON quotes.
+    let legacy = json.replace("\\\"", "\"");
+    serde_json::from_str::<Vec<ScaleZone>>(&legacy).ok()
 }
 
 fn map_scale_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<PoliticalScaleRow> {

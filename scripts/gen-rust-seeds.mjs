@@ -132,7 +132,7 @@ function generatePoliticalScalesSeed(scales, hash) {
       const zones =
         row.zones === null
           ? 'None'
-          : `Some(r#"${rustEscape(JSON.stringify(row.zones))}"#)`;
+          : `Some(r#"${JSON.stringify(row.zones)}"#)`;
       return `    SeedScale {
         code: "${rustEscape(row.code)}",
         entity_type: "${row.entityType}",
