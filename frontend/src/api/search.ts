@@ -3,7 +3,6 @@ import type {
   SearchQueryInput as TauriSearchQueryInput,
   SearchResult as TauriSearchResult,
 } from '@/types/generated/bindings';
-import { apiClient } from './client';
 import { transport } from './transport';
 import { withBranchParams } from './withBranchParams';
 
@@ -64,24 +63,25 @@ export const searchApi = {
       projectId,
     );
 
-    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
-      const input: TauriSearchQueryInput = {
-        projectId,
-        q: trimmed,
-        branchId: params.branchId ?? null,
-        limit: options?.limit ?? null,
-      };
-      const response = await transport.request<TauriSearchResult[]>({
-        tauri: {
-          command: 'search_query',
-          args: { input },
-        },
-      });
-      return toSearchResponse(response);
-    }
+    const input: TauriSearchQueryInput = {
+      projectId,
+      q: trimmed,
+      branchId: params.branchId ?? null,
+      limit: options?.limit ?? null,
+    };
 
-    return apiClient.get<ApiResponse<SearchResult[]>>('/search', {
-      params,
+    const response = await transport.request<ApiResponse<SearchResult[]> | TauriSearchResult[]>({
+      http: {
+        method: 'GET',
+        path: '/search',
+        query: params,
+      },
+      tauri: {
+        command: 'search_query',
+        args: { input },
+      },
     });
+
+    return toSearchResponse(response);
   },
 };

@@ -37,7 +37,8 @@ import type {
   UpdateDynastyInput as TauriUpdateDynastyInput,
   UpdateDynastyMemberInput as TauriUpdateDynastyMemberInput,
 } from '@/types/generated/bindings';
-import { apiClient, type ListWithTotal, type VoidResponse } from './client';
+import type { ListWithTotal, VoidResponse } from './client';
+import { httpPostMultipart } from './transport/httpMultipart';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
 import type { DynastiesListParams } from './types';
@@ -358,10 +359,7 @@ export const dynastiesApi = {
 
     const fd = new FormData();
     fd.append('image', file);
-    return apiClient.post<ApiResponse<Dynasty>>(`/dynasties/${id}/image`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      params: query,
-    });
+    return httpPostMultipart<ApiResponse<Dynasty>>(`/dynasties/${id}/image`, fd, { params: query });
   },
 
   setTags: async (id: number, tagIds: number[], projectId: number): Promise<ApiResult<Dynasty>> => {

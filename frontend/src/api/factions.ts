@@ -58,7 +58,8 @@ import type {
   UpdateFactionRankInput as TauriUpdateFactionRankInput,
   UpdateFactionRelationInput as TauriUpdateFactionRelationInput,
 } from '@/types/generated/bindings';
-import { apiClient, type ListWithTotal } from './client';
+import type { ListWithTotal } from './client';
+import { httpPostMultipart } from './transport/httpMultipart';
 import type { FactionsListParams } from './types';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
@@ -406,10 +407,7 @@ export const factionsApi = {
 
     const fd = new FormData();
     fd.append('image', file);
-    return apiClient.post<ApiResponse<Faction>>(`/factions/${id}/image`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      params: query,
-    });
+    return httpPostMultipart<ApiResponse<Faction>>(`/factions/${id}/image`, fd, { params: query });
   },
   uploadBanner: async (id: number, file: File, projectId: number) => {
     const query = withBranchParams({}, projectId);
@@ -423,10 +421,7 @@ export const factionsApi = {
 
     const fd = new FormData();
     fd.append('banner', file);
-    return apiClient.post<ApiResponse<Faction>>(`/factions/${id}/banner`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      params: query,
-    });
+    return httpPostMultipart<ApiResponse<Faction>>(`/factions/${id}/banner`, fd, { params: query });
   },
   setTags: async (id: number, tagIds: number[], projectId: number): Promise<ApiResult<Tag[]>> => {
     const query = withBranchParams({}, projectId);

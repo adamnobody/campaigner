@@ -8,6 +8,10 @@ import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { GlobalSnackbar } from './components/ui/GlobalSnackbar';
 import { OnboardingOverlay } from './components/onboarding/OnboardingOverlay';
 
+if (import.meta.env.DEV) {
+  console.info('[campaigner] VITE_TRANSPORT:', import.meta.env.VITE_TRANSPORT);
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter

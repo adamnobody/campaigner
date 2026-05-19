@@ -1,6 +1,6 @@
 import type { ApiResponse } from '@campaigner/shared';
 import type { UploadSavedPath } from '@/types/generated/bindings';
-import { apiClient } from './client';
+import { httpPostMultipart } from './transport/httpMultipart';
 import { uploadFileViaTransport } from './uploadFile';
 
 interface UploadAsset {
@@ -48,9 +48,7 @@ const uploadGeneric = async (
 
   const formData = new FormData();
   formData.append(fieldName, file);
-  const response = await apiClient.post<ApiResponse<UploadAsset>>(httpPath, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const response = await httpPostMultipart<ApiResponse<UploadAsset>>(httpPath, formData);
   return { data: response.data };
 };
 

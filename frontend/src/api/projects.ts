@@ -14,11 +14,16 @@ import type {
   UpdateProjectInput,
 } from '@/types/generated/bindings';
 import { transport } from './transport';
+import { httpGetBlob, httpPostMultipart } from './transport/httpMultipart';
 import { uploadFileViaTransport } from './uploadFile';
-import { apiClient } from './client';
+import { TransportError } from './transport/types';
 
 type ApiResult<T> = {
   data: ApiResponse<T>;
+};
+
+type CreateDemoProjectInput = {
+  locale?: AppLanguage | null;
 };
 
 const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
@@ -63,6 +68,13 @@ const toProjectsResponse = (
       data: response.map(toProject),
     },
   };
+};
+
+const tauriNotPorted = (feature: string): never => {
+  throw new TransportError(
+    'TAURI_NOT_PORTED',
+    `${feature} is not available in the Tauri build yet. Use the HTTP dev stack or track migration in MIGRATION_CHECKLIST.md.`,
+  );
 };
 
 export const projectsApi = {
@@ -171,17 +183,55 @@ export const projectsApi = {
 
     const formData = new FormData();
     formData.append('mapImage', file);
-    const response = await apiClient.post<ApiResponse<Project>>(`/projects/${id}/map`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await httpPostMultipart<ApiResponse<Project>>(`/projects/${id}/map`, formData);
     return { data: response.data };
   },
-  exportProject: (id: number) => apiClient.get<Blob>(`/projects/${id}/export`, { responseType: 'blob' }),
-  importProject: (data: ImportedProjectPayload, opts?: { locale?: AppLanguage }) =>
-    apiClient.post<ApiResponse<Project>>('/projects/import', {
-      ...data,
-      ...(opts?.locale ? { importLocale: opts.locale } : {}),
-    }),
-  createDemoProject: (body?: { locale?: AppLanguage }) =>
-    apiClient.post<ApiResponse<Project>>('/projects/demo', body ?? {}),
+
+  // HTTP-only: full project export not ported to Tauri yet.
+  exportProject: async (id: number) => {
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      tauriNotPorted('Project export');
+    }
+    return httpGetBlob(`/projects/${id}/export`);
+  },
+
+  // HTTP-only: full project import not ported to Tauri yet.
+  importProject: async (data: ImportedProjectPayload, opts?: { locale?: AppLanguage }) => {
+    if (import.meta.env.VITE_TRANSPORT === 'tauri') {
+      tauriNotPorted('Project import');
+    }
+
+    const response = await transport.request<ApiResponse<Project>>({
+      http: {
+        method: 'POST',
+        path: '/projects/import',
+        body: {
+          ...data,
+          ...(opts?.locale ? { importLocale: opts.locale } : {}),
+        },
+      },
+    });
+
+    return { data: response };
+  },
+
+  createDemoProject: async (body?: { locale?: AppLanguage }) => {
+    const input: CreateDemoProjectInput = {
+      locale: body?.locale ?? null,
+    };
+
+    const response = await transport.request<ApiResponse<Project> | TauriProject>({
+      http: {
+        method: 'POST',
+        path: '/projects/demo',
+        body: body ?? {},
+      },
+      tauri: {
+        command: 'projects_create_demo',
+        args: { input },
+      },
+    });
+
+    return toProjectResponse(response);
+  },
 };

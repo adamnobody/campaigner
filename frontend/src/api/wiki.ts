@@ -8,7 +8,7 @@ import type {
   WikiCategory as TauriWikiCategory,
   WikiLink as TauriWikiLink,
 } from '@/types/generated/bindings';
-import { apiClient, type VoidResponse } from './client';
+import type { VoidResponse } from './client';
 import { transport } from './transport';
 import { withBranchParams } from './withBranchParams';
 

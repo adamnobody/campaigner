@@ -29,7 +29,8 @@ import type {
 } from '@/types/generated/bindings';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
-import { apiClient, type VoidResponse } from './client';
+import type { VoidResponse } from './client';
+import { httpPostMultipart } from './transport/httpMultipart';
 import type { CharacterListParams } from './types';
 import { withBranchParams } from './withBranchParams';
 
@@ -283,8 +284,7 @@ export const charactersApi = {
 
     const formData = new FormData();
     formData.append('characterImage', file);
-    return apiClient.post<ApiResponse<Character>>(`/characters/${id}/image`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    return httpPostMultipart<ApiResponse<Character>>(`/characters/${id}/image`, formData, {
       params: query,
     });
   },
