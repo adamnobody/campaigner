@@ -38,6 +38,9 @@ export const commands = {
 	politicalScaleAssignmentsList: (input: ListPoliticalScaleAssignmentsInput) => __TAURI_INVOKE<PoliticalScaleAssignment[]>("political_scale_assignments_list", { input }),
 	politicalScaleAssignmentsReplace: (input: ReplacePoliticalScaleAssignmentsInput) => __TAURI_INVOKE<PoliticalScaleAssignment[]>("political_scale_assignments_replace", { input }),
 	politicalScaleAssignmentsDelete: (input: DeletePoliticalScaleAssignmentInput) => __TAURI_INVOKE<void>("political_scale_assignments_delete", { input }),
+	graphLayoutGet: (input: GetGraphLayoutInput) => __TAURI_INVOKE<GraphLayoutResponse_Serialize>("graph_layout_get", { input }),
+	graphLayoutUpsert: (input: UpsertGraphLayoutInput_Deserialize) => __TAURI_INVOKE<GraphLayoutResponse_Serialize>("graph_layout_upsert", { input }),
+	graphLayoutDelete: (input: DeleteGraphLayoutInput) => __TAURI_INVOKE<void>("graph_layout_delete", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -484,6 +487,12 @@ export type DeleteFactionRelationInput = {
 	relationId: number,
 };
 
+export type DeleteGraphLayoutInput = {
+	projectId: number,
+	graphType: string,
+	branchId: number | null,
+};
+
 export type DeleteNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -749,6 +758,12 @@ export type GetFactionInput = {
 	branchId: number | null,
 };
 
+export type GetGraphLayoutInput = {
+	projectId: number,
+	graphType: string,
+	branchId: number | null,
+};
+
 export type GetNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -761,6 +776,50 @@ export type GetProjectInput = {
 export type GetTimelineEventInput = {
 	id: number,
 	branchId: number | null,
+};
+
+export type GraphLayoutDataV1 = GraphLayoutDataV1_Serialize | GraphLayoutDataV1_Deserialize;
+
+export type GraphLayoutDataV1_Deserialize = {
+	version: number,
+	viewport: GraphLayoutViewport | null,
+	nodes?: { [key in string]: GraphLayoutNodeState_Deserialize },
+};
+
+export type GraphLayoutDataV1_Serialize = {
+	version: number,
+	viewport?: GraphLayoutViewport | null,
+	nodes: { [key in string]: GraphLayoutNodeState_Serialize },
+};
+
+export type GraphLayoutNodeState = GraphLayoutNodeState_Serialize | GraphLayoutNodeState_Deserialize;
+
+export type GraphLayoutNodeState_Deserialize = {
+	x: number | null,
+	y: number | null,
+	pinned: boolean | null,
+};
+
+export type GraphLayoutNodeState_Serialize = {
+	x: number | null,
+	y: number | null,
+	pinned?: boolean | null,
+};
+
+export type GraphLayoutResponse = GraphLayoutResponse_Serialize | GraphLayoutResponse_Deserialize;
+
+export type GraphLayoutResponse_Deserialize = {
+	layoutData: GraphLayoutDataV1_Deserialize,
+};
+
+export type GraphLayoutResponse_Serialize = {
+	layoutData: GraphLayoutDataV1_Serialize,
+};
+
+export type GraphLayoutViewport = {
+	x: number | null,
+	y: number | null,
+	zoom: number | null,
 };
 
 export type IdNameRef = {
@@ -1239,5 +1298,21 @@ export type UpsertFactionCustomMetricInput = {
 	value: number | null,
 	unit: string | null,
 	sortOrder: number | null,
+};
+
+export type UpsertGraphLayoutInput = UpsertGraphLayoutInput_Serialize | UpsertGraphLayoutInput_Deserialize;
+
+export type UpsertGraphLayoutInput_Deserialize = {
+	projectId: number,
+	graphType: string,
+	layoutData: GraphLayoutDataV1_Deserialize,
+	branchId: number | null,
+};
+
+export type UpsertGraphLayoutInput_Serialize = {
+	projectId: number,
+	graphType: string,
+	layoutData: GraphLayoutDataV1_Serialize,
+	branchId: number | null,
 };
 

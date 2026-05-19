@@ -38,6 +38,10 @@ use crate::models::faction::{
     SetFactionTagsInput, UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
     UpdateFactionRankInput, UpdateFactionRelationInput,
 };
+use crate::models::graph_layout::{
+    DeleteGraphLayoutInput, GetGraphLayoutInput, GraphLayoutDataV1, GraphLayoutNodeState,
+    GraphLayoutResponse, GraphLayoutViewport, UpsertGraphLayoutInput,
+};
 use crate::models::note::{
     CreateNoteInput, DeleteNoteInput, GetNoteInput, Note, NotesListInput, NotesListResult,
     SetNoteTagsInput, UpdateNoteInput,
@@ -69,19 +73,20 @@ mod codegen_commands {
         CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, DeleteAmbitionInput,
         DeleteBranchInput, DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput,
         DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
-        DeleteFactionRankInput, DeleteFactionRelationInput, DeleteNoteInput,
-        DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
-        DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, Dogma, DogmasListInput,
-        DogmasListResult, Faction, FactionCompareResult, FactionCustomMetric, FactionGraph,
-        FactionMember, FactionPolicy, FactionRank, FactionRelation, FactionsListInput,
-        FactionsListResult, FactionsRelationsListInput, GetAmbitionsCatalogInput,
-        GetAssignedCharacterTraitsInput, GetCharacterInput, GetDogmaInput,
-        GetFactionAmbitionsInput, GetFactionInput, GetNoteInput, GetProjectInput,
-        GetTimelineEventInput, ListBranchesInput, ListCharacterTraitsInput,
-        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput,
-        ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput, Note, NotesListInput,
-        NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project, RelationshipsListInput,
-        ReorderDogmasInput, ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
+        DeleteFactionRankInput, DeleteFactionRelationInput, DeleteGraphLayoutInput,
+        DeleteNoteInput, DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput,
+        DeleteProjectInput, DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput,
+        Dogma, DogmasListInput, DogmasListResult, Faction, FactionCompareResult,
+        FactionCustomMetric, FactionGraph, FactionMember, FactionPolicy, FactionRank,
+        FactionRelation, FactionsListInput, FactionsListResult, FactionsRelationsListInput,
+        GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput, GetCharacterInput,
+        GetDogmaInput, GetFactionAmbitionsInput, GetFactionInput, GetGraphLayoutInput,
+        GetNoteInput, GetProjectInput, GetTimelineEventInput, GraphLayoutDataV1,
+        GraphLayoutResponse, ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
+        ListFactionPoliciesInput, ListFactionRanksInput, ListPoliticalScaleAssignmentsInput,
+        ListPoliticalScalesInput, Note, NotesListInput, NotesListResult, PoliticalScale,
+        PoliticalScaleAssignment, Project, RelationshipsListInput, ReorderDogmasInput,
+        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
         ReplacePoliticalScaleAssignmentsInput, ScenarioBranch, SetCharacterTagsInput,
         SetDogmaTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
         TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
@@ -90,7 +95,7 @@ mod codegen_commands {
         UpdateDogmaInput, UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
         UpdateFactionRankInput, UpdateFactionRelationInput, UpdateNoteInput,
         UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput,
+        UpdateTimelineEventInput, UpsertGraphLayoutInput,
     };
 
     #[tauri::command]
@@ -422,6 +427,32 @@ mod codegen_commands {
     #[tauri::command]
     #[specta::specta]
     pub fn tags_delete(_input: DeleteTagInput) {}
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn graph_layout_get(_input: GetGraphLayoutInput) -> GraphLayoutResponse {
+        GraphLayoutResponse {
+            layout_data: GraphLayoutDataV1 {
+                version: 1,
+                viewport: None,
+                nodes: std::collections::HashMap::new(),
+            },
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn graph_layout_upsert(input: UpsertGraphLayoutInput) -> GraphLayoutResponse {
+        graph_layout_get(GetGraphLayoutInput {
+            project_id: input.project_id,
+            graph_type: input.graph_type,
+            branch_id: input.branch_id,
+        })
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn graph_layout_delete(_input: DeleteGraphLayoutInput) {}
 
     #[tauri::command]
     #[specta::specta]
@@ -1119,6 +1150,9 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::political_scale_assignments_list,
             codegen_commands::political_scale_assignments_replace,
             codegen_commands::political_scale_assignments_delete,
+            codegen_commands::graph_layout_get,
+            codegen_commands::graph_layout_upsert,
+            codegen_commands::graph_layout_delete,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -1220,6 +1254,13 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<PoliticalScaleAssignmentUpsertRow>()
         .typ::<ReplacePoliticalScaleAssignmentsInput>()
         .typ::<DeletePoliticalScaleAssignmentInput>()
+        .typ::<GraphLayoutViewport>()
+        .typ::<GraphLayoutNodeState>()
+        .typ::<GraphLayoutDataV1>()
+        .typ::<GetGraphLayoutInput>()
+        .typ::<UpsertGraphLayoutInput>()
+        .typ::<DeleteGraphLayoutInput>()
+        .typ::<GraphLayoutResponse>()
         .typ::<Project>()
         .typ::<GetProjectInput>()
         .typ::<CreateProjectInput>()

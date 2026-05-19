@@ -5,6 +5,7 @@ pub mod character;
 pub mod character_trait;
 pub mod dogma;
 pub mod faction;
+pub mod graph_layout;
 pub mod note;
 pub mod political_scale;
 pub mod project;

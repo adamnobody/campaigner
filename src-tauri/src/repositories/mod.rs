@@ -6,6 +6,7 @@ mod character_traits_seed;
 pub mod characters;
 pub mod dogmas;
 pub mod factions;
+pub mod graph_layouts;
 pub mod notes;
 pub mod political_scales;
 mod political_scales_seed;
