@@ -21,7 +21,8 @@
     "start:all": "concurrently -n BE,FE -c blue,green \"npm run start --workspace=backend\" \"npm run dev --workspace=frontend\"",
     "dev:shared": "cd shared && npm run dev",
     "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
+    "dev:frontend": "npm run dev:http --workspace=frontend",
+    "dev:frontend:tauri": "npm run dev:tauri --workspace=frontend",
     "build": "npm run build:shared && npm run build:backend && npm run build:frontend",
     "build:shared": "cd shared && npm run build",
     "build:backend": "cd backend && npm run build",
@@ -45,6 +46,8 @@
     "electron:build": "npm run electron:prepare-node && npm run build && npm run electron:rebuild-backend-native && electron-builder",
     "electron:quick": "electron .",
     "tauri:codegen": "node scripts/gen-rust-seeds.mjs && cargo run --manifest-path src-tauri/Cargo.toml --bin codegen",
+    "tauri:vite:dev": "node ./src-tauri/dev-frontend.mjs",
+    "tauri:vite:build": "node ./src-tauri/build-frontend.mjs",
     "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
     "tauri:build": "tauri build --config src-tauri/tauri.conf.json"
   },
