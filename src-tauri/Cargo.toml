@@ -1,6 +1,6 @@
 [package]
 name = "campaigner-tauri"
-version = "0.1.0"
+version = "0.3.0"
 description = "Tauri foundation for Campaigner"
 edition = "2021"
 default-run = "campaigner-tauri"
