@@ -42,9 +42,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toMap = (map: TauriMapRecord): Map => ({
   id: map.id,
   projectId: map.projectId,
@@ -133,24 +130,9 @@ const toTerritorySummary = (summary: TauriMapTerritorySummary): MapTerritorySumm
   occupantKind: summary.occupantKind as MapTerritorySummary['occupantKind'],
 });
 
-const toMapResponse = (response: unknown): ApiResult<Map | null> => {
-  if (isApiResponse<Map | null>(response)) {
-    return { data: response };
-  }
+const toMapResponse = (response: TauriMapRecord | null): ApiResult<Map | null> => {
   if (response === null) {
     return { data: { success: true, data: null } };
-  }
-  return {
-    data: {
-      success: true,
-      data: toMap(response as TauriMapRecord),
-    },
-  };
-};
-
-const toSingleMapResponse = (response: ApiResponse<Map> | TauriMapRecord): ApiResult<Map> => {
-  if (isApiResponse<Map>(response)) {
-    return { data: response };
   }
   return {
     data: {
@@ -160,10 +142,16 @@ const toSingleMapResponse = (response: ApiResponse<Map> | TauriMapRecord): ApiRe
   };
 };
 
-const toMapListResponse = (response: ApiResponse<Map[]> | TauriMapRecord[]): ApiResult<Map[]> => {
-  if (isApiResponse<Map[]>(response)) {
-    return { data: response };
-  }
+const toSingleMapResponse = (response: TauriMapRecord): ApiResult<Map> => {
+  return {
+    data: {
+      success: true,
+      data: toMap(response),
+    },
+  };
+};
+
+const toMapListResponse = (response: TauriMapRecord[]): ApiResult<Map[]> => {
   return {
     data: {
       success: true,
@@ -172,10 +160,7 @@ const toMapListResponse = (response: ApiResponse<Map[]> | TauriMapRecord[]): Api
   };
 };
 
-const toMarkerResponse = (response: ApiResponse<MapMarker> | TauriMapMarker): ApiResult<MapMarker> => {
-  if (isApiResponse<MapMarker>(response)) {
-    return { data: response };
-  }
+const toMarkerResponse = (response: TauriMapMarker): ApiResult<MapMarker> => {
   return {
     data: {
       success: true,
@@ -185,11 +170,8 @@ const toMarkerResponse = (response: ApiResponse<MapMarker> | TauriMapMarker): Ap
 };
 
 const toMarkerListResponse = (
-  response: ApiResponse<MapMarker[]> | TauriMapMarker[],
+  response: TauriMapMarker[],
 ): ApiResult<MapMarker[]> => {
-  if (isApiResponse<MapMarker[]>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -199,11 +181,8 @@ const toMarkerListResponse = (
 };
 
 const toTerritoryResponse = (
-  response: ApiResponse<MapTerritory> | TauriMapTerritory,
+  response: TauriMapTerritory,
 ): ApiResult<MapTerritory> => {
-  if (isApiResponse<MapTerritory>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -213,11 +192,8 @@ const toTerritoryResponse = (
 };
 
 const toTerritoryListResponse = (
-  response: ApiResponse<MapTerritory[]> | TauriMapTerritory[],
+  response: TauriMapTerritory[],
 ): ApiResult<MapTerritory[]> => {
-  if (isApiResponse<MapTerritory[]>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -227,11 +203,8 @@ const toTerritoryListResponse = (
 };
 
 const toTerritorySummaryListResponse = (
-  response: ApiResponse<MapTerritorySummary[]> | TauriMapTerritorySummary[],
+  response: TauriMapTerritorySummary[],
 ): ApiResult<MapTerritorySummary[]> => {
-  if (isApiResponse<MapTerritorySummary[]>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -248,35 +221,20 @@ export const mapApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Map | null> | TauriMapRecord | null>({
-      http: {
-        method: 'GET',
-        path: `/projects/${projectId}/maps/root`,
-        query,
-      },
-      tauri: {
-        command: 'maps_get_root',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapRecord | null>({
+      command: 'maps_get_root',
+      args: { input },
     });
 
     return toMapResponse(response);
   },
 
   getMapById: async (mapId: number, projectId?: number): Promise<ApiResult<Map>> => {
-    const query = withBranchParams({}, projectId);
     const input: TauriGetMapInput = { id: mapId };
 
-    const response = await transport.request<ApiResponse<Map> | TauriMapRecord>({
-      http: {
-        method: 'GET',
-        path: `/maps/${mapId}`,
-        query,
-      },
-      tauri: {
-        command: 'maps_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapRecord>({
+      command: 'maps_get',
+      args: { input },
     });
 
     return toSingleMapResponse(response);
@@ -289,16 +247,9 @@ export const mapApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Map[]> | TauriMapRecord[]>({
-      http: {
-        method: 'GET',
-        path: `/projects/${projectId}/maps/tree`,
-        query,
-      },
-      tauri: {
-        command: 'maps_get_tree',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapRecord[]>({
+      command: 'maps_get_tree',
+      args: { input },
     });
 
     return toMapListResponse(response);
@@ -313,18 +264,9 @@ export const mapApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<
-      ApiResponse<MapTerritorySummary[]> | TauriMapTerritorySummary[]
-    >({
-      http: {
-        method: 'GET',
-        path: `/projects/${projectId}/territories/summary`,
-        query,
-      },
-      tauri: {
-        command: 'maps_territory_summaries_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapTerritorySummary[]>({
+      command: 'maps_territory_summaries_list',
+      args: { input },
     });
 
     return toTerritorySummaryListResponse(response);
@@ -341,16 +283,9 @@ export const mapApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Map> | TauriMapRecord>({
-      http: {
-        method: 'POST',
-        path: '/maps',
-        body: payload,
-      },
-      tauri: {
-        command: 'maps_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapRecord>({
+      command: 'maps_create',
+      args: { input },
     });
 
     return toSingleMapResponse(response);
@@ -364,16 +299,9 @@ export const mapApi = {
       imagePath: payload.imagePath ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Map> | TauriMapRecord>({
-      http: {
-        method: 'PUT',
-        path: `/maps/${mapId}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'maps_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapRecord>({
+      command: 'maps_update',
+      args: { input },
     });
 
     return toSingleMapResponse(response);
@@ -383,14 +311,8 @@ export const mapApi = {
     const input: TauriDeleteMapInput = { id: mapId };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/maps/${mapId}`,
-      },
-      tauri: {
-        command: 'maps_delete',
-        args: { input },
-      },
+      command: 'maps_delete',
+      args: { input },
     });
 
     return { data: { success: true } as VoidResponse };
@@ -410,16 +332,9 @@ export const mapApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<MapMarker[]> | TauriMapMarker[]>({
-      http: {
-        method: 'GET',
-        path: `/maps/${mapId}/markers`,
-        query,
-      },
-      tauri: {
-        command: 'maps_markers_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapMarker[]>({
+      command: 'maps_markers_list',
+      args: { input },
     });
 
     return toMarkerListResponse(response);
@@ -444,16 +359,9 @@ export const mapApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<MapMarker> | TauriMapMarker>({
-      http: {
-        method: 'POST',
-        path: `/maps/${mapId}/markers`,
-        body: payload,
-      },
-      tauri: {
-        command: 'maps_markers_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapMarker>({
+      command: 'maps_markers_create',
+      args: { input },
     });
 
     return toMarkerResponse(response);
@@ -478,16 +386,9 @@ export const mapApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<MapMarker> | TauriMapMarker>({
-      http: {
-        method: 'PUT',
-        path: `/markers/${markerId}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'maps_markers_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapMarker>({
+      command: 'maps_markers_update',
+      args: { input },
     });
 
     return toMarkerResponse(response);
@@ -501,15 +402,8 @@ export const mapApi = {
     };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/markers/${markerId}`,
-        query,
-      },
-      tauri: {
-        command: 'maps_markers_delete',
-        args: { input },
-      },
+      command: 'maps_markers_delete',
+      args: { input },
     });
 
     return { data: { success: true } as VoidResponse };
@@ -525,16 +419,9 @@ export const mapApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<MapTerritory[]> | TauriMapTerritory[]>({
-      http: {
-        method: 'GET',
-        path: `/maps/${mapId}/territories`,
-        query,
-      },
-      tauri: {
-        command: 'maps_territories_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapTerritory[]>({
+      command: 'maps_territories_list',
+      args: { input },
     });
 
     return toTerritoryListResponse(response);
@@ -562,16 +449,9 @@ export const mapApi = {
       branchId: (payload.branchId as number | undefined) ?? null,
     };
 
-    const response = await transport.request<ApiResponse<MapTerritory> | TauriMapTerritory>({
-      http: {
-        method: 'POST',
-        path: `/maps/${mapId}/territories`,
-        body: payload,
-      },
-      tauri: {
-        command: 'maps_territories_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapTerritory>({
+      command: 'maps_territories_create',
+      args: { input },
     });
 
     return toTerritoryResponse(response);
@@ -599,16 +479,9 @@ export const mapApi = {
       branchId: (payload.branchId as number | undefined) ?? null,
     };
 
-    const response = await transport.request<ApiResponse<MapTerritory> | TauriMapTerritory>({
-      http: {
-        method: 'PUT',
-        path: `/territories/${territoryId}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'maps_territories_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriMapTerritory>({
+      command: 'maps_territories_update',
+      args: { input },
     });
 
     return toTerritoryResponse(response);
@@ -625,15 +498,8 @@ export const mapApi = {
     };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/territories/${territoryId}`,
-        query,
-      },
-      tauri: {
-        command: 'maps_territories_delete',
-        args: { input },
-      },
+      command: 'maps_territories_delete',
+      args: { input },
     });
 
     return { data: { success: true } as VoidResponse };

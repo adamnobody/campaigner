@@ -15,9 +15,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toCharacterTrait = (trait: TauriCharacterTrait): CharacterTrait => ({
   id: trait.id,
   projectId: trait.projectId,
@@ -32,12 +29,8 @@ const toCharacterTrait = (trait: TauriCharacterTrait): CharacterTrait => ({
 });
 
 const toCharacterTraitResponse = (
-  response: ApiResponse<CharacterTrait> | TauriCharacterTrait
+  response: TauriCharacterTrait
 ): ApiResult<CharacterTrait> => {
-  if (isApiResponse<CharacterTrait>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -47,12 +40,8 @@ const toCharacterTraitResponse = (
 };
 
 const toCharacterTraitsListResponse = (
-  response: ApiResponse<CharacterTrait[]> | TauriCharacterTrait[]
+  response: TauriCharacterTrait[]
 ): ApiResult<CharacterTrait[]> => {
-  if (isApiResponse<CharacterTrait[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -62,12 +51,8 @@ const toCharacterTraitsListResponse = (
 };
 
 const toAssignedIdsResponse = (
-  response: ApiResponse<number[]> | number[]
+  response: number[]
 ): ApiResult<number[]> => {
-  if (isApiResponse<number[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -79,35 +64,19 @@ const toAssignedIdsResponse = (
 export const characterTraitsApi = {
   getAll: async (projectId: number): Promise<ApiResult<CharacterTrait[]>> => {
     const input: TauriListCharacterTraitsInput = { projectId };
-    const response = await transport.request<ApiResponse<CharacterTrait[]> | TauriCharacterTrait[]>(
-      {
-        http: {
-          method: 'GET',
-          path: '/character-traits',
-          query: { projectId },
-        },
-        tauri: {
-          command: 'character_traits_list',
-          args: { input },
-        },
-      }
-    );
+    const response = await transport.request<TauriCharacterTrait[]>({
+      command: 'character_traits_list',
+      args: { input },
+    });
 
     return toCharacterTraitsListResponse(response);
   },
 
   getAssigned: async (characterId: number): Promise<ApiResult<number[]>> => {
     const input: TauriGetAssignedCharacterTraitsInput = { characterId };
-    const response = await transport.request<ApiResponse<number[]> | number[]>({
-      http: {
-        method: 'GET',
-        path: '/character-traits/assigned',
-        query: { characterId },
-      },
-      tauri: {
-        command: 'character_traits_get_assigned',
-        args: { input },
-      },
+    const response = await transport.request<number[]>({
+      command: 'character_traits_get_assigned',
+      args: { input },
     });
 
     return toAssignedIdsResponse(response);
@@ -116,15 +85,8 @@ export const characterTraitsApi = {
   assign: async (characterId: number, traitId: number): Promise<{ data: void }> => {
     const input: TauriAssignCharacterTraitInput = { characterId, traitId };
     await transport.request<void>({
-      http: {
-        method: 'POST',
-        path: '/character-traits/assign',
-        body: { characterId, traitId },
-      },
-      tauri: {
-        command: 'character_traits_assign',
-        args: { input },
-      },
+      command: 'character_traits_assign',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -133,15 +95,8 @@ export const characterTraitsApi = {
   unassign: async (characterId: number, traitId: number): Promise<{ data: void }> => {
     const input: TauriUnassignCharacterTraitInput = { characterId, traitId };
     await transport.request<void>({
-      http: {
-        method: 'POST',
-        path: '/character-traits/unassign',
-        body: { characterId, traitId },
-      },
-      tauri: {
-        command: 'character_traits_unassign',
-        args: { input },
-      },
+      command: 'character_traits_unassign',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -156,16 +111,9 @@ export const characterTraitsApi = {
       excludedIds: data.excludedIds ?? null,
     };
 
-    const response = await transport.request<ApiResponse<CharacterTrait> | TauriCharacterTrait>({
-      http: {
-        method: 'POST',
-        path: '/character-traits',
-        body: data,
-      },
-      tauri: {
-        command: 'character_traits_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacterTrait>({
+      command: 'character_traits_create',
+      args: { input },
     });
 
     return toCharacterTraitResponse(response);
@@ -174,16 +122,9 @@ export const characterTraitsApi = {
   updateExclusions: async (id: number, excludedIds: number[]): Promise<ApiResult<CharacterTrait>> => {
     const input: TauriUpdateCharacterTraitExclusionsInput = { id, excludedIds };
 
-    const response = await transport.request<ApiResponse<CharacterTrait> | TauriCharacterTrait>({
-      http: {
-        method: 'PATCH',
-        path: `/character-traits/${id}/exclusions`,
-        body: { excludedIds },
-      },
-      tauri: {
-        command: 'character_traits_update_exclusions',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacterTrait>({
+      command: 'character_traits_update_exclusions',
+      args: { input },
     });
 
     return toCharacterTraitResponse(response);
@@ -193,14 +134,8 @@ export const characterTraitsApi = {
     const input: TauriDeleteCharacterTraitInput = { id };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/character-traits/${id}`,
-      },
-      tauri: {
-        command: 'character_traits_delete',
-        args: { input },
-      },
+      command: 'character_traits_delete',
+      args: { input },
     });
 
     return { data: undefined as void };

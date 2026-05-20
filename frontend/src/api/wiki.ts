@@ -16,9 +16,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toWikiLink = (link: TauriWikiLink): WikiLink => ({
   id: link.id,
   projectId: link.projectId,
@@ -31,11 +28,8 @@ const toWikiLink = (link: TauriWikiLink): WikiLink => ({
 });
 
 const toWikiLinkListResponse = (
-  response: ApiResponse<WikiLink[]> | TauriWikiLink[],
+  response: TauriWikiLink[],
 ): ApiResult<WikiLink[]> => {
-  if (isApiResponse<WikiLink[]>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -44,10 +38,7 @@ const toWikiLinkListResponse = (
   };
 };
 
-const toWikiLinkResponse = (response: ApiResponse<WikiLink> | TauriWikiLink): ApiResult<WikiLink> => {
-  if (isApiResponse<WikiLink>(response)) {
-    return { data: response };
-  }
+const toWikiLinkResponse = (response: TauriWikiLink): ApiResult<WikiLink> => {
   return {
     data: {
       success: true,
@@ -57,11 +48,8 @@ const toWikiLinkResponse = (response: ApiResponse<WikiLink> | TauriWikiLink): Ap
 };
 
 const toCategoriesResponse = (
-  response: ApiResponse<{ name: string; count: number }[]> | TauriWikiCategory[],
+  response: TauriWikiCategory[],
 ): ApiResult<{ name: string; count: number }[]> => {
-  if (isApiResponse<{ name: string; count: number }[]>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -85,16 +73,9 @@ export const wikiApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<WikiLink[]> | TauriWikiLink[]>({
-      http: {
-        method: 'GET',
-        path: '/wiki/links',
-        query,
-      },
-      tauri: {
-        command: 'wiki_links_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriWikiLink[]>({
+      command: 'wiki_links_list',
+      args: { input },
     });
 
     return toWikiLinkListResponse(response);
@@ -110,35 +91,20 @@ export const wikiApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<WikiLink> | TauriWikiLink>({
-      http: {
-        method: 'POST',
-        path: '/wiki/links',
-        body: payload,
-      },
-      tauri: {
-        command: 'wiki_links_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriWikiLink>({
+      command: 'wiki_links_create',
+      args: { input },
     });
 
     return toWikiLinkResponse(response);
   },
 
   deleteLink: async (id: number, projectId: number): Promise<{ data: VoidResponse }> => {
-    const query = withBranchParams({}, projectId);
     const input: TauriDeleteWikiLinkInput = { id };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/wiki/links/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'wiki_links_delete',
-        args: { input },
-      },
+      command: 'wiki_links_delete',
+      args: { input },
     });
 
     return { data: { success: true } as VoidResponse };
@@ -153,18 +119,9 @@ export const wikiApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<
-      ApiResponse<{ name: string; count: number }[]> | TauriWikiCategory[]
-    >({
-      http: {
-        method: 'GET',
-        path: '/wiki/categories',
-        query,
-      },
-      tauri: {
-        command: 'wiki_categories_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriWikiCategory[]>({
+      command: 'wiki_categories_list',
+      args: { input },
     });
 
     return toCategoriesResponse(response);

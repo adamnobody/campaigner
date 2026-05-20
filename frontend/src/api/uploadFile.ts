@@ -22,13 +22,11 @@ export const uploadFileViaTransport = async <TResponse>(
 ): Promise<TResponse> => {
   const filePayload = await readFileForUpload(file);
   return transport.request<TResponse>({
-    tauri: {
-      command,
-      args: {
-        input: {
-          ...filePayload,
-          ...extra,
-        },
+    command,
+    args: {
+      input: {
+        ...filePayload,
+        ...extra,
       },
     },
   });

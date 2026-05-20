@@ -1,22 +1,9 @@
-export type TransportMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+import type { InvokeArgs } from '@tauri-apps/api/core';
 
-export type TransportHttpRequest<TBody = unknown> = {
-  method: TransportMethod;
-  path: string;
-  query?: Record<string, unknown>;
-  body?: TBody;
-  data?: TBody;
-};
-
-export type TransportTauriRequest = {
+export interface TransportRequest<TArgs extends InvokeArgs | undefined = InvokeArgs> {
   command: string;
-  args?: Record<string, unknown>;
-};
-
-export type TransportRequest<TBody = unknown> = {
-  http?: TransportHttpRequest<TBody>;
-  tauri?: TransportTauriRequest;
-};
+  args?: TArgs;
+}
 
 export class TransportError extends Error {
   code: string;
@@ -33,5 +20,7 @@ export class TransportError extends Error {
 }
 
 export interface Transport {
-  request<TResponse, TBody = unknown>(request: TransportRequest<TBody>): Promise<TResponse>;
+  request<TResponse, TArgs extends InvokeArgs | undefined = InvokeArgs>(
+    request: TransportRequest<TArgs>
+  ): Promise<TResponse>;
 }

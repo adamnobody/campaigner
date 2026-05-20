@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, type InvokeArgs } from '@tauri-apps/api/core';
 
 import type { Transport, TransportRequest } from './types';
 import { TransportError } from './types';
@@ -16,15 +16,10 @@ const toTransportError = (error: unknown): TransportError => {
 };
 
 export const tauriTransport: Transport = {
-  async request<TResponse, TBody = unknown>(request: TransportRequest<TBody>): Promise<TResponse> {
-    if (!request.tauri) {
-      throw new TransportError(
-        'TAURI_CONFIG_MISSING',
-        'Tauri request config is missing for the selected transport'
-      );
-    }
-
-    const { command, args } = request.tauri;
+  async request<TResponse, TArgs extends InvokeArgs | undefined = InvokeArgs>(
+    request: TransportRequest<TArgs>
+  ): Promise<TResponse> {
+    const { command, args } = request;
 
     try {
       return await invoke<TResponse>(command, args);

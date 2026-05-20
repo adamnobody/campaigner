@@ -37,7 +37,7 @@ import type {
   UpdateDynastyInput as TauriUpdateDynastyInput,
   UpdateDynastyMemberInput as TauriUpdateDynastyMemberInput,
 } from '@/types/generated/bindings';
-import type { DynastiesListParams, ListWithTotal, VoidResponse } from './types';
+import type { DynastiesListParams, ListWithTotal } from './types';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
 import { withBranchParams } from './withBranchParams';
@@ -47,18 +47,6 @@ type ApiResult<T> = {
 };
 
 type ListResult<T> = { data: ListWithTotal<T> };
-
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
-const isListWithTotal = <T>(value: unknown): value is ListWithTotal<T> =>
-  Boolean(
-    value &&
-      typeof value === 'object' &&
-      'success' in value &&
-      'total' in value &&
-      'data' in value,
-  );
 
 const toTag = (tag: TauriTag): Tag => ({
   id: tag.id,
@@ -136,10 +124,7 @@ const toDynasty = (dynasty: TauriDynasty): Dynasty => ({
   linkedFactionName: dynasty.linkedFactionName ?? undefined,
 });
 
-const toDynastyResponse = (response: ApiResponse<Dynasty> | TauriDynasty): ApiResult<Dynasty> => {
-  if (isApiResponse<Dynasty>(response)) {
-    return { data: response };
-  }
+const toDynastyResponse = (response: TauriDynasty): ApiResult<Dynasty> => {
   return {
     data: {
       success: true,
@@ -149,11 +134,8 @@ const toDynastyResponse = (response: ApiResponse<Dynasty> | TauriDynasty): ApiRe
 };
 
 const toDynastyMemberResponse = (
-  response: ApiResponse<DynastyMember> | TauriDynastyMember,
+  response: TauriDynastyMember,
 ): ApiResult<DynastyMember> => {
-  if (isApiResponse<DynastyMember>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -163,11 +145,8 @@ const toDynastyMemberResponse = (
 };
 
 const toDynastyFamilyLinkResponse = (
-  response: ApiResponse<DynastyFamilyLink> | TauriDynastyFamilyLink,
+  response: TauriDynastyFamilyLink,
 ): ApiResult<DynastyFamilyLink> => {
-  if (isApiResponse<DynastyFamilyLink>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -177,11 +156,8 @@ const toDynastyFamilyLinkResponse = (
 };
 
 const toDynastyEventResponse = (
-  response: ApiResponse<DynastyEvent> | TauriDynastyEvent,
+  response: TauriDynastyEvent,
 ): ApiResult<DynastyEvent> => {
-  if (isApiResponse<DynastyEvent>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -205,21 +181,10 @@ export const dynastiesApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ListWithTotal<Dynasty[]> | TauriDynastiesListResult>({
-      http: {
-        method: 'GET',
-        path: '/dynasties',
-        query,
-      },
-      tauri: {
-        command: 'dynasties_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynastiesListResult>({
+      command: 'dynasties_list',
+      args: { input },
     });
-
-    if (isListWithTotal<Dynasty[]>(response)) {
-      return { data: response };
-    }
 
     return {
       data: {
@@ -233,16 +198,9 @@ export const dynastiesApi = {
   getById: async (id: number, projectId: number): Promise<ApiResult<Dynasty>> => {
     const query = withBranchParams({}, projectId);
     const input: TauriGetDynastyInput = { id, branchId: query.branchId ?? null };
-    const response = await transport.request<ApiResponse<Dynasty> | TauriDynasty>({
-      http: {
-        method: 'GET',
-        path: `/dynasties/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'dynasties_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynasty>({
+      command: 'dynasties_get',
+      args: { input },
     });
     return toDynastyResponse(response);
   },
@@ -267,16 +225,9 @@ export const dynastiesApi = {
       sortOrder: body.sortOrder ?? null,
       branchId: body.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Dynasty> | TauriDynasty>({
-      http: {
-        method: 'POST',
-        path: '/dynasties',
-        body,
-      },
-      tauri: {
-        command: 'dynasties_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynasty>({
+      command: 'dynasties_create',
+      args: { input },
     });
     return toDynastyResponse(response);
   },
@@ -305,16 +256,9 @@ export const dynastiesApi = {
       sortOrder: body.sortOrder ?? null,
       branchId: body.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Dynasty> | TauriDynasty>({
-      http: {
-        method: 'PUT',
-        path: `/dynasties/${id}`,
-        body,
-      },
-      tauri: {
-        command: 'dynasties_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynasty>({
+      command: 'dynasties_update',
+      args: { input },
     });
     return toDynastyResponse(response);
   },
@@ -322,20 +266,10 @@ export const dynastiesApi = {
   delete: async (id: number, projectId: number): Promise<ApiResult<undefined>> => {
     const query = withBranchParams({}, projectId);
     const input: TauriDeleteDynastyInput = { id, branchId: query.branchId ?? null };
-    const response = await transport.request<VoidResponse | void>({
-      http: {
-        method: 'DELETE',
-        path: `/dynasties/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'dynasties_delete',
-        args: { input },
-      },
+    await transport.request<void>({
+      command: 'dynasties_delete',
+      args: { input },
     });
-    if (isApiResponse<undefined>(response)) {
-      return { data: response };
-    }
     return {
       data: {
         success: true,
@@ -361,17 +295,9 @@ export const dynastiesApi = {
       tagIds,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Dynasty> | TauriDynasty>({
-      http: {
-        method: 'PUT',
-        path: `/dynasties/${id}/tags`,
-        body: { tagIds },
-        query,
-      },
-      tauri: {
-        command: 'dynasties_set_tags',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynasty>({
+      command: 'dynasties_set_tags',
+      args: { input },
     });
     return toDynastyResponse(response);
   },
@@ -393,16 +319,9 @@ export const dynastiesApi = {
       notes: body.notes ?? null,
       branchId: body.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<DynastyMember> | TauriDynastyMember>({
-      http: {
-        method: 'POST',
-        path: `/dynasties/${dynastyId}/members`,
-        body,
-      },
-      tauri: {
-        command: 'dynasties_add_member',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynastyMember>({
+      command: 'dynasties_add_member',
+      args: { input },
     });
     return toDynastyMemberResponse(response);
   },
@@ -422,35 +341,19 @@ export const dynastiesApi = {
       isMainLine: data.isMainLine ?? null,
       notes: data.notes ?? null,
     };
-    const response = await transport.request<ApiResponse<DynastyMember> | TauriDynastyMember>({
-      http: {
-        method: 'PUT',
-        path: `/dynasties/${dynastyId}/members/${memberId}`,
-        body: data,
-      },
-      tauri: {
-        command: 'dynasties_update_member',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynastyMember>({
+      command: 'dynasties_update_member',
+      args: { input },
     });
     return toDynastyMemberResponse(response);
   },
 
   removeMember: async (dynastyId: number, memberId: number): Promise<ApiResult<undefined>> => {
     const input: TauriRemoveDynastyMemberInput = { dynastyId, memberId };
-    const response = await transport.request<VoidResponse | void>({
-      http: {
-        method: 'DELETE',
-        path: `/dynasties/${dynastyId}/members/${memberId}`,
-      },
-      tauri: {
-        command: 'dynasties_remove_member',
-        args: { input },
-      },
+    await transport.request<void>({
+      command: 'dynasties_remove_member',
+      args: { input },
     });
-    if (isApiResponse<undefined>(response)) {
-      return { data: response };
-    }
     return {
       data: {
         success: true,
@@ -474,19 +377,10 @@ export const dynastiesApi = {
       customLabel: body.customLabel ?? null,
       branchId: body.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<DynastyFamilyLink> | TauriDynastyFamilyLink>(
-      {
-        http: {
-          method: 'POST',
-          path: `/dynasties/${dynastyId}/family-links`,
-          body,
-        },
-        tauri: {
-          command: 'dynasties_add_family_link',
-          args: { input },
-        },
-      },
-    );
+    const response = await transport.request<TauriDynastyFamilyLink>({
+      command: 'dynasties_add_family_link',
+      args: { input },
+    });
     return toDynastyFamilyLinkResponse(response);
   },
 
@@ -495,19 +389,10 @@ export const dynastiesApi = {
     linkId: number,
   ): Promise<ApiResult<undefined>> => {
     const input: TauriDeleteDynastyFamilyLinkInput = { dynastyId, linkId };
-    const response = await transport.request<VoidResponse | void>({
-      http: {
-        method: 'DELETE',
-        path: `/dynasties/${dynastyId}/family-links/${linkId}`,
-      },
-      tauri: {
-        command: 'dynasties_delete_family_link',
-        args: { input },
-      },
+    await transport.request<void>({
+      command: 'dynasties_delete_family_link',
+      args: { input },
     });
-    if (isApiResponse<undefined>(response)) {
-      return { data: response };
-    }
     return {
       data: {
         success: true,
@@ -532,20 +417,10 @@ export const dynastiesApi = {
       })),
       branchId: body.branchId ?? null,
     };
-    const response = await transport.request<VoidResponse | void>({
-      http: {
-        method: 'PUT',
-        path: `/dynasties/${dynastyId}/graph-positions`,
-        body,
-      },
-      tauri: {
-        command: 'dynasties_save_graph_positions',
-        args: { input },
-      },
+    await transport.request<void>({
+      command: 'dynasties_save_graph_positions',
+      args: { input },
     });
-    if (isApiResponse<undefined>(response)) {
-      return { data: response };
-    }
     return {
       data: {
         success: true,
@@ -570,16 +445,9 @@ export const dynastiesApi = {
       sortOrder: body.sortOrder ?? null,
       branchId: body.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<DynastyEvent> | TauriDynastyEvent>({
-      http: {
-        method: 'POST',
-        path: `/dynasties/${dynastyId}/events`,
-        body,
-      },
-      tauri: {
-        command: 'dynasties_add_event',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynastyEvent>({
+      command: 'dynasties_add_event',
+      args: { input },
     });
     return toDynastyEventResponse(response);
   },
@@ -598,35 +466,19 @@ export const dynastiesApi = {
       importance: data.importance ?? null,
       sortOrder: data.sortOrder ?? null,
     };
-    const response = await transport.request<ApiResponse<DynastyEvent> | TauriDynastyEvent>({
-      http: {
-        method: 'PUT',
-        path: `/dynasties/${dynastyId}/events/${eventId}`,
-        body: data,
-      },
-      tauri: {
-        command: 'dynasties_update_event',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynastyEvent>({
+      command: 'dynasties_update_event',
+      args: { input },
     });
     return toDynastyEventResponse(response);
   },
 
   deleteEvent: async (dynastyId: number, eventId: number): Promise<ApiResult<undefined>> => {
     const input: TauriDeleteDynastyEventInput = { dynastyId, eventId };
-    const response = await transport.request<VoidResponse | void>({
-      http: {
-        method: 'DELETE',
-        path: `/dynasties/${dynastyId}/events/${eventId}`,
-      },
-      tauri: {
-        command: 'dynasties_delete_event',
-        args: { input },
-      },
+    await transport.request<void>({
+      command: 'dynasties_delete_event',
+      args: { input },
     });
-    if (isApiResponse<undefined>(response)) {
-      return { data: response };
-    }
     return {
       data: {
         success: true,
@@ -647,16 +499,9 @@ export const dynastiesApi = {
       orderedIds: body.orderedIds,
       branchId: body.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Dynasty> | TauriDynasty>({
-      http: {
-        method: 'POST',
-        path: `/dynasties/${dynastyId}/events/reorder`,
-        body,
-      },
-      tauri: {
-        command: 'dynasties_reorder_events',
-        args: { input },
-      },
+    const response = await transport.request<TauriDynasty>({
+      command: 'dynasties_reorder_events',
+      args: { input },
     });
     return toDynastyResponse(response);
   },

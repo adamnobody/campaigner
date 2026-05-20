@@ -10,9 +10,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toSearchResult = (result: TauriSearchResult): SearchResult => ({
   type: result.type,
   id: result.id,
@@ -23,11 +20,8 @@ const toSearchResult = (result: TauriSearchResult): SearchResult => ({
 });
 
 const toSearchResponse = (
-  response: ApiResponse<SearchResult[]> | TauriSearchResult[],
+  response: TauriSearchResult[],
 ): ApiResult<SearchResult[]> => {
-  if (isApiResponse<SearchResult[]>(response)) {
-    return { data: response };
-  }
   return {
     data: {
       success: true,
@@ -70,16 +64,9 @@ export const searchApi = {
       limit: options?.limit ?? null,
     };
 
-    const response = await transport.request<ApiResponse<SearchResult[]> | TauriSearchResult[]>({
-      http: {
-        method: 'GET',
-        path: '/search',
-        query: params,
-      },
-      tauri: {
-        command: 'search_query',
-        args: { input },
-      },
+    const response = await transport.request<TauriSearchResult[]>({
+      command: 'search_query',
+      args: { input },
     });
 
     return toSearchResponse(response);
