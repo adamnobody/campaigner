@@ -20,14 +20,24 @@
     "security": {
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**", "$APPLOCALDATA/**"]
+        "scope": [
+          "$APPDATA/**",
+          "$APPDATA/com.campaigner.app/**",
+          "$APPDATA/com.campaigner.app/uploads/**",
+          "$APPLOCALDATA/**"
+        ]
       },
-      "csp": "default-src 'self' http://localhost:5173 https://localhost:5173 tauri: asset: campaigner:; img-src 'self' data: blob: asset: http://localhost:5173 https://localhost:5173 tauri: campaigner:; connect-src 'self' http://localhost:5173 https://localhost:5173 tauri: ipc: campaigner:; style-src 'self' 'unsafe-inline' asset:"
+      "csp": "default-src 'self' http://asset.localhost https://asset.localhost http://localhost:5173 https://localhost:5173 tauri: asset: campaigner:; img-src 'self' data: blob: asset: http://asset.localhost https://asset.localhost http://localhost:5173 https://localhost:5173 tauri: campaigner:; connect-src 'self' http://asset.localhost https://asset.localhost http://localhost:5173 https://localhost:5173 tauri: ipc: campaigner:; style-src 'self' 'unsafe-inline' asset:"
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.ico"]
+    "icon": ["icons/icon.ico"],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
   }
 }
