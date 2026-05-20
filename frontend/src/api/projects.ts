@@ -26,9 +26,6 @@ type CreateDemoProjectInput = {
   locale?: AppLanguage | null;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const normalizeProjectStatus = (status: string): Project['status'] =>
   status === 'archived' ? 'archived' : 'active';
 
@@ -42,11 +39,7 @@ const toProject = (project: TauriProject): Project => ({
   updatedAt: project.updatedAt,
 });
 
-const toProjectResponse = (response: ApiResponse<Project> | TauriProject): ApiResult<Project> => {
-  if (isApiResponse<Project>(response)) {
-    return { data: response };
-  }
-
+const toProjectResponse = (response: TauriProject): ApiResult<Project> => {
   return {
     data: {
       success: true,
@@ -56,12 +49,8 @@ const toProjectResponse = (response: ApiResponse<Project> | TauriProject): ApiRe
 };
 
 const toProjectsResponse = (
-  response: ApiResponse<Project[]> | TauriProject[]
+  response: TauriProject[]
 ): ApiResult<Project[]> => {
-  if (isApiResponse<Project[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -72,14 +61,8 @@ const toProjectsResponse = (
 
 export const projectsApi = {
   getAll: async (): Promise<ApiResult<Project[]>> => {
-    const response = await transport.request<ApiResponse<Project[]> | TauriProject[]>({
-      http: {
-        method: 'GET',
-        path: '/projects',
-      },
-      tauri: {
-        command: 'projects_list',
-      },
+    const response = await transport.request<TauriProject[]>({
+      command: 'projects_list',
     });
 
     return toProjectsResponse(response);
@@ -88,15 +71,9 @@ export const projectsApi = {
   getById: async (id: number): Promise<ApiResult<Project>> => {
     const input: GetProjectInput = { id };
 
-    const response = await transport.request<ApiResponse<Project> | TauriProject, GetProjectInput>({
-      http: {
-        method: 'GET',
-        path: `/projects/${id}`,
-      },
-      tauri: {
-        command: 'projects_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriProject>({
+      command: 'projects_get',
+      args: { input },
     });
 
     return toProjectResponse(response);
@@ -110,16 +87,9 @@ export const projectsApi = {
       mainBranchName: data.mainBranchName ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Project> | TauriProject, CreateProject>({
-      http: {
-        method: 'POST',
-        path: '/projects',
-        body: data,
-      },
-      tauri: {
-        command: 'projects_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriProject>({
+      command: 'projects_create',
+      args: { input },
     });
 
     return toProjectResponse(response);
@@ -134,16 +104,9 @@ export const projectsApi = {
       mapImagePath: data.mapImagePath ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Project> | TauriProject, UpdateProject>({
-      http: {
-        method: 'PUT',
-        path: `/projects/${id}`,
-        body: data,
-      },
-      tauri: {
-        command: 'projects_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriProject>({
+      command: 'projects_update',
+      args: { input },
     });
 
     return toProjectResponse(response);
@@ -152,15 +115,9 @@ export const projectsApi = {
   delete: async (id: number): Promise<{ data: void }> => {
     const input: DeleteProjectInput = { id };
 
-    await transport.request<void, DeleteProjectInput>({
-      http: {
-        method: 'DELETE',
-        path: `/projects/${id}`,
-      },
-      tauri: {
-        command: 'projects_delete',
-        args: { input },
-      },
+    await transport.request<void>({
+      command: 'projects_delete',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -212,16 +169,9 @@ export const projectsApi = {
       locale: body?.locale ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Project> | TauriProject>({
-      http: {
-        method: 'POST',
-        path: '/projects/demo',
-        body: body ?? {},
-      },
-      tauri: {
-        command: 'projects_create_demo',
-        args: { input },
-      },
+    const response = await transport.request<TauriProject>({
+      command: 'projects_create_demo',
+      args: { input },
     });
 
     return toProjectResponse(response);

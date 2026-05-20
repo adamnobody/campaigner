@@ -14,20 +14,15 @@ type ApiResult<T> = {
 };
 
 const toUploadAssetResponse = (
-  response: ApiResponse<UploadAsset> | UploadSavedPath,
+  response: UploadSavedPath,
 ): ApiResult<UploadAsset> => {
-  if (response && typeof response === 'object' && 'success' in response) {
-    return { data: response as ApiResponse<UploadAsset> };
-  }
-
-  const saved = response as UploadSavedPath;
   return {
     data: {
       success: true,
       data: {
-        path: saved.path,
-        filename: saved.path.split('/').pop() ?? '',
-        originalName: saved.path.split('/').pop() ?? '',
+        path: response.path,
+        filename: response.path.split('/').pop() ?? '',
+        originalName: response.path.split('/').pop() ?? '',
         size: 0,
       },
     },

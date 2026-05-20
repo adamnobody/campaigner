@@ -3,7 +3,6 @@ import type {
   CreateTagInput as TauriCreateTagInput,
   DeleteTagInput as TauriDeleteTagInput,
   Tag as TauriTag,
-  TagsListInput,
 } from '@/types/generated/bindings';
 import { transport } from './transport';
 import type { CreateTagRequest } from './types';
@@ -12,20 +11,13 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toTag = (tag: TauriTag): Tag => ({
   id: tag.id,
   name: tag.name,
   color: tag.color,
 });
 
-const toTagResponse = (response: ApiResponse<Tag> | TauriTag): ApiResult<Tag> => {
-  if (isApiResponse<Tag>(response)) {
-    return { data: response };
-  }
-
+const toTagResponse = (response: TauriTag): ApiResult<Tag> => {
   return {
     data: {
       success: true,
@@ -34,11 +26,7 @@ const toTagResponse = (response: ApiResponse<Tag> | TauriTag): ApiResult<Tag> =>
   };
 };
 
-const toTagsResponse = (response: ApiResponse<Tag[]> | TauriTag[]): ApiResult<Tag[]> => {
-  if (isApiResponse<Tag[]>(response)) {
-    return { data: response };
-  }
-
+const toTagsResponse = (response: TauriTag[]): ApiResult<Tag[]> => {
   return {
     data: {
       success: true,
@@ -49,16 +37,9 @@ const toTagsResponse = (response: ApiResponse<Tag[]> | TauriTag[]): ApiResult<Ta
 
 export const tagsApi = {
   getAll: async (projectId: number): Promise<ApiResult<Tag[]>> => {
-    const response = await transport.request<ApiResponse<Tag[]> | TauriTag[], TagsListInput>({
-      http: {
-        method: 'GET',
-        path: '/tags',
-        query: { projectId },
-      },
-      tauri: {
-        command: 'tags_list',
-        args: { input: { projectId } },
-      },
+    const response = await transport.request<TauriTag[]>({
+      command: 'tags_list',
+      args: { input: { projectId } },
     });
 
     return toTagsResponse(response);
@@ -71,16 +52,9 @@ export const tagsApi = {
       color: data.color ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Tag> | TauriTag, CreateTagRequest>({
-      http: {
-        method: 'POST',
-        path: '/tags',
-        body: data,
-      },
-      tauri: {
-        command: 'tags_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriTag>({
+      command: 'tags_create',
+      args: { input },
     });
 
     return toTagResponse(response);
@@ -89,15 +63,9 @@ export const tagsApi = {
   delete: async (id: number): Promise<{ data: void }> => {
     const input: TauriDeleteTagInput = { id };
 
-    await transport.request<void, TauriDeleteTagInput>({
-      http: {
-        method: 'DELETE',
-        path: `/tags/${id}`,
-      },
-      tauri: {
-        command: 'tags_delete',
-        args: { input },
-      },
+    await transport.request<void>({
+      command: 'tags_delete',
+      args: { input },
     });
 
     return { data: undefined as void };

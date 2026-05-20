@@ -24,9 +24,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toScaleZone = (zone: TauriScaleZone) => ({
   from: zone.from,
   to: zone.to,
@@ -68,12 +65,8 @@ const toPoliticalScaleAssignment = (
 });
 
 const toPoliticalScaleResponse = (
-  response: ApiResponse<PoliticalScale> | TauriPoliticalScale
+  response: TauriPoliticalScale
 ): ApiResult<PoliticalScale> => {
-  if (isApiResponse<PoliticalScale>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -83,12 +76,8 @@ const toPoliticalScaleResponse = (
 };
 
 const toPoliticalScalesListResponse = (
-  response: ApiResponse<PoliticalScale[]> | TauriPoliticalScale[]
+  response: TauriPoliticalScale[]
 ): ApiResult<PoliticalScale[]> => {
-  if (isApiResponse<PoliticalScale[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -98,12 +87,8 @@ const toPoliticalScalesListResponse = (
 };
 
 const toAssignmentsListResponse = (
-  response: ApiResponse<PoliticalScaleAssignment[]> | TauriPoliticalScaleAssignment[]
+  response: TauriPoliticalScaleAssignment[]
 ): ApiResult<PoliticalScaleAssignment[]> => {
-  if (isApiResponse<PoliticalScaleAssignment[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -122,19 +107,10 @@ export const politicalScalesApi = {
       worldId: params.worldId,
     };
 
-    const response = await transport.request<ApiResponse<PoliticalScale[]> | TauriPoliticalScale[]>(
-      {
-        http: {
-          method: 'GET',
-          path: '/political-scales',
-          query: params,
-        },
-        tauri: {
-          command: 'political_scales_list',
-          args: { input },
-        },
-      }
-    );
+    const response = await transport.request<TauriPoliticalScale[]>({
+      command: 'political_scales_list',
+      args: { input },
+    });
 
     return toPoliticalScalesListResponse(response);
   },
@@ -160,16 +136,9 @@ export const politicalScalesApi = {
       order: data.order ?? null,
     };
 
-    const response = await transport.request<ApiResponse<PoliticalScale> | TauriPoliticalScale>({
-      http: {
-        method: 'POST',
-        path: '/political-scales',
-        body: data,
-      },
-      tauri: {
-        command: 'political_scales_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriPoliticalScale>({
+      command: 'political_scales_create',
+      args: { input },
     });
 
     return toPoliticalScaleResponse(response);
@@ -195,16 +164,9 @@ export const politicalScalesApi = {
       order: data.order ?? null,
     };
 
-    const response = await transport.request<ApiResponse<PoliticalScale> | TauriPoliticalScale>({
-      http: {
-        method: 'PATCH',
-        path: `/political-scales/${id}`,
-        body: data,
-      },
-      tauri: {
-        command: 'political_scales_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriPoliticalScale>({
+      command: 'political_scales_update',
+      args: { input },
     });
 
     return toPoliticalScaleResponse(response);
@@ -214,14 +176,8 @@ export const politicalScalesApi = {
     const input: TauriDeletePoliticalScaleInput = { id };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/political-scales/${id}`,
-      },
-      tauri: {
-        command: 'political_scales_delete',
-        args: { input },
-      },
+      command: 'political_scales_delete',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -236,18 +192,9 @@ export const politicalScalesApi = {
       entityId: params.entityId,
     };
 
-    const response = await transport.request<
-      ApiResponse<PoliticalScaleAssignment[]> | TauriPoliticalScaleAssignment[]
-    >({
-      http: {
-        method: 'GET',
-        path: '/political-scale-assignments',
-        query: params,
-      },
-      tauri: {
-        command: 'political_scale_assignments_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriPoliticalScaleAssignment[]>({
+      command: 'political_scale_assignments_list',
+      args: { input },
     });
 
     return toAssignmentsListResponse(response);
@@ -267,18 +214,9 @@ export const politicalScalesApi = {
       })),
     };
 
-    const response = await transport.request<
-      ApiResponse<PoliticalScaleAssignment[]> | TauriPoliticalScaleAssignment[]
-    >({
-      http: {
-        method: 'PUT',
-        path: '/political-scale-assignments',
-        body,
-      },
-      tauri: {
-        command: 'political_scale_assignments_replace',
-        args: { input },
-      },
+    const response = await transport.request<TauriPoliticalScaleAssignment[]>({
+      command: 'political_scale_assignments_replace',
+      args: { input },
     });
 
     return toAssignmentsListResponse(response);
@@ -288,14 +226,8 @@ export const politicalScalesApi = {
     const input: TauriDeletePoliticalScaleAssignmentInput = { id };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/political-scale-assignments/${id}`,
-      },
-      tauri: {
-        command: 'political_scale_assignments_delete',
-        args: { input },
-      },
+      command: 'political_scale_assignments_delete',
+      args: { input },
     });
 
     return { data: undefined as void };

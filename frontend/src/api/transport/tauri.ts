@@ -16,18 +16,11 @@ const toTransportError = (error: unknown): TransportError => {
 };
 
 export const tauriTransport: Transport = {
-  async request<TResponse, TBody = unknown>(request: TransportRequest<TBody>): Promise<TResponse> {
-    if (!request.tauri) {
-      throw new TransportError(
-        'TAURI_CONFIG_MISSING',
-        'Tauri request config is missing for the selected transport'
-      );
-    }
-
-    const { command, args } = request.tauri;
+  async request<TResponse, TArgs = any>(request: TransportRequest<TArgs>): Promise<TResponse> {
+    const { command, args } = request;
 
     try {
-      return await invoke<TResponse>(command, args);
+      return await invoke<TResponse>(command, args as any);
     } catch (error) {
       throw toTransportError(error);
     }

@@ -15,9 +15,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toViewport = (viewport: TauriGraphLayoutViewport) => ({
   x: viewport.x ?? 0,
   y: viewport.y ?? 0,
@@ -39,12 +36,8 @@ const toGraphLayoutData = (layout: TauriGraphLayoutDataV1): GraphLayoutDataV1 =>
 });
 
 const toGraphLayoutResponse = (
-  response: ApiResponse<{ layoutData: GraphLayoutDataV1 }> | TauriGraphLayoutResponse,
+  response: TauriGraphLayoutResponse,
 ): ApiResult<{ layoutData: GraphLayoutDataV1 }> => {
-  if (isApiResponse<{ layoutData: GraphLayoutDataV1 }>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -87,18 +80,9 @@ export const graphLayoutApi = {
       branchId: params.branchId ?? null,
     };
 
-    const response = await transport.request<
-      ApiResponse<{ layoutData: GraphLayoutDataV1 }> | TauriGraphLayoutResponse
-    >({
-      http: {
-        method: 'GET',
-        path: `/projects/${projectId}/graph-layout`,
-        query: params,
-      },
-      tauri: {
-        command: 'graph_layout_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriGraphLayoutResponse>({
+      command: 'graph_layout_get',
+      args: { input },
     });
 
     return toGraphLayoutResponse(response);
@@ -115,18 +99,9 @@ export const graphLayoutApi = {
       branchId: body.branchId ?? null,
     };
 
-    const response = await transport.request<
-      ApiResponse<{ layoutData: GraphLayoutDataV1 }> | TauriGraphLayoutResponse
-    >({
-      http: {
-        method: 'PUT',
-        path: `/projects/${projectId}/graph-layout`,
-        body,
-      },
-      tauri: {
-        command: 'graph_layout_upsert',
-        args: { input },
-      },
+    const response = await transport.request<TauriGraphLayoutResponse>({
+      command: 'graph_layout_upsert',
+      args: { input },
     });
 
     return toGraphLayoutResponse(response);
@@ -143,15 +118,8 @@ export const graphLayoutApi = {
     };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/projects/${projectId}/graph-layout`,
-        query: params,
-      },
-      tauri: {
-        command: 'graph_layout_delete',
-        args: { input },
-      },
+      command: 'graph_layout_delete',
+      args: { input },
     });
 
     return { data: undefined as void };

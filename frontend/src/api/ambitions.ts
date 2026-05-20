@@ -16,9 +16,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toAmbition = (ambition: TauriAmbition): Ambition => ({
   id: ambition.id,
   name: ambition.name,
@@ -31,11 +28,7 @@ const toAmbition = (ambition: TauriAmbition): Ambition => ({
   updatedAt: ambition.updatedAt ?? undefined,
 });
 
-const toAmbitionResponse = (response: ApiResponse<Ambition> | TauriAmbition): ApiResult<Ambition> => {
-  if (isApiResponse<Ambition>(response)) {
-    return { data: response };
-  }
-
+const toAmbitionResponse = (response: TauriAmbition): ApiResult<Ambition> => {
   return {
     data: {
       success: true,
@@ -45,12 +38,8 @@ const toAmbitionResponse = (response: ApiResponse<Ambition> | TauriAmbition): Ap
 };
 
 const toAmbitionsListResponse = (
-  response: ApiResponse<Ambition[]> | TauriAmbition[]
+  response: TauriAmbition[]
 ): ApiResult<Ambition[]> => {
-  if (isApiResponse<Ambition[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -62,16 +51,9 @@ const toAmbitionsListResponse = (
 export const ambitionsApi = {
   getCatalog: async (projectId: number): Promise<ApiResult<Ambition[]>> => {
     const input: TauriGetAmbitionsCatalogInput = { projectId };
-    const response = await transport.request<ApiResponse<Ambition[]> | TauriAmbition[]>({
-      http: {
-        method: 'GET',
-        path: '/ambitions',
-        query: { projectId },
-      },
-      tauri: {
-        command: 'ambitions_get_catalog',
-        args: { input },
-      },
+    const response = await transport.request<TauriAmbition[]>({
+      command: 'ambitions_get_catalog',
+      args: { input },
     });
 
     return toAmbitionsListResponse(response);
@@ -86,16 +68,9 @@ export const ambitionsApi = {
       excludedIds: data.excludedIds ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Ambition> | TauriAmbition>({
-      http: {
-        method: 'POST',
-        path: '/ambitions',
-        body: data,
-      },
-      tauri: {
-        command: 'ambitions_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriAmbition>({
+      command: 'ambitions_create',
+      args: { input },
     });
 
     return toAmbitionResponse(response);
@@ -109,16 +84,9 @@ export const ambitionsApi = {
       iconPath: data.iconPath ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Ambition> | TauriAmbition>({
-      http: {
-        method: 'PATCH',
-        path: `/ambitions/${id}`,
-        body: data,
-      },
-      tauri: {
-        command: 'ambitions_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriAmbition>({
+      command: 'ambitions_update',
+      args: { input },
     });
 
     return toAmbitionResponse(response);
@@ -127,16 +95,9 @@ export const ambitionsApi = {
   updateExclusions: async (id: number, excludedIds: number[]): Promise<ApiResult<Ambition>> => {
     const input: TauriUpdateAmbitionExclusionsInput = { id, excludedIds };
 
-    const response = await transport.request<ApiResponse<Ambition> | TauriAmbition>({
-      http: {
-        method: 'PATCH',
-        path: `/ambitions/${id}/exclusions`,
-        body: { excludedIds },
-      },
-      tauri: {
-        command: 'ambitions_update_exclusions',
-        args: { input },
-      },
+    const response = await transport.request<TauriAmbition>({
+      command: 'ambitions_update_exclusions',
+      args: { input },
     });
 
     return toAmbitionResponse(response);
@@ -146,14 +107,8 @@ export const ambitionsApi = {
     const input: TauriDeleteAmbitionInput = { id };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/ambitions/${id}`,
-      },
-      tauri: {
-        command: 'ambitions_delete',
-        args: { input },
-      },
+      command: 'ambitions_delete',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -162,15 +117,9 @@ export const ambitionsApi = {
   getFactionAmbitions: async (factionId: number): Promise<ApiResult<Ambition[]>> => {
     const input: TauriGetFactionAmbitionsInput = { factionId };
 
-    const response = await transport.request<ApiResponse<Ambition[]> | TauriAmbition[]>({
-      http: {
-        method: 'GET',
-        path: `/factions/${factionId}/ambitions`,
-      },
-      tauri: {
-        command: 'ambitions_get_faction_ambitions',
-        args: { input },
-      },
+    const response = await transport.request<TauriAmbition[]>({
+      command: 'ambitions_get_faction_ambitions',
+      args: { input },
     });
 
     return toAmbitionsListResponse(response);
@@ -183,15 +132,8 @@ export const ambitionsApi = {
     const input: TauriAssignFactionAmbitionInput = { factionId, ambitionId };
 
     await transport.request<void>({
-      http: {
-        method: 'POST',
-        path: `/factions/${factionId}/ambitions`,
-        body: { ambitionId },
-      },
-      tauri: {
-        command: 'ambitions_assign_faction_ambition',
-        args: { input },
-      },
+      command: 'ambitions_assign_faction_ambition',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -204,14 +146,8 @@ export const ambitionsApi = {
     const input: TauriUnassignFactionAmbitionInput = { factionId, ambitionId };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/factions/${factionId}/ambitions/${ambitionId}`,
-      },
-      tauri: {
-        command: 'ambitions_unassign_faction_ambition',
-        args: { input },
-      },
+      command: 'ambitions_unassign_faction_ambition',
+      args: { input },
     });
 
     return { data: undefined as void };

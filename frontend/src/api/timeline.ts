@@ -23,9 +23,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toTag = (tag: TauriTag): Tag => ({
   id: tag.id,
   name: tag.name,
@@ -48,12 +45,8 @@ const toTimelineEvent = (event: TauriTimelineEvent): TimelineEvent => ({
 });
 
 const toEventResponse = (
-  response: ApiResponse<TimelineEvent> | TauriTimelineEvent
+  response: TauriTimelineEvent
 ): ApiResult<TimelineEvent> => {
-  if (isApiResponse<TimelineEvent>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -63,12 +56,8 @@ const toEventResponse = (
 };
 
 const toEventsResponse = (
-  response: ApiResponse<TimelineEvent[]> | TauriTimelineEvent[]
+  response: TauriTimelineEvent[]
 ): ApiResult<TimelineEvent[]> => {
-  if (isApiResponse<TimelineEvent[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -77,11 +66,7 @@ const toEventsResponse = (
   };
 };
 
-const toTagsResponse = (response: ApiResponse<Tag[]> | TauriTag[]): ApiResult<Tag[]> => {
-  if (isApiResponse<Tag[]>(response)) {
-    return { data: response };
-  }
-
+const toTagsResponse = (response: TauriTag[]): ApiResult<Tag[]> => {
   return {
     data: {
       success: true,
@@ -99,16 +84,9 @@ export const timelineApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<TimelineEvent[]> | TauriTimelineEvent[]>({
-      http: {
-        method: 'GET',
-        path: '/timeline',
-        query,
-      },
-      tauri: {
-        command: 'timeline_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriTimelineEvent[]>({
+      command: 'timeline_list',
+      args: { input },
     });
 
     return toEventsResponse(response);
@@ -121,16 +99,9 @@ export const timelineApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<TimelineEvent> | TauriTimelineEvent>({
-      http: {
-        method: 'GET',
-        path: `/timeline/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'timeline_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriTimelineEvent>({
+      command: 'timeline_get',
+      args: { input },
     });
 
     return toEventResponse(response);
@@ -150,16 +121,9 @@ export const timelineApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<TimelineEvent> | TauriTimelineEvent>({
-      http: {
-        method: 'POST',
-        path: '/timeline',
-        body: payload,
-      },
-      tauri: {
-        command: 'timeline_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriTimelineEvent>({
+      command: 'timeline_create',
+      args: { input },
     });
 
     return toEventResponse(response);
@@ -183,16 +147,9 @@ export const timelineApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<TimelineEvent> | TauriTimelineEvent>({
-      http: {
-        method: 'PUT',
-        path: `/timeline/${id}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'timeline_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriTimelineEvent>({
+      command: 'timeline_update',
+      args: { input },
     });
 
     return toEventResponse(response);
@@ -206,15 +163,8 @@ export const timelineApi = {
     };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/timeline/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'timeline_delete',
-        args: { input },
-      },
+      command: 'timeline_delete',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -228,16 +178,9 @@ export const timelineApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<TimelineEvent[]> | TauriTimelineEvent[]>({
-      http: {
-        method: 'POST',
-        path: '/timeline/reorder',
-        body: payload,
-      },
-      tauri: {
-        command: 'timeline_reorder',
-        args: { input },
-      },
+    const response = await transport.request<TauriTimelineEvent[]>({
+      command: 'timeline_reorder',
+      args: { input },
     });
 
     return toEventsResponse(response);
@@ -251,17 +194,9 @@ export const timelineApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Tag[]> | TauriTag[]>({
-      http: {
-        method: 'PUT',
-        path: `/timeline/${id}/tags`,
-        query,
-        body: { tagIds },
-      },
-      tauri: {
-        command: 'timeline_set_tags',
-        args: { input },
-      },
+    const response = await transport.request<TauriTag[]>({
+      command: 'timeline_set_tags',
+      args: { input },
     });
 
     return toTagsResponse(response);

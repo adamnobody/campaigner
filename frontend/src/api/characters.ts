@@ -29,18 +29,11 @@ import type {
 } from '@/types/generated/bindings';
 import { transport } from './transport';
 import { uploadFileViaTransport } from './uploadFile';
-import type { VoidResponse } from './types';
 import type { CharacterListParams } from './types';
 import { withBranchParams } from './withBranchParams';
 
 type ApiResult<T> = { data: ApiResponse<T> };
 type PaginatedApiResult<T> = { data: PaginatedResponse<T> };
-
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
-const isPaginatedResponse = <T>(value: unknown): value is PaginatedResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value && 'data' in value);
 
 const toTag = (tag: TauriTag): Tag => ({
   id: tag.id,
@@ -121,23 +114,10 @@ export const charactersApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<
-      PaginatedResponse<Character> | TauriCharactersListResult
-    >({
-      http: {
-        method: 'GET',
-        path: '/characters',
-        query,
-      },
-      tauri: {
-        command: 'characters_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharactersListResult>({
+      command: 'characters_list',
+      args: { input },
     });
-
-    if (isPaginatedResponse<Character>(response)) {
-      return { data: response };
-    }
 
     return {
       data: {
@@ -159,21 +139,11 @@ export const charactersApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Character> | TauriCharacter>({
-      http: {
-        method: 'GET',
-        path: `/characters/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'characters_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacter>({
+      command: 'characters_get',
+      args: { input },
     });
 
-    if (isApiResponse<Character>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toCharacter(response) } };
   },
   create: async (data: CreateCharacter): Promise<ApiResult<Character>> => {
@@ -196,21 +166,11 @@ export const charactersApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Character> | TauriCharacter>({
-      http: {
-        method: 'POST',
-        path: '/characters',
-        body: payload,
-      },
-      tauri: {
-        command: 'characters_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacter>({
+      command: 'characters_create',
+      args: { input },
     });
 
-    if (isApiResponse<Character>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toCharacter(response) } };
   },
   update: async (id: number, data: UpdateCharacter, projectId: number): Promise<ApiResult<Character>> => {
@@ -233,21 +193,11 @@ export const charactersApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Character> | TauriCharacter>({
-      http: {
-        method: 'PUT',
-        path: `/characters/${id}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'characters_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacter>({
+      command: 'characters_update',
+      args: { input },
     });
 
-    if (isApiResponse<Character>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toCharacter(response) } };
   },
   delete: async (id: number, projectId: number) => {
@@ -258,15 +208,8 @@ export const charactersApi = {
     };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/characters/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'characters_delete',
-        args: { input },
-      },
+      command: 'characters_delete',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -286,21 +229,10 @@ export const charactersApi = {
       tagIds,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Tag[]> | TauriTag[]>({
-      http: {
-        method: 'PUT',
-        path: `/characters/${id}/tags`,
-        body: { tagIds },
-        query,
-      },
-      tauri: {
-        command: 'characters_set_tags',
-        args: { input },
-      },
+    const response = await transport.request<TauriTag[]>({
+      command: 'characters_set_tags',
+      args: { input },
     });
-    if (isApiResponse<Tag[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toTag) } };
   },
   getGraph: async (projectId: number): Promise<ApiResult<CharacterGraph>> => {
@@ -309,20 +241,10 @@ export const charactersApi = {
       projectId: query.projectId,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<CharacterGraph> | TauriCharacterGraph>({
-      http: {
-        method: 'GET',
-        path: '/characters/graph',
-        query,
-      },
-      tauri: {
-        command: 'characters_graph',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacterGraph>({
+      command: 'characters_graph',
+      args: { input },
     });
-    if (isApiResponse<CharacterGraph>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toGraph(response) } };
   },
   getRelationships: async (projectId: number): Promise<ApiResult<CharacterRelationship[]>> => {
@@ -331,20 +253,10 @@ export const charactersApi = {
       projectId: query.projectId,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<CharacterRelationship[]> | TauriCharacterRelationship[]>({
-      http: {
-        method: 'GET',
-        path: '/characters/relationships/list',
-        query,
-      },
-      tauri: {
-        command: 'characters_relationships_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacterRelationship[]>({
+      command: 'characters_relationships_list',
+      args: { input },
     });
-    if (isApiResponse<CharacterRelationship[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toRelationship) } };
   },
   createRelationship: async (data: CreateRelationship): Promise<ApiResult<CharacterRelationship>> => {
@@ -359,20 +271,10 @@ export const charactersApi = {
       isBidirectional: payload.isBidirectional ?? null,
       branchId: payload.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<CharacterRelationship> | TauriCharacterRelationship>({
-      http: {
-        method: 'POST',
-        path: '/characters/relationships',
-        body: payload,
-      },
-      tauri: {
-        command: 'characters_relationships_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacterRelationship>({
+      command: 'characters_relationships_create',
+      args: { input },
     });
-    if (isApiResponse<CharacterRelationship>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toRelationship(response) } };
   },
   updateRelationship: async (
@@ -389,20 +291,10 @@ export const charactersApi = {
       isBidirectional: payload.isBidirectional ?? null,
       branchId: payload.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<CharacterRelationship> | TauriCharacterRelationship>({
-      http: {
-        method: 'PUT',
-        path: `/characters/relationships/${id}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'characters_relationships_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriCharacterRelationship>({
+      command: 'characters_relationships_update',
+      args: { input },
     });
-    if (isApiResponse<CharacterRelationship>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toRelationship(response) } };
   },
   deleteRelationship: async (id: number, projectId: number) => {
@@ -412,15 +304,8 @@ export const charactersApi = {
       branchId: query.branchId ?? null,
     };
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/characters/relationships/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'characters_relationships_delete',
-        args: { input },
-      },
+      command: 'characters_relationships_delete',
+      args: { input },
     });
     return { data: undefined as void };
   },

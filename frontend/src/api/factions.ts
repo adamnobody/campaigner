@@ -66,9 +66,6 @@ import { withBranchParams } from './withBranchParams';
 type ApiResult<T> = { data: ApiResponse<T> };
 type ListResult<T> = { data: ListWithTotal<T> };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toTag = (tag: TauriTag): Tag => ({
   id: tag.id,
   name: tag.name,
@@ -232,21 +229,11 @@ export const factionsApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ListWithTotal<Faction[]> | TauriFactionsListResult>({
-      http: {
-        method: 'GET',
-        path: '/factions',
-        query,
-      },
-      tauri: {
-        command: 'factions_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionsListResult>({
+      command: 'factions_list',
+      args: { input },
     });
 
-    if ('success' in response) {
-      return { data: response };
-    }
     return {
       data: {
         success: true,
@@ -258,20 +245,10 @@ export const factionsApi = {
   getById: async (id: number, projectId: number): Promise<ApiResult<Faction>> => {
     const query = withBranchParams({}, projectId);
     const input: TauriGetFactionInput = { id, branchId: query.branchId ?? null };
-    const response = await transport.request<ApiResponse<Faction> | TauriFaction>({
-      http: {
-        method: 'GET',
-        path: `/factions/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'factions_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriFaction>({
+      command: 'factions_get',
+      args: { input },
     });
-    if (isApiResponse<Faction>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toFaction(response) } };
   },
   create: async (data: CreateFaction): Promise<ApiResult<Faction>> => {
@@ -308,20 +285,10 @@ export const factionsApi = {
       sortOrder: payload.sortOrder ?? null,
       branchId: payload.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Faction> | TauriFaction>({
-      http: {
-        method: 'POST',
-        path: '/factions',
-        body: payload,
-      },
-      tauri: {
-        command: 'factions_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriFaction>({
+      command: 'factions_create',
+      args: { input },
     });
-    if (isApiResponse<Faction>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toFaction(response) } };
   },
   update: async (id: number, data: UpdateFaction, projectId: number): Promise<ApiResult<Faction>> => {
@@ -358,20 +325,10 @@ export const factionsApi = {
       sortOrder: payload.sortOrder ?? null,
       branchId: payload.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Faction> | TauriFaction>({
-      http: {
-        method: 'PUT',
-        path: `/factions/${id}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'factions_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriFaction>({
+      command: 'factions_update',
+      args: { input },
     });
-    if (isApiResponse<Faction>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toFaction(response) } };
   },
   delete: async (id: number, projectId: number): Promise<{ data: void }> => {
@@ -381,15 +338,8 @@ export const factionsApi = {
       branchId: query.branchId ?? null,
     };
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/factions/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'factions_delete',
-        args: { input },
-      },
+      command: 'factions_delete',
+      args: { input },
     });
     return { data: undefined as void };
   },
@@ -416,21 +366,10 @@ export const factionsApi = {
       tagIds,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<Tag[]> | TauriTag[]>({
-      http: {
-        method: 'PUT',
-        path: `/factions/${id}/tags`,
-        body: { tagIds },
-        query,
-      },
-      tauri: {
-        command: 'factions_set_tags',
-        args: { input },
-      },
+    const response = await transport.request<TauriTag[]>({
+      command: 'factions_set_tags',
+      args: { input },
     });
-    if (isApiResponse<Tag[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toTag) } };
   },
   getRanks: async (factionId: number, projectId: number): Promise<ApiResult<FactionRank[]>> => {
@@ -439,20 +378,10 @@ export const factionsApi = {
       factionId,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionRank[]> | TauriFactionRank[]>({
-      http: {
-        method: 'GET',
-        path: `/factions/${factionId}/ranks`,
-        query,
-      },
-      tauri: {
-        command: 'factions_ranks_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionRank[]>({
+      command: 'factions_ranks_list',
+      args: { input },
     });
-    if (isApiResponse<FactionRank[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toRank) } };
   },
   createRank: async (factionId: number, data: CreateFactionRank, projectId: number): Promise<ApiResult<FactionRank>> => {
@@ -467,21 +396,10 @@ export const factionsApi = {
       color: data.color ?? null,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionRank> | TauriFactionRank>({
-      http: {
-        method: 'POST',
-        path: `/factions/${factionId}/ranks`,
-        body: data,
-        query,
-      },
-      tauri: {
-        command: 'factions_ranks_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionRank>({
+      command: 'factions_ranks_create',
+      args: { input },
     });
-    if (isApiResponse<FactionRank>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toRank(response) } };
   },
   updateRank: async (
@@ -502,21 +420,10 @@ export const factionsApi = {
       color: data.color ?? null,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionRank> | TauriFactionRank>({
-      http: {
-        method: 'PUT',
-        path: `/factions/${factionId}/ranks/${rankId}`,
-        body: data,
-        query,
-      },
-      tauri: {
-        command: 'factions_ranks_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionRank>({
+      command: 'factions_ranks_update',
+      args: { input },
     });
-    if (isApiResponse<FactionRank>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toRank(response) } };
   },
   deleteRank: async (factionId: number, rankId: number, projectId: number): Promise<{ data: void }> => {
@@ -527,15 +434,8 @@ export const factionsApi = {
       branchId: query.branchId ?? null,
     };
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/factions/${factionId}/ranks/${rankId}`,
-        query,
-      },
-      tauri: {
-        command: 'factions_ranks_delete',
-        args: { input },
-      },
+      command: 'factions_ranks_delete',
+      args: { input },
     });
     return { data: undefined as void };
   },
@@ -545,20 +445,10 @@ export const factionsApi = {
       factionId,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionMember[]> | TauriFactionMember[]>({
-      http: {
-        method: 'GET',
-        path: `/factions/${factionId}/members`,
-        query,
-      },
-      tauri: {
-        command: 'factions_members_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionMember[]>({
+      command: 'factions_members_list',
+      args: { input },
     });
-    if (isApiResponse<FactionMember[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toMember) } };
   },
   addMember: async (
@@ -578,21 +468,10 @@ export const factionsApi = {
       notes: data.notes ?? null,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionMember> | TauriFactionMember>({
-      http: {
-        method: 'POST',
-        path: `/factions/${factionId}/members`,
-        body: data,
-        query,
-      },
-      tauri: {
-        command: 'factions_members_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionMember>({
+      command: 'factions_members_create',
+      args: { input },
     });
-    if (isApiResponse<FactionMember>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toMember(response) } };
   },
   updateMember: async (
@@ -610,33 +489,17 @@ export const factionsApi = {
       isActive: data.isActive ?? null,
       notes: data.notes ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionMember> | TauriFactionMember>({
-      http: {
-        method: 'PUT',
-        path: `/factions/${factionId}/members/${memberId}`,
-        body: data,
-      },
-      tauri: {
-        command: 'factions_members_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionMember>({
+      command: 'factions_members_update',
+      args: { input },
     });
-    if (isApiResponse<FactionMember>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toMember(response) } };
   },
   removeMember: async (factionId: number, memberId: number): Promise<{ data: void }> => {
     const input: TauriDeleteFactionMemberInput = { factionId, memberId };
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/factions/${factionId}/members/${memberId}`,
-      },
-      tauri: {
-        command: 'factions_members_delete',
-        args: { input },
-      },
+      command: 'factions_members_delete',
+      args: { input },
     });
     return { data: undefined as void };
   },
@@ -657,21 +520,10 @@ export const factionsApi = {
       })),
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<CustomMetric[]> | TauriFactionCustomMetric[]>({
-      http: {
-        method: 'PUT',
-        path: `/factions/${factionId}/custom-metrics`,
-        body: data,
-        query,
-      },
-      tauri: {
-        command: 'factions_custom_metrics_replace',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionCustomMetric[]>({
+      command: 'factions_custom_metrics_replace',
+      args: { input },
     });
-    if (isApiResponse<CustomMetric[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toMetric) } };
   },
   compare: async (data: CompareFactionsInput): Promise<ApiResult<FactionCompareResult>> => {
@@ -679,20 +531,10 @@ export const factionsApi = {
       factionIds: data.factionIds,
       metricKeys: data.metricKeys,
     };
-    const response = await transport.request<ApiResponse<FactionCompareResult> | TauriFactionCompareResult>({
-      http: {
-        method: 'POST',
-        path: '/factions/compare',
-        body: data,
-      },
-      tauri: {
-        command: 'factions_compare',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionCompareResult>({
+      command: 'factions_compare',
+      args: { input },
     });
-    if (isApiResponse<FactionCompareResult>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toCompare(response) } };
   },
   getRelations: async (projectId: number): Promise<ApiResult<FactionRelation[]>> => {
@@ -701,20 +543,10 @@ export const factionsApi = {
       projectId: query.projectId,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionRelation[]> | TauriFactionRelation[]>({
-      http: {
-        method: 'GET',
-        path: '/factions/relations',
-        query,
-      },
-      tauri: {
-        command: 'factions_relations_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionRelation[]>({
+      command: 'factions_relations_list',
+      args: { input },
     });
-    if (isApiResponse<FactionRelation[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toRelation) } };
   },
   createRelation: async (data: CreateFactionRelation): Promise<ApiResult<FactionRelation>> => {
@@ -730,20 +562,10 @@ export const factionsApi = {
       isBidirectional: payload.isBidirectional ?? null,
       branchId: payload.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionRelation> | TauriFactionRelation>({
-      http: {
-        method: 'POST',
-        path: '/factions/relations',
-        body: payload,
-      },
-      tauri: {
-        command: 'factions_relations_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionRelation>({
+      command: 'factions_relations_create',
+      args: { input },
     });
-    if (isApiResponse<FactionRelation>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toRelation(response) } };
   },
   updateRelation: async (relationId: number, data: UpdateFactionRelation): Promise<ApiResult<FactionRelation>> => {
@@ -755,33 +577,17 @@ export const factionsApi = {
       startedDate: data.startedDate ?? null,
       isBidirectional: data.isBidirectional ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionRelation> | TauriFactionRelation>({
-      http: {
-        method: 'PUT',
-        path: `/factions/relations/${relationId}`,
-        body: data,
-      },
-      tauri: {
-        command: 'factions_relations_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionRelation>({
+      command: 'factions_relations_update',
+      args: { input },
     });
-    if (isApiResponse<FactionRelation>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toRelation(response) } };
   },
   deleteRelation: async (relationId: number): Promise<{ data: void }> => {
     const input: TauriDeleteFactionRelationInput = { relationId };
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/factions/relations/${relationId}`,
-      },
-      tauri: {
-        command: 'factions_relations_delete',
-        args: { input },
-      },
+      command: 'factions_relations_delete',
+      args: { input },
     });
     return { data: undefined as void };
   },
@@ -791,20 +597,10 @@ export const factionsApi = {
       projectId: query.projectId,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionGraph> | TauriFactionGraph>({
-      http: {
-        method: 'GET',
-        path: '/factions/graph',
-        query,
-      },
-      tauri: {
-        command: 'factions_graph',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionGraph>({
+      command: 'factions_graph',
+      args: { input },
     });
-    if (isApiResponse<FactionGraph>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toGraph(response) } };
   },
   getPolicies: async (factionId: number, projectId: number): Promise<ApiResult<FactionPolicy[]>> => {
@@ -813,20 +609,10 @@ export const factionsApi = {
       factionId,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionPolicy[]> | TauriFactionPolicy[]>({
-      http: {
-        method: 'GET',
-        path: `/factions/${factionId}/policies`,
-        query,
-      },
-      tauri: {
-        command: 'factions_policies_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionPolicy[]>({
+      command: 'factions_policies_list',
+      args: { input },
     });
-    if (isApiResponse<FactionPolicy[]>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: response.map(toPolicy) } };
   },
   createPolicy: async (
@@ -846,21 +632,10 @@ export const factionsApi = {
       sortOrder: data.sortOrder ?? null,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionPolicy> | TauriFactionPolicy>({
-      http: {
-        method: 'POST',
-        path: `/factions/${factionId}/policies`,
-        body: data,
-        query,
-      },
-      tauri: {
-        command: 'factions_policies_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionPolicy>({
+      command: 'factions_policies_create',
+      args: { input },
     });
-    if (isApiResponse<FactionPolicy>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toPolicy(response) } };
   },
   updatePolicy: async (
@@ -882,21 +657,10 @@ export const factionsApi = {
       sortOrder: data.sortOrder ?? null,
       branchId: query.branchId ?? null,
     };
-    const response = await transport.request<ApiResponse<FactionPolicy> | TauriFactionPolicy>({
-      http: {
-        method: 'PUT',
-        path: `/factions/${factionId}/policies/${policyId}`,
-        body: data,
-        query,
-      },
-      tauri: {
-        command: 'factions_policies_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriFactionPolicy>({
+      command: 'factions_policies_update',
+      args: { input },
     });
-    if (isApiResponse<FactionPolicy>(response)) {
-      return { data: response };
-    }
     return { data: { success: true, data: toPolicy(response) } };
   },
   deletePolicy: async (factionId: number, policyId: number, projectId: number): Promise<{ data: void }> => {
@@ -907,15 +671,8 @@ export const factionsApi = {
       branchId: query.branchId ?? null,
     };
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/factions/${factionId}/policies/${policyId}`,
-        query,
-      },
-      tauri: {
-        command: 'factions_policies_delete',
-        args: { input },
-      },
+      command: 'factions_policies_delete',
+      args: { input },
     });
     return { data: undefined as void };
   },

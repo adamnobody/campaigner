@@ -17,9 +17,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toBranch = (branch: TauriScenarioBranch): ScenarioBranch => ({
   id: branch.id,
   projectId: branch.projectId,
@@ -32,12 +29,8 @@ const toBranch = (branch: TauriScenarioBranch): ScenarioBranch => ({
 });
 
 const toBranchResponse = (
-  response: ApiResponse<ScenarioBranch> | TauriScenarioBranch
+  response: TauriScenarioBranch
 ): ApiResult<ScenarioBranch> => {
-  if (isApiResponse<ScenarioBranch>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -47,12 +40,8 @@ const toBranchResponse = (
 };
 
 const toBranchesResponse = (
-  response: ApiResponse<ScenarioBranch[]> | TauriScenarioBranch[]
+  response: TauriScenarioBranch[]
 ): ApiResult<ScenarioBranch[]> => {
-  if (isApiResponse<ScenarioBranch[]>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -64,16 +53,9 @@ const toBranchesResponse = (
 export const branchesApi = {
   getAll: async (projectId: number): Promise<ApiResult<ScenarioBranch[]>> => {
     const input: TauriListBranchesInput = { projectId };
-    const response = await transport.request<ApiResponse<ScenarioBranch[]> | TauriScenarioBranch[]>({
-      http: {
-        method: 'GET',
-        path: '/branches',
-        query: { projectId },
-      },
-      tauri: {
-        command: 'branches_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriScenarioBranch[]>({
+      command: 'branches_list',
+      args: { input },
     });
 
     return toBranchesResponse(response);
@@ -85,16 +67,9 @@ export const branchesApi = {
       parentBranchId: data.parentBranchId ?? null,
       baseRevision: data.baseRevision ?? null,
     };
-    const response = await transport.request<ApiResponse<ScenarioBranch> | TauriScenarioBranch>({
-      http: {
-        method: 'POST',
-        path: '/branches',
-        body: data,
-      },
-      tauri: {
-        command: 'branches_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriScenarioBranch>({
+      command: 'branches_create',
+      args: { input },
     });
 
     return toBranchResponse(response);
@@ -104,16 +79,9 @@ export const branchesApi = {
       id,
       name: data.name ?? null,
     };
-    const response = await transport.request<ApiResponse<ScenarioBranch> | TauriScenarioBranch>({
-      http: {
-        method: 'PUT',
-        path: `/branches/${id}`,
-        body: data,
-      },
-      tauri: {
-        command: 'branches_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriScenarioBranch>({
+      command: 'branches_update',
+      args: { input },
     });
 
     return toBranchResponse(response);
@@ -121,14 +89,8 @@ export const branchesApi = {
   delete: async (id: number): Promise<{ data: void }> => {
     const input: TauriDeleteBranchInput = { id };
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/branches/${id}`,
-      },
-      tauri: {
-        command: 'branches_delete',
-        args: { input },
-      },
+      command: 'branches_delete',
+      args: { input },
     });
 
     return { data: undefined as void };

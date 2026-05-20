@@ -19,9 +19,6 @@ type ApiResult<T> = {
   data: ApiResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
 const toTag = (tag: TauriTag): Tag => ({
   id: tag.id,
   name: tag.name,
@@ -47,11 +44,7 @@ const toDogma = (dogma: TauriDogma): Dogma => ({
   updatedAt: dogma.updatedAt,
 });
 
-const toDogmaResponse = (response: ApiResponse<Dogma> | TauriDogma): ApiResult<Dogma> => {
-  if (isApiResponse<Dogma>(response)) {
-    return { data: response };
-  }
-
+const toDogmaResponse = (response: TauriDogma): ApiResult<Dogma> => {
   return {
     data: {
       success: true,
@@ -61,12 +54,8 @@ const toDogmaResponse = (response: ApiResponse<Dogma> | TauriDogma): ApiResult<D
 };
 
 const toDogmasListResponse = (
-  response: ApiResponse<{ items: Dogma[]; total: number }> | TauriDogmasListResult
+  response: TauriDogmasListResult
 ): ApiResult<{ items: Dogma[]; total: number }> => {
-  if (isApiResponse<{ items: Dogma[]; total: number }>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -78,11 +67,7 @@ const toDogmasListResponse = (
   };
 };
 
-const toTagsResponse = (response: ApiResponse<Tag[]> | TauriTag[]): ApiResult<Tag[]> => {
-  if (isApiResponse<Tag[]>(response)) {
-    return { data: response };
-  }
-
+const toTagsResponse = (response: TauriTag[]): ApiResult<Tag[]> => {
   return {
     data: {
       success: true,
@@ -108,18 +93,9 @@ export const dogmasApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<
-      ApiResponse<{ items: Dogma[]; total: number }> | TauriDogmasListResult
-    >({
-      http: {
-        method: 'GET',
-        path: '/dogmas',
-        query,
-      },
-      tauri: {
-        command: 'dogmas_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriDogmasListResult>({
+      command: 'dogmas_list',
+      args: { input },
     });
 
     return toDogmasListResponse(response);
@@ -131,16 +107,9 @@ export const dogmasApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Dogma> | TauriDogma>({
-      http: {
-        method: 'GET',
-        path: `/dogmas/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'dogmas_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriDogma>({
+      command: 'dogmas_get',
+      args: { input },
     });
 
     return toDogmaResponse(response);
@@ -163,16 +132,9 @@ export const dogmasApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Dogma> | TauriDogma>({
-      http: {
-        method: 'POST',
-        path: '/dogmas',
-        body: payload,
-      },
-      tauri: {
-        command: 'dogmas_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriDogma>({
+      command: 'dogmas_create',
+      args: { input },
     });
 
     return toDogmaResponse(response);
@@ -195,16 +157,9 @@ export const dogmasApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Dogma> | TauriDogma>({
-      http: {
-        method: 'PUT',
-        path: `/dogmas/${id}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'dogmas_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriDogma>({
+      command: 'dogmas_update',
+      args: { input },
     });
 
     return toDogmaResponse(response);
@@ -217,15 +172,8 @@ export const dogmasApi = {
     };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/dogmas/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'dogmas_delete',
-        args: { input },
-      },
+      command: 'dogmas_delete',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -241,18 +189,9 @@ export const dogmasApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<
-      ApiResponse<{ items: Dogma[]; total: number }> | TauriDogmasListResult
-    >({
-      http: {
-        method: 'POST',
-        path: '/dogmas/reorder',
-        body: payload,
-      },
-      tauri: {
-        command: 'dogmas_reorder',
-        args: { input },
-      },
+    const response = await transport.request<TauriDogmasListResult>({
+      command: 'dogmas_reorder',
+      args: { input },
     });
 
     return toDogmasListResponse(response);
@@ -265,17 +204,9 @@ export const dogmasApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Tag[]> | TauriTag[]>({
-      http: {
-        method: 'PUT',
-        path: `/dogmas/${id}/tags`,
-        body: { tagIds },
-        query,
-      },
-      tauri: {
-        command: 'dogmas_set_tags',
-        args: { input },
-      },
+    const response = await transport.request<TauriTag[]>({
+      command: 'dogmas_set_tags',
+      args: { input },
     });
 
     return toTagsResponse(response);

@@ -29,12 +29,6 @@ type PaginatedApiResult<T> = {
   data: PaginatedResponse<T>;
 };
 
-const isApiResponse = <T>(value: unknown): value is ApiResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value);
-
-const isPaginatedResponse = <T>(value: unknown): value is PaginatedResponse<T> =>
-  Boolean(value && typeof value === 'object' && 'success' in value && 'data' in value);
-
 const toTag = (tag: TauriTag): Tag => ({
   id: tag.id,
   name: tag.name,
@@ -56,12 +50,8 @@ const toNote = (note: TauriNote): Note => ({
 });
 
 const toPaginatedNotesResponse = (
-  response: PaginatedResponse<Note> | TauriNotesListResult
+  response: TauriNotesListResult
 ): PaginatedApiResult<Note> => {
-  if (isPaginatedResponse<Note>(response)) {
-    return { data: response };
-  }
-
   return {
     data: {
       success: true,
@@ -76,11 +66,7 @@ const toPaginatedNotesResponse = (
   };
 };
 
-const toNoteResponse = (response: ApiResponse<Note> | TauriNote): ApiResult<Note> => {
-  if (isApiResponse<Note>(response)) {
-    return { data: response };
-  }
-
+const toNoteResponse = (response: TauriNote): ApiResult<Note> => {
   return {
     data: {
       success: true,
@@ -89,11 +75,7 @@ const toNoteResponse = (response: ApiResponse<Note> | TauriNote): ApiResult<Note
   };
 };
 
-const toTagsResponse = (response: ApiResponse<Tag[]> | TauriTag[]): ApiResult<Tag[]> => {
-  if (isApiResponse<Tag[]>(response)) {
-    return { data: response };
-  }
-
+const toTagsResponse = (response: TauriTag[]): ApiResult<Tag[]> => {
   return {
     data: {
       success: true,
@@ -117,16 +99,9 @@ export const notesApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<PaginatedResponse<Note> | TauriNotesListResult>({
-      http: {
-        method: 'GET',
-        path: '/notes',
-        query,
-      },
-      tauri: {
-        command: 'notes_list',
-        args: { input },
-      },
+    const response = await transport.request<TauriNotesListResult>({
+      command: 'notes_list',
+      args: { input },
     });
 
     return toPaginatedNotesResponse(response);
@@ -139,16 +114,9 @@ export const notesApi = {
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Note> | TauriNote>({
-      http: {
-        method: 'GET',
-        path: `/notes/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'notes_get',
-        args: { input },
-      },
+    const response = await transport.request<TauriNote>({
+      command: 'notes_get',
+      args: { input },
     });
 
     return toNoteResponse(response);
@@ -167,16 +135,9 @@ export const notesApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Note> | TauriNote>({
-      http: {
-        method: 'POST',
-        path: '/notes',
-        body: payload,
-      },
-      tauri: {
-        command: 'notes_create',
-        args: { input },
-      },
+    const response = await transport.request<TauriNote>({
+      command: 'notes_create',
+      args: { input },
     });
 
     return toNoteResponse(response);
@@ -195,16 +156,9 @@ export const notesApi = {
       branchId: payload.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Note> | TauriNote>({
-      http: {
-        method: 'PUT',
-        path: `/notes/${id}`,
-        body: payload,
-      },
-      tauri: {
-        command: 'notes_update',
-        args: { input },
-      },
+    const response = await transport.request<TauriNote>({
+      command: 'notes_update',
+      args: { input },
     });
 
     return toNoteResponse(response);
@@ -218,15 +172,8 @@ export const notesApi = {
     };
 
     await transport.request<void>({
-      http: {
-        method: 'DELETE',
-        path: `/notes/${id}`,
-        query,
-      },
-      tauri: {
-        command: 'notes_delete',
-        args: { input },
-      },
+      command: 'notes_delete',
+      args: { input },
     });
 
     return { data: undefined as void };
@@ -234,24 +181,15 @@ export const notesApi = {
 
   setTags: async (id: number, tagIds: number[], projectId?: number): Promise<ApiResult<Tag[]>> => {
     const query = withBranchParams({}, projectId);
-    const body = { tagIds };
     const input: TauriSetNoteTagsInput = {
       id,
       tagIds,
       branchId: query.branchId ?? null,
     };
 
-    const response = await transport.request<ApiResponse<Tag[]> | TauriTag[]>({
-      http: {
-        method: 'PUT',
-        path: `/notes/${id}/tags`,
-        query,
-        body,
-      },
-      tauri: {
-        command: 'notes_set_tags',
-        args: { input },
-      },
+    const response = await transport.request<TauriTag[]>({
+      command: 'notes_set_tags',
+      args: { input },
     });
 
     return toTagsResponse(response);
