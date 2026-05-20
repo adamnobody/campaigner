@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, type InvokeArgs } from '@tauri-apps/api/core';
 
 import type { Transport, TransportRequest } from './types';
 import { TransportError } from './types';
@@ -16,11 +16,13 @@ const toTransportError = (error: unknown): TransportError => {
 };
 
 export const tauriTransport: Transport = {
-  async request<TResponse, TArgs = any>(request: TransportRequest<TArgs>): Promise<TResponse> {
+  async request<TResponse, TArgs extends InvokeArgs | undefined = InvokeArgs>(
+    request: TransportRequest<TArgs>
+  ): Promise<TResponse> {
     const { command, args } = request;
 
     try {
-      return await invoke<TResponse>(command, args as any);
+      return await invoke<TResponse>(command, args);
     } catch (error) {
       throw toTransportError(error);
     }

@@ -1,7 +1,9 @@
-export type TransportRequest<TArgs = any> = {
+import type { InvokeArgs } from '@tauri-apps/api/core';
+
+export interface TransportRequest<TArgs extends InvokeArgs | undefined = InvokeArgs> {
   command: string;
   args?: TArgs;
-};
+}
 
 export class TransportError extends Error {
   code: string;
@@ -18,5 +20,7 @@ export class TransportError extends Error {
 }
 
 export interface Transport {
-  request<TResponse, TArgs = any>(request: TransportRequest<TArgs>): Promise<TResponse>;
+  request<TResponse, TArgs extends InvokeArgs | undefined = InvokeArgs>(
+    request: TransportRequest<TArgs>
+  ): Promise<TResponse>;
 }
