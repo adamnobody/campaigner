@@ -1,21 +1,86 @@
-use std::path::Path;
-
 use rusqlite::{params, Connection};
 
-use crate::error::{AppError, Result};
+use crate::error::Result;
 
-type Migration = (i64, String, String);
+type Migration = (i64, &'static str, &'static str);
+
+const MIGRATIONS: &[Migration] = &[
+    (0, "init", include_str!("../../migrations/000_init.sql")),
+    (1, "tags", include_str!("../../migrations/001_tags.sql")),
+    (
+        2,
+        "projects",
+        include_str!("../../migrations/002_projects.sql"),
+    ),
+    (
+        3,
+        "branch_foundation",
+        include_str!("../../migrations/003_branch_foundation.sql"),
+    ),
+    (
+        4,
+        "tag_associations",
+        include_str!("../../migrations/004_tag_associations.sql"),
+    ),
+    (5, "notes", include_str!("../../migrations/005_notes.sql")),
+    (
+        6,
+        "timeline",
+        include_str!("../../migrations/006_timeline.sql"),
+    ),
+    (
+        7,
+        "characters",
+        include_str!("../../migrations/007_characters.sql"),
+    ),
+    (
+        8,
+        "factions",
+        include_str!("../../migrations/008_factions.sql"),
+    ),
+    (9, "dogmas", include_str!("../../migrations/009_dogmas.sql")),
+    (
+        10,
+        "ambitions",
+        include_str!("../../migrations/010_ambitions.sql"),
+    ),
+    (
+        11,
+        "character_traits",
+        include_str!("../../migrations/011_character_traits.sql"),
+    ),
+    (
+        12,
+        "political_scales",
+        include_str!("../../migrations/012_political_scales.sql"),
+    ),
+    (
+        13,
+        "graph_layouts",
+        include_str!("../../migrations/013_graph_layouts.sql"),
+    ),
+    (
+        14,
+        "dynasties",
+        include_str!("../../migrations/014_dynasties.sql"),
+    ),
+    (15, "maps", include_str!("../../migrations/015_maps.sql")),
+    (
+        16,
+        "wiki_links",
+        include_str!("../../migrations/016_wiki_links.sql"),
+    ),
+];
 
 pub fn run_migrations(connection: &Connection) -> Result<()> {
     ensure_schema_migrations_table(connection)?;
 
-    let migrations = load_migrations()?;
-    for (version, name, sql) in migrations {
+    for &(version, name, sql) in load_migrations() {
         if is_migration_applied(connection, version)? {
             continue;
         }
 
-        connection.execute_batch(&sql)?;
+        connection.execute_batch(sql)?;
         connection.execute(
             "INSERT INTO schema_migrations (version, name) VALUES (?1, ?2)",
             params![version, name],
@@ -39,67 +104,8 @@ fn ensure_schema_migrations_table(connection: &Connection) -> Result<()> {
     Ok(())
 }
 
-fn load_migrations() -> Result<Vec<Migration>> {
-    let migrations_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations");
-    let mut migrations = Vec::new();
-
-    for entry in std::fs::read_dir(&migrations_dir)? {
-        let entry = entry?;
-        if !entry.file_type()?.is_file() {
-            continue;
-        }
-
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("sql") {
-            continue;
-        }
-
-        let file_name = match path.file_name().and_then(|name| name.to_str()) {
-            Some(name) => name,
-            None => {
-                return Err(AppError::internal(
-                    "MIGRATION_FILENAME_ERROR",
-                    format!("Invalid migration filename: {}", path.display()),
-                ));
-            }
-        };
-
-        let (version, name) = parse_migration_name(file_name)?;
-        let sql = std::fs::read_to_string(&path)?;
-        migrations.push((version, name, sql));
-    }
-
-    migrations.sort_by_key(|(version, _, _)| *version);
-    Ok(migrations)
-}
-
-fn parse_migration_name(file_name: &str) -> Result<(i64, String)> {
-    let stem = file_name
-        .strip_suffix(".sql")
-        .ok_or_else(|| AppError::internal("MIGRATION_EXTENSION_ERROR", file_name.to_string()))?;
-
-    let (version_part, name_part) = stem.split_once('_').ok_or_else(|| {
-        AppError::internal(
-            "MIGRATION_NAME_ERROR",
-            format!("Expected '<version>_<name>.sql', got '{file_name}'"),
-        )
-    })?;
-
-    let version = version_part.parse::<i64>().map_err(|_| {
-        AppError::internal(
-            "MIGRATION_VERSION_ERROR",
-            format!("Invalid migration version in '{file_name}'"),
-        )
-    })?;
-
-    if name_part.trim().is_empty() {
-        return Err(AppError::internal(
-            "MIGRATION_NAME_ERROR",
-            format!("Migration name is empty in '{file_name}'"),
-        ));
-    }
-
-    Ok((version, name_part.to_string()))
+fn load_migrations() -> &'static [Migration] {
+    MIGRATIONS
 }
 
 fn is_migration_applied(connection: &Connection, version: i64) -> Result<bool> {

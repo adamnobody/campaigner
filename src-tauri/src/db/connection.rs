@@ -20,7 +20,11 @@ impl DatabaseState {
 
 pub fn open_database(app: &AppHandle) -> Result<Connection> {
     let db_path = database_path(app)?;
-    let connection = Connection::open(db_path)?;
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let connection = Connection::open(&db_path)?;
 
     connection.execute_batch(
         r#"

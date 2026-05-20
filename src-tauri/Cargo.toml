@@ -1,6 +1,6 @@
 [package]
 name = "campaigner-tauri"
-version = "0.1.0"
+version = "0.3.0"
 description = "Tauri foundation for Campaigner"
 edition = "2021"
 default-run = "campaigner-tauri"
@@ -27,3 +27,11 @@ tracing = "0.1"
 
 [build-dependencies]
 tauri-build = { version = "2.6.2", features = [] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+debug = false
