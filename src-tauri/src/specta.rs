@@ -49,6 +49,7 @@ use crate::models::graph_layout::{
     DeleteGraphLayoutInput, GetGraphLayoutInput, GraphLayoutDataV1, GraphLayoutNodeState,
     GraphLayoutResponse, GraphLayoutViewport, UpsertGraphLayoutInput,
 };
+use crate::models::legacy_migration::{LegacyMigrationPreview, LegacyMigrationReport};
 use crate::models::map::{
     CreateMapInput, CreateMapMarkerInput, CreateMapTerritoryInput, DeleteMapInput,
     DeleteMapMarkerInput, DeleteMapTerritoryInput, GetMapInput, GetMapTreeInput, GetRootMapInput,
@@ -116,27 +117,27 @@ mod codegen_commands {
         GetFactionAmbitionsInput, GetFactionInput, GetGraphLayoutInput, GetMapInput,
         GetMapTreeInput, GetNoteInput, GetProjectInput, GetRootMapInput, GetTimelineEventInput,
         GraphLayoutDataV1, GraphLayoutResponse, ImportProjectInput, ImportedProjectPayload,
-        ListBranchesInput, ListCharacterTraitsInput, ListFactionMembersInput,
-        ListFactionPoliciesInput, ListFactionRanksInput, ListMapMarkersInput,
-        ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput,
-        ListTerritorySummariesInput, ListWikiCategoriesInput, ListWikiLinksInput, MapMarker,
-        MapRecord, MapTerritory, MapTerritorySummary, MapUploadImageInput, Note, NotesListInput,
-        NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
-        ProjectUploadMapImageInput, RelationshipsListInput, RemoveDynastyMemberInput,
-        ReorderDogmasInput, ReorderDynastyEventsInput, ReorderTimelineInput,
-        ReplaceFactionCustomMetricsInput, ReplacePoliticalScaleAssignmentsInput,
-        SaveDynastyGraphPositionsInput, ScenarioBranch, SearchQueryInput, SearchResult,
-        SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
-        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
-        TimelineListInput, UnassignCharacterTraitInput, UnassignFactionAmbitionInput,
-        UpdateAmbitionExclusionsInput, UpdateAmbitionInput, UpdateBranchInput,
-        UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
-        UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
-        UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
-        UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput, UpdateMapTerritoryInput,
-        UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput, UploadFileInput, UploadSavedPath, UpsertGraphLayoutInput,
-        WikiCategory, WikiLink,
+        LegacyMigrationPreview, LegacyMigrationReport, ListBranchesInput, ListCharacterTraitsInput,
+        ListFactionMembersInput, ListFactionPoliciesInput, ListFactionRanksInput,
+        ListMapMarkersInput, ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput,
+        ListPoliticalScalesInput, ListTerritorySummariesInput, ListWikiCategoriesInput,
+        ListWikiLinksInput, MapMarker, MapRecord, MapTerritory, MapTerritorySummary,
+        MapUploadImageInput, Note, NotesListInput, NotesListResult, PoliticalScale,
+        PoliticalScaleAssignment, Project, ProjectUploadMapImageInput, RelationshipsListInput,
+        RemoveDynastyMemberInput, ReorderDogmasInput, ReorderDynastyEventsInput,
+        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
+        ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
+        SearchQueryInput, SearchResult, SetCharacterTagsInput, SetDogmaTagsInput,
+        SetDynastyTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
+        TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
+        UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
+        UpdateBranchInput, UpdateCharacterInput, UpdateCharacterTraitExclusionsInput,
+        UpdateDogmaInput, UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput,
+        UpdateFactionInput, UpdateFactionMemberInput, UpdateFactionPolicyInput,
+        UpdateFactionRankInput, UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput,
+        UpdateMapTerritoryInput, UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput,
+        UpdateRelationshipInput, UpdateTimelineEventInput, UploadFileInput, UploadSavedPath,
+        UpsertGraphLayoutInput, WikiCategory, WikiLink,
     };
 
     #[tauri::command]
@@ -148,6 +149,26 @@ mod codegen_commands {
             app_version: String::new(),
         }
     }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn check_legacy_migration_available() -> Option<LegacyMigrationPreview> {
+        None
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn run_legacy_migration() -> LegacyMigrationReport {
+        LegacyMigrationReport {
+            imported_counts: Default::default(),
+            uploads_copied: false,
+            errors: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn skip_legacy_migration() {}
 
     #[tauri::command]
     #[specta::specta]
@@ -1689,6 +1710,9 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             codegen_commands::app_health,
+            codegen_commands::check_legacy_migration_available,
+            codegen_commands::run_legacy_migration,
+            codegen_commands::skip_legacy_migration,
             codegen_commands::branches_list,
             codegen_commands::branches_create,
             codegen_commands::branches_update,
@@ -1835,6 +1859,8 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::wiki_categories_list
         ])
         .typ::<AppHealthResponse>()
+        .typ::<LegacyMigrationPreview>()
+        .typ::<LegacyMigrationReport>()
         .typ::<ScenarioBranch>()
         .typ::<ListBranchesInput>()
         .typ::<CreateBranchInput>()

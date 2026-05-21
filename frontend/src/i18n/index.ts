@@ -20,6 +20,7 @@ import settingsEn from './locales/en/settings.json';
 import projectSettingsEn from './locales/en/projectSettings.json';
 import appearanceEn from './locales/en/appearance.json';
 import onboardingEn from './locales/en/onboarding.json';
+import legacyMigrationEn from './locales/en/legacyMigration.json';
 import enCatalogTraits from './locales/en/builtins/catalogTraits.json';
 import enCatalogAmbitions from './locales/en/builtins/catalogAmbitions.json';
 import enPoliticalScalesBuiltin from './locales/en/builtins/politicalScalesBuiltin.json';
@@ -42,6 +43,7 @@ import settingsRu from './locales/ru/settings.json';
 import projectSettingsRu from './locales/ru/projectSettings.json';
 import appearanceRu from './locales/ru/appearance.json';
 import onboardingRu from './locales/ru/onboarding.json';
+import legacyMigrationRu from './locales/ru/legacyMigration.json';
 
 export const NAMESPACES = [
   'common',
@@ -62,6 +64,7 @@ export const NAMESPACES = [
   'projectSettings',
   'appearance',
   'onboarding',
+  'legacyMigration',
 ] as const;
 
 void i18n.use(initReactI18next).init({
@@ -95,6 +98,7 @@ void i18n.use(initReactI18next).init({
       projectSettings: projectSettingsEn,
       appearance: appearanceEn,
       onboarding: onboardingEn,
+      legacyMigration: legacyMigrationEn,
     },
     ru: {
       common: commonRu,
@@ -115,6 +119,7 @@ void i18n.use(initReactI18next).init({
       projectSettings: projectSettingsRu,
       appearance: appearanceRu,
       onboarding: onboardingRu,
+      legacyMigration: legacyMigrationRu,
     },
   },
 });
