@@ -1,0 +1,27 @@
+{
+  "title": "Data from a previous Campaigner version was found",
+  "description": "You can import projects, characters, factions, notes, and related data from version 0.2.0 once. The old database will be opened read-only.",
+  "counts": {
+    "projects": "Projects",
+    "characters": "Characters",
+    "factions": "Factions",
+    "notes": "Notes"
+  },
+  "sourcePath": "Detected database",
+  "import": "Import",
+  "importing": "Importing...",
+  "skip": "Skip",
+  "askLater": "Ask later",
+  "successTitle": "Import complete",
+  "successDescription": "Your data has been moved. Reload the app so the interface can read the imported projects and catalogs.",
+  "reload": "Reload app",
+  "uploadsCopied": "The uploads folder was processed. Existing files were not overwritten.",
+  "uploadsNotFound": "The previous version uploads folder was not found, so data was imported without copying files.",
+  "warningsTitle": "Warnings",
+  "warningsMore": "{{count}} more warnings",
+  "checkFailed": "Could not check for previous version data",
+  "importFailed": "Could not import previous version data",
+  "skipFailed": "Could not save the migration skip choice",
+  "skipSuccess": "Previous version import will not be offered again",
+  "importSuccess": "Previous version data imported"
+}

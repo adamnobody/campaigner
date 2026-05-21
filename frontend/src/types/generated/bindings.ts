@@ -5,6 +5,15 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	appHealth: () => __TAURI_INVOKE<AppHealthResponse>("app_health"),
+	checkLegacyMigrationAvailable: () => __TAURI_INVOKE<{
+	projects: number,
+	characters: number,
+	factions: number,
+	notes: number,
+	sourcePath: string,
+} | null>("check_legacy_migration_available"),
+	runLegacyMigration: () => __TAURI_INVOKE<LegacyMigrationReport>("run_legacy_migration"),
+	skipLegacyMigration: () => __TAURI_INVOKE<void>("skip_legacy_migration"),
 	branchesList: (input: ListBranchesInput) => __TAURI_INVOKE<ScenarioBranch[]>("branches_list", { input }),
 	branchesCreate: (input: CreateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_create", { input }),
 	branchesUpdate: (input: UpdateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_update", { input }),
@@ -1799,6 +1808,20 @@ export type ImportedProjectPayload_Serialize = {
 	dynastyEvents: ExportDynastyEventRow[],
 	scenarioBranches: ExportScenarioBranchRow[],
 	graphLayouts: ExportGraphLayoutRow_Serialize[],
+};
+
+export type LegacyMigrationPreview = {
+	projects: number,
+	characters: number,
+	factions: number,
+	notes: number,
+	sourcePath: string,
+};
+
+export type LegacyMigrationReport = {
+	importedCounts: { [key in string]: number },
+	uploadsCopied: boolean,
+	errors: string[],
 };
 
 export type ListBranchesInput = {
