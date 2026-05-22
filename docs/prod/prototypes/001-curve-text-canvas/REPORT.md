@@ -49,8 +49,10 @@
 **Procedural tiles vs real PNG:** Validation uses **procedural canvas tiles**, not a loaded 16k PNG. Memory profile, decode time, and GPU upload behavior of a real ~250 MB asset are **not** validated here. Main project should re-test with a representative PNG (or production pipeline asset) before locking ADR-0001.
 
 ### Task 3 — Primitive shapes
-- Outcome:
-- Notes:
+- Approach taken: Third demo mode **Primitives demo** (`?mode=primitives`) with React-owned `SceneObject[]` (`sceneTypes.ts`) synced to Pixi via naive clear-and-rebuild (`primitivesBridge.ts`). Toolbar: Polygon / Polyline / Text (toggle off = no tool). Polygon: click vertices, double-click close (≥3 points). Polyline: click vertices, **Enter** finish (≥2 points). Text: click to place, rotation slider in left sidebar updates last placed label. **Pan UX:** no tool → left-drag pan; tool active → **right-drag pan** (`viewport.plugins` drag `mouseButtons: 'right'`). Shape drag uses Task 1 pattern (`stopPropagation` + `pause('drag')` on shape). Pixi v8 Graphics: `moveTo`/`lineTo`/`closePath` + `fill()` / `stroke()`. Esc cancels in-progress shape.
+- Outcome: **Pass** — all three primitives drawable, draggable as whole objects, Tasks 1–2 unchanged via demo dropdown.
+- Screenshots: `screenshots/task3-polygon.png`, `task3-polyline.png`, `task3-text.png`
+- Notes / gotchas: Double-click on polygon may add an extra vertex before close (acceptable for prototype). Text rotation slider applies to last placed label only (no selection UI until Task 4). Playwright screenshot script: `node scripts/capture-task3-screenshots.cjs` with dev server running.
 
 ### Task 4 — Hit-testing
 - Outcome:

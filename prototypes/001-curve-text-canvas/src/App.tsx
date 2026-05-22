@@ -1,13 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { initCurveTextDemo } from './curveTextDemo'
 import { initLargeImageDemo } from './largeImageDemo'
+import { PrimitivesDemo } from './primitives/PrimitivesDemo'
 
-export type DemoMode = 'curve' | 'large'
+export type DemoMode = 'curve' | 'large' | 'primitives'
+
+const MODE_LABELS: Record<DemoMode, string> = {
+  curve: 'Curve text demo',
+  large: 'Large image demo',
+  primitives: 'Primitives demo',
+}
 
 function initialMode(): DemoMode {
-  const params = new URLSearchParams(window.location.search)
-  return params.get('mode') === 'large' ? 'large' : 'curve'
+  const m = new URLSearchParams(window.location.search).get('mode')
+  if (m === 'large') return 'large'
+  if (m === 'primitives') return 'primitives'
+  return 'curve'
 }
 
 function App() {
@@ -16,6 +25,8 @@ function App() {
   const destroyRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
+    if (mode === 'primitives') return
+
     const host = canvasHostRef.current
     if (!host) return
 
@@ -43,16 +54,23 @@ function App() {
     }
   }, [mode])
 
-  const toggleMode = useCallback(() => {
-    setMode((m) => (m === 'curve' ? 'large' : 'curve'))
-  }, [])
-
   return (
     <div className="app-root">
-      <div ref={canvasHostRef} className="canvas-host" />
-      <button type="button" className="mode-switch" onClick={toggleMode}>
-        Switch to: {mode === 'curve' ? 'large image demo' : 'curve text demo'}
-      </button>
+      {mode === 'primitives' ? (
+        <PrimitivesDemo />
+      ) : (
+        <div ref={canvasHostRef} className="canvas-host" />
+      )}
+      <label className="mode-switch">
+        <span>Demo</span>
+        <select value={mode} onChange={(e) => setMode(e.target.value as DemoMode)}>
+          {(Object.keys(MODE_LABELS) as DemoMode[]).map((key) => (
+            <option key={key} value={key}>
+              {MODE_LABELS[key]}
+            </option>
+          ))}
+        </select>
+      </label>
       <div id="bench-results" hidden aria-hidden="true" />
     </div>
   )
