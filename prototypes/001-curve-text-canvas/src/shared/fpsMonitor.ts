@@ -3,7 +3,8 @@ import { Application, Text } from 'pixi.js'
 export type InteractionKind = 'idle' | 'pan' | 'zoom'
 
 export interface FpsSampleRow {
-  zoom: number
+  /** Display label for zoom column (e.g. "0.25" or "fit-all (~0.06)") */
+  zoomLabel: string
   interaction: InteractionKind
   avgFps: number
   minFps: number
@@ -64,6 +65,10 @@ export class FpsMonitor {
     return this.zoom
   }
 
+  getDisplayFps(): number {
+    return this.displayFps
+  }
+
   /** Reset sample buffer for a measurement window. */
   beginSample(): void {
     this.samples.length = 0
@@ -99,7 +104,7 @@ export function formatResultsTable(rows: FpsSampleRow[]): string {
   const sep = '| --- | --- | ---: | ---: | --- |'
   const body = rows.map((r) => {
     const pass = r.minFps >= 30 ? 'yes' : 'NO'
-    return `| ${r.zoom}× | ${r.interaction} | ${r.avgFps} | ${r.minFps} | ${pass} |`
+    return `| ${r.zoomLabel} | ${r.interaction} | ${r.avgFps} | ${r.minFps} | ${pass} |`
   })
   return [header, sep, ...body].join('\n')
 }

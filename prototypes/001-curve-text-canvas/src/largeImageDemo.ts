@@ -108,10 +108,25 @@ export async function initLargeImageDemo(container: HTMLDivElement): Promise<() 
   window.addEventListener('resize', resize)
 
   const params = new URLSearchParams(window.location.search)
-  const win = window as Window & { __proto001BenchStarted?: boolean }
+  const win = window as Window & {
+    __proto001BenchStarted?: boolean
+    __proto001SanityStarted?: boolean
+    __proto001FpsDisplay?: number
+    __proto001SanityResult?: { minFps: number; zoom: number; avgFps: number }
+  }
+
+  app.ticker.add(() => {
+    win.__proto001FpsDisplay = fpsMonitor.getDisplayFps()
+  })
+
   if (params.get('bench') === '1' && !win.__proto001BenchStarted) {
     win.__proto001BenchStarted = true
     void runAutoBenchmark(viewport, fpsMonitor, hud, container)
+  }
+
+  if (params.get('sanity') === '1' && !win.__proto001SanityStarted) {
+    win.__proto001SanityStarted = true
+    void runSanityPanCheck(viewport, fpsMonitor, container, win)
   }
 
   return () => {
@@ -151,7 +166,12 @@ async function runAutoBenchmark(
         interaction === 'idle' ? SAMPLE_MS : interaction === 'pan' ? PAN_ANIM_MS : ZOOM_ANIM_MS,
       )
       driver.stop()
-      rows.push({ zoom, interaction, avgFps, minFps })
+      rows.push({
+        zoomLabel: `${zoom}× (rel. fit)`,
+        interaction,
+        avgFps,
+        minFps,
+      })
       if (sampleCount < 30 || minFps < 30) {
         hud.text = [
           'Benchmark STOP: min FPS < 30 (baseline failure).',
@@ -166,10 +186,40 @@ async function runAutoBenchmark(
     }
   }
 
+  // Worst-case: entire 16k world visible (all 16 tiles on screen), panning
+  applyFitAllZoom(viewport, container)
+  fpsMonitor.setZoom(viewport.scale.x)
+  await sleep(400)
+  fpsMonitor.setInteraction('pan')
+  const worstDriver = startInteractionDriver(viewport, 'pan', container)
+  const worst = await fpsMonitor.measureWindow(PAN_ANIM_MS)
+  worstDriver.stop()
+  const fitScale = viewport.scale.x
+  rows.push({
+    zoomLabel: `fit-all (~${fitScale.toFixed(3)}×)`,
+    interaction: 'pan',
+    avgFps: worst.avgFps,
+    minFps: worst.minFps,
+  })
+  console.warn('[prototype-001] Worst-case (all tiles visible, pan):', worst)
+
   const table = formatResultsTable(rows)
-  hud.text = `Benchmark done (all phases ≥30 min FPS).\n\n${table}`
+  const worstPass = worst.minFps >= 30
+  hud.text = [
+    `Benchmark done. Worst-case min FPS: ${worst.minFps} (${worstPass ? 'pass' : 'FAIL'})`,
+    table,
+  ].join('\n\n')
   console.log('[prototype-001] Task 2 FPS results:\n' + table)
-  publishBenchResults(rows, true)
+  publishBenchResults(rows, worstPass)
+}
+
+/** Zoom so full 16k×16k world (all tiles) fits in the viewport. */
+function applyFitAllZoom(viewport: Viewport, container: HTMLDivElement): void {
+  const scaleX = container.clientWidth / WORLD_WIDTH
+  const scaleY = container.clientHeight / WORLD_HEIGHT
+  const scale = Math.min(scaleX, scaleY) * 0.98
+  viewport.setZoom(scale, true)
+  viewport.moveCenter(WORLD_WIDTH / 2, WORLD_HEIGHT / 2)
 }
 
 function publishBenchResults(rows: FpsSampleRow[], pass: boolean): void {
@@ -178,6 +228,26 @@ function publishBenchResults(rows: FpsSampleRow[], pass: boolean): void {
     el.dataset.results = JSON.stringify({ rows, pass })
     el.dataset.benchDone = 'true'
   }
+}
+
+async function runSanityPanCheck(
+  viewport: Viewport,
+  fpsMonitor: FpsMonitor,
+  container: HTMLDivElement,
+  win: Window & { __proto001SanityResult?: { minFps: number; zoom: number; avgFps: number } },
+): Promise<void> {
+  applyFitAllZoom(viewport, container)
+  fpsMonitor.setZoom(viewport.scale.x)
+  fpsMonitor.setInteraction('pan')
+  const driver = startInteractionDriver(viewport, 'pan', container)
+  const sample = await fpsMonitor.measureWindow(5000)
+  driver.stop()
+  win.__proto001SanityResult = {
+    minFps: sample.minFps,
+    avgFps: sample.avgFps,
+    zoom: viewport.scale.x,
+  }
+  console.log('[prototype-001] Sanity pan (fit-all, 5s):', win.__proto001SanityResult)
 }
 
 function applyZoomLevel(viewport: Viewport, container: HTMLDivElement, level: 0.25 | 1 | 4): void {

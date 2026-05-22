@@ -25,22 +25,28 @@
 - Approach taken: **Procedural 16 384×16 384 background** — no PNG in repo. World split into **16 tiles** (4×4 grid, 4096×4096 px each) via `Texture.from(canvas)` per tile (PixiJS v8 native). Parchment gradient + 256 px grid drawn per tile on first load (~sub-second). Optional manual PNG path documented in `public/assets/README.md` (gitignored); not required for validation. **Mode switch** in UI preserves Task 1 curve demo. FPS overlay top-left; auto-benchmark via `?mode=large&bench=1` (console + `#bench-results`). `playwright` devDependency only for `npm run bench` headless/headed automation script.
 - Outcome: **Pass** on dev machine — tab stable, no crash, heap reported in HUD (Chrome `performance.memory` when available). All benchmark phases **min FPS ≥ 30** (see table). Tiling avoids single 16k GPU texture upload.
 - Max texture size hit?: **No** — tiles are 4096²; `MAX_TEXTURE_SIZE` read from WebGL at runtime and shown in HUD (typically ≥8192 on test hardware).
-- FPS during pan/zoom (automated bench, Chromium headed, `npm run bench` after `npm run dev`):
+- FPS during pan/zoom (automated bench, Playwright **Chromium** headed, `npm run bench` after `npm run dev`). **Vsync:** state not instrumented; sustained ~180 FPS min across phases suggests **vsync off / uncapped** in this environment — numbers are **relative**, not absolute vs a 60 Hz display.
 
 | Zoom | Interaction | Avg FPS | Min FPS | Pass (≥30) |
 | --- | --- | ---: | ---: | --- |
-| 0.25× | idle | 182.0 | 107.5 | yes |
-| 0.25× | pan | 182.7 | 133.3 | yes |
-| 0.25× | zoom | 180.0 | 175.4 | yes |
-| 1× | idle | 180.0 | 175.4 | yes |
-| 1× | pan | 180.0 | 175.4 | yes |
-| 1× | zoom | 180.0 | 169.5 | yes |
-| 4× | idle | 180.0 | 172.4 | yes |
-| 4× | pan | 180.0 | 175.4 | yes |
-| 4× | zoom | 180.0 | 172.4 | yes |
+| 0.25× (rel. fit) | idle | 179.6 | 89.3 | yes |
+| 0.25× (rel. fit) | pan | 180.0 | 172.4 | yes |
+| 0.25× (rel. fit) | zoom | 180.0 | 166.7 | yes |
+| 1× (rel. fit) | idle | 180.0 | 175.4 | yes |
+| 1× (rel. fit) | pan | 180.0 | 175.4 | yes |
+| 1× (rel. fit) | zoom | 180.0 | 175.4 | yes |
+| 4× (rel. fit) | idle | 180.0 | 172.4 | yes |
+| 4× (rel. fit) | pan | 180.0 | 175.4 | yes |
+| 4× (rel. fit) | zoom | 180.0 | 175.4 | yes |
+| **fit-all (~0.043×) — worst case: all 16 tiles visible** | **pan** | **180.0** | **175.4** | **yes** |
 
-- Screenshot: `screenshots/task2-large-bg.png` (capture large-image demo at 1× zoom after load)
-- Notes: Re-run manual check in your Chromium/Tauri webview: switch to **large image demo**, pan/zoom, confirm HUD heap **&lt; 2 GB** and FPS overlay stays ≥30. StrictMode removed in `main.tsx` to avoid double Pixi teardown. If min FPS &lt;30 on your GPU, document before optimizing (per SPEC). Headless Playwright without GPU gave invalid 0 FPS samples — headed bench used for table above.
+- **Worst-case interpretation:** `fit-all` zoom fits the entire 16 384×16 384 world on screen (all 16 tiles drawn). Rel. 0.25×/1×/4× rows are relative to “fit viewport” and do **not** guarantee all tiles visible — high FPS there can be misleading; the fit-all row is the stress case.
+- **Google Chrome (vsync-respecting) manual row:** not captured on agent machine (Playwright `channel: 'chrome'` unavailable). **Please run locally:** `npm run dev`, then `node scripts/chrome-worst-case.cjs`, or open `?mode=large&bench=1` in desktop Chrome and read the fit-all row in the HUD/console.
+- **Agent sanity (5 s pan at fit-all, Playwright Chromium):** min FPS **~90** observed (`?mode=large&sanity=1` / `node scripts/sanity-check.cjs`); still ≥30, no optimization attempted.
+- Screenshot: `screenshots/task2-large-bg.png` (capture large-image demo at fit-all zoom after load)
+- Notes: Re-run in your Chromium/Tauri webview; confirm HUD heap **&lt; 2 GB**. Headless Playwright without GPU gave invalid 0 FPS — do not use for validation.
+
+**Procedural tiles vs real PNG:** Validation uses **procedural canvas tiles**, not a loaded 16k PNG. Memory profile, decode time, and GPU upload behavior of a real ~250 MB asset are **not** validated here. Main project should re-test with a representative PNG (or production pipeline asset) before locking ADR-0001.
 
 ### Task 3 — Primitive shapes
 - Outcome:
@@ -60,8 +66,8 @@
 
 ## Acceptance checklist
 
-- [ ] Curve text follows a user-drawn Bézier and remains readable at
-      0.25× / 1× / 4× zoom.
+- [x] Curve text follows a user-drawn Bézier and remains readable at
+      0.25× / 1× / 4× zoom (Task 1 approved).
 - [x] 16k × 16k PNG pans/zooms at ≥ 30 FPS (procedural tiled 16k; see Task 2 FPS table).
 - [ ] 1k polygons + 1k labels at ≥ 30 FPS.
 - [ ] Hit-testing works for all shape kinds incl. curve text.
@@ -73,6 +79,11 @@
 
 <one paragraph justification>
 
+## Technical debt / carry-over to main project
+
+- **StrictMode disabled** in `prototypes/001-curve-text-canvas/src/main.tsx` due to incomplete Pixi `Application` teardown in the React `useEffect` cleanup (double-mount under StrictMode leaves duplicate listeners/textures). Acceptable for this throwaway prototype; **main project must implement proper `destroy()` + listener removal before re-enabling StrictMode.**
+
 ## Lessons / snippets worth keeping for mainline
 
+- Tiled 4096² sprites for 16k worlds; fit-all zoom is the FPS stress case, not rel. 0.25×.
 - ...

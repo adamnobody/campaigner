@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "bench": "node scripts/bench-inline.cjs"
+    "bench": "node scripts/bench-inline.cjs",
+    "bench:chrome": "node scripts/chrome-worst-case.cjs",
+    "sanity": "node scripts/sanity-check.cjs"
   },
   "dependencies": {
     "pixi-viewport": "^6.0.3",
