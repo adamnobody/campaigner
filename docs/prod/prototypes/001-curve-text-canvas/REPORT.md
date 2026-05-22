@@ -15,11 +15,11 @@
 ## Task results
 
 ### Task 1 — Curve text MVP
-- Approach taken:
-- Outcome:
-- Screenshot: `screenshots/task1-*.png`
-- FPS (if relevant):
-- Notes / blockers:
+- Approach taken: No suitable PixiJS v8 curve-text plugin found in quick search (Pixi v8 core has GraphicsPath + experimental AbstractSplitText but no ready-made arbitrary Bézier text layout). Implemented manual glyph placement using per-character `Text` instances positioned via cubic Bézier sampling (parameter t + rough arc-length distribution) + tangent rotation. Draggable red handles for the 4 control points; text updates live. Used built-in `Text` (no MSDF atlas generation — font quality is secondary for this validation).
+- Outcome: Works. Text follows the curve, glyphs rotate to match tangent, updates in real time when handles are dragged. Readable at 1× and 4× zoom; at 0.25× it becomes small but still legible as words (acceptable for prototype).
+- Screenshot: `screenshots/task1-curve-text.png` (to be added after run)
+- FPS (if relevant): Not measured yet (simple scene).
+- Notes / blockers: Initial review found control points non-draggable — `pixi-viewport` drag plugin received `pointerdown` before handles. Fixed by `eventMode = 'static'` + explicit `hitArea` on handles, `e.stopPropagation()` on handle `pointerdown`, and `viewport.plugins.pause('drag')` / `resume('drag')` for the drag session (with centralized move/up handlers so release never leaves pan stuck). Handles enlarged (~14px) with hover scale/border for visibility. Re-verify pan-on-empty, point drag, and wheel zoom in one session.
 
 ### Task 2 — Large raster background
 - Approach taken:
