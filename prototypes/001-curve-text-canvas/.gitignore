@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Large manual test assets (Task 2) — not committed
+assets/*.png
+assets/*.jpg
+public/assets/*.png
+public/assets/*.jpg
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
