@@ -6,10 +6,21 @@
 campaigner
 ├─ data
 ├─ docs
-│  └─ ideas
-│     ├─ ideas-backlog.md
-│     ├─ ideas-dumb.md
-│     └─ ideas-prompt.md
+│  ├─ ideas
+│  │  ├─ Campaigner - План развития продукта.xlsx
+│  │  ├─ ideas-backlog.md
+│  │  ├─ ideas-dumb.md
+│  │  └─ ideas-prompt.md
+│  ├─ prod
+│  │  ├─ adr
+│  │  │  ├─ 0001-canvas-rendering-technology.md
+│  │  │  ├─ README.md
+│  │  │  └─ template.md
+│  │  └─ prototypes
+│  │     └─ 001-curve-text-canvas
+│  │        ├─ REPORT.md
+│  │        └─ SPEC.md
+│  └─ legacy-electron-import-manual-test.md
 ├─ frontend
 │  ├─ public
 │  │  ├─ ambitions
@@ -97,6 +108,7 @@ campaigner
 │  │  │  ├─ dynasties.ts
 │  │  │  ├─ factions.ts
 │  │  │  ├─ graphLayout.ts
+│  │  │  ├─ legacyMigration.ts
 │  │  │  ├─ maps.ts
 │  │  │  ├─ notes.ts
 │  │  │  ├─ politicalScales.ts
@@ -127,28 +139,29 @@ campaigner
 │  │  │  │  ├─ ThemePresetSelector.tsx
 │  │  │  │  ├─ ThemePreviewCard.tsx
 │  │  │  │  └─ ThemeSliderControl.tsx
-│  │  │  └─ ui
-│  │  │     ├─ AssetAvatar.tsx
-│  │  │     ├─ BranchEntityMissingDialog.tsx
-│  │  │     ├─ ConfirmDialog.tsx
-│  │  │     ├─ DndButton.tsx
-│  │  │     ├─ EditExclusionsDialog.tsx
-│  │  │     ├─ EmptyState.tsx
-│  │  │     ├─ EntityHeroLayout.tsx
-│  │  │     ├─ EntityTabs.tsx
-│  │  │     ├─ ErrorBoundary.tsx
-│  │  │     ├─ ExclusionOverlay.tsx
-│  │  │     ├─ FlipCard.tsx
-│  │  │     ├─ FloatingOrb.tsx
-│  │  │     ├─ GlassCard.tsx
-│  │  │     ├─ GlobalSnackbar.tsx
-│  │  │     ├─ LanguageSwitcher.tsx
-│  │  │     ├─ LoadingScreen.tsx
-│  │  │     ├─ SearchDialog.tsx
-│  │  │     ├─ SectionHeader.tsx
-│  │  │     ├─ SplashScreen.tsx
-│  │  │     ├─ splashTipKeys.ts
-│  │  │     └─ StyleCustomizer.tsx
+│  │  │  ├─ ui
+│  │  │  │  ├─ AssetAvatar.tsx
+│  │  │  │  ├─ BranchEntityMissingDialog.tsx
+│  │  │  │  ├─ ConfirmDialog.tsx
+│  │  │  │  ├─ DndButton.tsx
+│  │  │  │  ├─ EditExclusionsDialog.tsx
+│  │  │  │  ├─ EmptyState.tsx
+│  │  │  │  ├─ EntityHeroLayout.tsx
+│  │  │  │  ├─ EntityTabs.tsx
+│  │  │  │  ├─ ErrorBoundary.tsx
+│  │  │  │  ├─ ExclusionOverlay.tsx
+│  │  │  │  ├─ FlipCard.tsx
+│  │  │  │  ├─ FloatingOrb.tsx
+│  │  │  │  ├─ GlassCard.tsx
+│  │  │  │  ├─ GlobalSnackbar.tsx
+│  │  │  │  ├─ LanguageSwitcher.tsx
+│  │  │  │  ├─ LoadingScreen.tsx
+│  │  │  │  ├─ SearchDialog.tsx
+│  │  │  │  ├─ SectionHeader.tsx
+│  │  │  │  ├─ SplashScreen.tsx
+│  │  │  │  ├─ splashTipKeys.ts
+│  │  │  │  └─ StyleCustomizer.tsx
+│  │  │  └─ LegacyMigrationDialog.tsx
 │  │  ├─ hooks
 │  │  │  ├─ useAssetUrl.ts
 │  │  │  ├─ useDebounce.ts
@@ -172,6 +185,7 @@ campaigner
 │  │  │  │  │  ├─ dynasties.json
 │  │  │  │  │  ├─ factions.json
 │  │  │  │  │  ├─ graph.json
+│  │  │  │  │  ├─ legacyMigration.json
 │  │  │  │  │  ├─ map.json
 │  │  │  │  │  ├─ navigation.json
 │  │  │  │  │  ├─ notes.json
@@ -191,6 +205,7 @@ campaigner
 │  │  │  │     ├─ dynasties.json
 │  │  │  │     ├─ factions.json
 │  │  │  │     ├─ graph.json
+│  │  │  │     ├─ legacyMigration.json
 │  │  │  │     ├─ map.json
 │  │  │  │     ├─ navigation.json
 │  │  │  │     ├─ notes.json
@@ -358,7 +373,6 @@ campaigner
 │  ├─ tsconfig.json
 │  └─ vite.config.ts
 ├─ scripts
-│  ├─ db
 │  ├─ en-catalog
 │  │  ├─ ambitions-en.json
 │  │  ├─ political-axes-en.json
@@ -441,6 +455,7 @@ campaigner
 │  │  │  ├─ dynasties.rs
 │  │  │  ├─ factions.rs
 │  │  │  ├─ graph_layouts.rs
+│  │  │  ├─ legacy_migration.rs
 │  │  │  ├─ maps.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ notes.rs
@@ -454,6 +469,7 @@ campaigner
 │  │  │  └─ wiki.rs
 │  │  ├─ db
 │  │  │  ├─ connection.rs
+│  │  │  ├─ legacy_migration.rs
 │  │  │  ├─ migrations.rs
 │  │  │  └─ mod.rs
 │  │  ├─ models
@@ -466,6 +482,7 @@ campaigner
 │  │  │  ├─ dynasty.rs
 │  │  │  ├─ faction.rs
 │  │  │  ├─ graph_layout.rs
+│  │  │  ├─ legacy_migration.rs
 │  │  │  ├─ map.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ note.rs
