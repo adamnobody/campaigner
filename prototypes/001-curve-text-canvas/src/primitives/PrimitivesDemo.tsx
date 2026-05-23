@@ -14,75 +14,124 @@ import {
   type PrimitivesBridge,
 } from './primitivesBridge'
 
-const DOUBLE_CLICK_MS = 300
-const DOUBLE_CLICK_DIST_PX = 5
+/** True duplicate: both clicks of a double-click on the same screen pixel. */
+const CLOSE_DUPLICATE_SCREEN_PX = 3
 
 export function PrimitivesDemo() {
   const canvasHostRef = useRef<HTMLDivElement>(null)
   const bridgeRef = useRef<PrimitivesBridge | null>(null)
   const toolRef = useRef<DrawTool | null>(null)
   const textRotRef = useRef(0)
-  const lastClickRef = useRef<{ t: number; x: number; y: number } | null>(null)
+  const inProgressRef = useRef<InProgressShape | null>(null)
 
   const [objects, setObjects] = useState<SceneObject[]>([])
   const [activeTool, setActiveTool] = useState<DrawTool | null>(null)
   const [inProgress, setInProgress] = useState<InProgressShape | null>(null)
-  const [selectedTextId, setSelectedTextId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [textRotationDeg, setTextRotationDeg] = useState(0)
+  const objectsRef = useRef(objects)
 
   toolRef.current = activeTool
   textRotRef.current = textRotationDeg
+  inProgressRef.current = inProgress
+  objectsRef.current = objects
+
+  const addPolygonVertex = useCallback((world: [number, number]) => {
+    setInProgress((prog) => {
+      const pts = prog?.kind === 'polygon' ? prog.points : []
+      const next: InProgressShape = { kind: 'polygon', points: [...pts, world] }
+      inProgressRef.current = next
+      return next
+    })
+  }, [])
+
+  /** Enter — close with all current vertices (no pop). */
+  const commitPolygon = useCallback(() => {
+    const prog = inProgressRef.current
+    if (!prog || prog.kind !== 'polygon' || prog.points.length < 3) {
+      setInProgress(null)
+      return false
+    }
+    const points = [...prog.points]
+    setObjects((objs) => [
+      ...objs,
+      { id: newId(), kind: 'polygon', points, fill: DEFAULT_POLYGON_FILL },
+    ])
+    setInProgress(null)
+    setActiveTool(null)
+    return true
+  }, [])
+
+  /**
+   * Double-click adds the final vertex (first click of the pair) then closes.
+   * Pop only when the last two vertices are a true duplicate (< 3 screen px).
+   */
+  const closePolygonFromDoubleClick = useCallback(() => {
+    const prog = inProgressRef.current
+    if (!prog || prog.kind !== 'polygon') return
+    let points = [...prog.points]
+    const n = points.length
+    if (n >= 2) {
+      const screenDist =
+        bridgeRef.current?.screenDistanceBetweenWorldPoints(
+          points[n - 1],
+          points[n - 2],
+        ) ?? Infinity
+      if (screenDist < CLOSE_DUPLICATE_SCREEN_PX) {
+        points.pop()
+      }
+    }
+    if (points.length < 3) {
+      inProgressRef.current = null
+      setInProgress(null)
+      return
+    }
+    setObjects((objs) => [
+      ...objs,
+      { id: newId(), kind: 'polygon', points, fill: DEFAULT_POLYGON_FILL },
+    ])
+    inProgressRef.current = null
+    setInProgress(null)
+    setActiveTool(null)
+  }, [])
+
+  const finishPolyline = useCallback(() => {
+    const prog = inProgressRef.current
+    if (!prog || prog.kind !== 'polyline' || prog.points.length < 2) return
+    const points = [...prog.points]
+    setObjects((objs) => [
+      ...objs,
+      { id: newId(), kind: 'polyline', points, stroke: DEFAULT_POLYLINE_STROKE },
+    ])
+    setInProgress(null)
+    setActiveTool(null)
+  }, [])
 
   const callbacksRef = useRef<BridgeCallbacks>({
     getActiveTool: () => null,
+    getObjects: () => [],
+    onSelect: () => {},
     onCanvasClick: () => {},
+    onPolygonDoubleClick: () => {},
     onShapeDragMove: () => {},
     onShapeDragEnd: () => {},
   })
 
-  const finishPolyline = useCallback(() => {
-    setInProgress((prog) => {
-      if (!prog || prog.kind !== 'polyline' || prog.points.length < 2) return prog
-      const id = newId()
-      setObjects((objs) => [
-        ...objs,
-        { id, kind: 'polyline', points: [...prog.points], stroke: DEFAULT_POLYLINE_STROKE },
-      ])
-      return null
-    })
-  }, [])
-
   callbacksRef.current = {
     getActiveTool: () => toolRef.current,
+    getObjects: () => objectsRef.current,
+    onSelect: (id) => {
+      setSelectedId(id)
+      if (id) {
+        const obj = objectsRef.current.find((o) => o.id === id)
+        if (obj?.kind === 'text') {
+          setTextRotationDeg(Math.round((obj.rotation * 180) / Math.PI))
+        }
+      }
+    },
     onCanvasClick: (world) => {
       const tool = toolRef.current
       if (!tool) return
-
-      const now = performance.now()
-      const last = lastClickRef.current
-      const isDoubleClick =
-        tool === 'polygon' &&
-        last !== null &&
-        now - last.t < DOUBLE_CLICK_MS &&
-        Math.hypot(world[0] - last.x, world[1] - last.y) < DOUBLE_CLICK_DIST_PX
-
-      if (isDoubleClick) {
-        lastClickRef.current = null
-        setInProgress((prog) => {
-          if (!prog || prog.kind !== 'polygon' || prog.points.length < 3) {
-            return null
-          }
-          const points = [...prog.points]
-          setObjects((objs) => [
-            ...objs,
-            { id: newId(), kind: 'polygon', points, fill: DEFAULT_POLYGON_FILL },
-          ])
-          return null
-        })
-        return
-      }
-
-      lastClickRef.current = { t: now, x: world[0], y: world[1] }
 
       if (tool === 'text') {
         const id = newId()
@@ -91,15 +140,12 @@ export function PrimitivesDemo() {
           ...objs,
           { id, kind: 'text', x: world[0], y: world[1], rotation, content: DEFAULT_TEXT },
         ])
-        setSelectedTextId(id)
+        setSelectedId(id)
         return
       }
 
       if (tool === 'polygon') {
-        setInProgress((prog) => {
-          const pts = prog?.kind === 'polygon' ? prog.points : []
-          return { kind: 'polygon', points: [...pts, world] }
-        })
+        addPolygonVertex(world)
         return
       }
 
@@ -108,6 +154,7 @@ export function PrimitivesDemo() {
         return { kind: 'polyline', points: [...pts, world] }
       })
     },
+    onPolygonDoubleClick: closePolygonFromDoubleClick,
     onShapeDragMove: (id, dx, dy) => {
       setObjects((objs) =>
         objs.map((o) => {
@@ -137,7 +184,10 @@ export function PrimitivesDemo() {
     void (async () => {
       const bridge = await createPrimitivesBridge(host, {
         getActiveTool: () => callbacksRef.current.getActiveTool(),
+        getObjects: () => callbacksRef.current.getObjects(),
+        onSelect: (id) => callbacksRef.current.onSelect(id),
         onCanvasClick: (w) => callbacksRef.current.onCanvasClick(w),
+        onPolygonDoubleClick: () => callbacksRef.current.onPolygonDoubleClick(),
         onShapeDragMove: (id, dx, dy) => callbacksRef.current.onShapeDragMove(id, dx, dy),
         onShapeDragEnd: (id) => callbacksRef.current.onShapeDragEnd(id),
       })
@@ -157,43 +207,73 @@ export function PrimitivesDemo() {
   }, [])
 
   useEffect(() => {
-    bridgeRef.current?.reconcile({ objects, inProgress, textRotationDeg })
-  }, [objects, inProgress, textRotationDeg])
+    bridgeRef.current?.reconcile({ objects, inProgress, textRotationDeg, selectedId })
+  }, [objects, inProgress, textRotationDeg, selectedId])
 
   useEffect(() => {
     bridgeRef.current?.setPanForTool(activeTool !== null)
   }, [activeTool])
 
   useEffect(() => {
-    if (!selectedTextId) return
+    const w = window as Window & {
+      __proto001Debug?: {
+        objects: SceneObject[]
+        inProgress: InProgressShape | null
+        selectedId: string | null
+        activeTool: DrawTool | null
+      }
+      __proto001ScreenToWorld?: (clientX: number, clientY: number) => [number, number]
+      __proto001WorldDistScreen?: (a: [number, number], b: [number, number]) => number
+      __proto001HasSelectionOutline?: () => boolean
+      __proto001HitTestAtClient?: (clientX: number, clientY: number) => string | null
+    }
+    w.__proto001Debug = { objects, inProgress, selectedId, activeTool: activeTool }
+    w.__proto001HasSelectionOutline = () => bridgeRef.current?.hasSelectionOutline() ?? false
+    w.__proto001HitTestAtClient = (clientX: number, clientY: number) =>
+      bridgeRef.current?.hitTestAtClient(clientX, clientY) ?? null
+    w.__proto001ScreenToWorld = (clientX, clientY) =>
+      bridgeRef.current?.clientToWorld(clientX, clientY) ?? [0, 0]
+    w.__proto001WorldDistScreen = (a, b) =>
+      bridgeRef.current?.screenDistanceBetweenWorldPoints(a, b) ?? Infinity
+  }, [objects, inProgress, selectedId, activeTool])
+
+  useEffect(() => {
+    if (!selectedId) return
+    const sel = objectsRef.current.find((o) => o.id === selectedId)
+    if (!sel || sel.kind !== 'text') return
     const rad = (textRotationDeg * Math.PI) / 180
     setObjects((objs) =>
       objs.map((o) =>
-        o.id === selectedTextId && o.kind === 'text' ? { ...o, rotation: rad } : o,
+        o.id === selectedId && o.kind === 'text' ? { ...o, rotation: rad } : o,
       ),
     )
-  }, [textRotationDeg, selectedTextId])
+  }, [textRotationDeg, selectedId])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        inProgressRef.current = null
         setInProgress(null)
-        lastClickRef.current = null
         return
       }
-      if (e.key === 'Enter' && toolRef.current === 'polyline') {
-        e.preventDefault()
-        finishPolyline()
+      if (e.key === 'Enter') {
+        if (toolRef.current === 'polyline') {
+          e.preventDefault()
+          finishPolyline()
+        } else if (toolRef.current === 'polygon') {
+          e.preventDefault()
+          commitPolygon()
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [finishPolyline])
+  }, [finishPolyline, commitPolygon])
 
   const selectTool = (tool: DrawTool) => {
     setActiveTool((t) => (t === tool ? null : tool))
+    inProgressRef.current = null
     setInProgress(null)
-    lastClickRef.current = null
   }
 
   return (
@@ -222,10 +302,13 @@ export function PrimitivesDemo() {
           Text
         </button>
         <span className="primitives-hint">
-          {activeTool === 'polygon' && 'Click vertices, double-click to close. Esc cancel.'}
-          {activeTool === 'polyline' && 'Click vertices, Enter to finish. Esc cancel.'}
-          {activeTool === 'text' && 'Click to place label. Esc cancel.'}
-          {!activeTool && 'No tool: left-drag pan. With tool: right-drag pan.'}
+          {activeTool === 'polygon' &&
+            'Click vertices, double-click to close (or Enter). Esc cancel. Right-drag pan.'}
+          {activeTool === 'polyline' &&
+            'Click vertices, Enter to finish. Esc cancel. Right-drag pan.'}
+          {activeTool === 'text' && 'Click to place label. Esc cancel. Right-drag pan.'}
+          {!activeTool &&
+            'Click to select · drag to move · empty click deselects. Right-drag pan.'}
         </span>
       </div>
       <div className="primitives-sidebar">

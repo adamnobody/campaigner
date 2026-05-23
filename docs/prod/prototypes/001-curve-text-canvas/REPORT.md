@@ -49,14 +49,25 @@
 **Procedural tiles vs real PNG:** Validation uses **procedural canvas tiles**, not a loaded 16k PNG. Memory profile, decode time, and GPU upload behavior of a real ~250 MB asset are **not** validated here. Main project should re-test with a representative PNG (or production pipeline asset) before locking ADR-0001.
 
 ### Task 3 — Primitive shapes
-- Approach taken: Third demo mode **Primitives demo** (`?mode=primitives`) with React-owned `SceneObject[]` (`sceneTypes.ts`) synced to Pixi via naive clear-and-rebuild (`primitivesBridge.ts`). Toolbar: Polygon / Polyline / Text (toggle off = no tool). Polygon: click vertices, double-click close (≥3 points). Polyline: click vertices, **Enter** finish (≥2 points). Text: click to place, rotation slider in left sidebar updates last placed label. **Pan UX:** no tool → left-drag pan; tool active → **right-drag pan** (`viewport.plugins` drag `mouseButtons: 'right'`). Shape drag uses Task 1 pattern (`stopPropagation` + `pause('drag')` on shape). Pixi v8 Graphics: `moveTo`/`lineTo`/`closePath` + `fill()` / `stroke()`. Esc cancels in-progress shape.
-- Outcome: **Pass** — all three primitives drawable, draggable as whole objects, Tasks 1–2 unchanged via demo dropdown.
-- Screenshots: `screenshots/task3-polygon.png`, `task3-polyline.png`, `task3-text.png`
-- Notes / gotchas: Double-click on polygon may add an extra vertex before close (acceptable for prototype). Text rotation slider applies to last placed label only (no selection UI until Task 4). Playwright screenshot script: `node scripts/capture-task3-screenshots.cjs` with dev server running.
+- Approach taken: Third demo mode **Primitives demo** (`?mode=primitives`) with React-owned `SceneObject[]` (`sceneTypes.ts`) synced to Pixi via naive clear-and-rebuild (`primitivesBridge.ts`). Toolbar: Polygon / Polyline / Text (toggle off = no tool). Polygon: DOM `click` (`detail > 1` skipped) adds vertices; DOM `dblclick` commits ring (final vertex kept); pop only if tail duplicate &lt; 3 screen px; **Enter** closes without adding. Polyline: click vertices, **Enter** finish (≥2 points). Text: click to place (`"Label"`, 24px bold white + black stroke), rotation slider updates last placed label. **Pan UX:** no tool → left-drag pan; tool active → **right-drag pan**. Shape drag: Task 1 pattern on polygon, polyline, and text.
+- Outcome: **Pass** (post-review fixes) — polygon closes correctly; polygon / polyline / text all draggable as whole objects.
+- Screenshots: `screenshots/task3-polygon.png` (closed filled pentagon, zoomed at dblclick final vertex), `task3-polyline.png`, `task3-text.png` (rotated readable label), `task3-drag.png` (polygon after drag).
+- Drag verified: whole-object drag moves all vertices (polygon/polyline) or label position (text); see `task3-drag.png`.
+- Smoke (Tasks 1–2 after Task 3 changes): curve-text demo still drags control points; large-image demo still pans — automated via `node scripts/smoke-demos.cjs` with dev server.
+- Notes / gotchas: **Polygon close (mouse):** single click = add vertex; **double-click at a new point** = add final vertex (first click of pair; `detail > 1` skipped) **and** commit — no pop unless last two verts are &lt; 3 screen px apart (true duplicate). **Enter** closes without adding. **Drag:** DOM pointer gesture + `suppressNextClick` prevents synthetic `click` after shape drag or pointer move &gt; 3 px. `verify-polygon-close.cjs` covers dblclick-close, polygon drag, and empty-canvas drag. Tool switch discards in-progress shape.
 
-### Task 4 — Hit-testing
-- Outcome:
-- Notes:
+### Screenshot checklist (agent — before every commit to `screenshots/`)
+
+1. Open the saved PNG and **look at it** (do not trust the capture script alone).
+2. Confirm it shows the **claimed state** (e.g. polygon = **blue fill**, closed outline, **no** preview vertex dots / dashed in-progress path).
+3. If wrong → retake; do not commit.
+4. Task 4+: selection = visible dashed bbox or tint on the selected object.
+
+### Task 4 — Hit-testing & selection
+- Approach taken: DOM `pointerdown` (capture on canvas) runs `hitTestTopmost` in world space (reverse paint order). **Polygon:** ray-casting even-odd `pointInPolygon` (concave-safe). **Polyline:** min distance to segments ≤ 5 screen px converted to world via viewport scale. **Text:** axis-aligned bbox in local rotated space (char-width heuristic, same as Task 3 labels). **Curve text:** not in primitives demo — would use union of glyph bboxes when curve-text mode shares this bridge. **Feedback:** dashed axis-aligned bbox from `boundsOfObject` + `selectionOutline.ts` (not object tint). Shape `eventMode = 'none'`; hits go through bridge only. Miss → `onSelect(null)`; hit → select + shape drag (Task 3 pattern). Draw tools auto-off after polygon close / polyline Enter so selection mode is default.
+- Outcome: **Pass** — `node scripts/verify-selection.cjs` (with `PROTO_URL`); includes Task 3 polygon-close regression subprocess.
+- Screenshots: [`task4-concave-hit.png`](screenshots/task4-concave-hit.png) (L selected, dashed bbox), [`task4-polyline-hit.png`](screenshots/task4-polyline-hit.png), [`task4-overlap.png`](screenshots/task4-overlap.png) (front polygon on top after drag-overlap click).
+- Notes / quirks: Empty-canvas deselect must click **on the canvas**, not the left sidebar overlay (verify uses upper-right ~0.88, 0.18). Automated overlap test draws two rects apart, drags front over back, then clicks overlap. `pointerHitId` + `suppressNextClick` unchanged for draw tools. Only single selection.
 
 ### Task 5 — Stress test
 - 1 000 polygons + 1 000 labels: FPS =
@@ -72,7 +83,7 @@
       0.25× / 1× / 4× zoom (Task 1 approved).
 - [x] 16k × 16k PNG pans/zooms at ≥ 30 FPS (procedural tiled 16k; see Task 2 FPS table).
 - [ ] 1k polygons + 1k labels at ≥ 30 FPS.
-- [ ] Hit-testing works for all shape kinds incl. curve text.
+- [x] Hit-testing works for polygon / polyline / text in primitives demo (curve text N/A here; Task 1 curve demo separate).
 - [ ] PNG export works.
 
 ## Verdict
