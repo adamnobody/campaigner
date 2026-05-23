@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (pending curve-text prototype validation — see "Validation")
+Status: Accepted
+Accepted: 2026-05-22
+Validated by: Prototype 001 — see docs/prod/prototypes/001-curve-text-canvas/REPORT.md
 
 ## Context
 
@@ -185,3 +187,9 @@ activated and this ADR is amended.
 - Excalidraw architecture (reference for Canvas 2D editor):
   https://github.com/excalidraw/excalidraw
 - Roadmap items CV01–CV05 (internal roadmap document).
+
+## Validation outcome
+
+Prototype 001 completed all six validation tasks and recorded **VERDICT: GO** in `docs/prod/prototypes/001-curve-text-canvas/REPORT.md`: curve text along a Bézier, large raster-style tiled background, primitive drawing, hit-testing and selection, 2 000-object stress testing, and viewport PNG export were all demonstrated. The five ADR acceptance criteria are treated as validated for starting mainline 0.3.1 work, with documented partial coverage that must be closed in mainline: curve-text click selection was deferred, and the 16k background validation used procedural 4096² tiles rather than decoding a real 16 000 × 16 000 PNG file.
+
+The remaining deferred work is tracked in `docs/prod/prototypes/001-curve-text-canvas/CARRYOVER.md`: three open items must be closed or explicitly re-deferred during mainline 0.3.1 (`Curve text click selection`, `Real 16 000 × 16 000 PNG background on min-spec hardware`, and `Incremental scene reconciliation`). The measured prototype numbers were: fit-all pan on the 16 384 × 16 384 tiled background averaged **180.0 FPS** with **175.4 FPS minimum**; the 2 000-object stress test measured **60.1 / 54.1 FPS** idle, **60.2 / 52.1 FPS** pan, and **60.2 / 52.4 FPS** zoom (average / minimum); viewport export produced a small-scene PNG of approximately **22 KB** and a stress-scene PNG of approximately **293 KB**.
