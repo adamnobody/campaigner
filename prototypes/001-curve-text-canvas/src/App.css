@@ -109,6 +109,25 @@
   color: #888;
 }
 
+.primitives-stress-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  background: #3a2848;
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.primitives-stress-btn:hover {
+  background: #4a3458;
+}
+
 .primitives-canvas {
   flex: 1;
   min-height: 0;

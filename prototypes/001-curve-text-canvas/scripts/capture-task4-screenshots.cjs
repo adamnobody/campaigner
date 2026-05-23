@@ -30,7 +30,7 @@ const BASE = process.env.PROTO_URL || 'http://localhost:5173'
   // L-polygon selected inside shape
   await go()
   let b = await box()
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   for (const [x, y] of [
     [0.32, 0.32],
     [0.58, 0.32],
@@ -68,7 +68,7 @@ const BASE = process.env.PROTO_URL || 'http://localhost:5173'
   // Overlap — front dragged over back, topmost selected
   await go()
   b = await box()
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   for (const [x, y] of [
     [0.28, 0.38],
     [0.42, 0.38],
@@ -80,7 +80,7 @@ const BASE = process.env.PROTO_URL || 'http://localhost:5173'
   }
   await page.mouse.dblclick(cx(b, 0.28), cy(b, 0.54))
   await page.waitForTimeout(400)
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   for (const [x, y] of [
     [0.58, 0.38],
     [0.72, 0.38],

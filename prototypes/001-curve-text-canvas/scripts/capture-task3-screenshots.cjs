@@ -30,7 +30,7 @@ const BASE = process.env.PROTO_URL || 'http://localhost:5173'
 
   // Closed pentagon: 4 singles + dblclick at 5th corner; zoom to that vertex
   await goPrimitives()
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   let b = await box()
   const singles = [
     [cx(b, 0.28), cy(b, 0.28)],
@@ -62,7 +62,7 @@ const BASE = process.env.PROTO_URL || 'http://localhost:5173'
   if (check.n !== 5 || check.inProgress || check.px > 8) {
     throw new Error(`polygon screenshot precheck failed: ${JSON.stringify(check)}`)
   }
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   await page.mouse.move(close[0], close[1])
   for (let i = 0; i < 12; i++) await page.mouse.wheel(0, -120)
   await page.waitForTimeout(400)
@@ -81,7 +81,7 @@ const BASE = process.env.PROTO_URL || 'http://localhost:5173'
 
   // Drag: closed pentagon moved — no phantom vertex at drop (see REPORT screenshot checklist)
   await goPrimitives()
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   b = await box()
   const dragSingles = [
     [cx(b, 0.28), cy(b, 0.28)],

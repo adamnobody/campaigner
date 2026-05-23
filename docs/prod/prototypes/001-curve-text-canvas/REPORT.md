@@ -70,8 +70,24 @@
 - Notes / quirks: Empty-canvas deselect must click **on the canvas**, not the left sidebar overlay (verify uses upper-right ~0.88, 0.18). Automated overlap test draws two rects apart, drags front over back, then clicks overlap. `pointerHitId` + `suppressNextClick` unchanged for draw tools. Only single selection.
 
 ### Task 5 — Stress test
-- 1 000 polygons + 1 000 labels: FPS =
-- Notes:
+- Approach taken: Sidebar button **Spawn 1000 polygons + 1000 labels** calls `createStressScene()` (mulberry32 seed **42**) — 1000 random polygons (3–6 verts, radius 20–150, random fill) + 1000 text labels (`Label 0001`…, rotation 0 or ±15°) over **8000×8000** world (`STRESS_WORLD_SIZE`; primitives backdrop expanded to match). Objects use the same React `SceneObject[]` + naive `reconcile` clear-and-rebuild (no fast path). **FPS:** reused `FpsMonitor` from Task 2 (Pixi ticker overlay, top-left). Viewport `drag-start` / `drag-end` / `wheel` set interaction label. `verify-stress.cjs` spawns, samples 3 s idle / pan / zoom (avg ≥ 30), grid hit-test + click for selection spot-check.
+- Outcome: **Pass** — `node scripts/verify-stress.cjs` (with `PROTO_URL`); Task 4 `verify-selection.cjs` still passes (toolbar button selectors use `exact: true` to avoid matching the stress button).
+- Environment (automated run, Playwright **Chromium** headless): Windows 10 build 26200; **CPU threads:** 16 (`hardwareConcurrency`); **RAM:** 32 GB (`deviceMemory`); **Browser:** Chromium 148.0.7778.96. GPU model not exposed to the page (ANGLE/WebGL); re-check in desktop Chrome/Tauri if needed.
+- FPS (3 s windows, avg / min):
+
+| Interaction | Avg FPS | Min FPS | Pass (≥30) |
+| --- | ---: | ---: | --- |
+| idle (after spawn) | 60.1 | 54.1 | yes |
+| pan (left-drag across canvas) | 60.2 | 52.1 | yes |
+| zoom (wheel in/out) | 60.2 | 52.4 | yes |
+
+- **≥30 FPS criterion:** met on this machine (display/ticker capped ~60 in headless Chromium).
+- Screenshots: [`task5-stress-idle.png`](screenshots/task5-stress-idle.png), [`task5-stress-pan.png`](screenshots/task5-stress-pan.png), [`task5-stress-zoomed.png`](screenshots/task5-stress-zoomed.png).
+- Notes / findings:
+  - **Reconciler:** initial spawn triggers one full rebuild of 2000 Pixi nodes (~1–2 s); **idle / pan / zoom stay fast** because the scene array does not change during viewport interaction. Dragging a selected object at this count would re-run full reconcile every pointer move — not benchmarked; mainline should use incremental diff or GPU batching before relying on drag at 1k+ objects.
+  - **Hit-test:** linear scan of 2000 objects per click; spot-check selection works; no perceptible delay in verify, but mainline may need spatial index at scale.
+  - **Selection after stress:** verify finds a hit via grid + `__proto001HitTestAtClient` then clicks (center alone may miss sparse overlap).
+  - No reconciler optimization applied — not required to pass the FPS bar in this run.
 
 ### Task 6 — PNG export
 - Outcome:
@@ -82,7 +98,7 @@
 - [x] Curve text follows a user-drawn Bézier and remains readable at
       0.25× / 1× / 4× zoom (Task 1 approved).
 - [x] 16k × 16k PNG pans/zooms at ≥ 30 FPS (procedural tiled 16k; see Task 2 FPS table).
-- [ ] 1k polygons + 1k labels at ≥ 30 FPS.
+- [x] 1k polygons + 1k labels at ≥ 30 FPS (primitives stress spawn; see Task 5 table).
 - [x] Hit-testing works for polygon / polyline / text in primitives demo (curve text N/A here; Task 1 curve demo separate).
 - [ ] PNG export works.
 

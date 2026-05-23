@@ -23,10 +23,10 @@ import type { DrawTool, InProgressShape, SceneObject } from '../sceneTypes'
 import { boundsOfObject, hitTestTopmost } from './hitTest'
 
 import { drawSelectionOutline } from './selectionOutline'
+import { FpsMonitor } from '../shared/fpsMonitor'
+import { STRESS_WORLD_SIZE } from './stressSpawn'
 
-
-
-const WORLD_SIZE = 4000
+const WORLD_SIZE = STRESS_WORLD_SIZE
 
 const POLYLINE_STROKE = 0xe6b422
 
@@ -89,6 +89,12 @@ export type PrimitivesBridge = {
   hasSelectionOutline: () => boolean
 
   hitTestAtClient: (clientX: number, clientY: number) => string | null
+
+  fpsMonitor: FpsMonitor
+
+  fitWorld: () => void
+
+  setZoomRelative: (factor: number) => void
 
   destroy: () => void
 
@@ -256,7 +262,36 @@ export async function createPrimitivesBridge(
 
   viewport.setZoom(fit * 0.9, true)
 
+  const fpsMonitor = new FpsMonitor()
+  fpsMonitor.attach(app)
+  fpsMonitor.setZoom(viewport.scale.x)
 
+  let isPanning = false
+  let isZooming = false
+  let zoomDebounce: ReturnType<typeof setTimeout> | undefined
+
+  viewport.on('drag-start', () => {
+    isPanning = true
+    fpsMonitor.setInteraction('pan')
+  })
+  viewport.on('drag-end', () => {
+    isPanning = false
+    if (!isZooming) fpsMonitor.setInteraction('idle')
+  })
+  viewport.on('wheel', () => {
+    isZooming = true
+    fpsMonitor.setInteraction('zoom')
+    fpsMonitor.setZoom(viewport.scale.x)
+    clearTimeout(zoomDebounce)
+    zoomDebounce = setTimeout(() => {
+      isZooming = false
+      if (!isPanning) fpsMonitor.setInteraction('idle')
+    }, 200)
+  })
+
+  app.ticker.add(() => {
+    fpsMonitor.setZoom(viewport.scale.x)
+  })
 
   let activeDrag: { id: string; lastX: number; lastY: number } | null = null
 
@@ -685,7 +720,17 @@ export async function createPrimitivesBridge(
 
   window.addEventListener('resize', resize)
 
+  const fitWorld = () => {
+    viewport.moveCenter(WORLD_SIZE / 2, WORLD_SIZE / 2)
+    const fit = Math.min(container.clientWidth, container.clientHeight) / WORLD_SIZE
+    viewport.setZoom(fit * 0.9, true)
+    fpsMonitor.setZoom(viewport.scale.x)
+  }
 
+  const setZoomRelative = (factor: number) => {
+    viewport.setZoom(viewport.scale.x * factor, true)
+    fpsMonitor.setZoom(viewport.scale.x)
+  }
 
   return {
 
@@ -709,6 +754,12 @@ export async function createPrimitivesBridge(
       )
     },
 
+    fpsMonitor,
+
+    fitWorld,
+
+    setZoomRelative,
+
     destroy: () => {
 
       window.removeEventListener('resize', resize)
@@ -722,6 +773,8 @@ export async function createPrimitivesBridge(
       app.canvas.removeEventListener('dblclick', onCanvasDblClick)
 
       endShapeDrag()
+
+      clearTimeout(zoomDebounce)
 
       app.destroy(true, { children: true })
 

@@ -78,7 +78,7 @@ function assertCloseResult(result, label, expectedCount) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
   await page.goto(`${BASE}/?mode=primitives`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(1000)
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
 
   // Triangle: 2 singles, dblclick at a 3rd NEW corner
   const triSingles = [
@@ -94,7 +94,7 @@ function assertCloseResult(result, label, expectedCount) {
 
   await page.goto(`${BASE}/?mode=primitives`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
 
   // Pentagon: 4 singles, dblclick at 5th NEW corner
   const pentSingles = [
@@ -112,7 +112,7 @@ function assertCloseResult(result, label, expectedCount) {
 
   await page.goto(`${BASE}/?mode=primitives`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
 
   // Drag existing polygon — must not spawn in-progress ring / extra polygon
   await drawAndClose(page, triSingles, triClose)
@@ -139,7 +139,7 @@ function assertCloseResult(result, label, expectedCount) {
 
   await page.goto(`${BASE}/?mode=primitives`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
 
   // Drag on empty canvas — must not place a vertex
   const empty = [cx(0.35), cy(0.45)]

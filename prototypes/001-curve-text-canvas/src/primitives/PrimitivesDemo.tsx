@@ -8,11 +8,13 @@ import {
   newId,
   type SceneObject,
 } from '../sceneTypes'
+import type { InteractionKind } from '../shared/fpsMonitor'
 import {
   createPrimitivesBridge,
   type BridgeCallbacks,
   type PrimitivesBridge,
 } from './primitivesBridge'
+import { createStressScene } from './stressSpawn'
 
 /** True duplicate: both clicks of a double-click on the same screen pixel. */
 const CLOSE_DUPLICATE_SCREEN_PX = 3
@@ -276,6 +278,37 @@ export function PrimitivesDemo() {
     setInProgress(null)
   }
 
+  const spawnStress = () => {
+    setSelectedId(null)
+    setInProgress(null)
+    setActiveTool(null)
+    inProgressRef.current = null
+    setObjects(createStressScene())
+    queueMicrotask(() => bridgeRef.current?.fitWorld())
+  }
+
+  useEffect(() => {
+    const w = window as Window & {
+      __proto001FpsDisplay?: () => number
+      __proto001MeasureFps?: (ms: number, interaction: InteractionKind) => Promise<{
+        avgFps: number
+        minFps: number
+        sampleCount: number
+      }>
+      __proto001FitWorld?: () => void
+      __proto001SetZoomRelative?: (factor: number) => void
+    }
+    w.__proto001FpsDisplay = () => bridgeRef.current?.fpsMonitor.getDisplayFps() ?? 0
+    w.__proto001MeasureFps = async (ms, interaction) => {
+      const mon = bridgeRef.current?.fpsMonitor
+      if (!mon) return { avgFps: 0, minFps: 0, sampleCount: 0 }
+      mon.setInteraction(interaction)
+      return mon.measureWindow(ms)
+    }
+    w.__proto001FitWorld = () => bridgeRef.current?.fitWorld()
+    w.__proto001SetZoomRelative = (factor) => bridgeRef.current?.setZoomRelative(factor)
+  }, [])
+
   return (
     <div className="primitives-root">
       <div className="primitives-toolbar">
@@ -325,6 +358,9 @@ export function PrimitivesDemo() {
         <p className="primitives-sidebar-note">
           Adjusts the last placed text label after clicking with Text tool.
         </p>
+        <button type="button" className="primitives-stress-btn" onClick={spawnStress}>
+          Spawn 1000 polygons + 1000 labels
+        </button>
       </div>
       <div ref={canvasHostRef} className="primitives-canvas" />
     </div>

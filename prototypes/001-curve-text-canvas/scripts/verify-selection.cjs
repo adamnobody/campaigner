@@ -19,7 +19,7 @@ async function state(page) {
 
 async function ensureToolOff(page) {
   for (const name of ['Polygon', 'Polyline', 'Text']) {
-    const btn = page.getByRole('button', { name })
+    const btn = page.getByRole('button', { name, exact: true })
     if (await btn.evaluate((el) => el.classList.contains('active'))) {
       await btn.click()
     }
@@ -29,7 +29,7 @@ async function ensureToolOff(page) {
 async function drawL(page, box) {
   const cx = (x) => box.x + box.width * x
   const cy = (y) => box.y + box.height * y
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   const verts = [
     [0.32, 0.32],
     [0.58, 0.32],
@@ -144,7 +144,7 @@ async function drawL(page, box) {
   // Overlap: draw apart, drag front over back, topmost wins
   await page.goto(`${BASE}/?mode=primitives`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   const backVerts = [
     [0.28, 0.38],
     [0.42, 0.38],
@@ -157,7 +157,7 @@ async function drawL(page, box) {
   }
   await page.mouse.dblclick(cx(0.28), cy(0.54))
   await page.waitForTimeout(400)
-  await page.getByRole('button', { name: 'Polygon' }).click()
+  await page.getByRole('button', { name: 'Polygon', exact: true }).click()
   const frontVerts = [
     [0.58, 0.38],
     [0.72, 0.38],
