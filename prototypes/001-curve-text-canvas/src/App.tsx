@@ -59,7 +59,21 @@ function App() {
       {mode === 'primitives' ? (
         <PrimitivesDemo />
       ) : (
-        <div ref={canvasHostRef} className="canvas-host" />
+        <>
+          <div ref={canvasHostRef} className="canvas-host" />
+          <button
+            type="button"
+            className="app-export-btn"
+            onClick={() => {
+              const w = window as Window & {
+                __proto001ExportViewportPng?: () => Promise<unknown>
+              }
+              void w.__proto001ExportViewportPng?.()
+            }}
+          >
+            Export viewport to PNG
+          </button>
+        </>
       )}
       <label className="mode-switch">
         <span>Demo</span>

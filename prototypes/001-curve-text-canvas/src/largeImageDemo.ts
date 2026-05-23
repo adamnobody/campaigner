@@ -14,6 +14,7 @@ import {
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from './shared/tiledBackground'
+import { downloadPngBlob, exportVisibleViewport } from './shared/viewportExport'
 
 const SAMPLE_MS = 2500
 const PAN_ANIM_MS = 2500
@@ -113,6 +114,20 @@ export async function initLargeImageDemo(container: HTMLDivElement): Promise<() 
     __proto001SanityStarted?: boolean
     __proto001FpsDisplay?: number
     __proto001SanityResult?: { minFps: number; zoom: number; avgFps: number }
+    __proto001ExportViewportPng?: () => Promise<{
+      width: number
+      height: number
+      byteLength: number
+    }>
+  }
+
+  win.__proto001ExportViewportPng = async () => {
+    const { blob, width, height } = await exportVisibleViewport(app, app.stage, {
+      hide: [fpsMonitor.getOverlay(), hud],
+      clearColor: 0x0f0f14,
+    })
+    downloadPngBlob(blob, 'campaigner-viewport.png')
+    return { width, height, byteLength: blob.size }
   }
 
   app.ticker.add(() => {
@@ -130,6 +145,7 @@ export async function initLargeImageDemo(container: HTMLDivElement): Promise<() 
   }
 
   return () => {
+    delete win.__proto001ExportViewportPng
     window.removeEventListener('resize', resize)
     clearTimeout(zoomDebounce)
     app.destroy(true, { children: true })

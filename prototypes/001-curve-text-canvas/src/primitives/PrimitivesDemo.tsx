@@ -297,6 +297,11 @@ export function PrimitivesDemo() {
       }>
       __proto001FitWorld?: () => void
       __proto001SetZoomRelative?: (factor: number) => void
+      __proto001ExportViewportPng?: () => Promise<{
+        width: number
+        height: number
+        byteLength: number
+      }>
     }
     w.__proto001FpsDisplay = () => bridgeRef.current?.fpsMonitor.getDisplayFps() ?? 0
     w.__proto001MeasureFps = async (ms, interaction) => {
@@ -307,6 +312,9 @@ export function PrimitivesDemo() {
     }
     w.__proto001FitWorld = () => bridgeRef.current?.fitWorld()
     w.__proto001SetZoomRelative = (factor) => bridgeRef.current?.setZoomRelative(factor)
+    w.__proto001ExportViewportPng = () =>
+      bridgeRef.current?.exportViewportPng() ??
+      Promise.resolve({ width: 0, height: 0, byteLength: 0 })
   }, [])
 
   return (
@@ -360,6 +368,13 @@ export function PrimitivesDemo() {
         </p>
         <button type="button" className="primitives-stress-btn" onClick={spawnStress}>
           Spawn 1000 polygons + 1000 labels
+        </button>
+        <button
+          type="button"
+          className="primitives-export-btn"
+          onClick={() => void bridgeRef.current?.exportViewportPng()}
+        >
+          Export viewport to PNG
         </button>
       </div>
       <div ref={canvasHostRef} className="primitives-canvas" />

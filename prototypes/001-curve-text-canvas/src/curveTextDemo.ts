@@ -8,6 +8,7 @@ import {
   TextStyle,
 } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
+import { downloadPngBlob, exportVisibleViewport } from './shared/viewportExport'
 
 const HANDLE_RADIUS = 14
 const HANDLE_HOVER_SCALE = 1.2
@@ -263,7 +264,24 @@ export async function initCurveTextDemo(container: HTMLDivElement) {
   info.y = 20
   app.stage.addChild(info)
 
+  const win = window as Window & {
+    __proto001ExportViewportPng?: () => Promise<{
+      width: number
+      height: number
+      byteLength: number
+    }>
+  }
+  win.__proto001ExportViewportPng = async () => {
+    const { blob, width, height } = await exportVisibleViewport(app, app.stage, {
+      hide: [handlesLayer, info],
+      clearColor: 0x1a1a2e,
+    })
+    downloadPngBlob(blob, 'campaigner-viewport.png')
+    return { width, height, byteLength: blob.size }
+  }
+
   return () => {
+    delete win.__proto001ExportViewportPng
     window.removeEventListener('resize', resize)
     endHandleDrag()
     app.destroy(true, { children: true })

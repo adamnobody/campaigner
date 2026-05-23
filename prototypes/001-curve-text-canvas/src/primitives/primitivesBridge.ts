@@ -24,6 +24,7 @@ import { boundsOfObject, hitTestTopmost } from './hitTest'
 
 import { drawSelectionOutline } from './selectionOutline'
 import { FpsMonitor } from '../shared/fpsMonitor'
+import { downloadPngBlob, exportVisibleViewport } from '../shared/viewportExport'
 import { STRESS_WORLD_SIZE } from './stressSpawn'
 
 const WORLD_SIZE = STRESS_WORLD_SIZE
@@ -95,6 +96,12 @@ export type PrimitivesBridge = {
   fitWorld: () => void
 
   setZoomRelative: (factor: number) => void
+
+  exportViewportPng: (filename?: string) => Promise<{
+    width: number
+    height: number
+    byteLength: number
+  }>
 
   destroy: () => void
 
@@ -732,6 +739,15 @@ export async function createPrimitivesBridge(
     fpsMonitor.setZoom(viewport.scale.x)
   }
 
+  const exportViewportPng = async (filename = 'campaigner-viewport.png') => {
+    const { blob, width, height } = await exportVisibleViewport(app, app.stage, {
+      hide: [selectionLayer, fpsMonitor.getOverlay()],
+      clearColor: 0x1e1e2a,
+    })
+    downloadPngBlob(blob, filename)
+    return { width, height, byteLength: blob.size }
+  }
+
   return {
 
     reconcile,
@@ -759,6 +775,8 @@ export async function createPrimitivesBridge(
     fitWorld,
 
     setZoomRelative,
+
+    exportViewportPng,
 
     destroy: () => {
 
