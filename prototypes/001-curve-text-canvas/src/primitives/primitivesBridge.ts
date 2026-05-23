@@ -18,7 +18,6 @@ const HIT_PADDING = 8
 export type BridgeCallbacks = {
   getActiveTool: () => DrawTool | null
   onCanvasClick: (world: [number, number]) => void
-  onCanvasDoubleClick: (world: [number, number]) => void
   onShapeDragMove: (id: string, dx: number, dy: number) => void
   onShapeDragEnd: (id: string) => void
 }
@@ -142,14 +141,7 @@ export async function createPrimitivesBridge(
     callbacks.onCanvasClick([local.x, local.y])
   }
 
-  const onBackdropDblClick = (e: FederatedPointerEvent) => {
-    if (e.button !== 0 || callbacks.getActiveTool() !== 'polygon') return
-    const local = viewport.toLocal(e.global)
-    callbacks.onCanvasDoubleClick([local.x, local.y])
-  }
-
-  backdrop.on('pointerdown', onBackdropClick)
-  backdrop.on('dblclick', onBackdropDblClick)
+  backdrop.on('pointerup', onBackdropClick)
 
   const attachShapeDrag = (root: Container, id: string) => {
     root.eventMode = 'static'
@@ -202,9 +194,10 @@ export async function createPrimitivesBridge(
           text: obj.content,
           style: new TextStyle({
             fontFamily: 'Arial',
-            fontSize: 22,
+            fontSize: 24,
+            fontWeight: 'bold',
             fill: 0xffffff,
-            stroke: { color: 0x222222, width: 2 },
+            stroke: { color: 0x000000, width: 4 },
           }),
         })
         label.anchor.set(0.5)

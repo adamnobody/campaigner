@@ -14,11 +14,15 @@ import {
   type PrimitivesBridge,
 } from './primitivesBridge'
 
+const DOUBLE_CLICK_MS = 300
+const DOUBLE_CLICK_DIST_PX = 5
+
 export function PrimitivesDemo() {
   const canvasHostRef = useRef<HTMLDivElement>(null)
   const bridgeRef = useRef<PrimitivesBridge | null>(null)
   const toolRef = useRef<DrawTool | null>(null)
   const textRotRef = useRef(0)
+  const lastClickRef = useRef<{ t: number; x: number; y: number } | null>(null)
 
   const [objects, setObjects] = useState<SceneObject[]>([])
   const [activeTool, setActiveTool] = useState<DrawTool | null>(null)
@@ -32,22 +36,9 @@ export function PrimitivesDemo() {
   const callbacksRef = useRef<BridgeCallbacks>({
     getActiveTool: () => null,
     onCanvasClick: () => {},
-    onCanvasDoubleClick: () => {},
     onShapeDragMove: () => {},
     onShapeDragEnd: () => {},
   })
-
-  const closePolygon = useCallback(() => {
-    setInProgress((prog) => {
-      if (!prog || prog.kind !== 'polygon' || prog.points.length < 3) return prog
-      const id = newId()
-      setObjects((objs) => [
-        ...objs,
-        { id, kind: 'polygon', points: [...prog.points], fill: DEFAULT_POLYGON_FILL },
-      ])
-      return null
-    })
-  }, [])
 
   const finishPolyline = useCallback(() => {
     setInProgress((prog) => {
@@ -66,6 +57,32 @@ export function PrimitivesDemo() {
     onCanvasClick: (world) => {
       const tool = toolRef.current
       if (!tool) return
+
+      const now = performance.now()
+      const last = lastClickRef.current
+      const isDoubleClick =
+        tool === 'polygon' &&
+        last !== null &&
+        now - last.t < DOUBLE_CLICK_MS &&
+        Math.hypot(world[0] - last.x, world[1] - last.y) < DOUBLE_CLICK_DIST_PX
+
+      if (isDoubleClick) {
+        lastClickRef.current = null
+        setInProgress((prog) => {
+          if (!prog || prog.kind !== 'polygon' || prog.points.length < 3) {
+            return null
+          }
+          const points = [...prog.points]
+          setObjects((objs) => [
+            ...objs,
+            { id: newId(), kind: 'polygon', points, fill: DEFAULT_POLYGON_FILL },
+          ])
+          return null
+        })
+        return
+      }
+
+      lastClickRef.current = { t: now, x: world[0], y: world[1] }
 
       if (tool === 'text') {
         const id = newId()
@@ -90,9 +107,6 @@ export function PrimitivesDemo() {
         const pts = prog?.kind === 'polyline' ? prog.points : []
         return { kind: 'polyline', points: [...pts, world] }
       })
-    },
-    onCanvasDoubleClick: () => {
-      if (toolRef.current === 'polygon') closePolygon()
     },
     onShapeDragMove: (id, dx, dy) => {
       setObjects((objs) =>
@@ -124,7 +138,6 @@ export function PrimitivesDemo() {
       const bridge = await createPrimitivesBridge(host, {
         getActiveTool: () => callbacksRef.current.getActiveTool(),
         onCanvasClick: (w) => callbacksRef.current.onCanvasClick(w),
-        onCanvasDoubleClick: (w) => callbacksRef.current.onCanvasDoubleClick(w),
         onShapeDragMove: (id, dx, dy) => callbacksRef.current.onShapeDragMove(id, dx, dy),
         onShapeDragEnd: (id) => callbacksRef.current.onShapeDragEnd(id),
       })
@@ -165,6 +178,7 @@ export function PrimitivesDemo() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setInProgress(null)
+        lastClickRef.current = null
         return
       }
       if (e.key === 'Enter' && toolRef.current === 'polyline') {
@@ -179,6 +193,7 @@ export function PrimitivesDemo() {
   const selectTool = (tool: DrawTool) => {
     setActiveTool((t) => (t === tool ? null : tool))
     setInProgress(null)
+    lastClickRef.current = null
   }
 
   return (
