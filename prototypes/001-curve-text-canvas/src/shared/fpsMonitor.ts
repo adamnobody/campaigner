@@ -12,6 +12,7 @@ export interface FpsSampleRow {
 
 export class FpsMonitor {
   private readonly samples: number[] = []
+  private overlay!: Text
   private displayFps = 0
   private frameCount = 0
   private lastReportMs = performance.now()
@@ -20,7 +21,7 @@ export class FpsMonitor {
   private zoom = 1
 
   attach(app: Application): Text {
-    const overlay = new Text({
+    this.overlay = new Text({
       text: 'FPS: --',
       style: {
         fontFamily: 'monospace',
@@ -29,11 +30,11 @@ export class FpsMonitor {
         stroke: { color: 0x000000, width: 3 },
       },
     })
-    overlay.eventMode = 'none'
-    overlay.x = 8
-    overlay.y = 8
-    overlay.zIndex = 10_000
-    app.stage.addChild(overlay)
+    this.overlay.eventMode = 'none'
+    this.overlay.x = 8
+    this.overlay.y = 8
+    this.overlay.zIndex = 10_000
+    app.stage.addChild(this.overlay)
 
     app.ticker.add((ticker) => {
       const now = performance.now()
@@ -46,11 +47,15 @@ export class FpsMonitor {
         this.displayFps = Math.round((this.frameCount * 1000) / (now - this.lastReportMs))
         this.frameCount = 0
         this.lastReportMs = now
-        overlay.text = `FPS: ${this.displayFps}  (${this.interaction}, ${this.zoom.toFixed(2)}×)`
+        this.overlay.text = `FPS: ${this.displayFps}  (${this.interaction}, ${this.zoom.toFixed(2)}×)`
       }
     })
 
-    return overlay
+    return this.overlay
+  }
+
+  getOverlay(): Text {
+    return this.overlay
   }
 
   setInteraction(kind: InteractionKind): void {
