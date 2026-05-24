@@ -1598,11 +1598,14 @@ fn list_territories_internal(
 ) -> Result<Vec<IdNameRef>> {
     let mut statement = connection.prepare(
         r#"
-        SELECT mt.id, mt.name
-        FROM map_territories mt
-        JOIN maps m ON m.id = mt.map_id
-        WHERE m.project_id = ?1 AND mt.faction_id = ?2
-        ORDER BY mt.name COLLATE NOCASE ASC
+        SELECT co.id, COALESCE(co.name, '')
+        FROM canvas_object co
+        JOIN canvas_scene cs ON cs.id = co.scene_id
+        WHERE
+          cs.project_id = ?1
+          AND co.kind = 'territory'
+          AND CAST(json_extract(co.content_json, '$.factionId') AS INTEGER) = ?2
+        ORDER BY co.name COLLATE NOCASE ASC
         "#,
     )?;
     let rows = statement.query_map(params![project_id, faction_id], |row| {
@@ -2154,10 +2157,13 @@ fn sync_state_territories(
         let exists = connection
             .query_row(
                 r#"
-                SELECT mt.id
-                FROM map_territories mt
-                JOIN maps m ON m.id = mt.map_id
-                WHERE mt.id = ?1 AND m.project_id = ?2
+                SELECT co.id
+                FROM canvas_object co
+                JOIN canvas_scene cs ON cs.id = co.scene_id
+                WHERE
+                  co.id = ?1
+                  AND cs.project_id = ?2
+                  AND co.kind = 'territory'
                 "#,
                 params![territory_id, project_id],
                 |row| row.get::<_, i32>(0),
@@ -2175,10 +2181,13 @@ fn sync_state_territories(
     let previous_ids = {
         let mut statement = connection.prepare(
             r#"
-            SELECT mt.id
-            FROM map_territories mt
-            JOIN maps m ON m.id = mt.map_id
-            WHERE m.project_id = ?1 AND mt.faction_id = ?2
+            SELECT co.id
+            FROM canvas_object co
+            JOIN canvas_scene cs ON cs.id = co.scene_id
+            WHERE
+              cs.project_id = ?1
+              AND co.kind = 'territory'
+              AND CAST(json_extract(co.content_json, '$.factionId') AS INTEGER) = ?2
             "#,
         )?;
         let rows =
@@ -2188,7 +2197,13 @@ fn sync_state_territories(
 
     for id in previous_ids.iter().filter(|id| !next_ids.contains(id)) {
         connection.execute(
-            "UPDATE map_territories SET faction_id = NULL, updated_at = datetime('now') WHERE id = ?1",
+            r#"
+            UPDATE canvas_object
+            SET
+              content_json = json_set(COALESCE(NULLIF(content_json, ''), '{}'), '$.factionId', NULL),
+              updated_at = datetime('now')
+            WHERE id = ?1
+            "#,
             params![id],
         )?;
     }
@@ -2224,11 +2239,16 @@ fn sync_state_territories(
     for id in &next_ids {
         connection.execute(
             r#"
-            UPDATE map_territories
+            UPDATE canvas_object
             SET
-              faction_id = ?1,
-              color = CASE WHEN COALESCE(faction_id, -1) != ?1 THEN ?2 ELSE color END,
-              border_color = CASE WHEN COALESCE(faction_id, -1) != ?1 THEN ?3 ELSE border_color END,
+              content_json = json_set(
+                COALESCE(NULLIF(content_json, ''), '{}'),
+                '$.factionId', ?1
+              ),
+              style_json = json_set(
+                json_set(COALESCE(NULLIF(style_json, ''), '{}'), '$.fillColor', ?2),
+                '$.strokeColor', ?3
+              ),
               updated_at = datetime('now')
             WHERE id = ?4
             "#,

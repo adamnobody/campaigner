@@ -1,6 +1,7 @@
 pub mod ambitions;
 mod ambitions_seed;
 pub mod branches;
+pub mod canvas;
 pub mod character_traits;
 mod character_traits_seed;
 pub mod characters;

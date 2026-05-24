@@ -1,6 +1,7 @@
 pub mod ambitions;
 pub mod app;
 pub mod branches;
+pub mod canvas;
 pub mod character_traits;
 pub mod characters;
 pub mod dogmas;
