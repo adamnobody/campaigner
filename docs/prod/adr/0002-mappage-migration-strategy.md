@@ -2,14 +2,19 @@
 
 ## Status
 
-TBD pending product owner decision on Open questions.
+Status: Accepted
+Accepted: 2026-05-24
 
-## Открытые вопросы к владельцу продукта
+## Open questions for product owner
 
 1. Should existing maps be migrated into the new canvas-backed model during 0.3.1, or should existing DOM/SVG maps continue to open in the current implementation until a later migration step?
+   - **Answer:** Migrate existing maps into the new canvas-backed model during 0.3.1. No legacy persistence remains after release.
 2. Should curve text and other rich canvas primitives be available on every existing map immediately after 0.3.1, or only on maps created/converted into the new canvas format?
+   - **Answer:** Curve text and all rich canvas primitives are available on every map after 0.3.1 (follows from Q1).
 3. During the transition, may users see two map experiences (legacy DOM/SVG and new canvas), or must the application expose one unified map experience at all times?
+   - **Answer:** One unified map experience at all times. Legacy DOM/SVG `MapPage` is removed in the same release that introduces canvas.
 4. Is a map-type distinction acceptable in persisted product data (for example "simple map" vs "rich canvas map"), or should map type remain an implementation detail hidden from product concepts?
+   - **Answer:** No map-type product concept. A single map entity and single persisted format are used.
 
 ## Context
 
@@ -84,4 +89,9 @@ Consequences for CARRYOVER #1 and #2:
 
 ## Decision
 
-TBD pending product owner decision on Open questions.
+Choose option (a) **Full replacement**.
+
+Rationale from product owner:
+- The product currently has no production users beyond two internal testers.
+- Backward compatibility with the legacy DOM/SVG `MapPage` is not required.
+- Technical debt from a dual-path strategy is unacceptable.
