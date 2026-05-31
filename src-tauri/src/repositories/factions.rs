@@ -2246,8 +2246,8 @@ fn sync_state_territories(
                 '$.factionId', ?1
               ),
               style_json = json_set(
-                json_set(COALESCE(NULLIF(style_json, ''), '{}'), '$.fillColor', ?2),
-                '$.strokeColor', ?3
+                json_set(COALESCE(NULLIF(style_json, ''), '{}'), '$.fill', ?2),
+                '$.stroke', ?3
               ),
               updated_at = datetime('now')
             WHERE id = ?4

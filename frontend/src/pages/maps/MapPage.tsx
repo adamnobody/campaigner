@@ -5,23 +5,34 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import { canvasApi, type CanvasLayer, type CanvasObject, type CanvasScene } from '@/api/canvas';
+import { notesApi } from '@/api/notes';
 import { projectsApi } from '@/api/projects';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import { MapToolbar } from './components/MapToolbar';
+import { MapMarkerDialog } from './components/MapMarkerDialog';
+import { MapMarkerPanel } from './components/MapMarkerPanel';
 import { MapCanvasContextMenu, type MapContextMenuState } from './components/MapCanvasContextMenu';
 import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas';
 import {
+  applyMarkerFormToObject,
+  asRecord,
+  asString,
+  buildMarkerCreateInput,
+  DEFAULT_MARKER_FORM,
   defaultImageObject,
-  defaultMarkerObject,
   defaultShapeObject,
+  defaultTerritoryObject,
   defaultTextObject,
+  markerFormFromObject,
   objectTransform,
   objectToUpsert,
   withObjectPosition,
   type CanvasMode,
   type CanvasPoint,
+  type MarkerFormState,
+  type NoteOption,
 } from './canvas/canvasModel';
 
 const MAX_TEXTURE_SIZE = 16384;
@@ -102,9 +113,14 @@ export function CanvasPage() {
   const [largeBackgroundStatus, setLargeBackgroundStatus] = useState('');
   const [zoomPercent, setZoomPercent] = useState(100);
   const [contextMenu, setContextMenu] = useState<MapContextMenuState>(null);
+  const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
+  const [editingMarker, setEditingMarker] = useState<CanvasObject | null>(null);
+  const [markerForm, setMarkerForm] = useState<MarkerFormState>(DEFAULT_MARKER_FORM);
+  const [notes, setNotes] = useState<NoteOption[]>([]);
   const pixiCanvasRef = useRef<PixiMapCanvasHandle | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const pendingImagePointRef = useRef<CanvasPoint | null>(null);
+  const pendingMarkerPointRef = useRef<CanvasPoint | null>(null);
   const reportedImageLoadErrorsRef = useRef(new Set<string>());
   const sceneCacheRef = useRef(new Map<number, { scene: CanvasScene; layers: CanvasLayer[]; objects: CanvasObject[] }>());
   const viewportPersistTimerRef = useRef<number | null>(null);
@@ -113,6 +129,20 @@ export function CanvasPage() {
     () => objects.find((object) => object.id === selectedObjectId) ?? null,
     [objects, selectedObjectId],
   );
+
+  const notesMap = useMemo(
+    () => new Map(notes.map((note) => [note.id, note])),
+    [notes],
+  );
+
+  const selectedLabel = useMemo(() => {
+    if (!selectedObject) return null;
+    if (selectedObject.kind === 'marker') {
+      const content = asRecord(selectedObject.contentJson);
+      return asString(content.title, selectedObject.name ?? selectedObject.kind);
+    }
+    return selectedObject.name ?? selectedObject.kind;
+  }, [selectedObject]);
 
   const loadScene = useCallback(async () => {
     if (!projectIdNumber) return;
@@ -164,6 +194,19 @@ export function CanvasPage() {
   }, [loadScene]);
 
   useEffect(() => {
+    if (!projectIdNumber) return;
+    void notesApi.getAll(projectIdNumber, { limit: 500 })
+      .then((response) => {
+        setNotes(response.data.data.items.map((note) => ({
+          id: note.id,
+          title: note.title,
+          noteType: note.noteType,
+        })));
+      })
+      .catch(() => undefined);
+  }, [projectIdNumber]);
+
+  useEffect(() => {
     if (!scene) return;
     sceneCacheRef.current.set(scene.id, { scene, layers, objects });
   }, [scene, layers, objects]);
@@ -197,14 +240,58 @@ export function CanvasPage() {
     }
   }, [loadScene, projectIdNumber, scene, showSnackbar, t]);
 
+  const openMarkerDialog = useCallback((point: CanvasPoint | null, marker: CanvasObject | null = null) => {
+    pendingMarkerPointRef.current = point;
+    setEditingMarker(marker);
+    setMarkerForm(marker ? markerFormFromObject(marker) : DEFAULT_MARKER_FORM);
+    setMarkerDialogOpen(true);
+  }, []);
+
+  const closeMarkerDialog = useCallback(() => {
+    setMarkerDialogOpen(false);
+    setEditingMarker(null);
+    pendingMarkerPointRef.current = null;
+  }, []);
+
+  const saveMarker = useCallback(async () => {
+    if (!scene || !markerForm.title.trim()) return;
+    try {
+      if (editingMarker) {
+        const updated = applyMarkerFormToObject(editingMarker, markerForm);
+        await persistObject(updated);
+        closeMarkerDialog();
+        return;
+      }
+      const point = pendingMarkerPointRef.current;
+      if (!point) return;
+      const layer = await contentLayer();
+      const created = await canvasApi.createObject(
+        buildMarkerCreateInput(scene.id, layer.id, point, markerForm),
+        projectIdNumber,
+      );
+      setObjects((current) => [...current, created]);
+      setSelectedObjectId(created.id);
+      closeMarkerDialog();
+      setMode('select');
+    } catch {
+      showSnackbar(t('map:canvas.snackbar.objectSaveError'), 'error');
+    }
+  }, [
+    closeMarkerDialog,
+    contentLayer,
+    editingMarker,
+    markerForm,
+    persistObject,
+    projectIdNumber,
+    scene,
+    showSnackbar,
+    t,
+  ]);
+
   const handleCanvasClick = useCallback(async (point: CanvasPoint) => {
     if (!scene) return;
     if (mode === 'marker') {
-      const layer = await contentLayer();
-      const created = await canvasApi.createObject(defaultMarkerObject(scene.id, layer.id, point), projectIdNumber);
-      setObjects((current) => [...current, created]);
-      setSelectedObjectId(created.id);
-      setMode('select');
+      openMarkerDialog(point);
       return;
     }
     if (mode === 'text' || mode === 'curve_text') {
@@ -227,7 +314,7 @@ export function CanvasPage() {
       pendingImagePointRef.current = point;
       imageInputRef.current?.click();
     }
-  }, [contentLayer, mode, projectIdNumber, scene]);
+  }, [contentLayer, mode, openMarkerDialog, projectIdNumber, scene]);
 
   const handleObjectMove = useCallback((object: CanvasObject, point: CanvasPoint) => {
     persistObject(withObjectPosition(object, point.x, point.y));
@@ -347,6 +434,19 @@ export function CanvasPage() {
     }, projectIdNumber);
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
+    setMode('select');
+  }, [contentLayer, projectIdNumber, scene]);
+
+  const createTerritory = useCallback(async (points: CanvasPoint[]) => {
+    if (!scene || points.length < 3) return;
+    const layer = await contentLayer();
+    const created = await canvasApi.createObject(
+      defaultTerritoryObject(scene.id, layer.id, points),
+      projectIdNumber,
+    );
+    setObjects((current) => [...current, created]);
+    setSelectedObjectId(created.id);
+    setMode('select');
   }, [contentLayer, projectIdNumber, scene]);
 
   const createPolyline = useCallback(async (points: CanvasPoint[]) => {
@@ -481,7 +581,7 @@ export function CanvasPage() {
       if (isBlockedTarget(event.target)) return;
 
       if (event.key === 'Escape') {
-        if (mode === 'polygon' || mode === 'polyline') {
+        if (mode === 'polygon' || mode === 'draw_territory' || mode === 'polyline') {
           if (pixiCanvasRef.current?.cancelDrawing()) {
             setDraftPointsCount(0);
             return;
@@ -496,7 +596,7 @@ export function CanvasPage() {
       if (!next) return;
       event.preventDefault();
       setMode(next);
-      if (next !== 'polygon' && next !== 'polyline') {
+      if (next !== 'polygon' && next !== 'draw_territory' && next !== 'polyline') {
         pixiCanvasRef.current?.cancelDrawing();
         setDraftPointsCount(0);
       }
@@ -521,7 +621,7 @@ export function CanvasPage() {
         mode={mode}
         onModeChange={(nextMode) => {
           setMode(nextMode);
-          if (nextMode !== 'polygon' && nextMode !== 'polyline') {
+          if (nextMode !== 'polygon' && nextMode !== 'draw_territory' && nextMode !== 'polyline') {
             pixiCanvasRef.current?.cancelDrawing();
             setDraftPointsCount(0);
           }
@@ -531,7 +631,7 @@ export function CanvasPage() {
         onZoomOut={() => pixiCanvasRef.current?.zoomOut()}
         onResetView={() => pixiCanvasRef.current?.resetView()}
         objectCount={objects.length}
-        selectedLabel={selectedObject ? selectedObject.name ?? selectedObject.kind : null}
+        selectedLabel={selectedLabel}
         draftPointsCount={draftPointsCount}
         onUndoDraftPoint={() => {
           const nextCount = pixiCanvasRef.current?.undoDrawingPoint() ?? 0;
@@ -574,6 +674,7 @@ export function CanvasPage() {
             setDraftPointsCount(count);
           }}
           onCreatePolygon={createPolygon}
+          onCreateTerritory={createTerritory}
           onCreatePolyline={createPolyline}
           onImageLoadError={handleImageLoadError}
           onViewportChange={handleViewportChange}
@@ -581,7 +682,20 @@ export function CanvasPage() {
           onContextMenu={setContextMenu}
         />
 
-        {selectedObject && (
+        {selectedObject?.kind === 'marker' && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapMarkerPanel
+              selectedMarker={selectedObject}
+              linkedNote={selectedObject.linkedNoteId ? notesMap.get(selectedObject.linkedNoteId) : undefined}
+              onClose={() => setSelectedObjectId(null)}
+              onNavigateToNote={(noteId) => navigate(`/project/${projectIdNumber}/notes/${noteId}`)}
+              onEditMarker={(marker) => openMarkerDialog(null, marker)}
+              onDeleteMarker={() => deleteSelected()}
+            />
+          </Box>
+        )}
+
+        {selectedObject && selectedObject.kind !== 'marker' && (
           <Paper
             elevation={6}
             sx={{
@@ -623,13 +737,8 @@ export function CanvasPage() {
         menu={contextMenu}
         onClose={() => setContextMenu(null)}
         onAddMarker={() => {
-          placeByContextMenu(async (point) => {
-            if (!scene) return;
-            const layer = await contentLayer();
-            const created = await canvasApi.createObject(defaultMarkerObject(scene.id, layer.id, point), projectIdNumber);
-            setObjects((current) => [...current, created]);
-            setSelectedObjectId(created.id);
-          });
+          if (!contextMenu) return;
+          openMarkerDialog({ x: contextMenu.worldX, y: contextMenu.worldY });
         }}
         onAddText={() => {
           placeByContextMenu(async (point) => {
@@ -676,6 +785,19 @@ export function CanvasPage() {
         }}
         onBringToFront={bringToFront}
         onSendToBack={sendToBack}
+      />
+
+      <MapMarkerDialog
+        open={markerDialogOpen}
+        onClose={closeMarkerDialog}
+        editingMarker={editingMarker}
+        markerForm={markerForm}
+        setMarkerForm={setMarkerForm}
+        notes={notes}
+        notesMap={notesMap}
+        onSave={() => {
+          void saveMarker();
+        }}
       />
 
       <BranchEntityMissingDialog

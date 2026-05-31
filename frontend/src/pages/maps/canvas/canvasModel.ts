@@ -1,4 +1,6 @@
+import type { Theme } from '@mui/material/styles';
 import type { CanvasObject } from '@/api/canvas';
+import type { CreateCanvasObjectInput } from '@/types/generated/bindings';
 import type { UpsertCanvasObjectInput } from '@/types/generated/bindings';
 
 export type CanvasPoint = { x: number; y: number };
@@ -6,12 +8,69 @@ export type CanvasMode =
   | 'select'
   | 'marker'
   | 'text'
+  | 'draw_territory'
   | 'polygon'
   | 'polyline'
   | 'rectangle'
   | 'ellipse'
   | 'curve_text'
   | 'image';
+
+export const MARKER_ICONS: Record<string, string> = {
+  castle: '🏰', city: '🏙️', village: '🏘️', tavern: '🍺',
+  dungeon: '⚔️', forest: '🌲', mountain: '⛰️', river: '🌊',
+  cave: '🕳️', temple: '⛪', ruins: '🏚️', port: '⚓',
+  bridge: '🌉', tower: '🗼', camp: '🏕️', battlefield: '⚔️',
+  mine: '⛏️', farm: '🌾', graveyard: '💀', custom: '📍',
+};
+export const MARKER_ICON_ENTRIES = Object.entries(MARKER_ICONS);
+
+export const MARKER_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+  '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+  '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
+] as const;
+
+export const PANEL_WIDTH = 360;
+
+export type MarkerIcon = keyof typeof MARKER_ICONS;
+
+export type MarkerFormState = {
+  title: string;
+  description: string;
+  icon: MarkerIcon;
+  color: string;
+  linkedNoteId: number | null;
+};
+
+export type NoteOption = { id: number; title: string; noteType: string };
+
+export const DEFAULT_MARKER_FORM: MarkerFormState = {
+  title: '',
+  description: '',
+  icon: 'custom',
+  color: MARKER_COLORS[0],
+  linkedNoteId: null,
+};
+
+export const sxDivider = (theme: Theme) => ({ borderColor: theme.palette.divider, my: 1.5 });
+export const sxSectionLabel = (theme: Theme) => ({
+  color: theme.palette.text.secondary,
+  fontWeight: 600,
+  textTransform: 'uppercase' as const,
+  letterSpacing: 1,
+  fontSize: '0.65rem',
+});
+export const sxPanelRoot = (theme: Theme) => ({
+  width: PANEL_WIDTH,
+  minWidth: PANEL_WIDTH,
+  height: '100%',
+  backgroundColor: theme.palette.background.paper,
+  borderLeft: `1px solid ${theme.palette.divider}`,
+  display: 'flex',
+  flexDirection: 'column' as const,
+  overflow: 'hidden',
+});
 
 export type CanvasObjectTransform = {
   x?: number;
@@ -77,22 +136,62 @@ export const withObjectPosition = (object: CanvasObject, x: number, y: number): 
   },
 });
 
-export const defaultMarkerObject = (sceneId: number, layerId: number, point: CanvasPoint) => ({
-  sceneId,
-  layerId,
-  kind: 'marker',
-  name: 'Marker',
-  zIndex: null,
-  transformJson: { x: point.x, y: point.y },
-  geometryJson: { radius: 12 },
-  styleJson: { fill: '#ff6b6b', stroke: '#f8d7a4', strokeWidth: 2 },
-  contentJson: { title: 'Marker', description: '', icon: 'custom' },
-  resourcePath: null,
-  linkedNoteId: null,
-  linkedSceneId: null,
-  isHidden: false,
-  isLocked: false,
-});
+export const markerFormFromObject = (object: CanvasObject): MarkerFormState => {
+  const content = asRecord(object.contentJson);
+  const style = asRecord(object.styleJson);
+  const icon = asString(content.icon, 'custom');
+  return {
+    title: asString(content.title, object.name ?? ''),
+    description: asString(content.description),
+    icon: (icon in MARKER_ICONS ? icon : 'custom') as MarkerIcon,
+    color: asString(style.fill, MARKER_COLORS[0]),
+    linkedNoteId: object.linkedNoteId,
+  };
+};
+
+export const applyMarkerFormToObject = (object: CanvasObject, form: MarkerFormState): CanvasObject => {
+  const title = form.title.trim();
+  return {
+    ...object,
+    name: title || 'Marker',
+    linkedNoteId: form.linkedNoteId,
+    contentJson: {
+      ...asRecord(object.contentJson),
+      title,
+      description: form.description,
+      icon: form.icon,
+    },
+    styleJson: {
+      ...asRecord(object.styleJson),
+      fill: form.color,
+    },
+  };
+};
+
+export const buildMarkerCreateInput = (
+  sceneId: number,
+  layerId: number,
+  point: CanvasPoint,
+  form: MarkerFormState,
+): Omit<CreateCanvasObjectInput, 'branchId'> => {
+  const title = form.title.trim();
+  return {
+    sceneId,
+    layerId,
+    kind: 'marker',
+    name: title || 'Marker',
+    zIndex: null,
+    transformJson: { x: point.x, y: point.y },
+    geometryJson: { radius: 12 },
+    styleJson: { fill: form.color, stroke: '#f8d7a4', strokeWidth: 2 },
+    contentJson: { title, description: form.description, icon: form.icon },
+    resourcePath: null,
+    linkedNoteId: form.linkedNoteId,
+    linkedSceneId: null,
+    isHidden: false,
+    isLocked: false,
+  };
+};
 
 export const defaultImageObject = (
   sceneId: number,

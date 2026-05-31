@@ -51,6 +51,7 @@
       "toolSelect": "Выбрать / переместить (Ctrl+1)",
       "toolMarker": "Маркер (Ctrl+2)",
       "toolText": "Текст (Ctrl+3)",
+      "toolTerritory": "Рисовать территорию",
       "toolPolygon": "Полигон (Ctrl+4)",
       "toolPolyline": "Полилиния (Ctrl+5)",
       "toolRectangle": "Прямоугольник (Ctrl+6)",
@@ -78,6 +79,9 @@
       "sceneAutoCreateError": "Не удалось создать первую сцену холста",
       "maxTextureExceeded": "Изображение превышает лимит текстуры {{max}}",
       "objectSelectedForEdit": "Объект выбран для редактирования"
+    },
+    "markerPanel": {
+      "nestedMapTodo": "Вложенные карты — в следующем обновлении (B4)"
     },
     "status": {
       "maxTextureExceeded": "Лимит текстуры {{max}} превышен: {{width}}x{{height}}"

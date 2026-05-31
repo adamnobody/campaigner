@@ -1951,5 +1951,16 @@ mod tests {
             content.get("factionId").and_then(|value| value.as_i64()),
             Some(i64::from(state.id))
         );
+        let style = synced.style_json.as_object().expect("style object");
+        assert_eq!(
+            style.get("fill").and_then(|value| value.as_str()),
+            Some("#336699")
+        );
+        assert_eq!(
+            style.get("stroke").and_then(|value| value.as_str()),
+            Some("#224466")
+        );
+        assert!(style.get("fillColor").is_none());
+        assert!(style.get("strokeColor").is_none());
     }
 }

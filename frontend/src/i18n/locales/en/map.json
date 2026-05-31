@@ -51,6 +51,7 @@
       "toolSelect": "Select / move (Ctrl+1)",
       "toolMarker": "Marker (Ctrl+2)",
       "toolText": "Text (Ctrl+3)",
+      "toolTerritory": "Draw territory",
       "toolPolygon": "Polygon (Ctrl+4)",
       "toolPolyline": "Polyline (Ctrl+5)",
       "toolRectangle": "Rectangle (Ctrl+6)",
@@ -78,6 +79,9 @@
       "sceneAutoCreateError": "Could not create the first canvas scene",
       "maxTextureExceeded": "Image exceeds texture limit {{max}}",
       "objectSelectedForEdit": "Object selected for editing"
+    },
+    "markerPanel": {
+      "nestedMapTodo": "Nested maps — coming in a later update (B4)"
     },
     "status": {
       "maxTextureExceeded": "Texture limit {{max}} exceeded: {{width}}x{{height}}"

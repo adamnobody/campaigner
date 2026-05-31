@@ -57,6 +57,7 @@ type Props = {
   onObjectMove: (object: CanvasObject, point: CanvasPoint) => void;
   onDraftPointCountChange: (count: number) => void;
   onCreatePolygon: (points: CanvasPoint[]) => void;
+  onCreateTerritory: (points: CanvasPoint[]) => void;
   onCreatePolyline: (points: CanvasPoint[]) => void;
   onImageLoadError: (object: CanvasObject, resourcePath: string) => void;
   onViewportChange: (viewport: ViewportSnapshot) => void;
@@ -73,6 +74,12 @@ export type PixiMapCanvasHandle = {
   finishDrawing: () => number;
   cancelDrawing: () => boolean;
 };
+
+const isClosedDrawMode = (mode: CanvasMode): boolean =>
+  mode === 'polygon' || mode === 'draw_territory';
+
+const isDrawingMode = (mode: CanvasMode): boolean =>
+  isClosedDrawMode(mode) || mode === 'polyline';
 
 const pointFromEvent = (viewport: Viewport, event: FederatedPointerEvent): CanvasPoint => {
   const world = viewport.toWorld(event.global);
@@ -107,7 +114,7 @@ const redrawDraftPolyline = (
   }
   graphics.stroke({ color: 0xf8d7a4, alpha: 0.92, width: 2 });
 
-  if (mode === 'polygon' && points.length >= 2) {
+  if (isClosedDrawMode(mode) && points.length >= 2) {
     graphics.moveTo(points[points.length - 1].x, points[points.length - 1].y);
     if (snapToFirst) {
       graphics.lineTo(points[0].x, points[0].y);
@@ -121,7 +128,7 @@ const redrawDraftPolyline = (
     graphics.circle(point.x, point.y, 3).fill({ color: 0xf8d7a4, alpha: 0.9 });
   });
 
-  if (mode === 'polygon') {
+  if (isClosedDrawMode(mode)) {
     const first = points[0];
     if (first) {
       const markerRadius = snapToFirst ? 8 / viewport.scale.x : 5 / viewport.scale.x;
@@ -159,6 +166,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onObjectMove,
   onDraftPointCountChange,
   onCreatePolygon,
+  onCreateTerritory,
   onCreatePolyline,
   onImageLoadError,
   onViewportChange,
@@ -190,6 +198,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const onObjectMoveRef = useRef(onObjectMove);
   const onDraftPointCountChangeRef = useRef(onDraftPointCountChange);
   const onCreatePolygonRef = useRef(onCreatePolygon);
+  const onCreateTerritoryRef = useRef(onCreateTerritory);
   const onCreatePolylineRef = useRef(onCreatePolyline);
   const onImageLoadErrorRef = useRef(onImageLoadError);
   const onViewportChangeRef = useRef(onViewportChange);
@@ -205,6 +214,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onObjectMoveRef.current = onObjectMove;
   onDraftPointCountChangeRef.current = onDraftPointCountChange;
   onCreatePolygonRef.current = onCreatePolygon;
+  onCreateTerritoryRef.current = onCreateTerritory;
   onCreatePolylineRef.current = onCreatePolyline;
   onImageLoadErrorRef.current = onImageLoadError;
   onViewportChangeRef.current = onViewportChange;
@@ -248,6 +258,12 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     if (currentModeRef.current === 'polygon') {
       if (points.length < 3) return points.length;
       onCreatePolygonRef.current(points);
+      clearDrawing();
+      return 0;
+    }
+    if (currentModeRef.current === 'draw_territory') {
+      if (points.length < 3) return points.length;
+      onCreateTerritoryRef.current(points);
       clearDrawing();
       return 0;
     }
@@ -295,7 +311,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       return { x: center.x, y: center.y };
     },
     undoDrawingPoint() {
-      if (currentModeRef.current !== 'polygon' && currentModeRef.current !== 'polyline') return 0;
+      if (!isDrawingMode(currentModeRef.current)) return 0;
       const next = drawingPointsRef.current.slice(0, -1);
       setDrawingPoints(next);
       return next.length;
@@ -382,10 +398,10 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         if (event.button !== 0) return;
         const worldPoint = pointFromEvent(viewport, event);
         const hit = hitTestObjects(reconcileStateRef.current, liveObjectsRef.current, worldPoint);
-        const isDrawingMode = currentModeRef.current === 'polygon' || currentModeRef.current === 'polyline';
+        const isDrawing = isDrawingMode(currentModeRef.current);
         const forcePan = spacePressedRef.current;
 
-        if (isDrawingMode && !forcePan) {
+        if (isDrawing && !forcePan) {
           drawPointerRef.current = {
             downX: event.global.x,
             downY: event.global.y,
@@ -412,7 +428,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           return;
         }
 
-        if (currentModeRef.current !== 'select' && !isDrawingMode && !hit) {
+        if (currentModeRef.current !== 'select' && !isDrawing && !hit) {
           onCanvasClickRef.current(worldPoint);
         }
 
@@ -427,7 +443,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
       const handlePointerMove = (event: FederatedPointerEvent) => {
         const worldPoint = pointFromEvent(viewport, event);
-        const isDrawingMode = currentModeRef.current === 'polygon' || currentModeRef.current === 'polyline';
+        const isDrawing = isDrawingMode(currentModeRef.current);
 
         if (drawPointerRef.current) {
           const draw = drawPointerRef.current;
@@ -435,7 +451,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
             draw.moved = true;
           }
           drawingHoverRef.current = worldPoint;
-          if (currentModeRef.current === 'polygon' && drawingPointsRef.current.length > 0) {
+          if (isClosedDrawMode(currentModeRef.current) && drawingPointsRef.current.length > 0) {
             const first = drawingPointsRef.current[0];
             const firstScreen = viewport.toScreen(first.x, first.y);
             const distance = Math.hypot(firstScreen.x - event.global.x, firstScreen.y - event.global.y);
@@ -446,9 +462,9 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           redrawDraft();
         }
 
-        if (!drawPointerRef.current && isDrawingMode && drawingPointsRef.current.length > 0) {
+        if (!drawPointerRef.current && isDrawing && drawingPointsRef.current.length > 0) {
           drawingHoverRef.current = worldPoint;
-          if (currentModeRef.current === 'polygon') {
+          if (isClosedDrawMode(currentModeRef.current)) {
             const first = drawingPointsRef.current[0];
             const firstScreen = viewport.toScreen(first.x, first.y);
             const distance = Math.hypot(firstScreen.x - event.global.x, firstScreen.y - event.global.y);
@@ -485,7 +501,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         const hovered = hitTestObjects(reconcileStateRef.current, liveObjectsRef.current, worldPoint);
         if (spacePressedRef.current) {
           updateCursor('grab');
-        } else if (isDrawingMode) {
+        } else if (isDrawing) {
           updateCursor('crosshair');
         } else if (hovered) {
           updateCursor('pointer');
@@ -519,7 +535,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           return;
         }
 
-        if (drawPointerRef.current && (currentModeRef.current === 'polygon' || currentModeRef.current === 'polyline')) {
+        if (drawPointerRef.current && isDrawingMode(currentModeRef.current)) {
           const draw = drawPointerRef.current;
           drawPointerRef.current = null;
           if (draw.moved) return;
@@ -531,7 +547,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           );
           lastDrawClickRef.current = { at: now, x: worldPoint.x, y: worldPoint.y };
 
-          if (currentModeRef.current === 'polygon') {
+          if (isClosedDrawMode(currentModeRef.current)) {
             if (drawingPointsRef.current.length > 0) {
               const first = drawingPointsRef.current[0];
               const firstScreen = viewport.toScreen(first.x, first.y);

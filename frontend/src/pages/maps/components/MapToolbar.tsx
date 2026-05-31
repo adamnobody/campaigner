@@ -6,6 +6,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import MouseIcon from '@mui/icons-material/Mouse';
 import PlaceIcon from '@mui/icons-material/Place';
 import PentagonIcon from '@mui/icons-material/Pentagon';
+import LandscapeIcon from '@mui/icons-material/Landscape';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import GestureIcon from '@mui/icons-material/Gesture';
 import PolylineIcon from '@mui/icons-material/Timeline';
@@ -100,6 +101,7 @@ export function MapToolbar({
           <ToggleButton value="select"><Tooltip title={t('map:canvas.toolbar.toolSelect')}><MouseIcon fontSize="small" /></Tooltip></ToggleButton>
           <ToggleButton value="marker"><Tooltip title={t('map:canvas.toolbar.toolMarker')}><PlaceIcon fontSize="small" /></Tooltip></ToggleButton>
           <ToggleButton value="text"><Tooltip title={t('map:canvas.toolbar.toolText')}><TextFieldsIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="draw_territory"><Tooltip title={t('map:canvas.toolbar.toolTerritory')}><LandscapeIcon fontSize="small" /></Tooltip></ToggleButton>
           <ToggleButton value="polygon"><Tooltip title={t('map:canvas.toolbar.toolPolygon')}><PentagonIcon fontSize="small" /></Tooltip></ToggleButton>
           <ToggleButton value="polyline"><Tooltip title={t('map:canvas.toolbar.toolPolyline')}><PolylineIcon fontSize="small" /></Tooltip></ToggleButton>
           <ToggleButton value="rectangle"><Tooltip title={t('map:canvas.toolbar.toolRectangle')}><RectangleIcon fontSize="small" /></Tooltip></ToggleButton>
@@ -108,7 +110,7 @@ export function MapToolbar({
           <ToggleButton value="image"><Tooltip title={t('map:canvas.toolbar.toolImage')}><ImageIcon fontSize="small" /></Tooltip></ToggleButton>
         </ToggleButtonGroup>
 
-        {(mode === 'polygon' || mode === 'polyline') && (
+        {(mode === 'polygon' || mode === 'draw_territory' || mode === 'polyline') && (
           <Box display="flex" gap={0.5} alignItems="center">
             <Chip
               size="small"
@@ -120,7 +122,7 @@ export function MapToolbar({
               size="small"
               variant="contained"
               startIcon={<CheckIcon />}
-              disabled={draftPointsCount < (mode === 'polygon' ? 3 : 2)}
+              disabled={draftPointsCount < (mode === 'polyline' ? 2 : 3)}
               onClick={onFinishTerritory}
             >
               {t('map:canvas.toolbar.save')}
