@@ -5,7 +5,7 @@ export const factionEntityTypeSchema = z.enum(['state', 'faction']);
 const factionStateRelationFields = {
   rulingDynastyId: z.number().int().positive().nullable().optional(),
   rulerCharacterId: z.number().int().positive().nullable().optional(),
-  /** Синхронизация `map_territories.faction_id` для государства; только при `kind: 'state'`. */
+  /** Синхронизация `canvas_object(kind='territory')` для государства; только при `kind: 'state'`. */
   territoryIds: z.array(z.number().int().positive()).optional(),
 };
 

@@ -8,19 +8,26 @@ use serde_json::{Map, Value};
 use crate::error::{AppError, Result};
 use crate::models::branch::BranchOverride;
 use crate::models::canvas::{
-    BulkDeleteCanvasObjectsInput, BulkUpsertCanvasObjectsInput, CANVAS_OBJECT_KINDS, CanvasLayer,
-    CanvasObject, CanvasReconcileResult, CanvasScene, CanvasTerritorySummary, CreateCanvasLayerInput,
-    CreateCanvasObjectInput, CreateCanvasSceneInput, DeleteCanvasLayerInput,
-    DeleteCanvasObjectInput, DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput,
-    GetCanvasSceneTreeInput, GetRootCanvasSceneInput, ListCanvasLayersInput,
-    ListCanvasObjectsInput, ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput,
-    ReorderCanvasLayersInput, ReorderCanvasObjectsInput, UpdateCanvasLayerInput,
-    UpdateCanvasObjectInput, UpdateCanvasSceneInput, UpsertCanvasObjectInput,
+    AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult, BulkDeleteCanvasObjectsInput,
+    BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject, CanvasReconcileResult, CanvasScene,
+    CanvasTerritorySummary, CreateCanvasLayerInput, CreateCanvasObjectInput,
+    CreateCanvasSceneInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
+    DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput,
+    GetRootCanvasSceneInput, ListCanvasLayersInput, ListCanvasObjectsInput,
+    ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput, ReorderCanvasLayersInput,
+    ReorderCanvasObjectsInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput,
+    UpdateCanvasSceneInput, CANVAS_OBJECT_KINDS,
 };
 use crate::services::branch_overlay;
 use crate::services::branch_scope;
 
-const CANVAS_LAYER_KINDS: &[&str] = &["background", "content", "overlay", "annotation", "ui_helper"];
+const CANVAS_LAYER_KINDS: &[&str] = &[
+    "background",
+    "content",
+    "overlay",
+    "annotation",
+    "ui_helper",
+];
 
 #[derive(Debug, Clone)]
 struct SceneRow {
@@ -76,7 +83,10 @@ struct ObjectRow {
     created_branch_id: Option<i32>,
 }
 
-pub fn get_root_scene(connection: &Connection, input: &GetRootCanvasSceneInput) -> Result<Option<CanvasScene>> {
+pub fn get_root_scene(
+    connection: &Connection,
+    input: &GetRootCanvasSceneInput,
+) -> Result<Option<CanvasScene>> {
     let mut scenes = get_scene_tree(
         connection,
         &GetCanvasSceneTreeInput {
@@ -84,12 +94,16 @@ pub fn get_root_scene(connection: &Connection, input: &GetRootCanvasSceneInput) 
             branch_id: input.branch_id,
         },
     )?;
-    Ok(scenes
+    let root = scenes
         .drain(..)
-        .find(|scene| scene.parent_scene_id.is_none()))
+        .find(|scene| scene.parent_scene_id.is_none());
+    Ok(root)
 }
 
-pub fn get_scene_tree(connection: &Connection, input: &GetCanvasSceneTreeInput) -> Result<Vec<CanvasScene>> {
+pub fn get_scene_tree(
+    connection: &Connection,
+    input: &GetCanvasSceneTreeInput,
+) -> Result<Vec<CanvasScene>> {
     let mut statement = connection.prepare(
         r#"
         SELECT
@@ -134,18 +148,26 @@ pub fn get_scene(connection: &Connection, input: &GetCanvasSceneInput) -> Result
         row.created_branch_id,
         Some(row.created_at.as_str()),
     )? {
-        return Err(AppError::internal("CANVAS_SCENE_NOT_FOUND", "Canvas scene not found"));
+        return Err(AppError::internal(
+            "CANVAS_SCENE_NOT_FOUND",
+            "Canvas scene not found",
+        ));
     }
     let mut scene = scene_row_to_model(row);
     if let Some(branch_id) = input.branch_id {
         let override_row = get_branch_override(connection, branch_id, "canvas_scene", input.id)?;
         scene = branch_overlay::apply_item_overlay(Some(scene), override_row.as_ref())?
-            .ok_or_else(|| AppError::internal("CANVAS_SCENE_NOT_FOUND", "Canvas scene not found"))?;
+            .ok_or_else(|| {
+                AppError::internal("CANVAS_SCENE_NOT_FOUND", "Canvas scene not found")
+            })?;
     }
     Ok(scene)
 }
 
-pub fn create_scene(connection: &Connection, input: &CreateCanvasSceneInput) -> Result<CanvasScene> {
+pub fn create_scene(
+    connection: &Connection,
+    input: &CreateCanvasSceneInput,
+) -> Result<CanvasScene> {
     if let Some(branch_id) = input.branch_id {
         branch_scope::assert_branch_belongs_to_project(connection, branch_id, input.project_id)?;
     }
@@ -184,7 +206,151 @@ pub fn create_scene(connection: &Connection, input: &CreateCanvasSceneInput) -> 
     )
 }
 
-pub fn update_scene(connection: &Connection, input: &UpdateCanvasSceneInput) -> Result<CanvasScene> {
+fn create_default_layers_for_scene(
+    connection: &Connection,
+    scene_id: i32,
+    branch_id: Option<i32>,
+) -> Result<()> {
+    create_layer(
+        connection,
+        &CreateCanvasLayerInput {
+            scene_id,
+            name: "Background".to_string(),
+            kind: "background".to_string(),
+            z_index: Some(0),
+            is_hidden: Some(false),
+            is_locked: Some(false),
+            opacity: Some(1.0),
+            blend_mode: Some("normal".to_string()),
+            metadata_json: None,
+            branch_id,
+        },
+    )?;
+    create_layer(
+        connection,
+        &CreateCanvasLayerInput {
+            scene_id,
+            name: "Content".to_string(),
+            kind: "content".to_string(),
+            z_index: Some(1),
+            is_hidden: Some(false),
+            is_locked: Some(false),
+            opacity: Some(1.0),
+            blend_mode: Some("normal".to_string()),
+            metadata_json: None,
+            branch_id,
+        },
+    )?;
+    Ok(())
+}
+
+pub fn create_root_scene_for_project(
+    connection: &Connection,
+    project_id: i32,
+    background_path: Option<&str>,
+    branch_id: Option<i32>,
+) -> Result<CanvasScene> {
+    let scene = create_scene(
+        connection,
+        &CreateCanvasSceneInput {
+            project_id,
+            parent_scene_id: None,
+            parent_object_id: None,
+            name: "World".to_string(),
+            background_path: background_path.map(str::to_string),
+            viewport_json: None,
+            metadata_json: None,
+            branch_id,
+        },
+    )?;
+
+    create_default_layers_for_scene(connection, scene.id, branch_id)?;
+
+    Ok(scene)
+}
+
+pub fn attach_child_scene_to_marker(
+    connection: &Connection,
+    input: &AttachChildSceneToMarkerInput,
+) -> Result<AttachChildSceneToMarkerResult> {
+    let marker_row = get_object_row(connection, input.marker_id)?;
+    if marker_row.kind != "marker" {
+        return Err(AppError::internal(
+            "MARKER_ATTACH_INVALID_KIND",
+            "Only marker objects can receive a child scene",
+        ));
+    }
+    if marker_row.linked_scene_id.is_some() {
+        return Err(AppError::internal(
+            "MARKER_CHILD_SCENE_ALREADY_EXISTS",
+            "Marker already has a linked child scene",
+        ));
+    }
+
+    let parent_scene = get_scene_row_by_id(connection, marker_row.scene_id)?;
+    if let Some(branch_id) = input.branch_id {
+        branch_scope::assert_branch_belongs_to_project(
+            connection,
+            branch_id,
+            parent_scene.project_id,
+        )?;
+    }
+
+    let tx = connection.unchecked_transaction()?;
+
+    let child_scene = create_scene(
+        &tx,
+        &CreateCanvasSceneInput {
+            project_id: parent_scene.project_id,
+            parent_scene_id: Some(marker_row.scene_id),
+            parent_object_id: Some(input.marker_id),
+            name: input.scene_name.clone(),
+            background_path: input.background_path.clone(),
+            viewport_json: None,
+            metadata_json: None,
+            branch_id: input.branch_id,
+        },
+    )?;
+
+    create_default_layers_for_scene(&tx, child_scene.id, input.branch_id)?;
+
+    if let Some(branch_id) = input.branch_id {
+        let patch = serde_json::json!({ "linkedSceneId": child_scene.id });
+        save_upsert_override(&tx, branch_id, "canvas_object", input.marker_id, &patch)?;
+    } else {
+        tx.execute(
+            "UPDATE canvas_object SET linked_scene_id = ?1, updated_at = datetime('now') WHERE id = ?2",
+            params![child_scene.id, input.marker_id],
+        )?;
+    }
+
+    tx.commit()?;
+
+    let marker = get_object(
+        connection,
+        &GetCanvasObjectInput {
+            id: input.marker_id,
+            branch_id: input.branch_id,
+        },
+    )?;
+    let child_scene = get_scene(
+        connection,
+        &GetCanvasSceneInput {
+            id: child_scene.id,
+            branch_id: input.branch_id,
+        },
+    )?;
+
+    Ok(AttachChildSceneToMarkerResult {
+        marker,
+        child_scene,
+    })
+}
+
+pub fn update_scene(
+    connection: &Connection,
+    input: &UpdateCanvasSceneInput,
+) -> Result<CanvasScene> {
     let current = get_scene_row(connection, input.id)?;
     if let Some(branch_id) = input.branch_id {
         let patch = build_scene_patch(input);
@@ -211,11 +377,15 @@ pub fn update_scene(connection: &Connection, input: &UpdateCanvasSceneInput) -> 
     }
     if let Some(value) = input.viewport_json.as_ref() {
         fields.push("viewport_json = ?".to_string());
-        values.push(SqlValue::Text(value_or_empty_object(Some(value)).to_string()));
+        values.push(SqlValue::Text(
+            value_or_empty_object(Some(value)).to_string(),
+        ));
     }
     if let Some(value) = input.metadata_json.as_ref() {
         fields.push("metadata_json = ?".to_string());
-        values.push(SqlValue::Text(value_or_empty_object(Some(value)).to_string()));
+        values.push(SqlValue::Text(
+            value_or_empty_object(Some(value)).to_string(),
+        ));
     }
     if !fields.is_empty() {
         fields.push("updated_at = datetime('now')".to_string());
@@ -248,7 +418,10 @@ pub fn delete_scene(connection: &Connection, input: &DeleteCanvasSceneInput) -> 
     Ok(())
 }
 
-pub fn list_layers(connection: &Connection, input: &ListCanvasLayersInput) -> Result<Vec<CanvasLayer>> {
+pub fn list_layers(
+    connection: &Connection,
+    input: &ListCanvasLayersInput,
+) -> Result<Vec<CanvasLayer>> {
     let scene = get_scene_row_by_id(connection, input.scene_id)?;
     let mut statement = connection.prepare(
         r#"
@@ -283,7 +456,10 @@ pub fn list_layers(connection: &Connection, input: &ListCanvasLayersInput) -> Re
     Ok(visible)
 }
 
-pub fn create_layer(connection: &Connection, input: &CreateCanvasLayerInput) -> Result<CanvasLayer> {
+pub fn create_layer(
+    connection: &Connection,
+    input: &CreateCanvasLayerInput,
+) -> Result<CanvasLayer> {
     validate_layer_kind(&input.kind)?;
     let scene = get_scene_row_by_id(connection, input.scene_id)?;
     if let Some(branch_id) = input.branch_id {
@@ -291,7 +467,9 @@ pub fn create_layer(connection: &Connection, input: &CreateCanvasLayerInput) -> 
     }
     let created_branch_id =
         branch_scope::resolve_created_branch_id(connection, scene.project_id, input.branch_id)?;
-    let z_index = input.z_index.unwrap_or_else(|| next_layer_z_index(connection, input.scene_id));
+    let z_index = input
+        .z_index
+        .unwrap_or_else(|| next_layer_z_index(connection, input.scene_id));
     connection.execute(
         r#"
         INSERT INTO canvas_layer (
@@ -324,7 +502,10 @@ pub fn create_layer(connection: &Connection, input: &CreateCanvasLayerInput) -> 
     get_layer_by_id(connection, id, input.branch_id)
 }
 
-pub fn update_layer(connection: &Connection, input: &UpdateCanvasLayerInput) -> Result<CanvasLayer> {
+pub fn update_layer(
+    connection: &Connection,
+    input: &UpdateCanvasLayerInput,
+) -> Result<CanvasLayer> {
     let _ = get_layer_by_id(connection, input.id, input.branch_id)?;
     if let Some(kind) = input.kind.as_deref() {
         validate_layer_kind(kind)?;
@@ -368,7 +549,9 @@ pub fn update_layer(connection: &Connection, input: &UpdateCanvasLayerInput) -> 
     }
     if let Some(value) = input.metadata_json.as_ref() {
         fields.push("metadata_json = ?".to_string());
-        values.push(SqlValue::Text(value_or_empty_object(Some(value)).to_string()));
+        values.push(SqlValue::Text(
+            value_or_empty_object(Some(value)).to_string(),
+        ));
     }
     if !fields.is_empty() {
         fields.push("updated_at = datetime('now')".to_string());
@@ -389,7 +572,10 @@ pub fn delete_layer(connection: &Connection, input: &DeleteCanvasLayerInput) -> 
     Ok(())
 }
 
-pub fn reorder_layers(connection: &Connection, input: &ReorderCanvasLayersInput) -> Result<Vec<CanvasLayer>> {
+pub fn reorder_layers(
+    connection: &Connection,
+    input: &ReorderCanvasLayersInput,
+) -> Result<Vec<CanvasLayer>> {
     let _ = get_scene_row_by_id(connection, input.scene_id)?;
     for (z, id) in input.ordered_ids.iter().enumerate() {
         if let Some(branch_id) = input.branch_id {
@@ -416,7 +602,10 @@ pub fn reorder_layers(connection: &Connection, input: &ReorderCanvasLayersInput)
     )
 }
 
-pub fn list_objects(connection: &Connection, input: &ListCanvasObjectsInput) -> Result<Vec<CanvasObject>> {
+pub fn list_objects(
+    connection: &Connection,
+    input: &ListCanvasObjectsInput,
+) -> Result<Vec<CanvasObject>> {
     let scene = get_scene_row_by_id(connection, input.scene_id)?;
     let mut statement = connection.prepare(
         r#"
@@ -464,18 +653,26 @@ pub fn get_object(connection: &Connection, input: &GetCanvasObjectInput) -> Resu
         row.created_branch_id,
         Some(row.created_at.as_str()),
     )? {
-        return Err(AppError::internal("CANVAS_OBJECT_NOT_FOUND", "Canvas object not found"));
+        return Err(AppError::internal(
+            "CANVAS_OBJECT_NOT_FOUND",
+            "Canvas object not found",
+        ));
     }
     let mut object = object_row_to_model(row);
     if let Some(branch_id) = input.branch_id {
         let override_row = get_branch_override(connection, branch_id, "canvas_object", input.id)?;
         object = branch_overlay::apply_item_overlay(Some(object), override_row.as_ref())?
-            .ok_or_else(|| AppError::internal("CANVAS_OBJECT_NOT_FOUND", "Canvas object not found"))?;
+            .ok_or_else(|| {
+                AppError::internal("CANVAS_OBJECT_NOT_FOUND", "Canvas object not found")
+            })?;
     }
     Ok(object)
 }
 
-pub fn create_object(connection: &Connection, input: &CreateCanvasObjectInput) -> Result<CanvasObject> {
+pub fn create_object(
+    connection: &Connection,
+    input: &CreateCanvasObjectInput,
+) -> Result<CanvasObject> {
     validate_object_kind(&input.kind)?;
     let scene = get_scene_row_by_id(connection, input.scene_id)?;
     if let Some(branch_id) = input.branch_id {
@@ -483,7 +680,9 @@ pub fn create_object(connection: &Connection, input: &CreateCanvasObjectInput) -
     }
     let created_branch_id =
         branch_scope::resolve_created_branch_id(connection, scene.project_id, input.branch_id)?;
-    let z_index = input.z_index.unwrap_or_else(|| next_object_z_index(connection, input.layer_id));
+    let z_index = input
+        .z_index
+        .unwrap_or_else(|| next_object_z_index(connection, input.layer_id));
     connection.execute(
         r#"
         INSERT INTO canvas_object (
@@ -525,7 +724,10 @@ pub fn create_object(connection: &Connection, input: &CreateCanvasObjectInput) -
     )
 }
 
-pub fn update_object(connection: &Connection, input: &UpdateCanvasObjectInput) -> Result<CanvasObject> {
+pub fn update_object(
+    connection: &Connection,
+    input: &UpdateCanvasObjectInput,
+) -> Result<CanvasObject> {
     let _ = get_object(
         connection,
         &GetCanvasObjectInput {
@@ -569,19 +771,27 @@ pub fn update_object(connection: &Connection, input: &UpdateCanvasObjectInput) -
     }
     if let Some(value) = input.transform_json.as_ref() {
         fields.push("transform_json = ?".to_string());
-        values.push(SqlValue::Text(value_or_empty_object(Some(value)).to_string()));
+        values.push(SqlValue::Text(
+            value_or_empty_object(Some(value)).to_string(),
+        ));
     }
     if let Some(value) = input.geometry_json.as_ref() {
         fields.push("geometry_json = ?".to_string());
-        values.push(SqlValue::Text(value_or_empty_object(Some(value)).to_string()));
+        values.push(SqlValue::Text(
+            value_or_empty_object(Some(value)).to_string(),
+        ));
     }
     if let Some(value) = input.style_json.as_ref() {
         fields.push("style_json = ?".to_string());
-        values.push(SqlValue::Text(value_or_empty_object(Some(value)).to_string()));
+        values.push(SqlValue::Text(
+            value_or_empty_object(Some(value)).to_string(),
+        ));
     }
     if let Some(value) = input.content_json.as_ref() {
         fields.push("content_json = ?".to_string());
-        values.push(SqlValue::Text(value_or_empty_object(Some(value)).to_string()));
+        values.push(SqlValue::Text(
+            value_or_empty_object(Some(value)).to_string(),
+        ));
     }
     if let Some(value) = input.resource_path.as_ref() {
         fields.push("resource_path = ?".to_string());
@@ -606,7 +816,10 @@ pub fn update_object(connection: &Connection, input: &UpdateCanvasObjectInput) -
     if !fields.is_empty() {
         fields.push("updated_at = datetime('now')".to_string());
         values.push(SqlValue::Integer(i64::from(input.id)));
-        let query = format!("UPDATE canvas_object SET {} WHERE id = ?", fields.join(", "));
+        let query = format!(
+            "UPDATE canvas_object SET {} WHERE id = ?",
+            fields.join(", ")
+        );
         connection.execute(&query, params_from_iter(values.iter()))?;
     }
     get_object(
@@ -634,7 +847,10 @@ pub fn delete_object(connection: &Connection, input: &DeleteCanvasObjectInput) -
     Ok(())
 }
 
-pub fn reorder_objects(connection: &Connection, input: &ReorderCanvasObjectsInput) -> Result<Vec<CanvasObject>> {
+pub fn reorder_objects(
+    connection: &Connection,
+    input: &ReorderCanvasObjectsInput,
+) -> Result<Vec<CanvasObject>> {
     for (z, id) in input.ordered_ids.iter().enumerate() {
         if let Some(branch_id) = input.branch_id {
             save_upsert_override(
@@ -668,7 +884,10 @@ pub fn reorder_objects(connection: &Connection, input: &ReorderCanvasObjectsInpu
     )
 }
 
-pub fn bulk_upsert_objects(connection: &Connection, input: &BulkUpsertCanvasObjectsInput) -> Result<Vec<CanvasObject>> {
+pub fn bulk_upsert_objects(
+    connection: &Connection,
+    input: &BulkUpsertCanvasObjectsInput,
+) -> Result<Vec<CanvasObject>> {
     let mut result = Vec::new();
     for item in &input.objects {
         if let Some(id) = item.id {
@@ -720,7 +939,10 @@ pub fn bulk_upsert_objects(connection: &Connection, input: &BulkUpsertCanvasObje
     Ok(result)
 }
 
-pub fn bulk_delete_objects(connection: &Connection, input: &BulkDeleteCanvasObjectsInput) -> Result<()> {
+pub fn bulk_delete_objects(
+    connection: &Connection,
+    input: &BulkDeleteCanvasObjectsInput,
+) -> Result<()> {
     for object_id in &input.object_ids {
         delete_object(
             connection,
@@ -733,7 +955,10 @@ pub fn bulk_delete_objects(connection: &Connection, input: &BulkDeleteCanvasObje
     Ok(())
 }
 
-pub fn reconcile_scene(connection: &Connection, input: &ReconcileCanvasSceneInput) -> Result<CanvasReconcileResult> {
+pub fn reconcile_scene(
+    connection: &Connection,
+    input: &ReconcileCanvasSceneInput,
+) -> Result<CanvasReconcileResult> {
     let upserted = bulk_upsert_objects(
         connection,
         &BulkUpsertCanvasObjectsInput {
@@ -862,7 +1087,11 @@ fn get_scene_row(connection: &Connection, id: i32) -> Result<SceneRow> {
         .ok_or_else(|| AppError::internal("CANVAS_SCENE_NOT_FOUND", "Canvas scene not found"))
 }
 
-fn get_layer_by_id(connection: &Connection, id: i32, branch_id: Option<i32>) -> Result<CanvasLayer> {
+fn get_layer_by_id(
+    connection: &Connection,
+    id: i32,
+    branch_id: Option<i32>,
+) -> Result<CanvasLayer> {
     let row = connection
         .query_row(
             r#"
@@ -887,13 +1116,18 @@ fn get_layer_by_id(connection: &Connection, id: i32, branch_id: Option<i32>) -> 
         row.created_branch_id,
         Some(row.created_at.as_str()),
     )? {
-        return Err(AppError::internal("CANVAS_LAYER_NOT_FOUND", "Canvas layer not found"));
+        return Err(AppError::internal(
+            "CANVAS_LAYER_NOT_FOUND",
+            "Canvas layer not found",
+        ));
     }
     let mut layer = layer_row_to_model(row);
     if let Some(branch_id) = branch_id {
         let override_row = get_branch_override(connection, branch_id, "canvas_layer", id)?;
         layer = branch_overlay::apply_item_overlay(Some(layer), override_row.as_ref())?
-            .ok_or_else(|| AppError::internal("CANVAS_LAYER_NOT_FOUND", "Canvas layer not found"))?;
+            .ok_or_else(|| {
+                AppError::internal("CANVAS_LAYER_NOT_FOUND", "Canvas layer not found")
+            })?;
     }
     Ok(layer)
 }
@@ -1032,13 +1266,15 @@ fn parse_json_or_default(raw: &str) -> Value {
 }
 
 fn value_or_empty_object(value: Option<&Value>) -> Value {
-    value
-        .cloned()
-        .unwrap_or_else(|| Value::Object(Map::new()))
+    value.cloned().unwrap_or_else(|| Value::Object(Map::new()))
 }
 
 fn bool_to_sql(value: bool) -> i32 {
-    if value { 1 } else { 0 }
+    if value {
+        1
+    } else {
+        0
+    }
 }
 
 fn validate_layer_kind(kind: &str) -> Result<()> {
@@ -1173,10 +1409,7 @@ fn build_object_patch(input: &UpdateCanvasObjectInput) -> Value {
     Value::Object(patch)
 }
 
-fn apply_overrides<T>(
-    rows: Vec<T>,
-    overrides: HashMap<i32, BranchOverride>,
-) -> Result<Vec<T>>
+fn apply_overrides<T>(rows: Vec<T>, overrides: HashMap<i32, BranchOverride>) -> Result<Vec<T>>
 where
     T: serde::Serialize + for<'de> serde::Deserialize<'de> + Clone,
 {
@@ -1262,7 +1495,8 @@ fn save_upsert_override(
                 Ok(Value::Object(map)) => Value::Object(map),
                 _ => Value::Object(Map::new()),
             };
-            if let (Value::Object(base_map), Value::Object(new_map)) = (&mut base, patch_json.clone())
+            if let (Value::Object(base_map), Value::Object(new_map)) =
+                (&mut base, patch_json.clone())
             {
                 for (key, value) in new_map {
                     base_map.insert(key, value);
@@ -1318,4 +1552,404 @@ fn map_branch_override_row(row: &Row<'_>) -> rusqlite::Result<BranchOverride> {
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::migrations::run_migrations;
+    use crate::models::canvas::CreateCanvasObjectInput;
+    use crate::models::faction::{CreateFactionInput, UpdateFactionInput};
+    use crate::models::project::CreateProjectInput;
+    use crate::repositories::factions::{create_faction, update_faction};
+    use crate::repositories::projects::create_project;
+    use serde_json::json;
+
+    fn test_connection() -> Connection {
+        let connection = Connection::open_in_memory().expect("in-memory db");
+        connection
+            .execute("PRAGMA foreign_keys = ON", [])
+            .expect("foreign keys");
+        run_migrations(&connection).expect("migrations");
+        connection
+    }
+
+    fn scene_count(connection: &Connection) -> i32 {
+        connection
+            .query_row("SELECT COUNT(*) FROM canvas_scene", [], |row| row.get(0))
+            .expect("scene count")
+    }
+
+    fn setup_project_with_marker(connection: &Connection) -> (i32, i32) {
+        let project = create_project(
+            connection,
+            &CreateProjectInput {
+                name: "Parity Test".to_string(),
+                description: None,
+                status: None,
+                main_branch_name: None,
+            },
+        )
+        .expect("project");
+
+        let root = get_root_scene(
+            connection,
+            &GetRootCanvasSceneInput {
+                project_id: project.id,
+                branch_id: None,
+            },
+        )
+        .expect("root scene")
+        .expect("root scene exists");
+
+        let layers = list_layers(
+            connection,
+            &ListCanvasLayersInput {
+                scene_id: root.id,
+                branch_id: None,
+            },
+        )
+        .expect("layers");
+        let content_layer = layers
+            .iter()
+            .find(|layer| layer.kind == "content")
+            .expect("content layer");
+
+        let marker = create_object(
+            connection,
+            &CreateCanvasObjectInput {
+                scene_id: root.id,
+                layer_id: content_layer.id,
+                kind: "marker".to_string(),
+                name: Some("Gate".to_string()),
+                z_index: Some(0),
+                transform_json: json!({ "x": 10.0, "y": 20.0 }),
+                geometry_json: Some(json!({ "radius": 12 })),
+                style_json: Some(json!({ "fill": "#ff6b6b" })),
+                content_json: Some(json!({ "title": "Gate", "description": "", "icon": "castle" })),
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: Some(false),
+                is_locked: Some(false),
+                branch_id: None,
+            },
+        )
+        .expect("marker");
+
+        (project.id, marker.id)
+    }
+
+    #[test]
+    fn attach_child_scene_links_marker_and_creates_layers() {
+        let connection = test_connection();
+        let (_project_id, marker_id) = setup_project_with_marker(&connection);
+        let scenes_before = scene_count(&connection);
+
+        let result = attach_child_scene_to_marker(
+            &connection,
+            &AttachChildSceneToMarkerInput {
+                marker_id,
+                scene_name: "Inner Map".to_string(),
+                background_path: None,
+                branch_id: None,
+            },
+        )
+        .expect("attach");
+
+        assert_eq!(scene_count(&connection), scenes_before + 1);
+        assert_eq!(result.marker.linked_scene_id, Some(result.child_scene.id));
+        assert_eq!(
+            result.child_scene.parent_scene_id,
+            Some(result.marker.scene_id)
+        );
+        assert_eq!(result.child_scene.parent_object_id, Some(marker_id));
+
+        let child_layers = list_layers(
+            &connection,
+            &ListCanvasLayersInput {
+                scene_id: result.child_scene.id,
+                branch_id: None,
+            },
+        )
+        .expect("child layers");
+        assert_eq!(child_layers.len(), 2);
+    }
+
+    #[test]
+    fn attach_child_scene_rejects_second_attach() {
+        let connection = test_connection();
+        let (_project_id, marker_id) = setup_project_with_marker(&connection);
+
+        attach_child_scene_to_marker(
+            &connection,
+            &AttachChildSceneToMarkerInput {
+                marker_id,
+                scene_name: "Inner Map".to_string(),
+                background_path: None,
+                branch_id: None,
+            },
+        )
+        .expect("first attach");
+
+        let scenes_before = scene_count(&connection);
+        let error = attach_child_scene_to_marker(
+            &connection,
+            &AttachChildSceneToMarkerInput {
+                marker_id,
+                scene_name: "Duplicate".to_string(),
+                background_path: None,
+                branch_id: None,
+            },
+        )
+        .expect_err("second attach must fail");
+
+        assert_eq!(error.to_payload().code, "MARKER_CHILD_SCENE_ALREADY_EXISTS");
+        assert_eq!(scene_count(&connection), scenes_before);
+    }
+
+    #[test]
+    fn attach_child_scene_rejects_non_marker_kind() {
+        let connection = test_connection();
+        let (_project_id, marker_id) = setup_project_with_marker(&connection);
+        connection
+            .execute(
+                "UPDATE canvas_object SET kind = 'text' WHERE id = ?1",
+                params![marker_id],
+            )
+            .expect("retag object");
+
+        let scenes_before = scene_count(&connection);
+        let error = attach_child_scene_to_marker(
+            &connection,
+            &AttachChildSceneToMarkerInput {
+                marker_id,
+                scene_name: "Inner Map".to_string(),
+                background_path: None,
+                branch_id: None,
+            },
+        )
+        .expect_err("non-marker attach must fail");
+
+        assert_eq!(error.to_payload().code, "MARKER_ATTACH_INVALID_KIND");
+        assert_eq!(scene_count(&connection), scenes_before);
+    }
+
+    #[test]
+    fn attach_child_scene_rolls_back_when_update_blocked() {
+        let connection = test_connection();
+        let (_project_id, marker_id) = setup_project_with_marker(&connection);
+        let scenes_before = scene_count(&connection);
+
+        connection
+            .execute_batch(
+                r#"
+                CREATE TRIGGER canvas_attach_test_fail_update
+                BEFORE UPDATE OF linked_scene_id ON canvas_object
+                WHEN NEW.linked_scene_id IS NOT NULL
+                BEGIN
+                  SELECT RAISE(ABORT, 'forced attach failure');
+                END;
+                "#,
+            )
+            .expect("trigger");
+
+        let error = attach_child_scene_to_marker(
+            &connection,
+            &AttachChildSceneToMarkerInput {
+                marker_id,
+                scene_name: "Rollback Map".to_string(),
+                background_path: None,
+                branch_id: None,
+            },
+        )
+        .expect_err("attach must fail at marker update");
+
+        assert_ne!(error.to_payload().code, "MARKER_CHILD_SCENE_ALREADY_EXISTS");
+        assert_eq!(scene_count(&connection), scenes_before);
+
+        let marker = get_object(
+            &connection,
+            &GetCanvasObjectInput {
+                id: marker_id,
+                branch_id: None,
+            },
+        )
+        .expect("marker reload");
+        assert!(marker.linked_scene_id.is_none());
+    }
+
+    #[test]
+    fn territory_kind_is_listed_and_synced_with_faction() {
+        let connection = test_connection();
+        let project = create_project(
+            &connection,
+            &CreateProjectInput {
+                name: "Territory Test".to_string(),
+                description: None,
+                status: None,
+                main_branch_name: None,
+            },
+        )
+        .expect("project");
+
+        let root = get_root_scene(
+            &connection,
+            &GetRootCanvasSceneInput {
+                project_id: project.id,
+                branch_id: None,
+            },
+        )
+        .expect("root")
+        .expect("root exists");
+
+        let content_layer = list_layers(
+            &connection,
+            &ListCanvasLayersInput {
+                scene_id: root.id,
+                branch_id: None,
+            },
+        )
+        .expect("layers")
+        .into_iter()
+        .find(|layer| layer.kind == "content")
+        .expect("content layer");
+
+        let state = create_faction(
+            &connection,
+            &CreateFactionInput {
+                project_id: project.id,
+                name: "Test State".to_string(),
+                kind: Some("state".to_string()),
+                r#type: None,
+                motto: None,
+                description: None,
+                history: None,
+                goals: None,
+                headquarters: None,
+                territory: None,
+                ruling_dynasty_id: None,
+                ruler_character_id: None,
+                territory_ids: None,
+                treasury: None,
+                population: None,
+                army_size: None,
+                navy_size: None,
+                territory_km2: None,
+                annual_income: None,
+                annual_expenses: None,
+                members_count: None,
+                influence: None,
+                status: None,
+                color: Some("#336699".to_string()),
+                secondary_color: Some("#224466".to_string()),
+                founded_date: None,
+                disbanded_date: None,
+                parent_faction_id: None,
+                sort_order: None,
+                branch_id: None,
+            },
+        )
+        .expect("state faction");
+
+        let territory = create_object(
+            &connection,
+            &CreateCanvasObjectInput {
+                scene_id: root.id,
+                layer_id: content_layer.id,
+                kind: "territory".to_string(),
+                name: Some("Borderlands".to_string()),
+                z_index: Some(0),
+                transform_json: json!({}),
+                geometry_json: Some(json!({
+                    "rings": [[
+                        { "x": 0.0, "y": 0.0 },
+                        { "x": 120.0, "y": 0.0 },
+                        { "x": 60.0, "y": 80.0 }
+                    ]]
+                })),
+                style_json: Some(json!({
+                    "fill": "#4ecdc4",
+                    "opacity": 0.25,
+                    "stroke": "#9ff3df",
+                    "strokeWidth": 2
+                })),
+                content_json: Some(json!({
+                    "description": "Northern border",
+                    "factionId": state.id
+                })),
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: Some(false),
+                is_locked: Some(false),
+                branch_id: None,
+            },
+        )
+        .expect("territory");
+
+        let summaries = list_territory_summaries(
+            &connection,
+            &ListCanvasTerritorySummariesInput {
+                project_id: project.id,
+                branch_id: None,
+            },
+        )
+        .expect("summaries");
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].id, territory.id);
+        assert_eq!(summaries[0].faction_id, Some(state.id));
+        assert_eq!(summaries[0].occupant_name.as_deref(), Some("Test State"));
+
+        update_faction(
+            &connection,
+            &UpdateFactionInput {
+                id: state.id,
+                name: None,
+                kind: None,
+                r#type: None,
+                motto: None,
+                description: None,
+                history: None,
+                goals: None,
+                headquarters: None,
+                territory: None,
+                ruling_dynasty_id: None,
+                ruler_character_id: None,
+                territory_ids: Some(vec![territory.id]),
+                treasury: None,
+                population: None,
+                army_size: None,
+                navy_size: None,
+                territory_km2: None,
+                annual_income: None,
+                annual_expenses: None,
+                members_count: None,
+                influence: None,
+                status: None,
+                color: None,
+                secondary_color: None,
+                founded_date: None,
+                disbanded_date: None,
+                parent_faction_id: None,
+                sort_order: None,
+                branch_id: None,
+            },
+        )
+        .expect("faction sync");
+
+        let synced = get_object(
+            &connection,
+            &GetCanvasObjectInput {
+                id: territory.id,
+                branch_id: None,
+            },
+        )
+        .expect("territory reload");
+        let content = synced.content_json.as_object().expect("content object");
+        assert_eq!(
+            content.get("factionId").and_then(|value| value.as_i64()),
+            Some(i64::from(state.id))
+        );
+    }
 }

@@ -6,7 +6,7 @@ use crate::models::project::{
     CreateProjectInput, DeleteProjectInput, GetProjectInput, Project, UpdateProjectInput,
 };
 use crate::models::timeline::CreateTimelineEventInput;
-use crate::repositories::{character_traits_seed, maps, notes, timeline};
+use crate::repositories::{canvas, character_traits_seed, notes, timeline};
 
 pub fn list_projects(connection: &Connection) -> Result<Vec<Project>> {
     let mut statement = connection.prepare(
@@ -91,7 +91,7 @@ pub fn create_project(connection: &Connection, input: &CreateProjectInput) -> Re
         )
     })?;
 
-    maps::create_root_map_for_project(connection, id, None, Some(main_branch_id))?;
+    canvas::create_root_scene_for_project(connection, id, None, Some(main_branch_id))?;
 
     get_project(connection, &GetProjectInput { id })
 }

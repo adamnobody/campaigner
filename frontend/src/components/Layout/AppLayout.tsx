@@ -16,6 +16,7 @@ export const AppLayout: React.FC = () => {
   const pageKey = `${location.pathname}${location.search}`;
 
   const isHomePage = location.pathname === '/';
+  const isCanvasPage = /^\/project\/[^/]+\/map(?:\/.*)?$/.test(location.pathname);
 
   if (isHomePage) {
     return (
@@ -26,17 +27,30 @@ export const AppLayout: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', position: 'relative' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        height: '100dvh',
+        pt: '64px',
+        boxSizing: 'border-box',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
       <TopBar />
       <Sidebar />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          mt: '64px',
           p: 3,
-          minHeight: 'calc(100vh - 64px)',
+          height: '100%',
+          boxSizing: 'border-box',
+          minHeight: 0,
           minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: isCanvasPage ? 'hidden' : 'auto',
         }}
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -48,7 +62,14 @@ export const AppLayout: React.FC = () => {
             transition={shouldAnimatePage
               ? { duration: pageTransitionMs / 1000, ease: [0.22, 1, 0.36, 1] }
               : undefined}
-            style={{ minHeight: '100%' }}
+            style={{
+              flex: 1,
+              width: '100%',
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: isCanvasPage ? 'hidden' : 'visible',
+            }}
           >
             <Outlet />
           </motion.div>

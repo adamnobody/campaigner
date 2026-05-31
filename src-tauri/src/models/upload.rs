@@ -57,15 +57,6 @@ pub struct DynastyUploadImageInput {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct MapUploadImageInput {
-    pub map_id: i32,
-    pub file_bytes: Vec<u8>,
-    pub file_name: String,
-    pub mime: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
 pub struct ProjectUploadMapImageInput {
     pub project_id: i32,
     pub file_bytes: Vec<u8>,

@@ -13,14 +13,15 @@ use crate::models::branch::{
     CreateBranchInput, DeleteBranchInput, ListBranchesInput, ScenarioBranch, UpdateBranchInput,
 };
 use crate::models::canvas::{
-    BulkDeleteCanvasObjectsInput, BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject,
-    CanvasReconcileResult, CanvasScene, CanvasTerritorySummary, CreateCanvasLayerInput,
-    CreateCanvasObjectInput, CreateCanvasSceneInput, DeleteCanvasLayerInput,
-    DeleteCanvasObjectInput, DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput,
-    GetCanvasSceneTreeInput, GetRootCanvasSceneInput, ListCanvasLayersInput,
-    ListCanvasObjectsInput, ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput,
-    ReorderCanvasLayersInput, ReorderCanvasObjectsInput, UpdateCanvasLayerInput,
-    UpdateCanvasObjectInput, UpdateCanvasSceneInput, UpsertCanvasObjectInput,
+    AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult, BulkDeleteCanvasObjectsInput,
+    BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject, CanvasReconcileResult, CanvasScene,
+    CanvasTerritorySummary, CreateCanvasLayerInput, CreateCanvasObjectInput,
+    CreateCanvasSceneInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
+    DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput,
+    GetRootCanvasSceneInput, ListCanvasLayersInput, ListCanvasObjectsInput,
+    ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput, ReorderCanvasLayersInput,
+    ReorderCanvasObjectsInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput,
+    UpdateCanvasSceneInput, UpsertCanvasObjectInput,
 };
 use crate::models::character::{
     Character, CharacterGraph, CharacterRelationship, CharactersListInput, CharactersListResult,
@@ -59,14 +60,6 @@ use crate::models::graph_layout::{
     DeleteGraphLayoutInput, GetGraphLayoutInput, GraphLayoutDataV1, GraphLayoutNodeState,
     GraphLayoutResponse, GraphLayoutViewport, UpsertGraphLayoutInput,
 };
-use crate::models::legacy_migration::{LegacyMigrationPreview, LegacyMigrationReport};
-use crate::models::map::{
-    CreateMapInput, CreateMapMarkerInput, CreateMapTerritoryInput, DeleteMapInput,
-    DeleteMapMarkerInput, DeleteMapTerritoryInput, GetMapInput, GetMapTreeInput, GetRootMapInput,
-    ListMapMarkersInput, ListMapTerritoriesInput, ListTerritorySummariesInput, MapMarker,
-    MapRecord, MapTerritory, MapTerritoryPoint, MapTerritorySummary, UpdateMapInput,
-    UpdateMapMarkerInput, UpdateMapTerritoryInput,
-};
 use crate::models::note::{
     CreateNoteInput, DeleteNoteInput, GetNoteInput, Note, NotesListInput, NotesListResult,
     SetNoteTagsInput, UpdateNoteInput,
@@ -91,8 +84,7 @@ use crate::models::timeline::{
 };
 use crate::models::upload::{
     CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
-    FactionUploadImageInput, MapUploadImageInput, ProjectUploadMapImageInput, UploadFileInput,
-    UploadSavedPath,
+    FactionUploadImageInput, ProjectUploadMapImageInput, UploadFileInput, UploadSavedPath,
 };
 use crate::models::wiki_link::{
     CreateWikiLinkInput, DeleteWikiLinkInput, ListWikiCategoriesInput, ListWikiLinksInput,
@@ -103,6 +95,7 @@ mod codegen_commands {
     use super::{
         AddDynastyEventInput, AddDynastyFamilyLinkInput, AddDynastyMemberInput, Ambition,
         AppHealthResponse, AssignCharacterTraitInput, AssignFactionAmbitionInput,
+        AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult,
         BulkDeleteCanvasObjectsInput, BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject,
         CanvasReconcileResult, CanvasScene, CanvasTerritorySummary, Character, CharacterGraph,
         CharacterRelationship, CharacterTrait, CharacterUploadImageInput, CharactersListInput,
@@ -110,35 +103,31 @@ mod codegen_commands {
         CreateCanvasLayerInput, CreateCanvasObjectInput, CreateCanvasSceneInput,
         CreateCharacterInput, CreateCharacterTraitInput, CreateDemoProjectInput, CreateDogmaInput,
         CreateDynastyInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
-        CreateFactionRankInput, CreateFactionRelationInput, CreateMapInput, CreateMapMarkerInput,
-        CreateMapTerritoryInput, CreateNoteInput, CreatePoliticalScaleInput, CreateProjectInput,
-        CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput, CreateWikiLinkInput,
-        DeleteAmbitionInput, DeleteBranchInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
-        DeleteCanvasSceneInput, DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput,
-        DeleteDynastyEventInput, DeleteDynastyFamilyLinkInput, DeleteDynastyInput,
-        DeleteFactionInput, DeleteFactionMemberInput, DeleteFactionPolicyInput,
-        DeleteFactionRankInput, DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteMapInput,
-        DeleteMapMarkerInput, DeleteMapTerritoryInput, DeleteNoteInput,
+        CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput,
+        CreatePoliticalScaleInput, CreateProjectInput, CreateRelationshipInput, CreateTagInput,
+        CreateTimelineEventInput, CreateWikiLinkInput, DeleteAmbitionInput, DeleteBranchInput,
+        DeleteCanvasLayerInput, DeleteCanvasObjectInput, DeleteCanvasSceneInput,
+        DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
+        DeleteDynastyFamilyLinkInput, DeleteDynastyInput, DeleteFactionInput,
+        DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
+        DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteNoteInput,
         DeletePoliticalScaleAssignmentInput, DeletePoliticalScaleInput, DeleteProjectInput,
         DeleteRelationshipInput, DeleteTagInput, DeleteTimelineEventInput, DeleteWikiLinkInput,
-        Dogma, DogmasListInput, DogmasListResult, DynastiesListInput, DynastiesListResult,
-        Dynasty, DynastyEvent, DynastyFamilyLink, DynastyMember, DynastyUploadImageInput,
-        ExportProjectMeta, Faction, FactionCompareResult, FactionCustomMetric, FactionGraph,
-        FactionMember, FactionPolicy, FactionRank, FactionRelation, FactionUploadBannerInput,
-        FactionUploadImageInput, FactionsListInput, FactionsListResult,
-        FactionsRelationsListInput, GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput,
-        GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput, GetCharacterInput,
-        GetDogmaInput, GetDynastyInput, GetFactionAmbitionsInput, GetFactionInput,
-        GetGraphLayoutInput, GetMapInput, GetMapTreeInput, GetNoteInput, GetProjectInput,
-        GetRootCanvasSceneInput, GetRootMapInput, GetTimelineEventInput, GraphLayoutDataV1,
-        GraphLayoutResponse, ImportProjectInput, ImportedProjectPayload, LegacyMigrationPreview,
-        LegacyMigrationReport, ListBranchesInput, ListCanvasLayersInput, ListCanvasObjectsInput,
+        Dogma, DogmasListInput, DogmasListResult, DynastiesListInput, DynastiesListResult, Dynasty,
+        DynastyEvent, DynastyFamilyLink, DynastyMember, DynastyUploadImageInput, ExportProjectMeta,
+        Faction, FactionCompareResult, FactionCustomMetric, FactionGraph, FactionMember,
+        FactionPolicy, FactionRank, FactionRelation, FactionUploadBannerInput,
+        FactionUploadImageInput, FactionsListInput, FactionsListResult, FactionsRelationsListInput,
+        GetAmbitionsCatalogInput, GetAssignedCharacterTraitsInput, GetCanvasObjectInput,
+        GetCanvasSceneInput, GetCanvasSceneTreeInput, GetCharacterInput, GetDogmaInput,
+        GetDynastyInput, GetFactionAmbitionsInput, GetFactionInput, GetGraphLayoutInput,
+        GetNoteInput, GetProjectInput, GetRootCanvasSceneInput, GetTimelineEventInput,
+        GraphLayoutDataV1, GraphLayoutResponse, ImportProjectInput, ImportedProjectPayload,
+        ListBranchesInput, ListCanvasLayersInput, ListCanvasObjectsInput,
         ListCanvasTerritorySummariesInput, ListCharacterTraitsInput, ListFactionMembersInput,
-        ListFactionPoliciesInput, ListFactionRanksInput, ListMapMarkersInput,
-        ListMapTerritoriesInput, ListPoliticalScaleAssignmentsInput, ListPoliticalScalesInput,
-        ListTerritorySummariesInput, ListWikiCategoriesInput, ListWikiLinksInput, MapMarker,
-        MapRecord, MapTerritory, MapTerritorySummary, MapUploadImageInput, Note, NotesListInput,
-        NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
+        ListFactionPoliciesInput, ListFactionRanksInput, ListPoliticalScaleAssignmentsInput,
+        ListPoliticalScalesInput, ListWikiCategoriesInput, ListWikiLinksInput, Note,
+        NotesListInput, NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
         ProjectUploadMapImageInput, ReconcileCanvasSceneInput, RelationshipsListInput,
         RemoveDynastyMemberInput, ReorderCanvasLayersInput, ReorderCanvasObjectsInput,
         ReorderDogmasInput, ReorderDynastyEventsInput, ReorderTimelineInput,
@@ -152,9 +141,8 @@ mod codegen_commands {
         UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
         UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
         UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
-        UpdateFactionRelationInput, UpdateMapInput, UpdateMapMarkerInput, UpdateMapTerritoryInput,
-        UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput, UpdateRelationshipInput,
-        UpdateTimelineEventInput, UploadFileInput, UploadSavedPath, UpsertCanvasObjectInput,
+        UpdateFactionRelationInput, UpdateNoteInput, UpdatePoliticalScaleInput, UpdateProjectInput,
+        UpdateRelationshipInput, UpdateTimelineEventInput, UploadFileInput, UploadSavedPath,
         UpsertGraphLayoutInput, WikiCategory, WikiLink,
     };
 
@@ -167,26 +155,6 @@ mod codegen_commands {
             app_version: String::new(),
         }
     }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn check_legacy_migration_available() -> Option<LegacyMigrationPreview> {
-        None
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn run_legacy_migration() -> LegacyMigrationReport {
-        LegacyMigrationReport {
-            imported_counts: Default::default(),
-            uploads_copied: false,
-            errors: Vec::new(),
-        }
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn skip_legacy_migration() {}
 
     #[tauri::command]
     #[specta::specta]
@@ -701,141 +669,6 @@ mod codegen_commands {
     #[specta::specta]
     pub fn graph_layout_delete(_input: DeleteGraphLayoutInput) {}
 
-    fn empty_map_record() -> MapRecord {
-        MapRecord {
-            id: 0,
-            project_id: 0,
-            parent_map_id: None,
-            parent_marker_id: None,
-            name: String::new(),
-            image_path: None,
-            created_at: String::new(),
-            updated_at: String::new(),
-        }
-    }
-
-    fn empty_map_marker() -> MapMarker {
-        MapMarker {
-            id: 0,
-            map_id: 0,
-            title: String::new(),
-            description: String::new(),
-            position_x: 0.0,
-            position_y: 0.0,
-            color: "#FF6B6B".to_string(),
-            icon: "custom".to_string(),
-            linked_note_id: None,
-            child_map_id: None,
-            created_at: String::new(),
-            updated_at: String::new(),
-        }
-    }
-
-    fn empty_map_territory() -> MapTerritory {
-        MapTerritory {
-            id: 0,
-            map_id: 0,
-            name: String::new(),
-            description: String::new(),
-            color: "#4ECDC4".to_string(),
-            opacity: 0.25,
-            border_color: "#4ECDC4".to_string(),
-            border_width: 2.0,
-            smoothing: 0.0,
-            rings: Vec::new(),
-            faction_id: None,
-            sort_order: 0,
-            created_at: String::new(),
-            updated_at: String::new(),
-        }
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_get_root(_input: GetRootMapInput) -> Option<MapRecord> {
-        None
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_get_tree(_input: GetMapTreeInput) -> Vec<MapRecord> {
-        Vec::new()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_get(_input: GetMapInput) -> MapRecord {
-        empty_map_record()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_create(_input: CreateMapInput) -> MapRecord {
-        empty_map_record()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_update(_input: UpdateMapInput) -> MapRecord {
-        empty_map_record()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_delete(_input: DeleteMapInput) {}
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_markers_list(_input: ListMapMarkersInput) -> Vec<MapMarker> {
-        Vec::new()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_markers_create(_input: CreateMapMarkerInput) -> MapMarker {
-        empty_map_marker()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_markers_update(_input: UpdateMapMarkerInput) -> MapMarker {
-        empty_map_marker()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_markers_delete(_input: DeleteMapMarkerInput) {}
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_territories_list(_input: ListMapTerritoriesInput) -> Vec<MapTerritory> {
-        Vec::new()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_territories_create(_input: CreateMapTerritoryInput) -> MapTerritory {
-        empty_map_territory()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_territories_update(_input: UpdateMapTerritoryInput) -> MapTerritory {
-        empty_map_territory()
-    }
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_territories_delete(_input: DeleteMapTerritoryInput) {}
-
-    #[tauri::command]
-    #[specta::specta]
-    pub fn maps_territory_summaries_list(
-        _input: ListTerritorySummariesInput,
-    ) -> Vec<MapTerritorySummary> {
-        Vec::new()
-    }
-
     fn empty_canvas_scene() -> CanvasScene {
         CanvasScene {
             id: 0,
@@ -1010,6 +843,17 @@ mod codegen_commands {
         CanvasReconcileResult {
             upserted: Vec::new(),
             deleted_ids: Vec::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn canvas_markers_attach_child_scene(
+        _input: AttachChildSceneToMarkerInput,
+    ) -> AttachChildSceneToMarkerResult {
+        AttachChildSceneToMarkerResult {
+            marker: empty_canvas_object(),
+            child_scene: empty_canvas_scene(),
         }
     }
 
@@ -1842,21 +1686,6 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
-    pub fn maps_upload_image(_input: MapUploadImageInput) -> MapRecord {
-        MapRecord {
-            id: 0,
-            project_id: 0,
-            parent_map_id: None,
-            parent_marker_id: None,
-            name: String::new(),
-            image_path: None,
-            created_at: String::new(),
-            updated_at: String::new(),
-        }
-    }
-
-    #[tauri::command]
-    #[specta::specta]
     pub fn projects_upload_map_image(_input: ProjectUploadMapImageInput) -> Project {
         Project {
             id: 0,
@@ -1905,9 +1734,6 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             codegen_commands::app_health,
-            codegen_commands::check_legacy_migration_available,
-            codegen_commands::run_legacy_migration,
-            codegen_commands::skip_legacy_migration,
             codegen_commands::branches_list,
             codegen_commands::branches_create,
             codegen_commands::branches_update,
@@ -1981,21 +1807,7 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::canvas_objects_bulk_upsert,
             codegen_commands::canvas_objects_bulk_delete,
             codegen_commands::canvas_reconcile_scene,
-            codegen_commands::maps_get_root,
-            codegen_commands::maps_get_tree,
-            codegen_commands::maps_get,
-            codegen_commands::maps_create,
-            codegen_commands::maps_update,
-            codegen_commands::maps_delete,
-            codegen_commands::maps_markers_list,
-            codegen_commands::maps_markers_create,
-            codegen_commands::maps_markers_update,
-            codegen_commands::maps_markers_delete,
-            codegen_commands::maps_territories_list,
-            codegen_commands::maps_territories_create,
-            codegen_commands::maps_territories_update,
-            codegen_commands::maps_territories_delete,
-            codegen_commands::maps_territory_summaries_list,
+            codegen_commands::canvas_markers_attach_child_scene,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -2015,7 +1827,6 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::factions_upload_image,
             codegen_commands::factions_upload_banner,
             codegen_commands::dynasties_upload_image,
-            codegen_commands::maps_upload_image,
             codegen_commands::projects_upload_map_image,
             codegen_commands::characters_list,
             codegen_commands::characters_get,
@@ -2075,8 +1886,6 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::wiki_categories_list
         ])
         .typ::<AppHealthResponse>()
-        .typ::<LegacyMigrationPreview>()
-        .typ::<LegacyMigrationReport>()
         .typ::<ScenarioBranch>()
         .typ::<ListBranchesInput>()
         .typ::<CreateBranchInput>()
@@ -2174,26 +1983,6 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<BulkUpsertCanvasObjectsInput>()
         .typ::<BulkDeleteCanvasObjectsInput>()
         .typ::<ReconcileCanvasSceneInput>()
-        .typ::<MapRecord>()
-        .typ::<MapMarker>()
-        .typ::<MapTerritory>()
-        .typ::<MapTerritoryPoint>()
-        .typ::<MapTerritorySummary>()
-        .typ::<GetRootMapInput>()
-        .typ::<GetMapTreeInput>()
-        .typ::<GetMapInput>()
-        .typ::<CreateMapInput>()
-        .typ::<UpdateMapInput>()
-        .typ::<DeleteMapInput>()
-        .typ::<ListMapMarkersInput>()
-        .typ::<CreateMapMarkerInput>()
-        .typ::<UpdateMapMarkerInput>()
-        .typ::<DeleteMapMarkerInput>()
-        .typ::<ListMapTerritoriesInput>()
-        .typ::<CreateMapTerritoryInput>()
-        .typ::<UpdateMapTerritoryInput>()
-        .typ::<DeleteMapTerritoryInput>()
-        .typ::<ListTerritorySummariesInput>()
         .typ::<Project>()
         .typ::<GetProjectInput>()
         .typ::<CreateProjectInput>()
@@ -2275,7 +2064,6 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<FactionUploadImageInput>()
         .typ::<FactionUploadBannerInput>()
         .typ::<DynastyUploadImageInput>()
-        .typ::<MapUploadImageInput>()
         .typ::<ProjectUploadMapImageInput>()
         .typ::<WikiLink>()
         .typ::<WikiCategory>()

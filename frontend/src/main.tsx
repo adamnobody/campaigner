@@ -7,7 +7,6 @@ import { AppThemeProvider } from './theme/AppThemeProvider';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { GlobalSnackbar } from './components/ui/GlobalSnackbar';
 import { OnboardingOverlay } from './components/onboarding/OnboardingOverlay';
-import { LegacyMigrationDialog } from './components/LegacyMigrationDialog';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -22,7 +21,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ConfirmDialog />
         <GlobalSnackbar />
         <OnboardingOverlay />
-        <LegacyMigrationDialog />
       </AppThemeProvider>
     </BrowserRouter>
   </React.StrictMode>

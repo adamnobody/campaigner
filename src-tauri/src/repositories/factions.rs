@@ -1598,7 +1598,7 @@ fn list_territories_internal(
 ) -> Result<Vec<IdNameRef>> {
     let mut statement = connection.prepare(
         r#"
-        SELECT co.id, COALESCE(co.name, '')
+        SELECT co.id, COALESCE(co.name, '') AS name
         FROM canvas_object co
         JOIN canvas_scene cs ON cs.id = co.scene_id
         WHERE

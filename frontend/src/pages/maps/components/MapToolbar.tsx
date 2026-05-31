@@ -1,197 +1,147 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Box, Typography, Button, IconButton,
-  Chip, Tooltip, ToggleButton, ToggleButtonGroup,
-  useTheme, alpha,
-} from '@mui/material';
+import { Box, Button, Chip, IconButton, ToggleButton, ToggleButtonGroup, Tooltip, Typography, alpha, useTheme } from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import PentagonIcon from '@mui/icons-material/Pentagon';
 import MouseIcon from '@mui/icons-material/Mouse';
 import PlaceIcon from '@mui/icons-material/Place';
-import UndoIcon from '@mui/icons-material/Undo';
+import PentagonIcon from '@mui/icons-material/Pentagon';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
+import GestureIcon from '@mui/icons-material/Gesture';
+import PolylineIcon from '@mui/icons-material/Timeline';
+import RectangleIcon from '@mui/icons-material/Crop75';
+import EllipseIcon from '@mui/icons-material/PanoramaFishEye';
+import ImageIcon from '@mui/icons-material/Image';
 import CheckIcon from '@mui/icons-material/Check';
-import AddIcon from '@mui/icons-material/Add';
-import { localizedRootMapDisplayedName, type MapData, type MapMode } from './mapUtils';
+import UndoIcon from '@mui/icons-material/Undo';
+import { useTranslation } from 'react-i18next';
+import type { CanvasMode } from '../canvas/canvasModel';
 
-export type MapToolbarProps = {
-  mapBreadcrumbs: MapData[];
-  onNavigateToParent: () => void;
-  onNavigateToBreadcrumb: (index: number) => void;
-  mode: MapMode;
-  onModeChange: (mode: MapMode) => void;
-  drawingCompletedRingsCount: number;
-  drawingPointsCount: number;
-  onUndoLastPoint: () => void;
-  onCompleteContour: () => void;
-  onFinishDrawing: () => void;
-  onCancelDrawing: () => void;
-  zoomDisplay: number;
+type Props = {
+  sceneName: string;
+  mode: CanvasMode;
+  onModeChange: (mode: CanvasMode) => void;
+  zoomPercent: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetView: () => void;
-  markersCount: number;
-  territoriesCount: number;
-  onUploadMap: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  objectCount: number;
+  selectedLabel: string | null;
+  draftPointsCount: number;
+  onUndoDraftPoint: () => void;
+  onFinishTerritory: () => void;
+  onCancelTerritory: () => void;
+  onAddImage: () => void;
 };
 
-export const MapToolbar: React.FC<MapToolbarProps> = ({
-  mapBreadcrumbs,
-  onNavigateToParent,
-  onNavigateToBreadcrumb,
+export function MapToolbar({
+  sceneName,
   mode,
   onModeChange,
-  drawingCompletedRingsCount,
-  drawingPointsCount,
-  onUndoLastPoint,
-  onCompleteContour,
-  onFinishDrawing,
-  onCancelDrawing,
-  zoomDisplay,
+  zoomPercent,
   onZoomIn,
   onZoomOut,
   onResetView,
-  markersCount,
-  territoriesCount,
-  onUploadMap,
-}) => {
+  objectCount,
+  selectedLabel,
+  draftPointsCount,
+  onUndoDraftPoint,
+  onFinishTerritory,
+  onCancelTerritory,
+  onAddImage,
+}: Props) {
   const theme = useTheme();
   const { t } = useTranslation(['map', 'common']);
 
   return (
-    <Box data-tour="map-toolbar" display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-      <Box display="flex" alignItems="center" gap={1}>
-        {mapBreadcrumbs.length > 1 && (
-          <IconButton size="small" onClick={onNavigateToParent} sx={{ color: 'text.secondary' }}
-            aria-label={t('map:toolbar.backParentAria')}>
-            <ArrowBackIcon fontSize="small" />
-          </IconButton>
-        )}
-        <Box display="flex" alignItems="center" gap={0.5}>
-          {mapBreadcrumbs.map((bc, i) => {
-            const isLast = i === mapBreadcrumbs.length - 1;
-            return (
-              <React.Fragment key={bc.id}>
-                {i > 0 && <Typography sx={{ color: 'text.disabled', mx: 0.5 }}>›</Typography>}
-                <Typography
-                  onClick={isLast ? undefined : () => onNavigateToBreadcrumb(i)}
-                  sx={{
-                    fontFamily: '"Cinzel", serif',
-                    fontWeight: isLast ? 700 : 400,
-                    fontSize: isLast ? '1.55rem' : '1.05rem',
-                    color: isLast ? 'text.primary' : 'text.secondary',
-                    cursor: isLast ? 'default' : 'pointer',
-                    ...(!isLast && { '&:hover': { color: 'text.primary' } }),
-                  }}
-                >
-                  {localizedRootMapDisplayedName(bc, t('map:breadcrumb.worldMap'))}
-                </Typography>
-              </React.Fragment>
-            );
+    <Box data-tour="map-toolbar" display="flex" justifyContent="space-between" alignItems="center" mb={1} gap={2}>
+      <Box minWidth={0}>
+        <Typography
+          sx={{
+            fontFamily: '"Cinzel", serif',
+            fontWeight: 700,
+            fontSize: '1.55rem',
+            color: 'text.primary',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {sceneName || t('map:canvas.defaults.sceneName')}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {t('map:canvas.toolbar.sceneStats', {
+            count: objectCount,
+            selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
           })}
-        </Box>
+        </Typography>
       </Box>
 
-      <Box display="flex" gap={1} alignItems="center">
+      <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" justifyContent="flex-end">
         <ToggleButtonGroup
           value={mode}
           exclusive
-          onChange={(_, v: MapMode | null) => {
-            if (v) onModeChange(v);
+          onChange={(_, value: CanvasMode | null) => {
+            if (value) onModeChange(value);
           }}
           size="small"
           sx={{
             '& .MuiToggleButton-root': {
               color: 'text.secondary',
               borderColor: theme.palette.divider,
-              px: 1.5, py: 0.5,
+              px: 0.8,
               '&.Mui-selected': {
                 color: theme.palette.primary.main,
                 backgroundColor: alpha(theme.palette.primary.main, 0.15),
-                borderColor: alpha(theme.palette.primary.main, 0.4),
               },
             },
           }}
         >
-          <ToggleButton value="select">
-            <Tooltip title={t('map:toolbar.tooltipSelectMode')}>
-              <MouseIcon fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="marker">
-            <Tooltip title={t('map:toolbar.tooltipMarkerMode')}>
-              <PlaceIcon fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="draw_territory">
-            <Tooltip title={t('map:toolbar.tooltipDrawTerritory')}>
-              <PentagonIcon fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
+          <ToggleButton value="select"><Tooltip title={t('map:canvas.toolbar.toolSelect')}><MouseIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="marker"><Tooltip title={t('map:canvas.toolbar.toolMarker')}><PlaceIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="text"><Tooltip title={t('map:canvas.toolbar.toolText')}><TextFieldsIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="polygon"><Tooltip title={t('map:canvas.toolbar.toolPolygon')}><PentagonIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="polyline"><Tooltip title={t('map:canvas.toolbar.toolPolyline')}><PolylineIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="rectangle"><Tooltip title={t('map:canvas.toolbar.toolRectangle')}><RectangleIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="ellipse"><Tooltip title={t('map:canvas.toolbar.toolEllipse')}><EllipseIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="curve_text"><Tooltip title={t('map:canvas.toolbar.toolCurveText')}><GestureIcon fontSize="small" /></Tooltip></ToggleButton>
+          <ToggleButton value="image"><Tooltip title={t('map:canvas.toolbar.toolImage')}><ImageIcon fontSize="small" /></Tooltip></ToggleButton>
         </ToggleButtonGroup>
 
-        {mode === 'draw_territory' && (
+        {(mode === 'polygon' || mode === 'polyline') && (
           <Box display="flex" gap={0.5} alignItems="center">
             <Chip
-              label={t('map:toolbar.drawingChip', { rings: drawingCompletedRingsCount, points: drawingPointsCount })}
-              size="small" variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.primary.main, 0.3), color: theme.palette.primary.main }}
+              size="small"
+              variant="outlined"
+              label={t('map:canvas.toolbar.drawingPoints', { count: draftPointsCount })}
             />
-            <IconButton size="small" onClick={onUndoLastPoint} disabled={drawingPointsCount === 0}
-              sx={{ color: 'text.secondary' }}>
-              <UndoIcon fontSize="small" />
-            </IconButton>
-            <Button size="small" variant="outlined" startIcon={<AddIcon />}
-              onClick={onCompleteContour} disabled={drawingPointsCount < 3}
-              sx={{ borderColor: alpha(theme.palette.primary.main, 0.45), color: theme.palette.primary.main, fontWeight: 600,
-                '&:hover': { borderColor: theme.palette.primary.main, backgroundColor: alpha(theme.palette.primary.main, 0.08) },
-                '&.Mui-disabled': { borderColor: alpha(theme.palette.primary.main, 0.15), color: alpha(theme.palette.primary.main, 0.25) } }}>
-              {t('map:toolbar.completeContour')}
+            <IconButton size="small" onClick={onUndoDraftPoint} disabled={draftPointsCount === 0}><UndoIcon fontSize="small" /></IconButton>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<CheckIcon />}
+              disabled={draftPointsCount < (mode === 'polygon' ? 3 : 2)}
+              onClick={onFinishTerritory}
+            >
+              {t('map:canvas.toolbar.save')}
             </Button>
-            <Button size="small" variant="contained" startIcon={<CheckIcon />}
-              onClick={onFinishDrawing}
-              disabled={drawingCompletedRingsCount === 0 && drawingPointsCount < 3}
-              sx={{ backgroundColor: theme.palette.primary.main, color: theme.palette.primary.contrastText, fontWeight: 600,
-                '&:hover': { backgroundColor: theme.palette.primary.dark },
-                '&.Mui-disabled': { backgroundColor: alpha(theme.palette.primary.main, 0.2), color: alpha(theme.palette.text.primary, 0.3) } }}>
-              {t('common:save')}
-            </Button>
-            <Button size="small" variant="outlined" onClick={onCancelDrawing}
-              sx={{ borderColor: alpha(theme.palette.error.main, 0.3), color: alpha(theme.palette.error.main, 0.7) }}>
-              {t('common:cancel')}
-            </Button>
+            <Button size="small" variant="outlined" onClick={onCancelTerritory}>{t('common:cancel')}</Button>
           </Box>
         )}
 
         <Box display="flex" gap={0.5} sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.6), borderRadius: 1, p: 0.5 }}>
-          <IconButton size="small" onClick={onZoomOut} sx={{ color: 'text.secondary' }}><ZoomOutIcon fontSize="small" /></IconButton>
-          <Typography sx={{ color: 'text.primary', fontSize: '0.9rem', lineHeight: '30px', px: 1, minWidth: 40, textAlign: 'center' }}>
-            {t('map:toolbar.zoomPercent', { value: Math.round(zoomDisplay * 100) })}
+          <IconButton size="small" onClick={onZoomOut}><ZoomOutIcon fontSize="small" /></IconButton>
+          <Typography sx={{ color: 'text.primary', fontSize: '0.9rem', lineHeight: '30px', px: 1, minWidth: 48, textAlign: 'center' }}>
+            {zoomPercent}%
           </Typography>
-          <IconButton size="small" onClick={onZoomIn} sx={{ color: 'text.secondary' }}><ZoomInIcon fontSize="small" /></IconButton>
-          <IconButton size="small" onClick={onResetView} sx={{ color: 'text.secondary' }}><CenterFocusStrongIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={onZoomIn}><ZoomInIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={onResetView}><CenterFocusStrongIcon fontSize="small" /></IconButton>
         </Box>
 
-        <Chip icon={<DragIndicatorIcon sx={{ fontSize: 14 }} />}
-          label={t('map:toolbar.statsChip', { markers: markersCount, territories: territoriesCount })}
-          size="small" variant="outlined"
-          sx={{
-            borderColor: theme.palette.divider, color: 'text.secondary',
-            '& .MuiChip-label': { fontSize: '0.8rem' },
-          }} />
-
-        <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} size="small"
-          data-tour="map-upload"
-          sx={{ borderColor: theme.palette.divider, color: 'text.secondary' }}>
-          {t('map:toolbar.uploadMap')}
-          <input type="file" hidden accept="image/*" onChange={onUploadMap} />
+        <Button variant="outlined" startIcon={<CloudUploadIcon />} size="small" onClick={onAddImage}>
+          {t('map:canvas.toolbar.addImage')}
         </Button>
       </Box>
     </Box>
   );
-};
+}

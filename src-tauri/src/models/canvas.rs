@@ -25,7 +25,9 @@ pub struct CanvasScene {
     pub parent_object_id: Option<i32>,
     pub name: String,
     pub background_path: Option<String>,
+    #[specta(type = specta_typescript::Unknown)]
     pub viewport_json: Value,
+    #[specta(type = specta_typescript::Unknown)]
     pub metadata_json: Value,
     pub created_at: String,
     pub updated_at: String,
@@ -43,6 +45,7 @@ pub struct CanvasLayer {
     pub is_locked: bool,
     pub opacity: f64,
     pub blend_mode: String,
+    #[specta(type = specta_typescript::Unknown)]
     pub metadata_json: Value,
     pub created_at: String,
     pub updated_at: String,
@@ -57,9 +60,13 @@ pub struct CanvasObject {
     pub kind: String,
     pub name: Option<String>,
     pub z_index: i32,
+    #[specta(type = specta_typescript::Unknown)]
     pub transform_json: Value,
+    #[specta(type = specta_typescript::Unknown)]
     pub geometry_json: Value,
+    #[specta(type = specta_typescript::Unknown)]
     pub style_json: Value,
+    #[specta(type = specta_typescript::Unknown)]
     pub content_json: Value,
     pub resource_path: Option<String>,
     pub linked_note_id: Option<i32>,
@@ -118,7 +125,9 @@ pub struct CreateCanvasSceneInput {
     pub parent_object_id: Option<i32>,
     pub name: String,
     pub background_path: Option<String>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub viewport_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub metadata_json: Option<Value>,
     pub branch_id: Option<i32>,
 }
@@ -129,7 +138,9 @@ pub struct UpdateCanvasSceneInput {
     pub id: i32,
     pub name: Option<String>,
     pub background_path: Option<String>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub viewport_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub metadata_json: Option<Value>,
     pub branch_id: Option<i32>,
 }
@@ -159,6 +170,7 @@ pub struct CreateCanvasLayerInput {
     pub is_locked: Option<bool>,
     pub opacity: Option<f64>,
     pub blend_mode: Option<String>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub metadata_json: Option<Value>,
     pub branch_id: Option<i32>,
 }
@@ -174,6 +186,7 @@ pub struct UpdateCanvasLayerInput {
     pub is_locked: Option<bool>,
     pub opacity: Option<f64>,
     pub blend_mode: Option<String>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub metadata_json: Option<Value>,
     pub branch_id: Option<i32>,
 }
@@ -222,9 +235,13 @@ pub struct CreateCanvasObjectInput {
     pub kind: String,
     pub name: Option<String>,
     pub z_index: Option<i32>,
+    #[specta(type = specta_typescript::Unknown)]
     pub transform_json: Value,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub geometry_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub style_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub content_json: Option<Value>,
     pub resource_path: Option<String>,
     pub linked_note_id: Option<i32>,
@@ -242,9 +259,13 @@ pub struct UpdateCanvasObjectInput {
     pub kind: Option<String>,
     pub name: Option<String>,
     pub z_index: Option<i32>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub transform_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub geometry_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub style_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub content_json: Option<Value>,
     pub resource_path: Option<String>,
     pub linked_note_id: Option<i32>,
@@ -286,9 +307,13 @@ pub struct UpsertCanvasObjectInput {
     pub kind: String,
     pub name: Option<String>,
     pub z_index: i32,
+    #[specta(type = specta_typescript::Unknown)]
     pub transform_json: Value,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub geometry_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub style_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
     pub content_json: Option<Value>,
     pub resource_path: Option<String>,
     pub linked_note_id: Option<i32>,
@@ -312,4 +337,20 @@ pub struct ReconcileCanvasSceneInput {
     pub upsert: Vec<UpsertCanvasObjectInput>,
     pub delete_ids: Vec<i32>,
     pub branch_id: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AttachChildSceneToMarkerInput {
+    pub marker_id: i32,
+    pub scene_name: String,
+    pub background_path: Option<String>,
+    pub branch_id: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AttachChildSceneToMarkerResult {
+    pub marker: CanvasObject,
+    pub child_scene: CanvasScene,
 }

@@ -3,14 +3,15 @@ use tauri::State;
 use crate::db::connection::DatabaseState;
 use crate::error::{AppError, Result};
 use crate::models::canvas::{
-    BulkDeleteCanvasObjectsInput, BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject,
-    CanvasReconcileResult, CanvasScene, CanvasTerritorySummary, CreateCanvasLayerInput,
-    CreateCanvasObjectInput, CreateCanvasSceneInput, DeleteCanvasLayerInput,
-    DeleteCanvasObjectInput, DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput,
-    GetCanvasSceneTreeInput, GetRootCanvasSceneInput, ListCanvasLayersInput,
-    ListCanvasObjectsInput, ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput,
-    ReorderCanvasLayersInput, ReorderCanvasObjectsInput, UpdateCanvasLayerInput,
-    UpdateCanvasObjectInput, UpdateCanvasSceneInput,
+    AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult, BulkDeleteCanvasObjectsInput,
+    BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject, CanvasReconcileResult, CanvasScene,
+    CanvasTerritorySummary, CreateCanvasLayerInput, CreateCanvasObjectInput,
+    CreateCanvasSceneInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
+    DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput,
+    GetRootCanvasSceneInput, ListCanvasLayersInput, ListCanvasObjectsInput,
+    ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput, ReorderCanvasLayersInput,
+    ReorderCanvasObjectsInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput,
+    UpdateCanvasSceneInput,
 };
 use crate::repositories::canvas;
 
@@ -264,4 +265,16 @@ pub fn canvas_reconcile_scene_command(
         .lock()
         .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
     canvas::reconcile_scene(&connection, &input)
+}
+
+#[tauri::command(rename = "canvas_markers_attach_child_scene")]
+pub fn canvas_markers_attach_child_scene_command(
+    state: State<'_, DatabaseState>,
+    input: AttachChildSceneToMarkerInput,
+) -> Result<AttachChildSceneToMarkerResult> {
+    let connection = state
+        .connection
+        .lock()
+        .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
+    canvas::attach_child_scene_to_marker(&connection, &input)
 }

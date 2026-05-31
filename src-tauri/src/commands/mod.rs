@@ -8,8 +8,6 @@ pub mod dogmas;
 pub mod dynasties;
 pub mod factions;
 pub mod graph_layouts;
-pub mod legacy_migration;
-pub mod maps;
 pub mod notes;
 pub mod political_scales;
 pub mod project_io;

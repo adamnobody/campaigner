@@ -8,12 +8,10 @@
     "dev:tauri": "vite --mode tauri",
     "build": "tsc -b && vite build",
     "build:tauri": "tsc -b && vite build --mode tauri",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.11.0",
-    "@tauri-apps/plugin-dialog": "^2",
-    "@tauri-apps/plugin-fs": "^2",
     "@campaigner/shared": "*",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -27,9 +25,14 @@
     "@mui/icons-material": "^5.15.21",
     "@mui/lab": "^5.0.0-alpha.170",
     "@mui/material": "^5.15.21",
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-fs": "^2",
     "@types/dagre": "^0.7.54",
     "dagre": "^0.8.5",
     "i18next": "^26.0.8",
+    "pixi-viewport": "^6.0.3",
+    "pixi.js": "^8.18.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.52.0",
@@ -46,6 +49,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "typescript": "^5.4.5",
-    "vite": "^5.3.1"
+    "vite": "^5.3.1",
+    "vitest": "^3.2.4"
   }
 }

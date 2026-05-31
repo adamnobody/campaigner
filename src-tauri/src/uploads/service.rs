@@ -5,17 +5,15 @@ use crate::error::Result;
 use crate::models::character::{Character, GetCharacterInput};
 use crate::models::dynasty::{Dynasty, GetDynastyInput};
 use crate::models::faction::{Faction, GetFactionInput};
-use crate::models::map::{GetMapInput, MapRecord};
 use crate::models::project::{GetProjectInput, Project};
 use crate::models::upload::{
     CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
-    FactionUploadImageInput, MapUploadImageInput, ProjectUploadMapImageInput, UploadFileInput,
-    UploadSavedPath,
+    FactionUploadImageInput, ProjectUploadMapImageInput, UploadFileInput, UploadSavedPath,
 };
 use crate::paths::UploadSubdir;
-use crate::repositories::{characters, dynasties, factions, maps, projects};
-use crate::uploads::filename::{generate_filename, generate_map_entity_filename};
-use crate::uploads::storage::{delete_file_if_exists, write_file};
+use crate::repositories::{characters, dynasties, factions, projects};
+use crate::uploads::filename::generate_filename;
+use crate::uploads::storage::write_file;
 use crate::uploads::validation::{
     validate_size, validate_upload, UploadProfile, MAX_FILE_SIZE, MAX_IMAGE_SIZE,
 };
@@ -203,31 +201,6 @@ pub fn dynasties_upload_image<R: Runtime>(
             branch_id: input.branch_id,
         },
     )
-}
-
-pub fn maps_upload_image<R: Runtime>(
-    app: &AppHandle<R>,
-    connection: &Connection,
-    input: MapUploadImageInput,
-) -> Result<MapRecord> {
-    validate_size(input.file_bytes.len(), MAX_IMAGE_SIZE)?;
-    validate_upload(
-        &input.file_name,
-        &input.mime,
-        UploadProfile::Default,
-        MAX_IMAGE_SIZE,
-    )?;
-
-    let existing = maps::get_map_by_id(connection, &GetMapInput { id: input.map_id })?;
-
-    if let Some(old_path) = existing.image_path.as_deref() {
-        delete_file_if_exists(app, old_path)?;
-    }
-
-    let filename = generate_map_entity_filename(input.map_id, &input.file_name);
-    let image_path = write_file(app, UploadSubdir::Maps, &filename, &input.file_bytes)?;
-    maps::update_map_image_path(connection, input.map_id, &image_path)?;
-    maps::get_map_by_id(connection, &GetMapInput { id: input.map_id })
 }
 
 pub fn projects_upload_map_image<R: Runtime>(

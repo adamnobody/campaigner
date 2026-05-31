@@ -78,15 +78,6 @@ pub fn generate_filename(prefix: &str, original_name: &str) -> String {
     format!("{prefix}-{timestamp}-{random}-{safe_base}{ext}")
 }
 
-pub fn generate_map_entity_filename(map_id: i32, original_name: &str) -> String {
-    let mut ext = extension_from_name(original_name);
-    if ext.is_empty() {
-        ext = ".png".to_string();
-    }
-    let timestamp = unix_ms_timestamp();
-    format!("map_{map_id}_{timestamp}{ext}")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
