@@ -15,6 +15,8 @@ import { MapMarkerDialog } from './components/MapMarkerDialog';
 import { MapMarkerPanel } from './components/MapMarkerPanel';
 import { MapCanvasContextMenu, type MapContextMenuState } from './components/MapCanvasContextMenu';
 import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas';
+import type { ViewportPersist } from './canvas/canvasViewport';
+import { flushCanvasWrites, trackCanvasWrite } from './canvas/canvasWriteQueue';
 import {
   applyMarkerFormToObject,
   asRecord,
@@ -122,8 +124,16 @@ export function CanvasPage() {
   const pendingImagePointRef = useRef<CanvasPoint | null>(null);
   const pendingMarkerPointRef = useRef<CanvasPoint | null>(null);
   const reportedImageLoadErrorsRef = useRef(new Set<string>());
-  const sceneCacheRef = useRef(new Map<number, { scene: CanvasScene; layers: CanvasLayer[]; objects: CanvasObject[] }>());
   const viewportPersistTimerRef = useRef<number | null>(null);
+  const pendingViewportRef = useRef<{ sceneId: number; viewport: ViewportPersist } | null>(null);
+  const projectIdRef = useRef(projectIdNumber);
+  projectIdRef.current = projectIdNumber;
+
+  const createCanvasObject = useCallback(
+    (input: Parameters<typeof canvasApi.createObject>[0]) =>
+      trackCanvasWrite(canvasApi.createObject(input, projectIdNumber)),
+    [projectIdNumber],
+  );
 
   const selectedObject = useMemo(
     () => objects.find((object) => object.id === selectedObjectId) ?? null,
@@ -156,19 +166,16 @@ export function CanvasPage() {
         t('map:canvas.defaults.sceneName'),
         scopeKey,
       );
-      const cached = sceneCacheRef.current.get(loadedScene.id);
-      if (cached) {
-        setScene(cached.scene);
-        setLayers(cached.layers);
-        setObjects(cached.objects);
-      }
 
       const [loadedLayers, loadedObjects] = await Promise.all([
         canvasApi.listLayers(loadedScene.id, projectIdNumber),
         canvasApi.listObjects(loadedScene.id, projectIdNumber),
       ]);
-      const snapshot = { scene: loadedScene, layers: loadedLayers, objects: loadedObjects };
-      sceneCacheRef.current.set(loadedScene.id, snapshot);
+      console.debug('[Canvas] loadScene', {
+        sceneId: loadedScene.id,
+        routeSceneId: sceneIdFromRoute,
+        objectCount: loadedObjects.length,
+      });
       setScene(loadedScene);
       setLayers(loadedLayers);
       setObjects(loadedObjects);
@@ -206,10 +213,26 @@ export function CanvasPage() {
       .catch(() => undefined);
   }, [projectIdNumber]);
 
-  useEffect(() => {
-    if (!scene) return;
-    sceneCacheRef.current.set(scene.id, { scene, layers, objects });
-  }, [scene, layers, objects]);
+  useEffect(() => () => {
+    if (viewportPersistTimerRef.current != null) {
+      window.clearTimeout(viewportPersistTimerRef.current);
+      viewportPersistTimerRef.current = null;
+    }
+    const pendingViewport = pendingViewportRef.current;
+    if (pendingViewport) {
+      pendingViewportRef.current = null;
+      void trackCanvasWrite(canvasApi.updateScene({
+        id: pendingViewport.sceneId,
+        name: null,
+        backgroundPath: null,
+        viewportJson: pendingViewport.viewport,
+        metadataJson: null,
+      }, projectIdRef.current)).catch((error) => {
+        console.error('[Canvas] viewport flush on unmount failed', error);
+      });
+    }
+    void flushCanvasWrites();
+  }, []);
 
   const contentLayer = useCallback(async () => {
     if (!scene) throw new Error('Scene is not loaded');
@@ -222,21 +245,22 @@ export function CanvasPage() {
 
   const persistObject = useCallback(async (object: CanvasObject) => {
     if (!scene) return;
-    setObjects((current) => current.map((item) => (item.id === object.id ? object : item)));
     try {
-      const result = await canvasApi.reconcileScene({
+      const result = await trackCanvasWrite(canvasApi.reconcileScene({
         sceneId: scene.id,
         upsert: [objectToUpsert(object)],
         deleteIds: [],
-      }, projectIdNumber);
+      }, projectIdNumber));
+      console.debug('[Canvas] persistObject', { sceneId: scene.id, objectId: object.id });
       setObjects((current) => {
         const byId = new Map(current.map((item) => [item.id, item]));
         for (const upserted of result.upserted) byId.set(upserted.id, upserted);
         return [...byId.values()];
       });
-    } catch {
+    } catch (error) {
+      console.error('[Canvas] persistObject failed', { sceneId: scene.id, objectId: object.id, error });
       showSnackbar(t('map:canvas.snackbar.objectSaveError'), 'error');
-      loadScene();
+      await loadScene();
     }
   }, [loadScene, projectIdNumber, scene, showSnackbar, t]);
 
@@ -265,20 +289,22 @@ export function CanvasPage() {
       const point = pendingMarkerPointRef.current;
       if (!point) return;
       const layer = await contentLayer();
-      const created = await canvasApi.createObject(
+      const created = await createCanvasObject(
         buildMarkerCreateInput(scene.id, layer.id, point, markerForm),
-        projectIdNumber,
       );
+      console.debug('[Canvas] createObject marker', { sceneId: scene.id, objectId: created.id });
       setObjects((current) => [...current, created]);
       setSelectedObjectId(created.id);
       closeMarkerDialog();
       setMode('select');
-    } catch {
+    } catch (error) {
+      console.error('[Canvas] saveMarker failed', { sceneId: scene?.id, error });
       showSnackbar(t('map:canvas.snackbar.objectSaveError'), 'error');
     }
   }, [
     closeMarkerDialog,
     contentLayer,
+    createCanvasObject,
     editingMarker,
     markerForm,
     persistObject,
@@ -296,7 +322,7 @@ export function CanvasPage() {
     }
     if (mode === 'text' || mode === 'curve_text') {
       const layer = await contentLayer();
-      const created = await canvasApi.createObject(defaultTextObject(scene.id, layer.id, point, mode), projectIdNumber);
+      const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, mode));
       setObjects((current) => [...current, created]);
       setSelectedObjectId(created.id);
       setMode('select');
@@ -304,7 +330,7 @@ export function CanvasPage() {
     }
     if (mode === 'rectangle' || mode === 'ellipse') {
       const layer = await contentLayer();
-      const created = await canvasApi.createObject(defaultShapeObject(scene.id, layer.id, point, mode), projectIdNumber);
+      const created = await createCanvasObject(defaultShapeObject(scene.id, layer.id, point, mode));
       setObjects((current) => [...current, created]);
       setSelectedObjectId(created.id);
       setMode('select');
@@ -314,7 +340,7 @@ export function CanvasPage() {
       pendingImagePointRef.current = point;
       imageInputRef.current?.click();
     }
-  }, [contentLayer, mode, openMarkerDialog, projectIdNumber, scene]);
+  }, [contentLayer, createCanvasObject, mode, openMarkerDialog, projectIdNumber, scene]);
 
   const handleObjectMove = useCallback((object: CanvasObject, point: CanvasPoint) => {
     persistObject(withObjectPosition(object, point.x, point.y));
@@ -331,18 +357,24 @@ export function CanvasPage() {
     showSnackbar(t('map:canvas.snackbar.imageLoadError'), 'error');
   }, [showSnackbar, t]);
 
-  const handleViewportChange = useCallback((viewport: { x: number; y: number; scale: number }) => {
+  const handleViewportChange = useCallback((viewport: ViewportPersist) => {
     setZoomPercent(Math.round(viewport.scale * 100));
     if (!scene) return;
-    if (viewportPersistTimerRef.current) window.clearTimeout(viewportPersistTimerRef.current);
+    pendingViewportRef.current = { sceneId: scene.id, viewport };
+    if (viewportPersistTimerRef.current != null) window.clearTimeout(viewportPersistTimerRef.current);
     viewportPersistTimerRef.current = window.setTimeout(() => {
-      canvasApi.updateScene({
-        id: scene.id,
+      const pending = pendingViewportRef.current;
+      if (!pending || pending.sceneId !== scene.id) return;
+      pendingViewportRef.current = null;
+      void trackCanvasWrite(canvasApi.updateScene({
+        id: pending.sceneId,
         name: null,
         backgroundPath: null,
-        viewportJson: viewport,
+        viewportJson: pending.viewport,
         metadataJson: null,
-      }, projectIdNumber).catch(() => undefined);
+      }, projectIdNumber)).catch((error) => {
+        console.error('[Canvas] viewport persist failed', { sceneId: pending.sceneId, error });
+      });
     }, 400);
   }, [projectIdNumber, scene]);
 
@@ -388,14 +420,15 @@ export function CanvasPage() {
       const assetPath = await canvasApi.uploadCanvasAsset(file);
       const input = defaultImageObject(scene.id, layer.id, point, assetPath, width, height);
       const style = role ? { ...(input.styleJson as Record<string, unknown>), role } : input.styleJson;
-      const created = await canvasApi.createObject({ ...input, styleJson: style }, projectIdNumber);
+      const created = await createCanvasObject({ ...input, styleJson: style });
       setObjects((current) => [...current, created]);
       setSelectedObjectId(created.id);
       setMode('select');
-    } catch {
+    } catch (error) {
+      console.error('[Canvas] createImageObjectAt failed', { sceneId: scene?.id, error });
       showSnackbar(t('map:canvas.snackbar.imagePersistError'), 'error');
     }
-  }, [contentLayer, projectIdNumber, readImageSize, scene, showSnackbar, t]);
+  }, [contentLayer, createCanvasObject, readImageSize, scene, showSnackbar, t]);
 
   const uploadBackground = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -416,7 +449,7 @@ export function CanvasPage() {
   const createPolygon = useCallback(async (points: CanvasPoint[]) => {
     if (!scene || points.length < 3) return;
     const layer = await contentLayer();
-    const created = await canvasApi.createObject({
+    const created = await createCanvasObject({
       sceneId: scene.id,
       layerId: layer.id,
       kind: 'polygon',
@@ -431,28 +464,29 @@ export function CanvasPage() {
       linkedSceneId: null,
       isHidden: false,
       isLocked: false,
-    }, projectIdNumber);
+    });
+    console.debug('[Canvas] createObject polygon', { sceneId: scene.id, objectId: created.id });
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
     setMode('select');
-  }, [contentLayer, projectIdNumber, scene]);
+  }, [contentLayer, createCanvasObject, scene]);
 
   const createTerritory = useCallback(async (points: CanvasPoint[]) => {
     if (!scene || points.length < 3) return;
     const layer = await contentLayer();
-    const created = await canvasApi.createObject(
+    const created = await createCanvasObject(
       defaultTerritoryObject(scene.id, layer.id, points),
-      projectIdNumber,
     );
+    console.debug('[Canvas] createObject territory', { sceneId: scene.id, objectId: created.id });
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
     setMode('select');
-  }, [contentLayer, projectIdNumber, scene]);
+  }, [contentLayer, createCanvasObject, scene]);
 
   const createPolyline = useCallback(async (points: CanvasPoint[]) => {
     if (!scene || points.length < 2) return;
     const layer = await contentLayer();
-    const created = await canvasApi.createObject({
+    const created = await createCanvasObject({
       sceneId: scene.id,
       layerId: layer.id,
       kind: 'polyline',
@@ -467,10 +501,11 @@ export function CanvasPage() {
       linkedSceneId: null,
       isHidden: false,
       isLocked: false,
-    }, projectIdNumber);
+    });
+    console.debug('[Canvas] createObject polyline', { sceneId: scene.id, objectId: created.id });
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
-  }, [contentLayer, projectIdNumber, scene]);
+  }, [contentLayer, createCanvasObject, scene]);
 
   const deleteSelected = useCallback(() => {
     const target = contextMenu?.targetObject ?? selectedObject;
@@ -479,7 +514,7 @@ export function CanvasPage() {
       t('map:canvas.confirm.deleteObjectTitle'),
       t('map:canvas.confirm.deleteObjectBody', { name: target.name ?? target.kind }),
       async () => {
-        await canvasApi.deleteObject(target.id, projectIdNumber);
+        await trackCanvasWrite(canvasApi.deleteObject(target.id, projectIdNumber));
         setObjects((current) => current.filter((object) => object.id !== target.id));
         setSelectedObjectId(null);
       },
@@ -509,11 +544,11 @@ export function CanvasPage() {
   const createShapeAt = useCallback(async (point: CanvasPoint, kind: 'polygon' | 'rectangle' | 'ellipse' | 'polyline') => {
     if (!scene) return;
     const layer = await contentLayer();
-    const created = await canvasApi.createObject(defaultShapeObject(scene.id, layer.id, point, kind), projectIdNumber);
+    const created = await createCanvasObject(defaultShapeObject(scene.id, layer.id, point, kind));
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
     setMode('select');
-  }, [contentLayer, projectIdNumber, scene]);
+  }, [contentLayer, createCanvasObject, scene]);
 
   const duplicateSelected = useCallback(async () => {
     if (!selectedForMenu || !scene) return;
@@ -524,7 +559,7 @@ export function CanvasPage() {
       transform.x + 24,
       transform.y + 24,
     );
-    const created = await canvasApi.createObject({
+    const created = await createCanvasObject({
       sceneId: scene.id,
       layerId: layer.id,
       kind: moved.kind,
@@ -539,10 +574,10 @@ export function CanvasPage() {
       linkedSceneId: moved.linkedSceneId,
       isHidden: moved.isHidden,
       isLocked: moved.isLocked,
-    }, projectIdNumber);
+    });
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
-  }, [contentLayer, maxZIndex, projectIdNumber, scene, selectedForMenu]);
+  }, [contentLayer, createCanvasObject, maxZIndex, scene, selectedForMenu]);
 
   const bringToFront = useCallback(() => {
     if (!selectedForMenu) return;
@@ -592,6 +627,13 @@ export function CanvasPage() {
       }
 
       if (!event.ctrlKey && !event.metaKey) return;
+
+      if (event.key === '0') {
+        event.preventDefault();
+        pixiCanvasRef.current?.fitToContent();
+        return;
+      }
+
       const next = keyToMode[event.key];
       if (!next) return;
       event.preventDefault();
@@ -629,7 +671,7 @@ export function CanvasPage() {
         zoomPercent={zoomPercent}
         onZoomIn={() => pixiCanvasRef.current?.zoomIn()}
         onZoomOut={() => pixiCanvasRef.current?.zoomOut()}
-        onResetView={() => pixiCanvasRef.current?.resetView()}
+        onResetView={() => pixiCanvasRef.current?.fitToContent()}
         objectCount={objects.length}
         selectedLabel={selectedLabel}
         draftPointsCount={draftPointsCount}
@@ -744,7 +786,7 @@ export function CanvasPage() {
           placeByContextMenu(async (point) => {
             if (!scene) return;
             const layer = await contentLayer();
-            const created = await canvasApi.createObject(defaultTextObject(scene.id, layer.id, point, 'text'), projectIdNumber);
+            const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, 'text'));
             setObjects((current) => [...current, created]);
             setSelectedObjectId(created.id);
           });
@@ -753,7 +795,7 @@ export function CanvasPage() {
           placeByContextMenu(async (point) => {
             if (!scene) return;
             const layer = await contentLayer();
-            const created = await canvasApi.createObject(defaultTextObject(scene.id, layer.id, point, 'curve_text'), projectIdNumber);
+            const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, 'curve_text'));
             setObjects((current) => [...current, created]);
             setSelectedObjectId(created.id);
           });
@@ -776,8 +818,11 @@ export function CanvasPage() {
         }}
         onEditSelected={() => {
           if (!selectedForMenu) return;
+          if (selectedForMenu.kind === 'marker') {
+            openMarkerDialog(null, selectedForMenu);
+            return;
+          }
           setSelectedObjectId(selectedForMenu.id);
-          showSnackbar(t('map:canvas.snackbar.objectSelectedForEdit'), 'info');
         }}
         onDeleteSelected={deleteSelected}
         onDuplicateSelected={() => {

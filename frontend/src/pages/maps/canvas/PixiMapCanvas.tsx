@@ -9,20 +9,32 @@ import {
   type FederatedPointerEvent,
 } from 'pixi.js';
 import { Viewport } from 'pixi-viewport';
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { CanvasLayer, CanvasObject, CanvasScene } from '@/api/canvas';
 import type { MapContextMenuState } from '../components/MapCanvasContextMenu';
+import { computeObjectsBounds } from './canvasBounds';
 import type { CanvasMode, CanvasPoint } from './canvasModel';
-import { asNumber, asRecord, objectTransform } from './canvasModel';
+import { objectTransform } from './canvasModel';
 import { hitTestObjects, reconcilePixiObjects, type ReconcileState } from './canvasReconciler';
+import {
+  applyPersistToViewport,
+  clampZoom,
+  fitViewportToBounds,
+  isBoundsVisibleInViewport,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  parseStoredViewport,
+  persistFromViewport,
+  shouldAutoFitOnLoad,
+  snapshotFromViewport,
+  type ViewportPersist,
+} from './canvasViewport';
 
 const WORLD_SIZE = 20000;
 const DOT_STEP = 64;
 const DOT_COLOR = 0x9fb0bf;
 const DOT_ALPHA = 0.18;
 const DOT_RADIUS = 0.95;
-
-type ViewportSnapshot = { x: number; y: number; scale: number };
 
 type DragState = {
   objectId: number;
@@ -60,7 +72,7 @@ type Props = {
   onCreateTerritory: (points: CanvasPoint[]) => void;
   onCreatePolyline: (points: CanvasPoint[]) => void;
   onImageLoadError: (object: CanvasObject, resourcePath: string) => void;
-  onViewportChange: (viewport: ViewportSnapshot) => void;
+  onViewportChange: (viewport: ViewportPersist) => void;
   onLargeBackgroundStatus: (status: string) => void;
   onContextMenu: (menu: MapContextMenuState) => void;
 };
@@ -69,6 +81,7 @@ export type PixiMapCanvasHandle = {
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
+  fitToContent: () => void;
   getViewportCenter: () => CanvasPoint;
   undoDrawingPoint: () => number;
   finishDrawing: () => number;
@@ -86,14 +99,8 @@ const pointFromEvent = (viewport: Viewport, event: FederatedPointerEvent): Canva
   return { x: world.x, y: world.y };
 };
 
-const sceneViewport = (scene: CanvasScene): ViewportSnapshot => {
-  const json = asRecord(scene.viewportJson);
-  return {
-    x: asNumber(json.x),
-    y: asNumber(json.y),
-    scale: Math.max(0.1, asNumber(json.scale, 1)),
-  };
-};
+const sceneViewportPersist = (scene: CanvasScene, screenWidth: number, screenHeight: number): ViewportPersist =>
+  parseStoredViewport(scene.viewportJson, screenWidth, screenHeight);
 
 const redrawDraftPolyline = (
   graphics: Graphics,
@@ -148,11 +155,20 @@ const createDotTexture = (app: Application): Texture => {
   return texture;
 };
 
+const positiveMod = (value: number, modulus: number): number =>
+  ((value % modulus) + modulus) % modulus;
+
 const updateDots = (dots: TilingSprite, viewport: Viewport, width: number, height: number): void => {
   dots.width = width;
   dots.height = height;
-  dots.tileScale.set(viewport.scale.x, viewport.scale.y);
-  dots.tilePosition.set(viewport.x + (DOT_STEP / 2) * viewport.scale.x, viewport.y + (DOT_STEP / 2) * viewport.scale.y);
+  const scale = clampZoom(viewport.scale.x);
+  const tileSize = DOT_STEP * scale;
+  const offset = (DOT_STEP / 2) * scale;
+  dots.tileScale.set(scale, scale);
+  dots.tilePosition.set(
+    positiveMod(viewport.x + offset, tileSize),
+    positiveMod(viewport.y + offset, tileSize),
+  );
 };
 
 export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function PixiMapCanvas({
@@ -205,6 +221,12 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const onContextMenuRef = useRef(onContextMenu);
   const onLargeBackgroundStatusRef = useRef(onLargeBackgroundStatus);
   const sceneIdRef = useRef<number | null>(null);
+  const autoFitSceneRef = useRef<number | null>(null);
+  const [pixiReady, setPixiReady] = useState(false);
+
+  const forceRender = () => {
+    appRef.current?.render();
+  };
 
   liveObjectsRef.current = objects;
   currentModeRef.current = mode;
@@ -253,6 +275,52 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     setDrawingPoints([]);
   };
 
+  const syncDots = () => {
+    const viewport = viewportRef.current;
+    const dots = dotsRef.current;
+    const app = appRef.current;
+    if (!viewport || !dots || !app) return;
+    updateDots(dots, viewport, app.renderer.width, app.renderer.height);
+  };
+
+  const fitToContentInternal = (source: 'auto' | 'manual') => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const visibleObjects = liveObjectsRef.current.filter((object) => !object.isHidden);
+    const bounds = computeObjectsBounds(visibleObjects);
+    const cameraBefore = snapshotFromViewport(viewport);
+
+    console.debug('[Canvas] fitToContent', {
+      source,
+      sceneId: sceneRef.current.id,
+      objectCount: visibleObjects.length,
+      bbox: bounds
+        ? {
+            minX: bounds.minX,
+            minY: bounds.minY,
+            maxX: bounds.maxX,
+            maxY: bounds.maxY,
+          }
+        : null,
+      cameraBefore,
+    });
+
+    if (!bounds || visibleObjects.length === 0) {
+      if (!viewport) return;
+      const fallback = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
+      applyPersistToViewport(viewport, fallback);
+      syncDots();
+      onViewportChangeRef.current(persistFromViewport(viewport));
+      return;
+    }
+
+    const cameraAfter = fitViewportToBounds(viewport, bounds);
+    syncDots();
+    console.debug('[Canvas] fitToContent applied', { cameraAfter });
+    onViewportChangeRef.current(persistFromViewport(viewport));
+  };
+
   const finishDrawingInternal = () => {
     const points = drawingPointsRef.current;
     if (currentModeRef.current === 'polygon') {
@@ -281,28 +349,19 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const viewport = viewportRef.current;
       if (!viewport) return;
       viewport.zoom(0.2, true);
-      if (dotsRef.current && appRef.current) {
-        updateDots(dotsRef.current, viewport, appRef.current.renderer.width, appRef.current.renderer.height);
-      }
+      syncDots();
     },
     zoomOut() {
       const viewport = viewportRef.current;
       if (!viewport) return;
       viewport.zoom(-0.2, true);
-      if (dotsRef.current && appRef.current) {
-        updateDots(dotsRef.current, viewport, appRef.current.renderer.width, appRef.current.renderer.height);
-      }
+      syncDots();
     },
     resetView() {
-      const viewport = viewportRef.current;
-      if (!viewport) return;
-      const initial = sceneViewport(scene);
-      viewport.position.set(initial.x, initial.y);
-      viewport.setZoom(initial.scale, true);
-      if (dotsRef.current && appRef.current) {
-        updateDots(dotsRef.current, viewport, appRef.current.renderer.width, appRef.current.renderer.height);
-      }
-      onViewportChange(initial);
+      fitToContentInternal('manual');
+    },
+    fitToContent() {
+      fitToContentInternal('manual');
     },
     getViewportCenter() {
       const viewport = viewportRef.current;
@@ -354,7 +413,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         worldWidth: WORLD_SIZE,
         worldHeight: WORLD_SIZE,
       });
-      viewport.wheel().pinch().decelerate();
+      viewport.wheel().pinch().decelerate().clampZoom({ minScale: MIN_ZOOM, maxScale: MAX_ZOOM });
       app.stage.eventMode = 'static';
       appRef.current = app;
       viewportRef.current = viewport;
@@ -383,13 +442,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       viewport.addChild(draft);
 
       const syncViewport = () => {
-        const snapshot: ViewportSnapshot = {
-          x: viewport.x,
-          y: viewport.y,
-          scale: viewport.scale.x,
-        };
-        onViewportChangeRef.current(snapshot);
-        if (dotsRef.current) updateDots(dotsRef.current, viewport, app.renderer.width, app.renderer.height);
+        onViewportChangeRef.current(persistFromViewport(viewport));
+        syncDots();
       };
       viewport.on('moved', syncViewport);
       viewport.on('zoomed', syncViewport);
@@ -652,13 +706,16 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       });
       resizeObserver.observe(host);
 
-      const initial = sceneViewport(sceneRef.current);
-      viewport.position.set(initial.x, initial.y);
-      viewport.setZoom(initial.scale, true);
+      const initial = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
+      applyPersistToViewport(viewport, initial);
       updateDots(dots, viewport, app.renderer.width, app.renderer.height);
       updateCursor('grab');
 
       sceneIdRef.current = sceneRef.current.id;
+      setPixiReady(true);
+      if (!app.ticker.started) {
+        app.start();
+      }
       onLargeBackgroundStatusRef.current('');
 
       const cleanupInput = () => {
@@ -680,6 +737,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       appRef.current?.destroy(true, { children: true });
       appRef.current = null;
       viewportRef.current = null;
+      setPixiReady(false);
+      autoFitSceneRef.current = null;
       rootObjectsRef.current = null;
       dotsRef.current = null;
       dotTextureRef.current?.destroy(true);
@@ -695,23 +754,66 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     if (!viewport) return;
     if (sceneIdRef.current === scene.id) return;
     clearDrawing();
-    const snapshot = sceneViewport(scene);
-    viewport.position.set(snapshot.x, snapshot.y);
-    viewport.setZoom(snapshot.scale, true);
+    autoFitSceneRef.current = null;
+    const persist = sceneViewportPersist(scene, viewport.screenWidth, viewport.screenHeight);
+    applyPersistToViewport(viewport, persist);
     sceneIdRef.current = scene.id;
-    if (dotsRef.current && appRef.current) {
-      updateDots(dotsRef.current, viewport, appRef.current.renderer.width, appRef.current.renderer.height);
-    }
-    onViewportChange(snapshot);
+    syncDots();
+    onViewportChange(persistFromViewport(viewport));
   }, [onViewportChange, scene]);
 
   useEffect(() => {
+    if (!pixiReady) return;
+    if (autoFitSceneRef.current === scene.id) return;
+
+    const visibleObjects = objects.filter((object) => !object.isHidden);
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const savedViewport = sceneViewportPersist(scene, viewport.screenWidth, viewport.screenHeight);
+    const bounds = computeObjectsBounds(visibleObjects);
+    const camera = snapshotFromViewport(viewport);
+
+    console.debug('[Canvas] scene load camera', {
+      sceneId: scene.id,
+      objectCount: visibleObjects.length,
+      bbox: bounds
+        ? {
+            minX: bounds.minX,
+            minY: bounds.minY,
+            maxX: bounds.maxX,
+            maxY: bounds.maxY,
+          }
+        : null,
+      camera,
+      savedViewport,
+      boundsVisible: bounds
+        ? isBoundsVisibleInViewport(bounds, savedViewport, viewport.screenWidth, viewport.screenHeight)
+        : null,
+    });
+
+    autoFitSceneRef.current = scene.id;
+
+    if (!shouldAutoFitOnLoad(
+      visibleObjects.length,
+      bounds,
+      savedViewport,
+      viewport.screenWidth,
+      viewport.screenHeight,
+    )) return;
+
+    fitToContentInternal('auto');
+  }, [pixiReady, scene, objects]);
+
+  useEffect(() => {
+    if (!pixiReady) return;
     const root = rootObjectsRef.current;
     if (!root) return;
+
     reconcilePixiObjects(root, reconcileStateRef.current, layers, objects, selectedObjectId, (object, resourcePath) => {
       onImageLoadErrorRef.current(object, resourcePath);
     });
-  }, [layers, objects, selectedObjectId]);
+    forceRender();
+  }, [pixiReady, layers, objects, selectedObjectId, scene.id]);
 
   useEffect(() => {
     redrawDraft();

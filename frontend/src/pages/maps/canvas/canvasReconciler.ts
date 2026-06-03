@@ -12,6 +12,7 @@ import {
   asPoints,
   asRecord,
   asString,
+  MARKER_ICONS,
   objectTransform,
   type CanvasPoint,
 } from './canvasModel';
@@ -43,6 +44,104 @@ const toColor = (value: unknown, fallback: number): number => {
 
 const boundsHit = (x: number, y: number, width: number, height: number): HitTest => (point) =>
   point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height;
+
+const combineBoundsHit = (
+  boxes: Array<{ x: number; y: number; width: number; height: number }>,
+): HitTest => (point) =>
+  boxes.some((box) => point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height);
+
+const MARKER_CIRCLE_RADIUS = 16;
+const MARKER_BADGE_RADIUS = 7;
+const TEXT_RESOLUTION = Math.max(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 2);
+
+const drawMarker = (container: Container, object: CanvasObject, selected: boolean): HitTest => {
+  const style = asRecord(object.styleJson);
+  const content = asRecord(object.contentJson);
+  const fill = toColor(style.fill, 0xff6b6b);
+  const iconKey = asString(content.icon, '');
+  const emoji = iconKey ? (MARKER_ICONS[iconKey] ?? '📍') : '';
+  const title = asString(content.title, object.name ?? '').trim();
+  const hitBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+  const circle = new Graphics();
+  circle
+    .circle(0, 0, MARKER_CIRCLE_RADIUS)
+    .fill({ color: fill, alpha: 0.9 })
+    .stroke({ color: selected ? 0xffffff : 0x000000, width: 2, alpha: selected ? 1 : 0.35 });
+  container.addChild(circle);
+
+  hitBoxes.push({
+    x: -MARKER_CIRCLE_RADIUS - 2,
+    y: -MARKER_CIRCLE_RADIUS - 2,
+    width: (MARKER_CIRCLE_RADIUS + 2) * 2,
+    height: (MARKER_CIRCLE_RADIUS + 2) * 2,
+  });
+
+  if (emoji) {
+    const iconText = new Text({
+      text: emoji,
+      style: { fontSize: 16, fill: 0xffffff },
+    });
+    iconText.anchor.set(0.5);
+    iconText.position.set(0, 0);
+    container.addChild(iconText);
+  }
+
+  if (title) {
+    const label = new Text({
+      text: title,
+      resolution: TEXT_RESOLUTION,
+      style: {
+        fill: 0xffffff,
+        fontSize: 13,
+        fontFamily: 'Cinzel, "Crimson Text", serif',
+        fontWeight: '700',
+        stroke: { color: 0x000000, width: 3, join: 'round' },
+      },
+    });
+    label.anchor.set(0.5, 0);
+    label.position.set(0, MARKER_CIRCLE_RADIUS + 3);
+    container.addChild(label);
+    hitBoxes.push({
+      x: -label.width / 2 - 4,
+      y: MARKER_CIRCLE_RADIUS + 3,
+      width: label.width + 8,
+      height: label.height + 4,
+    });
+  }
+
+  if (object.linkedNoteId != null) {
+    const badgeX = MARKER_CIRCLE_RADIUS - 4;
+    const badgeY = -MARKER_CIRCLE_RADIUS + 4;
+    const noteBadge = new Graphics();
+    noteBadge
+      .circle(badgeX, badgeY, MARKER_BADGE_RADIUS)
+      .fill({ color: 0x4ecdc4 })
+      .stroke({ color: 0x000000, width: 1.5, alpha: 0.4 });
+    container.addChild(noteBadge);
+    const noteGlyph = new Text({ text: '📎', style: { fontSize: 7, fill: 0xffffff } });
+    noteGlyph.anchor.set(0.5);
+    noteGlyph.position.set(badgeX, badgeY);
+    container.addChild(noteGlyph);
+  }
+
+  if (object.linkedSceneId != null) {
+    const badgeX = -MARKER_CIRCLE_RADIUS + 4;
+    const badgeY = -MARKER_CIRCLE_RADIUS + 4;
+    const mapBadge = new Graphics();
+    mapBadge
+      .circle(badgeX, badgeY, MARKER_BADGE_RADIUS)
+      .fill({ color: 0xbb8fce })
+      .stroke({ color: 0x000000, width: 1.5, alpha: 0.4 });
+    container.addChild(mapBadge);
+    const mapGlyph = new Text({ text: '🗺', style: { fontSize: 7, fill: 0xffffff } });
+    mapGlyph.anchor.set(0.5);
+    mapGlyph.position.set(badgeX, badgeY);
+    container.addChild(mapGlyph);
+  }
+
+  return combineBoundsHit(hitBoxes);
+};
 
 const circleHit = (radius: number): HitTest => (point) => point.x * point.x + point.y * point.y <= radius * radius;
 
@@ -115,6 +214,7 @@ const drawCurveText = (container: Container, object: CanvasObject): HitTest => {
     const y = a.y + (b.y - a.y) * localT;
     const glyph = new Text({
       text: text[index],
+      resolution: TEXT_RESOLUTION,
       style: { fill: color, fontFamily: 'Crimson Text, serif', fontSize },
     });
     glyph.anchor.set(0.5);
@@ -201,6 +301,7 @@ const drawObject = (
   if (object.kind === 'text') {
     const text = new Text({
       text: asString(content.text, object.name ?? 'Text'),
+      resolution: TEXT_RESOLUTION,
       style: {
         fill,
         fontFamily: 'Crimson Text, serif',
@@ -211,10 +312,14 @@ const drawObject = (
     return boundsHit(0, 0, text.width, text.height);
   }
 
+  if (object.kind === 'marker') {
+    return drawMarker(container, object, selected);
+  }
+
   const graphics = new Graphics();
   container.addChild(graphics);
 
-  if (object.kind === 'marker' || object.kind === 'icon') {
+  if (object.kind === 'icon') {
     const radius = asNumber(geometry.radius, 12);
     graphics.circle(0, 0, radius).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
     return circleHit(radius + strokeWidth);
