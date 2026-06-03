@@ -11,7 +11,10 @@ write a new ADR that supersedes the old one — do not edit history.
 
 | #    | Title                                  | Status   | Date       |
 |------|----------------------------------------|----------|------------|
-| 0001 | Canvas rendering technology            | Accepted | 2026-XX-XX |
+| 0001 | Canvas rendering technology            | Accepted | 2026-05-22 |
+| 0002 | MapPage migration strategy             | Accepted | 2026-05-24 |
+| 0003 | Canvas data model                      | Accepted | 2026-05-24 |
+| 0004 | Canvas scene types and scene_container | Proposed | 2026-06-03 |
 
 ## Status values
 
@@ -37,7 +40,10 @@ Do **not** write an ADR for:
 ## Numbering
 
 Sequential, zero-padded to four digits: `0001`, `0002`, ...
-Filename: `NNNN-kebab-case-title.md`.
+Filename: `NNNN-kebab-case-title.md` (or linked from
+`docs/adr/ADR-NNNN-*.md` when introduced via documentation PR).
+
+**ADR-0004 file:** [`docs/adr/ADR-0004-canvas-scene-types-and-scene-container.md`](../../adr/ADR-0004-canvas-scene-types-and-scene-container.md)
 
 ## Process
 

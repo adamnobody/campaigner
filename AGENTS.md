@@ -122,7 +122,10 @@ Rust (`src-tauri/src/`):
 
 | ADR  | Тема                          | Статус                                  |
 |------|-------------------------------|-----------------------------------------|
-| 0001 | Canvas rendering technology   | Accepted (ждёт валидации прототипом 001)|
+| 0001 | Canvas rendering technology   | Accepted (validated prototype 001)      |
+| 0002 | MapPage migration strategy    | Accepted                                |
+| 0003 | Canvas data model             | Accepted                                |
+| 0004 | Scene types & scene_container | Proposed — `docs/adr/ADR-0004-*.md`     |
 
 ## Активные прототипы
 
