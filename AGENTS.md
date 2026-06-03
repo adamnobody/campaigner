@@ -131,7 +131,7 @@ Rust (`src-tauri/src/`):
 
 | #   | Тема                              | Статус       |
 |-----|-----------------------------------|--------------|
-| 001 | Curve text & canvas foundation    | In progress  |
+| 001 | Curve text & canvas foundation    | Validated (GO, see ADR-0001) |
 
 ## Завершение задачи
 
