@@ -24,6 +24,7 @@ type Props = {
   linkedNote: NoteOption | undefined;
   onClose: () => void;
   onNavigateToNote: (noteId: number) => void;
+  onOpenChildMap?: () => void;
   onEditMarker: (marker: CanvasObject) => void;
   onDeleteMarker: (marker: CanvasObject) => void;
 };
@@ -33,6 +34,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
   linkedNote,
   onClose,
   onNavigateToNote,
+  onOpenChildMap,
   onEditMarker,
   onDeleteMarker,
 }) => {
@@ -112,14 +114,16 @@ export const MapMarkerPanel: React.FC<Props> = ({
           <Typography variant="caption" sx={sxSectionLabel(theme)}>{t('map:markerPanel.sectionChildMap')}</Typography>
           {hasChildMap ? (
             <Box sx={{ mt: 1 }}>
-              <Tooltip title={t('map:canvas.markerPanel.nestedMapTodo')}>
-                <span>
-                  <Button fullWidth variant="outlined" startIcon={<MapIcon />} disabled
-                    sx={{ borderColor: alpha(theme.palette.secondary.main, 0.3), color: theme.palette.secondary.main, justifyContent: 'flex-start' }}>
-                    {t('map:markerPanel.openChildMap')}
-                  </Button>
-                </span>
-              </Tooltip>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<MapIcon />}
+                disabled={!onOpenChildMap}
+                onClick={() => onOpenChildMap?.()}
+                sx={{ borderColor: alpha(theme.palette.secondary.main, 0.3), color: theme.palette.secondary.main, justifyContent: 'flex-start' }}
+              >
+                {t('map:markerPanel.openChildMap')}
+              </Button>
             </Box>
           ) : (
             <Box sx={{ mt: 1 }}>

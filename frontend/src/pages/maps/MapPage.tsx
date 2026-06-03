@@ -18,6 +18,14 @@ import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas'
 import type { ViewportPersist } from './canvas/canvasViewport';
 import { flushCanvasWrites, trackCanvasWrite } from './canvas/canvasWriteQueue';
 import {
+  buildSceneTrailFromTree,
+  parentSceneEntry,
+  pushNavigationEntry,
+  resolveNavigationTrail,
+  truncateNavigationStack,
+  type NavigationEntry,
+} from './canvas/navigationStack';
+import {
   applyMarkerFormToObject,
   asRecord,
   asString,
@@ -105,6 +113,8 @@ export function CanvasPage() {
   }), shallow);
 
   const [scene, setScene] = useState<CanvasScene | null>(null);
+  const [sceneTree, setSceneTree] = useState<CanvasScene[]>([]);
+  const [navigationStack, setNavigationStack] = useState<NavigationEntry[]>([]);
   const [layers, setLayers] = useState<CanvasLayer[]>([]);
   const [objects, setObjects] = useState<CanvasObject[]>([]);
   const [selectedObjectId, setSelectedObjectId] = useState<number | null>(null);
@@ -154,23 +164,62 @@ export function CanvasPage() {
     return selectedObject.name ?? selectedObject.kind;
   }, [selectedObject]);
 
+  const navigationTrail = useMemo(() => {
+    if (!scene) return [];
+    return resolveNavigationTrail(navigationStack, sceneTree, scene.id);
+  }, [navigationStack, scene, sceneTree]);
+
+  const navigateToMapScene = useCallback((sceneId: number, stackAfterNavigate: NavigationEntry[]) => {
+    setNavigationStack(stackAfterNavigate);
+    navigate(`/project/${projectIdNumber}/map/${sceneId}`);
+  }, [navigate, projectIdNumber]);
+
+  const handleBreadcrumbNavigate = useCallback((sceneId: number, index: number) => {
+    const trail = scene ? resolveNavigationTrail(navigationStack, sceneTree, scene.id) : [];
+    navigateToMapScene(sceneId, truncateNavigationStack(trail, index));
+  }, [navigateToMapScene, navigationStack, scene, sceneTree]);
+
+  const handleNavigationBack = useCallback(() => {
+    const trail = scene ? resolveNavigationTrail(navigationStack, sceneTree, scene.id) : [];
+    const parent = parentSceneEntry(trail);
+    if (!parent) return;
+    navigateToMapScene(parent.sceneId, truncateNavigationStack(trail, trail.length - 2));
+  }, [navigateToMapScene, navigationStack, scene, sceneTree]);
+
+  const handleOpenChildMap = useCallback((childSceneId: number) => {
+    if (!scene) return;
+    const child = sceneTree.find((item) => item.id === childSceneId);
+    const trail = resolveNavigationTrail(navigationStack, sceneTree, scene.id);
+    const nextStack = pushNavigationEntry(trail, {
+      sceneId: childSceneId,
+      label: child?.name ?? t('map:canvas.defaults.sceneName'),
+      via: 'marker',
+    });
+    navigateToMapScene(childSceneId, nextStack);
+  }, [navigateToMapScene, navigationStack, scene, sceneTree, t]);
+
   const loadScene = useCallback(async () => {
     if (!projectIdNumber) return;
     setLoading(true);
     try {
       await projectsApi.getById(projectIdNumber);
       const scopeKey = `${projectIdNumber}:${activeBranchId ?? 'main'}`;
-      const loadedScene = await loadInitialScene(
-        projectIdNumber,
-        sceneIdFromRoute,
-        t('map:canvas.defaults.sceneName'),
-        scopeKey,
-      );
+      const [loadedScene, tree] = await Promise.all([
+        loadInitialScene(
+          projectIdNumber,
+          sceneIdFromRoute,
+          t('map:canvas.defaults.sceneName'),
+          scopeKey,
+        ),
+        canvasApi.getSceneTree(projectIdNumber),
+      ]);
 
       const [loadedLayers, loadedObjects] = await Promise.all([
         canvasApi.listLayers(loadedScene.id, projectIdNumber),
         canvasApi.listObjects(loadedScene.id, projectIdNumber),
       ]);
+      setSceneTree(tree);
+      setNavigationStack(buildSceneTrailFromTree(tree, loadedScene.id));
       console.debug('[Canvas] loadScene', {
         sceneId: loadedScene.id,
         routeSceneId: sceneIdFromRoute,
@@ -660,6 +709,9 @@ export function CanvasPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
       <MapToolbar
         sceneName={scene.name}
+        navigationTrail={navigationTrail}
+        onBreadcrumbNavigate={handleBreadcrumbNavigate}
+        onNavigationBack={handleNavigationBack}
         mode={mode}
         onModeChange={(nextMode) => {
           setMode(nextMode);
@@ -731,6 +783,11 @@ export function CanvasPage() {
               linkedNote={selectedObject.linkedNoteId ? notesMap.get(selectedObject.linkedNoteId) : undefined}
               onClose={() => setSelectedObjectId(null)}
               onNavigateToNote={(noteId) => navigate(`/project/${projectIdNumber}/notes/${noteId}`)}
+              onOpenChildMap={
+                selectedObject.linkedSceneId != null
+                  ? () => handleOpenChildMap(selectedObject.linkedSceneId!)
+                  : undefined
+              }
               onEditMarker={(marker) => openMarkerDialog(null, marker)}
               onDeleteMarker={() => deleteSelected()}
             />

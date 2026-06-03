@@ -45,6 +45,10 @@
     "defaults": {
       "sceneName": "Сцена 1"
     },
+    "breadcrumbs": {
+      "back": "Назад к родительской карте",
+      "navigateTo": "Открыть {{name}}"
+    },
     "toolbar": {
       "sceneStats": "Сцена холста · {{count}} объектов{{selected}}",
       "selectedWithName": " · выбрано: {{name}}",
