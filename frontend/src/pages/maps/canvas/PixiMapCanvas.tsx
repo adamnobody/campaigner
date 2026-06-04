@@ -81,6 +81,7 @@ type Props = {
   selectedObjectId: number | null;
   mode: CanvasMode;
   onCanvasClick: (point: CanvasPoint) => void;
+  onShiftCanvasClick?: (point: CanvasPoint) => void;
   onObjectSelect: (object: CanvasObject | null) => void;
   onObjectMove: (object: CanvasObject, point: CanvasPoint) => void;
   /** Double-click on a marker that has linkedSceneId (select mode, no drag). */
@@ -204,6 +205,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   selectedObjectId,
   mode,
   onCanvasClick,
+  onShiftCanvasClick,
   onObjectSelect,
   onObjectMove,
   onMarkerOpenLinkedScene,
@@ -248,6 +250,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const currentModeRef = useRef<CanvasMode>(mode);
   const sceneRef = useRef<CanvasScene>(scene);
   const onCanvasClickRef = useRef(onCanvasClick);
+  const onShiftCanvasClickRef = useRef(onShiftCanvasClick);
+  const shiftClickPointerRef = useRef<{ downX: number; downY: number; worldPoint: CanvasPoint } | null>(null);
   const onObjectSelectRef = useRef(onObjectSelect);
   const onObjectMoveRef = useRef(onObjectMove);
   const onMarkerOpenLinkedSceneRef = useRef(onMarkerOpenLinkedScene);
@@ -272,6 +276,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   currentModeRef.current = mode;
   sceneRef.current = scene;
   onCanvasClickRef.current = onCanvasClick;
+  onShiftCanvasClickRef.current = onShiftCanvasClick;
   onObjectSelectRef.current = onObjectSelect;
   onObjectMoveRef.current = onObjectMove;
   onMarkerOpenLinkedSceneRef.current = onMarkerOpenLinkedScene;
@@ -550,6 +555,26 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         const isEditingTerritory = Boolean(editRings && editRings.length > 0);
         const forcePan = spacePressedRef.current;
 
+        if (event.button === 1) {
+          panStateRef.current = {
+            startX: event.global.x,
+            startY: event.global.y,
+            viewportX: viewport.x,
+            viewportY: viewport.y,
+          };
+          updateCursor('grabbing');
+          return;
+        }
+
+        if (event.shiftKey && !forcePan) {
+          shiftClickPointerRef.current = {
+            downX: event.global.x,
+            downY: event.global.y,
+            worldPoint,
+          };
+          return;
+        }
+
         if (isEditingTerritory && !forcePan) {
           const scale = viewport.scale.x;
           if (event.button === 2) {
@@ -598,7 +623,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           };
           drawingHoverRef.current = worldPoint;
           redrawDraft();
-          updateCursor('crosshair');
+          updateCursor('pointer');
           return;
         }
 
@@ -707,8 +732,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           updateCursor(vertexHit ? 'pointer' : 'grab');
         } else if (spacePressedRef.current) {
           updateCursor('grab');
-        } else if (isDrawing) {
-          updateCursor('crosshair');
+        } else if (currentModeRef.current !== 'select') {
+          updateCursor('pointer');
         } else if (hovered) {
           updateCursor('pointer');
         } else {
@@ -720,9 +745,21 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         const worldPoint = pointFromEvent(viewport, event);
         const editRings = territoryEditRingsRef.current;
 
+        if (shiftClickPointerRef.current) {
+          const shiftClick = shiftClickPointerRef.current;
+          shiftClickPointerRef.current = null;
+          const distance = Math.hypot(event.global.x - shiftClick.downX, event.global.y - shiftClick.downY);
+          if (distance <= 4) {
+            if (onShiftCanvasClickRef.current) {
+              onShiftCanvasClickRef.current(shiftClick.worldPoint);
+            }
+            return;
+          }
+        }
+
         if (vertexDragRef.current) {
           vertexDragRef.current = null;
-          updateCursor('grab');
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
         }
 
         if (editRings && editRings.length > 0 && event.button === 0) {
@@ -756,6 +793,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
         if (panStateRef.current) {
           panStateRef.current = null;
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
         }
 
         if (dragStateRef.current && currentModeRef.current === 'select') {
@@ -897,6 +935,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const handleKeyUp = (event: KeyboardEvent) => {
         if (event.code === 'Space') {
           spacePressedRef.current = false;
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
         }
       };
       window.addEventListener('keydown', handleKeyDown);
@@ -916,7 +955,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const initial = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
       applyPersistToViewport(viewport, initial);
       updateDots(dots, viewport, app.renderer.width, app.renderer.height);
-      updateCursor('grab');
+      updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
 
       sceneIdRef.current = sceneRef.current.id;
       setPixiReady(true);
@@ -1033,6 +1072,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
   useEffect(() => {
     redrawDraft();
+    updateCursor(mode === 'select' ? 'grab' : 'pointer');
   }, [mode]);
 
   useEffect(() => {

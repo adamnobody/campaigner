@@ -736,6 +736,10 @@ export function CanvasPage() {
     }
   }, [contentLayer, createCanvasObject, mode, openMarkerDialog, projectIdNumber, scene]);
 
+  const handleShiftCanvasClick = useCallback((point: CanvasPoint) => {
+    openMarkerDialog(point);
+  }, [openMarkerDialog]);
+
   const handleObjectMove = useCallback((object: CanvasObject, point: CanvasPoint) => {
     persistObject(withObjectPosition(object, point.x, point.y));
   }, [persistObject]);
@@ -1195,6 +1199,7 @@ export function CanvasPage() {
           selectedObjectId={selectedObjectId}
           mode={mode}
           onCanvasClick={handleCanvasClick}
+          onShiftCanvasClick={handleShiftCanvasClick}
           onObjectSelect={handleObjectSelect}
           onObjectMove={handleObjectMove}
           onMarkerOpenLinkedScene={handleMarkerOpenLinkedScene}

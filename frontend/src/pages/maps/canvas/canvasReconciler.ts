@@ -529,6 +529,24 @@ const drawObject = (
   return boundsHit(-20, -20, 40, 40);
 };
 
+const getObjectKindPriority = (kind: string): number => {
+  if (kind === 'territory') return 0;
+  if (kind === 'marker') return 2;
+  return 1;
+};
+
+const compareObjects = (a: CanvasObject, b: CanvasObject): number => {
+  if (a.zIndex !== b.zIndex) {
+    return a.zIndex - b.zIndex;
+  }
+  const pA = getObjectKindPriority(a.kind);
+  const pB = getObjectKindPriority(b.kind);
+  if (pA !== pB) {
+    return pA - pB;
+  }
+  return a.id - b.id;
+};
+
 export const reconcilePixiObjects = (
   root: Container,
   state: ReconcileState,
@@ -570,7 +588,7 @@ export const reconcilePixiObjects = (
     }
   }
 
-  const sortedObjects = [...objects].sort((a, b) => a.zIndex - b.zIndex || a.id - b.id);
+  const sortedObjects = [...objects].sort(compareObjects);
   for (const object of sortedObjects) {
     const layerContainer = state.layerContainers.get(object.layerId);
     if (!layerContainer || object.isHidden) continue;
@@ -624,7 +642,7 @@ export const hitTestObjects = (
   objects: CanvasObject[],
   point: CanvasPoint,
 ): CanvasObject | null => {
-  const sorted = [...objects].sort((a, b) => b.zIndex - a.zIndex || b.id - a.id);
+  const sorted = [...objects].sort((a, b) => compareObjects(b, a));
   for (const object of sorted) {
     const entry = state.objects.get(object.id);
     if (!entry || object.isHidden || object.isLocked) continue;
