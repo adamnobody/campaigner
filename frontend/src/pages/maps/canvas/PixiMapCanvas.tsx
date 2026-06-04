@@ -67,6 +67,8 @@ type Props = {
   onCanvasClick: (point: CanvasPoint) => void;
   onObjectSelect: (object: CanvasObject | null) => void;
   onObjectMove: (object: CanvasObject, point: CanvasPoint) => void;
+  /** Double-click on a marker that has linkedSceneId (select mode, no drag). */
+  onMarkerOpenLinkedScene?: (object: CanvasObject) => void;
   onDraftPointCountChange: (count: number) => void;
   onCreatePolygon: (points: CanvasPoint[]) => void;
   onCreateTerritory: (points: CanvasPoint[]) => void;
@@ -180,6 +182,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onCanvasClick,
   onObjectSelect,
   onObjectMove,
+  onMarkerOpenLinkedScene,
   onDraftPointCountChange,
   onCreatePolygon,
   onCreateTerritory,
@@ -204,6 +207,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const drawingHoverRef = useRef<CanvasPoint | null>(null);
   const snapToFirstRef = useRef(false);
   const lastDrawClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
+  const lastMarkerClickRef = useRef<{ objectId: number; at: number } | null>(null);
   const spacePressedRef = useRef(false);
   const canvasHostRef = useRef<HTMLCanvasElement | null>(null);
   const liveObjectsRef = useRef<CanvasObject[]>(objects);
@@ -212,6 +216,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const onCanvasClickRef = useRef(onCanvasClick);
   const onObjectSelectRef = useRef(onObjectSelect);
   const onObjectMoveRef = useRef(onObjectMove);
+  const onMarkerOpenLinkedSceneRef = useRef(onMarkerOpenLinkedScene);
   const onDraftPointCountChangeRef = useRef(onDraftPointCountChange);
   const onCreatePolygonRef = useRef(onCreatePolygon);
   const onCreateTerritoryRef = useRef(onCreateTerritory);
@@ -234,6 +239,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onCanvasClickRef.current = onCanvasClick;
   onObjectSelectRef.current = onObjectSelect;
   onObjectMoveRef.current = onObjectMove;
+  onMarkerOpenLinkedSceneRef.current = onMarkerOpenLinkedScene;
   onDraftPointCountChangeRef.current = onDraftPointCountChange;
   onCreatePolygonRef.current = onCreatePolygon;
   onCreateTerritoryRef.current = onCreateTerritory;
@@ -575,9 +581,28 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           const drag = dragStateRef.current;
           dragStateRef.current = null;
           if (!drag.moved) {
+            const clicked = liveObjectsRef.current.find((item) => item.id === drag.objectId);
+            if (
+              clicked?.kind === 'marker'
+              && clicked.linkedSceneId != null
+              && onMarkerOpenLinkedSceneRef.current
+            ) {
+              const now = Date.now();
+              const last = lastMarkerClickRef.current;
+              if (last?.objectId === clicked.id && now - last.at < 400) {
+                lastMarkerClickRef.current = null;
+                onMarkerOpenLinkedSceneRef.current(clicked);
+                updateCursor('pointer');
+                return;
+              }
+              lastMarkerClickRef.current = { objectId: clicked.id, at: now };
+            } else {
+              lastMarkerClickRef.current = null;
+            }
             updateCursor('pointer');
             return;
           }
+          lastMarkerClickRef.current = null;
           const movedObject = liveObjectsRef.current.find((item) => item.id === drag.objectId);
           if (movedObject) {
             onObjectMoveRef.current(movedObject, {

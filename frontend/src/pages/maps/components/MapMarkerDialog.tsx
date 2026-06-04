@@ -3,9 +3,10 @@ import {
   Box, Typography, TextField, Button, Dialog,
   DialogTitle, DialogContent, DialogActions,
   Select, MenuItem, FormControl, InputLabel, Autocomplete,
-  Chip,
+  Chip, FormControlLabel, Checkbox,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useTranslation } from 'react-i18next';
 import { DndButton } from '@/components/ui/DndButton';
 import type { CanvasObject } from '@/api/canvas';
@@ -22,6 +23,12 @@ type Props = {
   setMarkerForm: React.Dispatch<React.SetStateAction<MarkerFormState>>;
   notes: NoteOption[];
   notesMap: Map<number, NoteOption>;
+  canCreateNestedMap: boolean;
+  createNestedMap: boolean;
+  onCreateNestedMapChange: (value: boolean) => void;
+  nestedMapImageName: string | null;
+  onPickNestedMapImage: () => void;
+  onClearNestedMapImage: () => void;
   onSave: () => void;
 };
 
@@ -33,6 +40,12 @@ export const MapMarkerDialog: React.FC<Props> = ({
   setMarkerForm,
   notes,
   notesMap,
+  canCreateNestedMap,
+  createNestedMap,
+  onCreateNestedMapChange,
+  nestedMapImageName,
+  onPickNestedMapImage,
+  onClearNestedMapImage,
   onSave,
 }) => {
   const { t } = useTranslation(['map', 'common']);
@@ -82,6 +95,47 @@ export const MapMarkerDialog: React.FC<Props> = ({
           clearText={t('map:markerDialog.clear')}
           sx={{ mt: 1 }}
         />
+
+        {canCreateNestedMap && (
+          <Box mt={2} p={1.5} sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={createNestedMap}
+                  onChange={(_, checked) => onCreateNestedMapChange(checked)}
+                  size="small"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {t('map:markerDialog.createNestedMapTitle')}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    {t('map:markerDialog.createNestedMapHint')}
+                  </Typography>
+                </Box>
+              }
+            />
+            {createNestedMap && (
+              <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" mt={1}>
+                <Button size="small" variant="outlined" startIcon={<CloudUploadIcon />} onClick={onPickNestedMapImage}>
+                  {t('map:markerDialog.uploadChildMapImage')}
+                </Button>
+                {nestedMapImageName && (
+                  <>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }} noWrap>
+                      {nestedMapImageName}
+                    </Typography>
+                    <Button size="small" onClick={onClearNestedMapImage}>
+                      {t('map:markerDialog.removeAttachment')}
+                    </Button>
+                  </>
+                )}
+              </Box>
+            )}
+          </Box>
+        )}
 
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('map:markerDialog.fieldIcon')}</InputLabel>

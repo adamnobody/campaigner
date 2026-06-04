@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Typography, Button, Divider, IconButton, Tooltip, useTheme, alpha } from '@mui/material';
+import { Box, Typography, Button, Divider, IconButton, useTheme, alpha } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -25,6 +25,7 @@ type Props = {
   onClose: () => void;
   onNavigateToNote: (noteId: number) => void;
   onOpenChildMap?: () => void;
+  onCreateChildMap?: () => void;
   onEditMarker: (marker: CanvasObject) => void;
   onDeleteMarker: (marker: CanvasObject) => void;
 };
@@ -35,6 +36,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
   onClose,
   onNavigateToNote,
   onOpenChildMap,
+  onCreateChildMap,
   onEditMarker,
   onDeleteMarker,
 }) => {
@@ -127,14 +129,17 @@ export const MapMarkerPanel: React.FC<Props> = ({
             </Box>
           ) : (
             <Box sx={{ mt: 1 }}>
-              <Tooltip title={t('map:canvas.markerPanel.nestedMapTodo')}>
-                <span>
-                  <Button fullWidth variant="outlined" startIcon={<AddIcon />} size="small" disabled
-                    sx={{ borderColor: theme.palette.divider, color: 'text.secondary', borderStyle: 'dashed', justifyContent: 'flex-start' }}>
-                    {t('map:markerPanel.createChildMap')}
-                  </Button>
-                </span>
-              </Tooltip>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<AddIcon />}
+                size="small"
+                disabled={!onCreateChildMap}
+                onClick={() => onCreateChildMap?.()}
+                sx={{ borderColor: theme.palette.divider, color: 'text.secondary', borderStyle: 'dashed', justifyContent: 'flex-start' }}
+              >
+                {t('map:markerPanel.createChildMap')}
+              </Button>
             </Box>
           )}
         </Box>

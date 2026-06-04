@@ -128,9 +128,15 @@ export function CanvasPage() {
   const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
   const [editingMarker, setEditingMarker] = useState<CanvasObject | null>(null);
   const [markerForm, setMarkerForm] = useState<MarkerFormState>(DEFAULT_MARKER_FORM);
+  const [createNestedMapInDialog, setCreateNestedMapInDialog] = useState(false);
+  const [nestedMapImageFile, setNestedMapImageFile] = useState<File | null>(null);
+  const [nestedMapImageName, setNestedMapImageName] = useState<string | null>(null);
   const [notes, setNotes] = useState<NoteOption[]>([]);
   const pixiCanvasRef = useRef<PixiMapCanvasHandle | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const childMapImageInputRef = useRef<HTMLInputElement | null>(null);
+  const dialogNestedMapImageInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingChildMapMarkerIdRef = useRef<number | null>(null);
   const pendingImagePointRef = useRef<CanvasPoint | null>(null);
   const pendingMarkerPointRef = useRef<CanvasPoint | null>(null);
   const reportedImageLoadErrorsRef = useRef(new Set<string>());
@@ -313,25 +319,77 @@ export function CanvasPage() {
     }
   }, [loadScene, projectIdNumber, scene, showSnackbar, t]);
 
+  const resetNestedMapDialogState = useCallback(() => {
+    setCreateNestedMapInDialog(false);
+    setNestedMapImageFile(null);
+    setNestedMapImageName(null);
+  }, []);
+
   const openMarkerDialog = useCallback((point: CanvasPoint | null, marker: CanvasObject | null = null) => {
     pendingMarkerPointRef.current = point;
     setEditingMarker(marker);
     setMarkerForm(marker ? markerFormFromObject(marker) : DEFAULT_MARKER_FORM);
+    resetNestedMapDialogState();
     setMarkerDialogOpen(true);
-  }, []);
+  }, [resetNestedMapDialogState]);
 
   const closeMarkerDialog = useCallback(() => {
     setMarkerDialogOpen(false);
     setEditingMarker(null);
     pendingMarkerPointRef.current = null;
-  }, []);
+    resetNestedMapDialogState();
+  }, [resetNestedMapDialogState]);
+
+  const nestedMapSceneName = useCallback((markerTitle: string) => (
+    t('map:childMap.autoName', { title: markerTitle.trim() || t('map:canvas.defaults.sceneName') })
+  ), [t]);
+
+  const attachNestedMapToMarker = useCallback(async (
+    markerId: number,
+    sceneName: string,
+    backgroundFile: File | null,
+  ) => {
+    const result = await trackCanvasWrite(canvasApi.attachChildSceneToMarker({
+      markerId,
+      sceneName,
+      backgroundPath: null,
+    }, projectIdNumber));
+
+    let childScene = result.childScene;
+    if (backgroundFile) {
+      try {
+        childScene = await trackCanvasWrite(
+          canvasApi.uploadSceneBackground(childScene.id, projectIdNumber, backgroundFile),
+        );
+        showSnackbar(t('map:snackbar.childMapImageUploaded'), 'success');
+      } catch (error) {
+        console.error('[Canvas] child map image upload failed', error);
+        showSnackbar(t('map:snackbar.markerChildMapUploadWarning'), 'warning');
+      }
+    }
+
+    setObjects((current) => current.map((item) => (item.id === markerId ? result.marker : item)));
+    const tree = await canvasApi.getSceneTree(projectIdNumber);
+    setSceneTree(tree);
+    showSnackbar(t('map:snackbar.nestedMapCreated'), 'success');
+    return { marker: result.marker, childScene };
+  }, [projectIdNumber, showSnackbar, t]);
 
   const saveMarker = useCallback(async () => {
     if (!scene || !markerForm.title.trim()) return;
+    const wantsNestedMap = createNestedMapInDialog
+      && !(editingMarker?.linkedSceneId != null);
     try {
       if (editingMarker) {
         const updated = applyMarkerFormToObject(editingMarker, markerForm);
         await persistObject(updated);
+        if (wantsNestedMap) {
+          await attachNestedMapToMarker(
+            editingMarker.id,
+            nestedMapSceneName(markerForm.title),
+            nestedMapImageFile,
+          );
+        }
         closeMarkerDialog();
         return;
       }
@@ -344,6 +402,18 @@ export function CanvasPage() {
       console.debug('[Canvas] createObject marker', { sceneId: scene.id, objectId: created.id });
       setObjects((current) => [...current, created]);
       setSelectedObjectId(created.id);
+      if (wantsNestedMap) {
+        try {
+          await attachNestedMapToMarker(
+            created.id,
+            nestedMapSceneName(markerForm.title),
+            nestedMapImageFile,
+          );
+        } catch (attachError) {
+          console.error('[Canvas] nested map attach after create failed', attachError);
+          showSnackbar(t('map:snackbar.markerChildMapWarning'), 'warning');
+        }
+      }
       closeMarkerDialog();
       setMode('select');
     } catch (error) {
@@ -351,17 +421,57 @@ export function CanvasPage() {
       showSnackbar(t('map:canvas.snackbar.objectSaveError'), 'error');
     }
   }, [
+    attachNestedMapToMarker,
     closeMarkerDialog,
     contentLayer,
     createCanvasObject,
+    createNestedMapInDialog,
     editingMarker,
     markerForm,
+    nestedMapImageFile,
+    nestedMapSceneName,
     persistObject,
-    projectIdNumber,
     scene,
     showSnackbar,
     t,
   ]);
+
+  const handleCreateChildMapFromPanel = useCallback((marker: CanvasObject) => {
+    pendingChildMapMarkerIdRef.current = marker.id;
+    childMapImageInputRef.current?.click();
+  }, []);
+
+  const handleDialogNestedMapImagePick = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setNestedMapImageFile(file);
+    setNestedMapImageName(file.name);
+  }, []);
+
+  const handleChildMapImageSelected = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    const markerId = pendingChildMapMarkerIdRef.current;
+    pendingChildMapMarkerIdRef.current = null;
+    if (!file || markerId == null) return;
+
+    const marker = objects.find((item) => item.id === markerId);
+    if (!marker || marker.kind !== 'marker' || marker.linkedSceneId != null) return;
+
+    const title = asString(asRecord(marker.contentJson).title, marker.name ?? '');
+    try {
+      await attachNestedMapToMarker(markerId, nestedMapSceneName(title), file);
+    } catch (error) {
+      console.error('[Canvas] create child map from panel failed', error);
+      showSnackbar(t('map:snackbar.nestedMapCreateError'), 'error');
+    }
+  }, [attachNestedMapToMarker, nestedMapSceneName, objects, showSnackbar, t]);
+
+  const handleMarkerOpenLinkedScene = useCallback((marker: CanvasObject) => {
+    if (marker.linkedSceneId == null) return;
+    handleOpenChildMap(marker.linkedSceneId);
+  }, [handleOpenChildMap]);
 
   const handleCanvasClick = useCallback(async (point: CanvasPoint) => {
     if (!scene) return;
@@ -742,6 +852,8 @@ export function CanvasPage() {
       />
 
       <input ref={imageInputRef} type="file" hidden accept="image/*" onChange={uploadBackground} />
+      <input ref={childMapImageInputRef} type="file" hidden accept="image/*" onChange={(event) => { void handleChildMapImageSelected(event); }} />
+      <input ref={dialogNestedMapImageInputRef} type="file" hidden accept="image/*" onChange={handleDialogNestedMapImagePick} />
 
       <Paper
         data-tour="map-canvas"
@@ -764,6 +876,7 @@ export function CanvasPage() {
           onCanvasClick={handleCanvasClick}
           onObjectSelect={handleObjectSelect}
           onObjectMove={handleObjectMove}
+          onMarkerOpenLinkedScene={handleMarkerOpenLinkedScene}
           onDraftPointCountChange={(count) => {
             setDraftPointsCount(count);
           }}
@@ -788,6 +901,7 @@ export function CanvasPage() {
                   ? () => handleOpenChildMap(selectedObject.linkedSceneId!)
                   : undefined
               }
+              onCreateChildMap={() => handleCreateChildMapFromPanel(selectedObject)}
               onEditMarker={(marker) => openMarkerDialog(null, marker)}
               onDeleteMarker={() => deleteSelected()}
             />
@@ -897,6 +1011,15 @@ export function CanvasPage() {
         setMarkerForm={setMarkerForm}
         notes={notes}
         notesMap={notesMap}
+        canCreateNestedMap={editingMarker?.linkedSceneId == null}
+        createNestedMap={createNestedMapInDialog}
+        onCreateNestedMapChange={setCreateNestedMapInDialog}
+        nestedMapImageName={nestedMapImageName}
+        onPickNestedMapImage={() => dialogNestedMapImageInputRef.current?.click()}
+        onClearNestedMapImage={() => {
+          setNestedMapImageFile(null);
+          setNestedMapImageName(null);
+        }}
         onSave={() => {
           void saveMarker();
         }}
