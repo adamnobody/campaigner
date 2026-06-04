@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import { canvasApi, type CanvasLayer, type CanvasObject, type CanvasScene } from '@/api/canvas';
+import { factionsApi } from '@/api/factions';
 import { notesApi } from '@/api/notes';
 import { projectsApi } from '@/api/projects';
 import { useBranchStore } from '@/store/useBranchStore';
@@ -13,6 +14,8 @@ import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDi
 import { MapToolbar } from './components/MapToolbar';
 import { MapMarkerDialog } from './components/MapMarkerDialog';
 import { MapMarkerPanel } from './components/MapMarkerPanel';
+import { MapTerritoryDialog } from './components/MapTerritoryDialog';
+import { MapTerritoryPanel } from './components/MapTerritoryPanel';
 import { MapCanvasContextMenu, type MapContextMenuState } from './components/MapCanvasContextMenu';
 import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas';
 import type { ViewportPersist } from './canvas/canvasViewport';
@@ -27,22 +30,27 @@ import {
 } from './canvas/navigationStack';
 import {
   applyMarkerFormToObject,
+  applyTerritoryFormToObject,
   asRecord,
   asString,
   buildMarkerCreateInput,
+  buildTerritoryCreateInput,
   DEFAULT_MARKER_FORM,
+  DEFAULT_TERRITORY_FORM,
   defaultImageObject,
   defaultShapeObject,
-  defaultTerritoryObject,
   defaultTextObject,
   markerFormFromObject,
   objectTransform,
   objectToUpsert,
+  territoryFormFromObject,
   withObjectPosition,
   type CanvasMode,
   type CanvasPoint,
   type MarkerFormState,
   type NoteOption,
+  type TerritoryFactionOption,
+  type TerritoryFormState,
 } from './canvas/canvasModel';
 
 const MAX_TEXTURE_SIZE = 16384;
@@ -132,6 +140,10 @@ export function CanvasPage() {
   const [nestedMapImageFile, setNestedMapImageFile] = useState<File | null>(null);
   const [nestedMapImageName, setNestedMapImageName] = useState<string | null>(null);
   const [notes, setNotes] = useState<NoteOption[]>([]);
+  const [factions, setFactions] = useState<TerritoryFactionOption[]>([]);
+  const [territoryDialogOpen, setTerritoryDialogOpen] = useState(false);
+  const [editingTerritory, setEditingTerritory] = useState<CanvasObject | null>(null);
+  const [territoryForm, setTerritoryForm] = useState<TerritoryFormState>(DEFAULT_TERRITORY_FORM);
   const pixiCanvasRef = useRef<PixiMapCanvasHandle | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const childMapImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -139,6 +151,7 @@ export function CanvasPage() {
   const pendingChildMapMarkerIdRef = useRef<number | null>(null);
   const pendingImagePointRef = useRef<CanvasPoint | null>(null);
   const pendingMarkerPointRef = useRef<CanvasPoint | null>(null);
+  const pendingTerritoryPointsRef = useRef<CanvasPoint[] | null>(null);
   const reportedImageLoadErrorsRef = useRef(new Set<string>());
   const viewportPersistTimerRef = useRef<number | null>(null);
   const pendingViewportRef = useRef<{ sceneId: number; viewport: ViewportPersist } | null>(null);
@@ -160,6 +173,17 @@ export function CanvasPage() {
     () => new Map(notes.map((note) => [note.id, note])),
     [notes],
   );
+
+  const factionsMap = useMemo(
+    () => new Map(factions.map((faction) => [faction.id, faction])),
+    [factions],
+  );
+
+  const selectedTerritoryFaction = useMemo(() => {
+    if (!selectedObject || selectedObject.kind !== 'territory') return null;
+    const factionId = territoryFormFromObject(selectedObject).factionId;
+    return factionId != null ? factionsMap.get(factionId) ?? null : null;
+  }, [factionsMap, selectedObject]);
 
   const selectedLabel = useMemo(() => {
     if (!selectedObject) return null;
@@ -268,6 +292,20 @@ export function CanvasPage() {
       .catch(() => undefined);
   }, [projectIdNumber]);
 
+  useEffect(() => {
+    if (!projectIdNumber) return;
+    void factionsApi.getAll(projectIdNumber, { limit: 500 })
+      .then((response) => {
+        setFactions(response.data.data.map((faction) => ({
+          id: faction.id,
+          name: faction.name,
+          color: faction.color || '#4ecdc4',
+          kind: faction.kind,
+        })));
+      })
+      .catch(() => undefined);
+  }, [projectIdNumber]);
+
   useEffect(() => () => {
     if (viewportPersistTimerRef.current != null) {
       window.clearTimeout(viewportPersistTimerRef.current);
@@ -339,6 +377,68 @@ export function CanvasPage() {
     pendingMarkerPointRef.current = null;
     resetNestedMapDialogState();
   }, [resetNestedMapDialogState]);
+
+  const openTerritoryDialog = useCallback((points: CanvasPoint[] | null, territory: CanvasObject | null = null) => {
+    pendingTerritoryPointsRef.current = points;
+    setEditingTerritory(territory);
+    setTerritoryForm(territory ? territoryFormFromObject(territory) : DEFAULT_TERRITORY_FORM);
+    setTerritoryDialogOpen(true);
+  }, []);
+
+  const closeTerritoryDialog = useCallback(() => {
+    setTerritoryDialogOpen(false);
+    setEditingTerritory(null);
+    pendingTerritoryPointsRef.current = null;
+  }, []);
+
+  const saveTerritory = useCallback(async () => {
+    if (!scene || !territoryForm.name.trim()) return;
+    try {
+      if (editingTerritory) {
+        const updated = applyTerritoryFormToObject(editingTerritory, territoryForm);
+        await persistObject(updated);
+        showSnackbar(t('map:snackbar.territoryUpdated', { name: updated.name }), 'success');
+        closeTerritoryDialog();
+        return;
+      }
+      const points = pendingTerritoryPointsRef.current;
+      if (!points || points.length < 3) return;
+      const layer = await contentLayer();
+      const created = await createCanvasObject(
+        buildTerritoryCreateInput(scene.id, layer.id, points, territoryForm),
+      );
+      console.debug('[Canvas] createObject territory', { sceneId: scene.id, objectId: created.id });
+      setObjects((current) => [...current, created]);
+      setSelectedObjectId(created.id);
+      showSnackbar(t('map:snackbar.territoryCreated', { name: created.name }), 'success');
+      closeTerritoryDialog();
+      setMode('select');
+    } catch (error) {
+      console.error('[Canvas] saveTerritory failed', { sceneId: scene?.id, error });
+      showSnackbar(t('map:snackbar.territorySaveError'), 'error');
+    }
+  }, [
+    closeTerritoryDialog,
+    contentLayer,
+    createCanvasObject,
+    editingTerritory,
+    persistObject,
+    scene,
+    showSnackbar,
+    t,
+    territoryForm,
+  ]);
+
+  const handleNavigateToFaction = useCallback((faction: TerritoryFactionOption) => {
+    const path = faction.kind === 'state'
+      ? `/project/${projectIdNumber}/states/${faction.id}`
+      : `/project/${projectIdNumber}/factions/${faction.id}`;
+    navigate(path);
+  }, [navigate, projectIdNumber]);
+
+  const handleStartTerritoryPointEdit = useCallback(() => {
+    showSnackbar(t('map:canvas.snackbar.vertexEditPending'), 'info');
+  }, [showSnackbar, t]);
 
   const nestedMapSceneName = useCallback((markerTitle: string) => (
     t('map:childMap.autoName', { title: markerTitle.trim() || t('map:canvas.defaults.sceneName') })
@@ -630,17 +730,11 @@ export function CanvasPage() {
     setMode('select');
   }, [contentLayer, createCanvasObject, scene]);
 
-  const createTerritory = useCallback(async (points: CanvasPoint[]) => {
-    if (!scene || points.length < 3) return;
-    const layer = await contentLayer();
-    const created = await createCanvasObject(
-      defaultTerritoryObject(scene.id, layer.id, points),
-    );
-    console.debug('[Canvas] createObject territory', { sceneId: scene.id, objectId: created.id });
-    setObjects((current) => [...current, created]);
-    setSelectedObjectId(created.id);
+  const createTerritory = useCallback((points: CanvasPoint[]) => {
+    if (points.length < 3) return;
+    openTerritoryDialog(points);
     setMode('select');
-  }, [contentLayer, createCanvasObject, scene]);
+  }, [openTerritoryDialog]);
 
   const createPolyline = useCallback(async (points: CanvasPoint[]) => {
     if (!scene || points.length < 2) return;
@@ -908,7 +1002,21 @@ export function CanvasPage() {
           </Box>
         )}
 
-        {selectedObject && selectedObject.kind !== 'marker' && (
+        {selectedObject?.kind === 'territory' && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapTerritoryPanel
+              selectedTerritory={selectedObject}
+              faction={selectedTerritoryFaction}
+              onClose={() => setSelectedObjectId(null)}
+              onNavigateToFaction={handleNavigateToFaction}
+              onEditTerritory={(territory) => openTerritoryDialog(null, territory)}
+              onDeleteTerritory={() => deleteSelected()}
+              onStartEditingPoints={handleStartTerritoryPointEdit}
+            />
+          </Box>
+        )}
+
+        {selectedObject && selectedObject.kind !== 'marker' && selectedObject.kind !== 'territory' && (
           <Paper
             elevation={6}
             sx={{
@@ -993,6 +1101,10 @@ export function CanvasPage() {
             openMarkerDialog(null, selectedForMenu);
             return;
           }
+          if (selectedForMenu.kind === 'territory') {
+            openTerritoryDialog(null, selectedForMenu);
+            return;
+          }
           setSelectedObjectId(selectedForMenu.id);
         }}
         onDeleteSelected={deleteSelected}
@@ -1001,6 +1113,18 @@ export function CanvasPage() {
         }}
         onBringToFront={bringToFront}
         onSendToBack={sendToBack}
+      />
+
+      <MapTerritoryDialog
+        open={territoryDialogOpen}
+        onClose={closeTerritoryDialog}
+        editingTerritory={editingTerritory}
+        territoryForm={territoryForm}
+        setTerritoryForm={setTerritoryForm}
+        factions={factions}
+        onSave={() => {
+          void saveTerritory();
+        }}
       />
 
       <MapMarkerDialog

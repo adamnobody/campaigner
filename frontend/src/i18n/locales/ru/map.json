@@ -82,7 +82,8 @@
       "imageLoadError": "Не удалось загрузить изображение",
       "sceneAutoCreateError": "Не удалось создать первую сцену холста",
       "maxTextureExceeded": "Изображение превышает лимит текстуры {{max}}",
-      "objectSelectedForEdit": "Объект выбран для редактирования"
+      "objectSelectedForEdit": "Объект выбран для редактирования",
+      "vertexEditPending": "Редактирование вершин — в C3 (parity-трек)"
     },
     "markerPanel": {
       "nestedMapTodo": "Вложенные карты — в следующем обновлении (B4)"

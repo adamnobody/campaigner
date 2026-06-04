@@ -31,6 +31,52 @@ export const MARKER_COLORS = [
   '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
 ] as const;
 
+export const TERRITORY_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+  '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+  '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA',
+  '#E74C3C', '#2ECC71', '#3498DB', '#9B59B6',
+  '#F39C12', '#1ABC9C', '#E67E22', '#8E44AD',
+] as const;
+
+export type TerritoryFactionOption = {
+  id: number;
+  name: string;
+  color: string;
+  kind: 'state' | 'faction';
+};
+
+export type TerritoryFormState = {
+  name: string;
+  description: string;
+  color: string;
+  opacity: number;
+  borderColor: string;
+  borderWidth: number;
+  smoothing: number;
+  factionId: number | null;
+};
+
+export const DEFAULT_TERRITORY_FORM: TerritoryFormState = {
+  name: '',
+  description: '',
+  color: '#4ecdc4',
+  opacity: 0.24,
+  borderColor: '#9ff3df',
+  borderWidth: 2,
+  smoothing: 0,
+  factionId: null,
+};
+
+export const hexToRgb = (hex: string): string => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) return '0,0,0';
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `${r},${g},${b}`;
+};
+
 export const PANEL_WIDTH = 360;
 
 export type MarkerIcon = keyof typeof MARKER_ICONS;
@@ -276,19 +322,89 @@ export const defaultShapeObject = (
   };
 };
 
-export const defaultTerritoryObject = (sceneId: number, layerId: number, points: CanvasPoint[]) => ({
-  sceneId,
-  layerId,
-  kind: 'territory',
-  name: 'Territory',
-  zIndex: null,
-  transformJson: {},
-  geometryJson: { rings: [points] },
-  styleJson: { fill: '#4ecdc4', opacity: 0.24, stroke: '#9ff3df', strokeWidth: 2 },
-  contentJson: { description: '', factionId: null },
-  resourcePath: null,
-  linkedNoteId: null,
-  linkedSceneId: null,
-  isHidden: false,
-  isLocked: false,
-});
+export const territoryRingsFromObject = (object: CanvasObject): CanvasPoint[][] => {
+  const geometry = asRecord(object.geometryJson);
+  const ringsRaw = Array.isArray(geometry.rings) ? geometry.rings : [];
+  if (ringsRaw.length > 0) {
+    return ringsRaw.map((ring) => asPoints(ring)).filter((ring) => ring.length > 0);
+  }
+  const points = asPoints(geometry.points);
+  return points.length > 0 ? [points] : [];
+};
+
+export const territoryTotalPointCount = (object: CanvasObject): number =>
+  territoryRingsFromObject(object).reduce((sum, ring) => sum + ring.length, 0);
+
+export const territoryFormFromObject = (object: CanvasObject): TerritoryFormState => {
+  const content = asRecord(object.contentJson);
+  const style = asRecord(object.styleJson);
+  const factionIdRaw = content.factionId;
+  return {
+    name: asString(object.name),
+    description: asString(content.description),
+    color: asString(style.fill, DEFAULT_TERRITORY_FORM.color),
+    opacity: asNumber(style.opacity, DEFAULT_TERRITORY_FORM.opacity),
+    borderColor: asString(style.stroke, DEFAULT_TERRITORY_FORM.borderColor),
+    borderWidth: asNumber(style.strokeWidth, DEFAULT_TERRITORY_FORM.borderWidth),
+    smoothing: asNumber(content.smoothing, 0),
+    factionId: typeof factionIdRaw === 'number' ? factionIdRaw : null,
+  };
+};
+
+export const applyTerritoryFormToObject = (object: CanvasObject, form: TerritoryFormState): CanvasObject => {
+  const name = form.name.trim() || 'Territory';
+  return {
+    ...object,
+    name,
+    contentJson: {
+      ...asRecord(object.contentJson),
+      description: form.description,
+      factionId: form.factionId,
+      smoothing: form.smoothing,
+    },
+    styleJson: {
+      ...asRecord(object.styleJson),
+      fill: form.color,
+      opacity: form.opacity,
+      stroke: form.borderColor,
+      strokeWidth: form.borderWidth,
+    },
+  };
+};
+
+export const buildTerritoryCreateInput = (
+  sceneId: number,
+  layerId: number,
+  points: CanvasPoint[],
+  form: TerritoryFormState,
+): Omit<CreateCanvasObjectInput, 'branchId'> => {
+  const name = form.name.trim() || 'Territory';
+  return {
+    sceneId,
+    layerId,
+    kind: 'territory',
+    name,
+    zIndex: null,
+    transformJson: {},
+    geometryJson: { rings: [points] },
+    styleJson: {
+      fill: form.color,
+      opacity: form.opacity,
+      stroke: form.borderColor,
+      strokeWidth: form.borderWidth,
+    },
+    contentJson: {
+      description: form.description,
+      factionId: form.factionId,
+      smoothing: form.smoothing,
+    },
+    resourcePath: null,
+    linkedNoteId: null,
+    linkedSceneId: null,
+    isHidden: false,
+    isLocked: false,
+  };
+};
+
+export const defaultTerritoryObject = (sceneId: number, layerId: number, points: CanvasPoint[]) =>
+  buildTerritoryCreateInput(sceneId, layerId, points, DEFAULT_TERRITORY_FORM);

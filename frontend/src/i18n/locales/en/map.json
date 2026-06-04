@@ -82,7 +82,8 @@
       "imageLoadError": "Could not load image",
       "sceneAutoCreateError": "Could not create the first canvas scene",
       "maxTextureExceeded": "Image exceeds texture limit {{max}}",
-      "objectSelectedForEdit": "Object selected for editing"
+      "objectSelectedForEdit": "Object selected for editing",
+      "vertexEditPending": "Vertex editing is planned for C3 (parity track)"
     },
     "markerPanel": {
       "nestedMapTodo": "Nested maps — coming in a later update (B4)"
