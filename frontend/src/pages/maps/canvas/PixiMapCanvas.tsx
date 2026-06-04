@@ -262,6 +262,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const sceneIdRef = useRef<number | null>(null);
   const autoFitSceneRef = useRef<number | null>(null);
   const [pixiReady, setPixiReady] = useState(false);
+  const [viewportScale, setViewportScale] = useState(1);
 
   const forceRender = () => {
     appRef.current?.render();
@@ -397,6 +398,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const fallback = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
       applyPersistToViewport(viewport, fallback);
       syncDots();
+      setViewportScale(clampZoom(viewport.scale.x));
       onViewportChangeRef.current(persistFromViewport(viewport));
       return;
     }
@@ -404,6 +406,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     const cameraAfter = fitViewportToBounds(viewport, bounds);
     syncDots();
     console.debug('[Canvas] fitToContent applied', { cameraAfter });
+    setViewportScale(clampZoom(viewport.scale.x));
     onViewportChangeRef.current(persistFromViewport(viewport));
   };
 
@@ -534,6 +537,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       viewport.addChild(draft);
 
       const syncViewport = () => {
+        setViewportScale(clampZoom(viewport.scale.x));
         onViewportChangeRef.current(persistFromViewport(viewport));
         syncDots();
       };
@@ -962,6 +966,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     applyPersistToViewport(viewport, persist);
     sceneIdRef.current = scene.id;
     syncDots();
+    setViewportScale(clampZoom(viewport.scale.x));
     onViewportChange(persistFromViewport(viewport));
   }, [onViewportChange, scene]);
 
@@ -1012,11 +1017,19 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     const root = rootObjectsRef.current;
     if (!root) return;
 
-    reconcilePixiObjects(root, reconcileStateRef.current, layers, objects, selectedObjectId, (object, resourcePath) => {
-      onImageLoadErrorRef.current(object, resourcePath);
-    });
+    reconcilePixiObjects(
+      root,
+      reconcileStateRef.current,
+      layers,
+      objects,
+      selectedObjectId,
+      (object, resourcePath) => {
+        onImageLoadErrorRef.current(object, resourcePath);
+      },
+      { viewportScale },
+    );
     forceRender();
-  }, [pixiReady, layers, objects, selectedObjectId, scene.id]);
+  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale]);
 
   useEffect(() => {
     redrawDraft();

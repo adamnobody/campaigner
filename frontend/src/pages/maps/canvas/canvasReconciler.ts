@@ -17,6 +17,7 @@ import {
   territoryRingsFromObject,
   type CanvasPoint,
 } from './canvasModel';
+import { territoryLabelPlacement } from './territoryLabel';
 
 type HitTest = (point: CanvasPoint) => boolean;
 type ImageLoadErrorHandler = (object: CanvasObject, resourcePath: string) => void;
@@ -32,6 +33,11 @@ export type DisplayEntry = {
 export type ReconcileState = {
   layerContainers: Map<number, Container>;
   objects: Map<number, DisplayEntry>;
+};
+
+export type ReconcileOptions = {
+  /** Viewport scale (world → screen) for territory label sizing. */
+  viewportScale?: number;
 };
 
 const loadedImageTextures = new Map<string, ImageTexture>();
@@ -312,10 +318,37 @@ const syncImageDisplay = (container: Container, object: CanvasObject, selected: 
   return boundsHit(0, 0, width, height);
 };
 
+const drawTerritoryLabel = (
+  container: Container,
+  ringList: CanvasPoint[][],
+  name: string,
+  viewportScale: number,
+): void => {
+  const placement = territoryLabelPlacement(ringList, name, viewportScale);
+  if (!placement) return;
+  const label = new Text({
+    text: name.trim(),
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fill: 0xffffff,
+      fontFamily: 'Crimson Text, serif',
+      fontSize: placement.fontSize,
+      fontWeight: '700',
+      stroke: { color: 0x000000, width: placement.strokeWidth, alpha: 0.65 },
+    },
+  });
+  label.anchor.set(0.5);
+  label.position.set(placement.x, placement.y);
+  label.alpha = 0.95;
+  label.eventMode = 'none';
+  container.addChild(label);
+};
+
 const drawObject = (
   container: Container,
   object: CanvasObject,
   selected: boolean,
+  viewportScale: number,
   onImageLoadError?: ImageLoadErrorHandler,
 ): HitTest => {
   const geometry = asRecord(object.geometryJson);
@@ -415,6 +448,9 @@ const drawObject = (
     const ringList = territoryRingsFromObject(object);
     if (ringList.length > 0) {
       drawRingList(graphics, ringList, fill, stroke, alpha, strokeWidth);
+      if (object.kind === 'territory') {
+        drawTerritoryLabel(container, ringList, object.name ?? '', viewportScale);
+      }
       return hitTestRingList(ringList, strokeWidth);
     }
   }
@@ -430,7 +466,9 @@ export const reconcilePixiObjects = (
   objects: CanvasObject[],
   selectedObjectId: number | null,
   onImageLoadError?: ImageLoadErrorHandler,
+  options?: ReconcileOptions,
 ): void => {
+  const viewportScale = options?.viewportScale ?? 1;
   const visibleLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex || a.id - b.id);
   const layerIds = new Set(visibleLayers.map((layer) => layer.id));
 
@@ -473,6 +511,7 @@ export const reconcilePixiObjects = (
       : JSON.stringify({
           object,
           selected: selectedObjectId === object.id,
+          viewportScale: Math.round(viewportScale * 1000) / 1000,
         });
     let entry = state.objects.get(object.id);
     if (!entry) {
@@ -496,7 +535,13 @@ export const reconcilePixiObjects = (
 
     if (entry.fingerprint !== fingerprint) {
       clearDisplay(entry.display);
-      entry.hitTest = drawObject(entry.display, object, selectedObjectId === object.id, onImageLoadError);
+      entry.hitTest = drawObject(
+        entry.display,
+        object,
+        selectedObjectId === object.id,
+        viewportScale,
+        onImageLoadError,
+      );
       entry.fingerprint = fingerprint;
     } else if (object.kind === 'image') {
       entry.hitTest = syncImageDisplay(entry.display, object, selectedObjectId === object.id);
