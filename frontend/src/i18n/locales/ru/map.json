@@ -38,6 +38,7 @@
     "hintDrawTerritory": "Клик — вершины линии · замкнуть: наведи на первую точку (кольцо) и кликни, или R / «Контур готов» · «Сохранить» — имя и создание",
     "hintSelectMode": "ЛКМ drag — перемещение карты · СКМ drag — панорамирование · Колёсико — зум",
     "hintMarkerMode": "ЛКМ — добавить маркер · Ctrl + ЛКМ drag или СКМ drag — панорамирование · Колёсико — зум",
+    "hintSceneContainerMode": "ЛКМ — разместить карту на холсте · СКМ — панорамирование · Shift+клик — маркер поверх территории",
     "modeShortcutsHint": "Ctrl+1 — перемещение · Ctrl+2 — маркеры · Ctrl+3 — территории"
   },
   "canvas": {
@@ -46,8 +47,14 @@
       "sceneName": "Сцена 1"
     },
     "breadcrumbs": {
-      "back": "Назад к родительской карте",
-      "navigateTo": "Открыть {{name}}"
+      "back": "Назад на холст",
+      "navigateTo": "Открыть {{name}}",
+      "rootCanvas": "Холст",
+      "mapFallback": "Карта"
+    },
+    "sceneType": {
+      "root": "Холст",
+      "map": "Карта"
     },
     "toolbar": {
       "sceneStats": "Сцена холста · {{count}} объектов{{selected}}",
@@ -71,7 +78,15 @@
       "tooltipMarker": "Режим маркера (Ctrl+2)",
       "tooltipDrawTerritory": "Рисовать территорию (Ctrl+3)",
       "save": "Сохранить",
-      "addImage": "Добавить изображение"
+      "addImage": "Добавить изображение",
+      "toolSceneContainer": "Добавить карту на холст",
+      "sceneStatsRoot": "Холст · {{count}} объектов{{selected}}"
+    },
+    "sceneContainer": {
+      "kindLabel": "Карта",
+      "openHint": "Двойной клик — открыть",
+      "openAction": "Открыть карту",
+      "selectionType": "Карта на холсте"
     },
     "selection": {
       "title": "Выбранный объект",
@@ -196,6 +211,16 @@
   },
   "childMap": {
     "autoName": "Карта: {{title}}"
+  },
+  "sceneContainerDialog": {
+    "title": "Новая карта на холсте",
+    "hint": "Карта появится на холсте карточкой. Откройте её двойным кликом или кнопкой в панели выбора.",
+    "nameLabel": "Название карты",
+    "nameRequired": "Укажите название карты",
+    "pickBackground": "Выбрать фоновое изображение",
+    "backgroundRequired": "Фоновое изображение обязательно",
+    "backgroundNote": "Изображение станет фоном географической карты. Его можно заменить позже.",
+    "create": "Создать карту"
   },
   "noteTypes": {
     "wiki": "Вики",

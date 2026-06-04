@@ -1,6 +1,6 @@
 /** Engine-agnostic canvas scene navigation (no Pixi / Tauri). */
 
-export type NavigationVia = 'root' | 'marker' | 'parent';
+export type NavigationVia = 'root' | 'marker' | 'parent' | 'container';
 
 export type NavigationEntry = {
   sceneId: number;
@@ -98,4 +98,41 @@ export function resolveNavigationTrail(
 export function parentSceneEntry(trail: readonly NavigationEntry[]): NavigationEntry | null {
   if (trail.length < 2) return null;
   return trail[trail.length - 2] ?? null;
+}
+
+/** Scene id → scene_type from canvas scene tree DTO. */
+export type SceneTypeById = ReadonlyMap<number, string | null | undefined>;
+
+export function sceneTypeForEntry(
+  entry: NavigationEntry,
+  sceneTypes: SceneTypeById,
+): string | null | undefined {
+  return sceneTypes.get(entry.sceneId) ?? null;
+}
+
+/**
+ * Display label for breadcrumbs: root canvas → rootLabel, otherwise scene name.
+ */
+export function formatNavigationBreadcrumbLabel(
+  entry: NavigationEntry,
+  sceneTypes: SceneTypeById,
+  labels: { root: string; fallbackMap: string },
+): string {
+  const sceneType = sceneTypeForEntry(entry, sceneTypes);
+  if (entry.via === 'root' || sceneType === 'root_canvas') {
+    return labels.root;
+  }
+  const trimmed = entry.label.trim();
+  return trimmed.length > 0 ? trimmed : labels.fallbackMap;
+}
+
+/**
+ * Builds breadcrumb trail with optional explicit stack (e.g. after opening via scene_container).
+ */
+export function buildCanvasBreadcrumbs(
+  stack: readonly NavigationEntry[],
+  scenes: readonly SceneNavRef[],
+  currentSceneId: number,
+): NavigationEntry[] {
+  return resolveNavigationTrail(stack, scenes, currentSceneId);
 }

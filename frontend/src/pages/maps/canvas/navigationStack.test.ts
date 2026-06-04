@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCanvasBreadcrumbs,
   buildSceneTrailFromTree,
   currentNavigationEntry,
+  formatNavigationBreadcrumbLabel,
   inferNavigationVia,
   popNavigationEntry,
   pushNavigationEntry,
@@ -15,6 +17,12 @@ const scenes: SceneNavRef[] = [
   { id: 2, name: 'Region Map', parentSceneId: 1, parentObjectId: 10 },
   { id: 3, name: 'City Map', parentSceneId: 2, parentObjectId: 20 },
 ];
+
+const sceneTypes = new Map<number, string | null>([
+  [1, 'root_canvas'],
+  [2, 'map'],
+  [3, 'map'],
+]);
 
 describe('inferNavigationVia', () => {
   it('classifies root, marker, and parent links', () => {
@@ -106,5 +114,22 @@ describe('resolveNavigationTrail', () => {
       { sceneId: 2, label: 'Region Map', via: 'marker' as const },
     ];
     expect(resolveNavigationTrail(stack, scenes, 2)).toEqual(stack);
+  });
+});
+
+describe('formatNavigationBreadcrumbLabel', () => {
+  const labels = { root: 'Холст', fallbackMap: 'Карта' };
+
+  it('uses root label for root_canvas trail entry', () => {
+    const trail = buildSceneTrailFromTree(scenes, 2);
+    expect(formatNavigationBreadcrumbLabel(trail[0]!, sceneTypes, labels)).toBe('Холст');
+    expect(formatNavigationBreadcrumbLabel(trail[1]!, sceneTypes, labels)).toBe('Region Map');
+  });
+
+  it('buildCanvasBreadcrumbs resolves root → map trail', () => {
+    const trail = buildCanvasBreadcrumbs([], scenes, 2);
+    expect(trail).toHaveLength(2);
+    expect(trail[0]?.sceneId).toBe(1);
+    expect(trail[1]?.sceneId).toBe(2);
   });
 });

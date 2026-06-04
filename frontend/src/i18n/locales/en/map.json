@@ -38,6 +38,7 @@
     "hintDrawTerritory": "Click — polygon vertices · Close: hover the first point (ring) and click, or R / «Complete ring» · «Save» — name and create",
     "hintSelectMode": "Left-drag to pan map · Middle-drag to pan · Wheel to zoom",
     "hintMarkerMode": "Left-click to add marker · Ctrl + left-drag or middle-drag to pan · Wheel to zoom",
+    "hintSceneContainerMode": "Left-click to place a map card · Middle-drag to pan · Shift+click adds a marker over territory",
     "modeShortcutsHint": "Ctrl+1 — pan · Ctrl+2 — markers · Ctrl+3 — territories"
   },
   "canvas": {
@@ -46,8 +47,14 @@
       "sceneName": "Scene 1"
     },
     "breadcrumbs": {
-      "back": "Back to parent map",
-      "navigateTo": "Open {{name}}"
+      "back": "Back to canvas",
+      "navigateTo": "Open {{name}}",
+      "rootCanvas": "Canvas",
+      "mapFallback": "Map"
+    },
+    "sceneType": {
+      "root": "Canvas",
+      "map": "Map"
     },
     "toolbar": {
       "sceneStats": "Canvas scene · {{count}} objects{{selected}}",
@@ -71,7 +78,15 @@
       "tooltipMarker": "Marker mode (Ctrl+2)",
       "tooltipDrawTerritory": "Draw territory (Ctrl+3)",
       "save": "Save",
-      "addImage": "Add image"
+      "addImage": "Add image",
+      "toolSceneContainer": "Add map to canvas",
+      "sceneStatsRoot": "Canvas · {{count}} objects{{selected}}"
+    },
+    "sceneContainer": {
+      "kindLabel": "Map",
+      "openHint": "Double-click to open",
+      "openAction": "Open map",
+      "selectionType": "Map on canvas"
     },
     "selection": {
       "title": "Selected object",
@@ -196,6 +211,16 @@
   },
   "childMap": {
     "autoName": "Map: {{title}}"
+  },
+  "sceneContainerDialog": {
+    "title": "New map on canvas",
+    "hint": "The map appears on the canvas as a card. Open it with a double-click or from the selection panel.",
+    "nameLabel": "Map name",
+    "nameRequired": "Enter a map name",
+    "pickBackground": "Choose background image",
+    "backgroundRequired": "Background image is required",
+    "backgroundNote": "This image becomes the geographic map background. You can replace it later.",
+    "create": "Create map"
   },
   "noteTypes": {
     "wiki": "Wiki",

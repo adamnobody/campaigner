@@ -32,11 +32,17 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MapIcon from '@mui/icons-material/Map';
 import { useTranslation } from 'react-i18next';
 import type { CanvasMode } from '../canvas/canvasModel';
-import type { NavigationEntry } from '../canvas/navigationStack';
+import { isMapScene, isRootCanvasScene, isToolAllowedForSceneType } from '../canvas/canvasTools';
+import {
+  formatNavigationBreadcrumbLabel,
+  type NavigationEntry,
+  type SceneTypeById,
+} from '../canvas/navigationStack';
 
 type Props = {
   sceneName: string;
   sceneType?: string | null;
+  sceneTypesById: SceneTypeById;
   navigationTrail: NavigationEntry[];
   onBreadcrumbNavigate: (sceneId: number, index: number) => void;
   onNavigationBack: () => void;
@@ -60,6 +66,7 @@ type Props = {
 export function MapToolbar({
   sceneName,
   sceneType,
+  sceneTypesById,
   navigationTrail,
   onBreadcrumbNavigate,
   onNavigationBack,
@@ -82,6 +89,17 @@ export function MapToolbar({
   const theme = useTheme();
   const { t } = useTranslation(['map', 'common']);
   const showBreadcrumbs = navigationTrail.length > 1;
+  const breadcrumbLabels = {
+    root: t('map:canvas.breadcrumbs.rootCanvas'),
+    fallbackMap: t('map:canvas.breadcrumbs.mapFallback'),
+  };
+  const sceneTypeLabel = isRootCanvasScene(sceneType)
+    ? t('map:canvas.sceneType.root')
+    : isMapScene(sceneType)
+      ? t('map:canvas.sceneType.map')
+      : null;
+
+  const allowTool = (toolMode: CanvasMode) => isToolAllowedForSceneType(toolMode, sceneType);
 
   return (
     <Box data-tour="map-toolbar" display="flex" flexDirection="column" gap={0.5} mb={1}>
@@ -98,9 +116,7 @@ export function MapToolbar({
           >
             {navigationTrail.map((entry, index) => {
               const isLast = index === navigationTrail.length - 1;
-              const label = entry.via === 'root'
-                ? t('map:breadcrumb.worldMap')
-                : entry.label;
+              const label = formatNavigationBreadcrumbLabel(entry, sceneTypesById, breadcrumbLabels);
               if (isLast) {
                 return (
                   <Typography key={entry.sceneId} variant="body2" color="text.primary" noWrap>
@@ -129,26 +145,44 @@ export function MapToolbar({
       )}
 
       <Box display="flex" justifyContent="space-between" alignItems="center" gap={2}>
-        <Box minWidth={0}>
-          <Typography
-            sx={{
-              fontFamily: '"Cinzel", serif',
-              fontWeight: 700,
-              fontSize: '1.55rem',
-              color: 'text.primary',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {sceneName || t('map:canvas.defaults.sceneName')}
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {t('map:canvas.toolbar.sceneStats', {
-              count: objectCount,
-              selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
-            })}
-          </Typography>
+        <Box minWidth={0} display="flex" alignItems="center" gap={1}>
+          <Box minWidth={0}>
+            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+              <Typography
+                sx={{
+                  fontFamily: '"Cinzel", serif',
+                  fontWeight: 700,
+                  fontSize: '1.55rem',
+                  color: 'text.primary',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {sceneName || t('map:canvas.defaults.sceneName')}
+              </Typography>
+              {sceneTypeLabel && (
+                <Chip
+                  size="small"
+                  label={sceneTypeLabel}
+                  color={isRootCanvasScene(sceneType) ? 'primary' : 'default'}
+                  variant="outlined"
+                  sx={{ fontWeight: 600 }}
+                />
+              )}
+            </Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {isRootCanvasScene(sceneType)
+                ? t('map:canvas.toolbar.sceneStatsRoot', {
+                    count: objectCount,
+                    selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
+                  })
+                : t('map:canvas.toolbar.sceneStats', {
+                    count: objectCount,
+                    selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
+                  })}
+            </Typography>
+          </Box>
         </Box>
 
         <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" justifyContent="flex-end">
@@ -171,19 +205,79 @@ export function MapToolbar({
               },
             }}
           >
-            <ToggleButton value="select"><Tooltip title={t('map:canvas.toolbar.tooltipSelect')}><MouseIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="marker"><Tooltip title={t('map:canvas.toolbar.tooltipMarker')}><PlaceIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="text"><Tooltip title={t('map:canvas.toolbar.toolText')}><TextFieldsIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="draw_territory"><Tooltip title={t('map:canvas.toolbar.tooltipDrawTerritory')}><LandscapeIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="polygon"><Tooltip title={t('map:canvas.toolbar.toolPolygon')}><PentagonIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="polyline"><Tooltip title={t('map:canvas.toolbar.toolPolyline')}><PolylineIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="rectangle"><Tooltip title={t('map:canvas.toolbar.toolRectangle')}><RectangleIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="ellipse"><Tooltip title={t('map:canvas.toolbar.toolEllipse')}><EllipseIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="curve_text"><Tooltip title={t('map:canvas.toolbar.toolCurveText')}><GestureIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="image"><Tooltip title={t('map:canvas.toolbar.toolImage')}><ImageIcon fontSize="small" /></Tooltip></ToggleButton>
-            {sceneType === 'root_canvas' && (
+            {allowTool('select') && (
+              <ToggleButton value="select">
+                <Tooltip title={t('map:canvas.toolbar.tooltipSelect')}>
+                  <MouseIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('marker') && (
+              <ToggleButton value="marker">
+                <Tooltip title={t('map:canvas.toolbar.tooltipMarker')}>
+                  <PlaceIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('text') && (
+              <ToggleButton value="text">
+                <Tooltip title={t('map:canvas.toolbar.toolText')}>
+                  <TextFieldsIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('draw_territory') && (
+              <ToggleButton value="draw_territory">
+                <Tooltip title={t('map:canvas.toolbar.tooltipDrawTerritory')}>
+                  <LandscapeIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('polygon') && (
+              <ToggleButton value="polygon">
+                <Tooltip title={t('map:canvas.toolbar.toolPolygon')}>
+                  <PentagonIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('polyline') && (
+              <ToggleButton value="polyline">
+                <Tooltip title={t('map:canvas.toolbar.toolPolyline')}>
+                  <PolylineIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('rectangle') && (
+              <ToggleButton value="rectangle">
+                <Tooltip title={t('map:canvas.toolbar.toolRectangle')}>
+                  <RectangleIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('ellipse') && (
+              <ToggleButton value="ellipse">
+                <Tooltip title={t('map:canvas.toolbar.toolEllipse')}>
+                  <EllipseIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('curve_text') && (
+              <ToggleButton value="curve_text">
+                <Tooltip title={t('map:canvas.toolbar.toolCurveText')}>
+                  <GestureIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('image') && (
+              <ToggleButton value="image">
+                <Tooltip title={t('map:canvas.toolbar.toolImage')}>
+                  <ImageIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
+            {allowTool('scene_container') && (
               <ToggleButton value="scene_container">
-                <Tooltip title={t('map:canvas.toolbar.toolSceneContainer', { defaultValue: 'Карта' })}>
+                <Tooltip title={t('map:canvas.toolbar.toolSceneContainer')}>
                   <MapIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>
@@ -197,7 +291,9 @@ export function MapToolbar({
                 variant="outlined"
                 label={t('map:canvas.toolbar.drawingPoints', { count: draftPointsCount })}
               />
-              <IconButton size="small" onClick={onUndoDraftPoint} disabled={draftPointsCount === 0}><UndoIcon fontSize="small" /></IconButton>
+              <IconButton size="small" onClick={onUndoDraftPoint} disabled={draftPointsCount === 0}>
+                <UndoIcon fontSize="small" />
+              </IconButton>
               <Button
                 size="small"
                 variant="contained"
@@ -207,16 +303,20 @@ export function MapToolbar({
               >
                 {t('map:canvas.toolbar.save')}
               </Button>
-              <Button size="small" variant="outlined" onClick={onCancelTerritory}>{t('common:cancel')}</Button>
+              <Button size="small" variant="outlined" onClick={onCancelTerritory}>
+                {t('common:cancel')}
+              </Button>
             </Box>
           )}
 
-          <Chip
-            size="small"
-            variant="outlined"
-            label={t('map:canvas.toolbar.statsChip', { markers: markersCount, territories: territoriesCount })}
-            sx={{ '& .MuiChip-label': { fontSize: '0.8rem' } }}
-          />
+          {isMapScene(sceneType) && (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={t('map:canvas.toolbar.statsChip', { markers: markersCount, territories: territoriesCount })}
+              sx={{ '& .MuiChip-label': { fontSize: '0.8rem' } }}
+            />
+          )}
 
           <Box display="flex" gap={0.5} sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.6), borderRadius: 1, p: 0.5 }}>
             <IconButton size="small" onClick={onZoomOut}><ZoomOutIcon fontSize="small" /></IconButton>

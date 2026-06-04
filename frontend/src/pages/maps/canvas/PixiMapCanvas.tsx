@@ -15,7 +15,12 @@ import type { MapContextMenuState } from '../components/MapCanvasContextMenu';
 import { computeObjectsBounds } from './canvasBounds';
 import type { CanvasMode, CanvasPoint } from './canvasModel';
 import { objectTransform } from './canvasModel';
-import { hitTestObjects, reconcilePixiObjects, type ReconcileState } from './canvasReconciler';
+import {
+  hitTestObjects,
+  reconcilePixiObjects,
+  type ReconcileState,
+  type SceneContainerDisplayLabels,
+} from './canvasReconciler';
 import {
   deleteTerritoryVertex,
   findNearestTerritoryEdge,
@@ -100,6 +105,8 @@ type Props = {
   onTerritoryVertexDeleteRejected: () => void;
   /** Closed rings already finished via «Complete ring» (draw_territory only). */
   territoryDraftCompletedRings?: CanvasPoint[][];
+  linkedSceneNames?: ReadonlyMap<number, string>;
+  sceneContainerLabels?: SceneContainerDisplayLabels;
 };
 
 export type PixiMapCanvasHandle = {
@@ -221,6 +228,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onTerritoryEditChange,
   onTerritoryVertexDeleteRejected,
   territoryDraftCompletedRings = [],
+  linkedSceneNames,
+  sceneContainerLabels,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -1065,10 +1074,14 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       (object, resourcePath) => {
         onImageLoadErrorRef.current(object, resourcePath);
       },
-      { viewportScale },
+      {
+        viewportScale,
+        linkedSceneNames,
+        sceneContainerLabels,
+      },
     );
     forceRender();
-  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale]);
+  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale, linkedSceneNames, sceneContainerLabels]);
 
   useEffect(() => {
     redrawDraft();

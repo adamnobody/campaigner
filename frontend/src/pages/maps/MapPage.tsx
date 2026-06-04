@@ -28,7 +28,10 @@ import {
   resolveNavigationTrail,
   truncateNavigationStack,
   type NavigationEntry,
+  type NavigationVia,
 } from './canvas/navigationStack';
+import { normalizeCanvasModeForSceneType } from './canvas/canvasTools';
+import type { SceneContainerDisplayLabels } from './canvas/canvasReconciler';
 import {
   appendCompletedTerritoryRing,
   buildTerritoryRingsForCreateDialog,
@@ -227,8 +230,25 @@ export function CanvasPage() {
     if (territoryEditSession) return t('map:page.hintEditingPoints');
     if (mode === 'draw_territory') return t('map:page.hintDrawTerritory');
     if (mode === 'marker') return t('map:page.hintMarkerMode');
+    if (mode === 'scene_container') return t('map:page.hintSceneContainerMode');
     return t('map:page.hintSelectMode');
   }, [mode, t, territoryEditSession]);
+
+  const sceneTypesById = useMemo(
+    () => new Map(sceneTree.map((item) => [item.id, item.sceneType])),
+    [sceneTree],
+  );
+
+  const linkedSceneNames = useMemo(
+    () => new Map(sceneTree.map((item) => [item.id, item.name])),
+    [sceneTree],
+  );
+
+  const sceneContainerLabels = useMemo((): SceneContainerDisplayLabels => ({
+    defaultTitle: t('map:canvas.breadcrumbs.mapFallback'),
+    openHint: t('map:canvas.sceneContainer.openHint'),
+    kindLabel: t('map:canvas.sceneContainer.kindLabel'),
+  }), [t]);
 
   const selectedLabel = useMemo(() => {
     if (!selectedObject) return null;
@@ -236,13 +256,26 @@ export function CanvasPage() {
       const content = asRecord(selectedObject.contentJson);
       return asString(content.title, selectedObject.name ?? selectedObject.kind);
     }
+    if (selectedObject.kind === 'scene_container') {
+      const content = asRecord(selectedObject.contentJson);
+      const override = asString(content.titleOverride, '').trim();
+      if (override) return override;
+      if (selectedObject.linkedSceneId != null) {
+        return linkedSceneNames.get(selectedObject.linkedSceneId) ?? selectedObject.name ?? t('map:canvas.breadcrumbs.mapFallback');
+      }
+    }
     return selectedObject.name ?? selectedObject.kind;
-  }, [selectedObject]);
+  }, [linkedSceneNames, selectedObject, t]);
 
   const navigationTrail = useMemo(() => {
     if (!scene) return [];
     return resolveNavigationTrail(navigationStack, sceneTree, scene.id);
   }, [navigationStack, scene, sceneTree]);
+
+  useEffect(() => {
+    if (!scene) return;
+    setMode((current) => normalizeCanvasModeForSceneType(current, scene.sceneType));
+  }, [scene?.id, scene?.sceneType]);
 
   const navigateToMapScene = useCallback((sceneId: number, stackAfterNavigate: NavigationEntry[]) => {
     setNavigationStack(stackAfterNavigate);
@@ -261,14 +294,17 @@ export function CanvasPage() {
     navigateToMapScene(parent.sceneId, truncateNavigationStack(trail, trail.length - 2));
   }, [navigateToMapScene, navigationStack, scene, sceneTree]);
 
-  const handleOpenChildMap = useCallback((childSceneId: number) => {
+  const handleOpenChildMap = useCallback((
+    childSceneId: number,
+    via: NavigationVia = 'marker',
+  ) => {
     if (!scene) return;
     const child = sceneTree.find((item) => item.id === childSceneId);
     const trail = resolveNavigationTrail(navigationStack, sceneTree, scene.id);
     const nextStack = pushNavigationEntry(trail, {
       sceneId: childSceneId,
-      label: child?.name ?? t('map:canvas.defaults.sceneName'),
-      via: 'marker',
+      label: child?.name ?? t('map:canvas.breadcrumbs.mapFallback'),
+      via,
     });
     navigateToMapScene(childSceneId, nextStack);
   }, [navigateToMapScene, navigationStack, scene, sceneTree, t]);
@@ -657,9 +693,10 @@ export function CanvasPage() {
     }
   }, [attachNestedMapToMarker, nestedMapSceneName, objects, showSnackbar, t]);
 
-  const handleMarkerOpenLinkedScene = useCallback((marker: CanvasObject) => {
-    if (marker.linkedSceneId == null) return;
-    handleOpenChildMap(marker.linkedSceneId);
+  const handleMarkerOpenLinkedScene = useCallback((object: CanvasObject) => {
+    if (object.linkedSceneId == null) return;
+    const via: NavigationVia = object.kind === 'scene_container' ? 'container' : 'marker';
+    handleOpenChildMap(object.linkedSceneId, via);
   }, [handleOpenChildMap]);
 
   const handleSaveSceneContainer = useCallback(async (mapName: string, file: File) => {
@@ -686,17 +723,22 @@ export function CanvasPage() {
         objectName: mapName,
         transformJson,
         styleJson: null,
-        contentJson: null,
+        contentJson: { titleOverride: mapName },
       }));
 
       setObjects((current) => [...current, result.containerObject]);
+      setSelectedObjectId(result.containerObject.id);
+      setMode('select');
       const tree = await canvasApi.getSceneTree(projectIdNumber);
       setSceneTree(tree);
 
-      showSnackbar(t('map:snackbar.nestedMapCreated', { defaultValue: 'Карта успешно создана!' }), 'success');
+      showSnackbar(t('map:snackbar.nestedMapCreated'), 'success');
     } catch (error) {
       console.error('[Canvas] createMapSceneContainer failed', error);
-      showSnackbar(t('map:snackbar.nestedMapCreateError', { defaultValue: 'Ошибка при создании карты' }), 'error');
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : t('map:snackbar.nestedMapCreateError');
+      showSnackbar(message, 'error');
     } finally {
       setLoading(false);
       setPendingSceneContainerPoint(null);
@@ -1108,6 +1150,7 @@ export function CanvasPage() {
       <MapToolbar
         sceneName={scene.name}
         sceneType={scene.sceneType}
+        sceneTypesById={sceneTypesById}
         navigationTrail={navigationTrail}
         onBreadcrumbNavigate={handleBreadcrumbNavigate}
         onNavigationBack={handleNavigationBack}
@@ -1189,6 +1232,8 @@ export function CanvasPage() {
           scene={scene}
           layers={layers}
           objects={canvasObjects}
+          linkedSceneNames={linkedSceneNames}
+          sceneContainerLabels={sceneContainerLabels}
           territoryEditRings={territoryEditSession?.rings ?? null}
           onTerritoryEditChange={(rings) => {
             setTerritoryEditSession((current) => (current ? { ...current, rings } : null));
@@ -1346,7 +1391,7 @@ export function CanvasPage() {
               <Typography variant="subtitle2" color="text.secondary">{t('map:canvas.selection.title')}</Typography>
               <Typography fontWeight={700}>{selectedObject.name ?? selectedObject.kind}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {selectedObject.kind === 'scene_container' ? 'Тип: Карта (Scene Container)' : t('map:canvas.selection.meta', {
+                {selectedObject.kind === 'scene_container' ? t('map:canvas.sceneContainer.selectionType') : t('map:canvas.selection.meta', {
                   kind: selectedObject.kind,
                   layer: selectedObject.layerId,
                   z: selectedObject.zIndex,
@@ -1357,9 +1402,9 @@ export function CanvasPage() {
                   variant="contained"
                   color="primary"
                   size="small"
-                  onClick={() => handleOpenChildMap(selectedObject.linkedSceneId!)}
+                  onClick={() => handleOpenChildMap(selectedObject.linkedSceneId!, 'container')}
                 >
-                  Открыть карту
+                  {t('map:canvas.sceneContainer.openAction')}
                 </Button>
               )}
               <Button color="error" variant="outlined" size="small" startIcon={<DeleteIcon />} onClick={deleteSelected}>

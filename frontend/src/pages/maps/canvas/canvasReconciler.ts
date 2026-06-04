@@ -35,9 +35,18 @@ export type ReconcileState = {
   objects: Map<number, DisplayEntry>;
 };
 
+export type SceneContainerDisplayLabels = {
+  defaultTitle: string;
+  openHint: string;
+  kindLabel: string;
+};
+
 export type ReconcileOptions = {
   /** Viewport scale (world → screen) for territory label sizing. */
   viewportScale?: number;
+  /** Linked child scene names for scene_container cards. */
+  linkedSceneNames?: ReadonlyMap<number, string>;
+  sceneContainerLabels?: SceneContainerDisplayLabels;
 };
 
 const loadedImageTextures = new Map<string, ImageTexture>();
@@ -300,69 +309,111 @@ const loadImageTexture = async (url: string): Promise<ImageTexture> => {
   return cachedTexture;
 };
 
-const drawSceneContainer = (container: Container, object: CanvasObject, selected: boolean): HitTest => {
+const resolveSceneContainerTitle = (
+  object: CanvasObject,
+  linkedSceneNames?: ReadonlyMap<number, string>,
+  defaultTitle = 'Карта',
+): string => {
+  const content = asRecord(object.contentJson);
+  const override = asString(content.titleOverride, '').trim();
+  if (override) return override;
+  if (object.linkedSceneId != null) {
+    const linkedName = linkedSceneNames?.get(object.linkedSceneId)?.trim();
+    if (linkedName) return linkedName;
+  }
+  const objectName = object.name?.trim();
+  if (objectName) return objectName;
+  return defaultTitle;
+};
+
+const drawSceneContainer = (
+  container: Container,
+  object: CanvasObject,
+  selected: boolean,
+  labels: SceneContainerDisplayLabels,
+  linkedSceneNames?: ReadonlyMap<number, string>,
+): HitTest => {
   const geometry = asRecord(object.geometryJson);
   const style = asRecord(object.styleJson);
-  const content = asRecord(object.contentJson);
-  
+
   const width = asNumber(geometry.width, 240);
   const height = asNumber(geometry.height, 160);
-  
+
   const graphics = new Graphics();
   container.addChild(graphics);
-  
-  const fill = toColor(style.fill, 0x1a1a2e);
-  const stroke = toColor(style.stroke, selected ? 0xf8d7a4 : 0x4ecdc4);
-  const alpha = asNumber(style.opacity, 0.9);
-  const strokeWidth = selected ? 4 : 2;
-  const radius = 8;
-  
+
+  const fill = toColor(style.fill, 0x16202a);
+  const stroke = toColor(style.stroke, selected ? 0xf8d7a4 : 0x5ecfff);
+  const alpha = asNumber(style.opacity, selected ? 0.98 : 0.92);
+  const strokeWidth = selected ? 3 : 2;
+  const radius = 10;
+
   graphics
     .roundRect(0, 0, width, height, radius)
     .fill({ color: fill, alpha })
-    .stroke({ color: stroke, width: strokeWidth });
-    
-  const iconText = new Text({
-    text: '🗺️',
+    .stroke({ color: stroke, width: strokeWidth, alpha: selected ? 1 : 0.85 });
+
+  if (selected) {
+    graphics
+      .roundRect(-2, -2, width + 4, height + 4, radius + 2)
+      .stroke({ color: 0xf8d7a4, width: 1, alpha: 0.45 });
+  }
+
+  const kindBadge = new Text({
+    text: labels.kindLabel,
     resolution: TEXT_RESOLUTION,
     style: {
-      fontSize: 36,
+      fill: 0x9ec9e8,
+      fontFamily: 'Crimson Text, serif',
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1,
     },
   });
+  kindBadge.x = 12;
+  kindBadge.y = 10;
+  container.addChild(kindBadge);
+
+  const iconText = new Text({
+    text: '🗺',
+    resolution: TEXT_RESOLUTION,
+    style: { fontSize: 32 },
+  });
   iconText.x = (width - iconText.width) / 2;
-  iconText.y = 30;
+  iconText.y = 28;
   container.addChild(iconText);
-  
+
+  const title = resolveSceneContainerTitle(object, linkedSceneNames, labels.defaultTitle);
   const titleText = new Text({
-    text: asString(content.titleOverride, object.name ?? 'Map'),
+    text: title,
     resolution: TEXT_RESOLUTION,
     style: {
       fill: 0xffffff,
       fontFamily: 'Crimson Text, serif',
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: 'bold',
       wordWrap: true,
-      wordWrapWidth: width - 20,
+      wordWrapWidth: width - 24,
       align: 'center',
     },
   });
   titleText.x = (width - titleText.width) / 2;
-  titleText.y = 90;
+  titleText.y = 78;
   container.addChild(titleText);
-  
+
   const subText = new Text({
-    text: 'Double click to open',
+    text: labels.openHint,
     resolution: TEXT_RESOLUTION,
     style: {
-      fill: 0x888888,
+      fill: selected ? 0xc8dce8 : 0x7a8f9c,
       fontFamily: 'Crimson Text, serif',
       fontSize: 12,
     },
   });
   subText.x = (width - subText.width) / 2;
-  subText.y = 130;
+  subText.y = height - 28;
   container.addChild(subText);
-  
+
   return boundsHit(0, 0, width, height);
 };
 
@@ -416,6 +467,7 @@ const drawObject = (
   selected: boolean,
   viewportScale: number,
   onImageLoadError?: ImageLoadErrorHandler,
+  options?: ReconcileOptions,
 ): HitTest => {
   const geometry = asRecord(object.geometryJson);
   const style = asRecord(object.styleJson);
@@ -428,7 +480,12 @@ const drawObject = (
   if (object.kind === 'curve_text') return drawCurveText(container, object);
 
   if (object.kind === 'scene_container') {
-    return drawSceneContainer(container, object, selected);
+    const labels = options?.sceneContainerLabels ?? {
+      defaultTitle: 'Карта',
+      openHint: 'Двойной клик — открыть',
+      kindLabel: 'Карта',
+    };
+    return drawSceneContainer(container, object, selected, labels, options?.linkedSceneNames);
   }
 
   if (object.kind === 'text') {
@@ -600,6 +657,12 @@ export const reconcilePixiObjects = (
           object,
           selected: selectedObjectId === object.id,
           viewportScale: Math.round(viewportScale * 1000) / 1000,
+          linkedSceneName: object.kind === 'scene_container' && object.linkedSceneId != null
+            ? options?.linkedSceneNames?.get(object.linkedSceneId)
+            : undefined,
+          sceneContainerLabels: object.kind === 'scene_container'
+            ? options?.sceneContainerLabels
+            : undefined,
         });
     let entry = state.objects.get(object.id);
     if (!entry) {
@@ -629,6 +692,7 @@ export const reconcilePixiObjects = (
         selectedObjectId === object.id,
         viewportScale,
         onImageLoadError,
+        options,
       );
       entry.fingerprint = fingerprint;
     } else if (object.kind === 'image') {
