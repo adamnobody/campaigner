@@ -63,6 +63,13 @@
       "toolCurveText": "Curve text (Ctrl+8)",
       "toolImage": "Image (Ctrl+9)",
       "drawingPoints": "{{count}} pts",
+      "drawingChip": "{{rings}} closed · {{points}} pts",
+      "completeContour": "Complete ring",
+      "zoomPercent": "{{value}}%",
+      "statsChip": "{{markers}} markers · {{territories}} territories",
+      "tooltipSelect": "Pan mode (Ctrl+1)",
+      "tooltipMarker": "Marker mode (Ctrl+2)",
+      "tooltipDrawTerritory": "Draw territory (Ctrl+3)",
       "save": "Save",
       "addImage": "Add image"
     },
@@ -82,11 +89,7 @@
       "imageLoadError": "Could not load image",
       "sceneAutoCreateError": "Could not create the first canvas scene",
       "maxTextureExceeded": "Image exceeds texture limit {{max}}",
-      "objectSelectedForEdit": "Object selected for editing",
-      "vertexEditPending": "Vertex editing is planned for C3 (parity track)"
-    },
-    "markerPanel": {
-      "nestedMapTodo": "Nested maps — coming in a later update (B4)"
+      "objectSelectedForEdit": "Object selected for editing"
     },
     "status": {
       "maxTextureExceeded": "Texture limit {{max}} exceeded: {{width}}x{{height}}"

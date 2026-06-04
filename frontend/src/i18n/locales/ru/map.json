@@ -63,6 +63,13 @@
       "toolCurveText": "Текст по кривой (Ctrl+8)",
       "toolImage": "Изображение (Ctrl+9)",
       "drawingPoints": "{{count}} т.",
+      "drawingChip": "{{rings}} конт. · {{points}} т.к.",
+      "completeContour": "Контур готов",
+      "zoomPercent": "{{value}}%",
+      "statsChip": "{{markers}} маркеров · {{territories}} территорий",
+      "tooltipSelect": "Режим перемещения (Ctrl+1)",
+      "tooltipMarker": "Режим маркера (Ctrl+2)",
+      "tooltipDrawTerritory": "Рисовать территорию (Ctrl+3)",
       "save": "Сохранить",
       "addImage": "Добавить изображение"
     },
@@ -82,11 +89,7 @@
       "imageLoadError": "Не удалось загрузить изображение",
       "sceneAutoCreateError": "Не удалось создать первую сцену холста",
       "maxTextureExceeded": "Изображение превышает лимит текстуры {{max}}",
-      "objectSelectedForEdit": "Объект выбран для редактирования",
-      "vertexEditPending": "Редактирование вершин — в C3 (parity-трек)"
-    },
-    "markerPanel": {
-      "nestedMapTodo": "Вложенные карты — в следующем обновлении (B4)"
+      "objectSelectedForEdit": "Объект выбран для редактирования"
     },
     "status": {
       "maxTextureExceeded": "Лимит текстуры {{max}} превышен: {{width}}x{{height}}"

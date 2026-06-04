@@ -45,6 +45,8 @@ type Props = {
   onZoomOut: () => void;
   onResetView: () => void;
   objectCount: number;
+  markersCount: number;
+  territoriesCount: number;
   selectedLabel: string | null;
   draftPointsCount: number;
   onUndoDraftPoint: () => void;
@@ -72,6 +74,8 @@ export function MapToolbar({
   onZoomOut,
   onResetView,
   objectCount,
+  markersCount,
+  territoriesCount,
   selectedLabel,
   draftPointsCount,
   onUndoDraftPoint,
@@ -178,10 +182,10 @@ export function MapToolbar({
               },
             }}
           >
-            <ToggleButton value="select"><Tooltip title={t('map:canvas.toolbar.toolSelect')}><MouseIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="marker"><Tooltip title={t('map:canvas.toolbar.toolMarker')}><PlaceIcon fontSize="small" /></Tooltip></ToggleButton>
+            <ToggleButton value="select"><Tooltip title={t('map:canvas.toolbar.tooltipSelect')}><MouseIcon fontSize="small" /></Tooltip></ToggleButton>
+            <ToggleButton value="marker"><Tooltip title={t('map:canvas.toolbar.tooltipMarker')}><PlaceIcon fontSize="small" /></Tooltip></ToggleButton>
             <ToggleButton value="text"><Tooltip title={t('map:canvas.toolbar.toolText')}><TextFieldsIcon fontSize="small" /></Tooltip></ToggleButton>
-            <ToggleButton value="draw_territory"><Tooltip title={t('map:canvas.toolbar.toolTerritory')}><LandscapeIcon fontSize="small" /></Tooltip></ToggleButton>
+            <ToggleButton value="draw_territory"><Tooltip title={t('map:canvas.toolbar.tooltipDrawTerritory')}><LandscapeIcon fontSize="small" /></Tooltip></ToggleButton>
             <ToggleButton value="polygon"><Tooltip title={t('map:canvas.toolbar.toolPolygon')}><PentagonIcon fontSize="small" /></Tooltip></ToggleButton>
             <ToggleButton value="polyline"><Tooltip title={t('map:canvas.toolbar.toolPolyline')}><PolylineIcon fontSize="small" /></Tooltip></ToggleButton>
             <ToggleButton value="rectangle"><Tooltip title={t('map:canvas.toolbar.toolRectangle')}><RectangleIcon fontSize="small" /></Tooltip></ToggleButton>
@@ -212,7 +216,7 @@ export function MapToolbar({
               <Chip
                 size="small"
                 variant="outlined"
-                label={t('map:toolbar.drawingChip', {
+                label={t('map:canvas.toolbar.drawingChip', {
                   rings: territoryCompletedRingCount,
                   points: draftPointsCount,
                 })}
@@ -226,7 +230,7 @@ export function MapToolbar({
                 disabled={draftPointsCount < 3}
                 onClick={onCompleteTerritoryRing}
               >
-                {t('map:toolbar.completeContour')}
+                {t('map:canvas.toolbar.completeContour')}
               </Button>
               <Button
                 size="small"
@@ -262,10 +266,17 @@ export function MapToolbar({
             </Box>
           )}
 
+          <Chip
+            size="small"
+            variant="outlined"
+            label={t('map:canvas.toolbar.statsChip', { markers: markersCount, territories: territoriesCount })}
+            sx={{ '& .MuiChip-label': { fontSize: '0.8rem' } }}
+          />
+
           <Box display="flex" gap={0.5} sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.6), borderRadius: 1, p: 0.5 }}>
             <IconButton size="small" onClick={onZoomOut}><ZoomOutIcon fontSize="small" /></IconButton>
             <Typography sx={{ color: 'text.primary', fontSize: '0.9rem', lineHeight: '30px', px: 1, minWidth: 48, textAlign: 'center' }}>
-              {zoomPercent}%
+              {t('map:canvas.toolbar.zoomPercent', { value: zoomPercent })}
             </Typography>
             <IconButton size="small" onClick={onZoomIn}><ZoomInIcon fontSize="small" /></IconButton>
             <IconButton size="small" onClick={onResetView}><CenterFocusStrongIcon fontSize="small" /></IconButton>

@@ -207,6 +207,22 @@ export function CanvasPage() {
     return factionId != null ? factionsMap.get(factionId) ?? null : null;
   }, [factionsMap, selectedObject]);
 
+  const markersCount = useMemo(
+    () => objects.filter((object) => object.kind === 'marker').length,
+    [objects],
+  );
+  const territoriesCount = useMemo(
+    () => objects.filter((object) => object.kind === 'territory').length,
+    [objects],
+  );
+
+  const canvasModeHint = useMemo(() => {
+    if (territoryEditSession) return t('map:page.hintEditingPoints');
+    if (mode === 'draw_territory') return t('map:page.hintDrawTerritory');
+    if (mode === 'marker') return t('map:page.hintMarkerMode');
+    return t('map:page.hintSelectMode');
+  }, [mode, t, territoryEditSession]);
+
   const selectedLabel = useMemo(() => {
     if (!selectedObject) return null;
     if (selectedObject.kind === 'marker') {
@@ -1021,8 +1037,9 @@ export function CanvasPage() {
 
   if (loading || !scene) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="60vh" gap={2}>
         <CircularProgress />
+        <Typography sx={{ color: 'text.secondary' }}>{t('map:page.loading')}</Typography>
       </Box>
     );
   }
@@ -1053,6 +1070,8 @@ export function CanvasPage() {
         onZoomOut={() => pixiCanvasRef.current?.zoomOut()}
         onResetView={() => pixiCanvasRef.current?.fitToContent()}
         objectCount={objects.length}
+        markersCount={markersCount}
+        territoriesCount={territoriesCount}
         selectedLabel={selectedLabel}
         draftPointsCount={draftPointsCount}
         onUndoDraftPoint={() => {
@@ -1072,7 +1091,8 @@ export function CanvasPage() {
         territoryEditLabel={
           territoryEditSession
             ? t('map:editingPoints.banner', {
-              name: territoryEditSession.snapshot.name ?? 'Territory',
+              name: territoryEditSession.snapshot.name?.trim()
+                || t('map:territoryDialog.previewNameFallback'),
               ringCount: territoryEditSession.rings.length,
               pointCount: territoryEditSession.rings.reduce((sum, ring) => sum + ring.length, 0),
             })
@@ -1084,6 +1104,28 @@ export function CanvasPage() {
         onCancelTerritoryShape={cancelTerritoryShapeEdit}
         onAddImage={() => openImagePickerAt()}
       />
+
+      <Typography
+        variant="caption"
+        sx={{ color: 'text.secondary', mb: 0.25, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}
+      >
+        {canvasModeHint}
+      </Typography>
+      <Typography
+        variant="caption"
+        component="div"
+        sx={{ color: 'text.secondary', mb: territoryEditSession ? 0.5 : 1, fontSize: '0.72rem', lineHeight: 1.4 }}
+      >
+        {t('map:page.modeShortcutsHint')}
+      </Typography>
+      {territoryEditSession && (
+        <Typography
+          variant="caption"
+          sx={{ color: 'text.secondary', mb: 1, display: 'block', fontSize: '0.75rem' }}
+        >
+          {t('map:editingPoints.escHint')}
+        </Typography>
+      )}
 
       <input ref={imageInputRef} type="file" hidden accept="image/*" onChange={uploadBackground} />
       <input ref={childMapImageInputRef} type="file" hidden accept="image/*" onChange={(event) => { void handleChildMapImageSelected(event); }} />
