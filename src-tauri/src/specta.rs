@@ -16,12 +16,12 @@ use crate::models::canvas::{
     AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult, BulkDeleteCanvasObjectsInput,
     BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject, CanvasReconcileResult, CanvasScene,
     CanvasTerritorySummary, CreateCanvasLayerInput, CreateCanvasObjectInput,
-    CreateCanvasSceneInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
-    DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput,
-    GetRootCanvasSceneInput, ListCanvasLayersInput, ListCanvasObjectsInput,
-    ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput, ReorderCanvasLayersInput,
-    ReorderCanvasObjectsInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput,
-    UpdateCanvasSceneInput, UpsertCanvasObjectInput,
+    CreateCanvasSceneInput, CreateMapSceneContainerInput, CreateMapSceneContainerResult,
+    DeleteCanvasLayerInput, DeleteCanvasObjectInput, DeleteCanvasSceneInput, GetCanvasObjectInput,
+    GetCanvasSceneInput, GetCanvasSceneTreeInput, GetRootCanvasSceneInput, ListCanvasLayersInput,
+    ListCanvasObjectsInput, ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput,
+    ReorderCanvasLayersInput, ReorderCanvasObjectsInput, UpdateCanvasLayerInput,
+    UpdateCanvasObjectInput, UpdateCanvasSceneInput, UpsertCanvasObjectInput,
 };
 use crate::models::character::{
     Character, CharacterGraph, CharacterRelationship, CharactersListInput, CharactersListResult,
@@ -103,11 +103,12 @@ mod codegen_commands {
         CreateCanvasLayerInput, CreateCanvasObjectInput, CreateCanvasSceneInput,
         CreateCharacterInput, CreateCharacterTraitInput, CreateDemoProjectInput, CreateDogmaInput,
         CreateDynastyInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
-        CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput,
-        CreatePoliticalScaleInput, CreateProjectInput, CreateRelationshipInput, CreateTagInput,
-        CreateTimelineEventInput, CreateWikiLinkInput, DeleteAmbitionInput, DeleteBranchInput,
-        DeleteCanvasLayerInput, DeleteCanvasObjectInput, DeleteCanvasSceneInput,
-        DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
+        CreateFactionRankInput, CreateFactionRelationInput, CreateMapSceneContainerInput,
+        CreateMapSceneContainerResult, CreateNoteInput, CreatePoliticalScaleInput,
+        CreateProjectInput, CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput,
+        CreateWikiLinkInput, DeleteAmbitionInput, DeleteBranchInput, DeleteCanvasLayerInput,
+        DeleteCanvasObjectInput, DeleteCanvasSceneInput, DeleteCharacterInput,
+        DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
         DeleteDynastyFamilyLinkInput, DeleteDynastyInput, DeleteFactionInput,
         DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
         DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteNoteInput,
@@ -677,6 +678,7 @@ mod codegen_commands {
             parent_object_id: None,
             name: String::new(),
             background_path: None,
+            scene_type: None,
             viewport_json: serde_json::json!({}),
             metadata_json: serde_json::json!({}),
             created_at: String::new(),
@@ -854,6 +856,17 @@ mod codegen_commands {
         AttachChildSceneToMarkerResult {
             marker: empty_canvas_object(),
             child_scene: empty_canvas_scene(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn canvas_create_map_scene_container(
+        _input: CreateMapSceneContainerInput,
+    ) -> CreateMapSceneContainerResult {
+        CreateMapSceneContainerResult {
+            container_object: empty_canvas_object(),
+            map_scene: empty_canvas_scene(),
         }
     }
 
@@ -1808,6 +1821,7 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::canvas_objects_bulk_delete,
             codegen_commands::canvas_reconcile_scene,
             codegen_commands::canvas_markers_attach_child_scene,
+            codegen_commands::canvas_create_map_scene_container,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,

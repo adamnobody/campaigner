@@ -11,12 +11,12 @@ use crate::models::canvas::{
     AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult, BulkDeleteCanvasObjectsInput,
     BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject, CanvasReconcileResult, CanvasScene,
     CanvasTerritorySummary, CreateCanvasLayerInput, CreateCanvasObjectInput,
-    CreateCanvasSceneInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
-    DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput,
-    GetRootCanvasSceneInput, ListCanvasLayersInput, ListCanvasObjectsInput,
-    ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput, ReorderCanvasLayersInput,
-    ReorderCanvasObjectsInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput,
-    UpdateCanvasSceneInput, CANVAS_OBJECT_KINDS,
+    CreateCanvasSceneInput, CreateMapSceneContainerInput, CreateMapSceneContainerResult,
+    DeleteCanvasLayerInput, DeleteCanvasObjectInput, DeleteCanvasSceneInput, GetCanvasObjectInput,
+    GetCanvasSceneInput, GetCanvasSceneTreeInput, GetRootCanvasSceneInput, ListCanvasLayersInput,
+    ListCanvasObjectsInput, ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput,
+    ReorderCanvasLayersInput, ReorderCanvasObjectsInput, UpdateCanvasLayerInput,
+    UpdateCanvasObjectInput, UpdateCanvasSceneInput, CANVAS_OBJECT_KINDS,
 };
 use crate::services::branch_overlay;
 use crate::services::branch_scope;
@@ -37,6 +37,7 @@ struct SceneRow {
     parent_object_id: Option<i32>,
     name: String,
     background_path: Option<String>,
+    scene_type: Option<String>,
     viewport_json: String,
     metadata_json: String,
     created_at: String,
@@ -107,7 +108,7 @@ pub fn get_scene_tree(
     let mut statement = connection.prepare(
         r#"
         SELECT
-          id, project_id, parent_scene_id, parent_object_id, name, background_path,
+          id, project_id, parent_scene_id, parent_object_id, name, background_path, scene_type,
           viewport_json, metadata_json, created_at, updated_at, created_branch_id
         FROM canvas_scene
         WHERE project_id = ?1
@@ -171,14 +172,17 @@ pub fn create_scene(
     if let Some(branch_id) = input.branch_id {
         branch_scope::assert_branch_belongs_to_project(connection, branch_id, input.project_id)?;
     }
+    if input.scene_type.as_deref() == Some("root_canvas") {
+        validate_root_canvas_invariant(connection, input.project_id, None)?;
+    }
     let created_branch_id =
         branch_scope::resolve_created_branch_id(connection, input.project_id, input.branch_id)?;
     connection.execute(
         r#"
         INSERT INTO canvas_scene (
-          project_id, parent_scene_id, parent_object_id, name, background_path,
+          project_id, parent_scene_id, parent_object_id, name, background_path, scene_type,
           viewport_json, metadata_json, created_branch_id
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
         "#,
         params![
             input.project_id,
@@ -186,6 +190,7 @@ pub fn create_scene(
             input.parent_object_id,
             input.name,
             input.background_path,
+            input.scene_type,
             value_or_empty_object(input.viewport_json.as_ref()).to_string(),
             value_or_empty_object(input.metadata_json.as_ref()).to_string(),
             created_branch_id
@@ -258,6 +263,7 @@ pub fn create_root_scene_for_project(
             parent_object_id: None,
             name: "World".to_string(),
             background_path: background_path.map(str::to_string),
+            scene_type: Some("root_canvas".to_string()),
             viewport_json: None,
             metadata_json: None,
             branch_id,
@@ -306,6 +312,7 @@ pub fn attach_child_scene_to_marker(
             parent_object_id: Some(input.marker_id),
             name: input.scene_name.clone(),
             background_path: input.background_path.clone(),
+            scene_type: Some("map".to_string()),
             viewport_json: None,
             metadata_json: None,
             branch_id: input.branch_id,
@@ -352,6 +359,9 @@ pub fn update_scene(
     input: &UpdateCanvasSceneInput,
 ) -> Result<CanvasScene> {
     let current = get_scene_row(connection, input.id)?;
+    if input.scene_type.as_deref() == Some("root_canvas") {
+        validate_root_canvas_invariant(connection, current.project_id, Some(input.id))?;
+    }
     if let Some(branch_id) = input.branch_id {
         let patch = build_scene_patch(input);
         if patch != Value::Object(Map::new()) {
@@ -373,6 +383,10 @@ pub fn update_scene(
     }
     if let Some(value) = input.background_path.as_ref() {
         fields.push("background_path = ?".to_string());
+        values.push(SqlValue::Text(value.clone()));
+    }
+    if let Some(value) = input.scene_type.as_ref() {
+        fields.push("scene_type = ?".to_string());
         values.push(SqlValue::Text(value.clone()));
     }
     if let Some(value) = input.viewport_json.as_ref() {
@@ -673,7 +687,8 @@ pub fn create_object(
     connection: &Connection,
     input: &CreateCanvasObjectInput,
 ) -> Result<CanvasObject> {
-    validate_object_kind(&input.kind)?;
+    validate_object_kind_for_scene(connection, input.scene_id, &input.kind)?;
+    validate_linked_scene(connection, input.scene_id, input.linked_scene_id)?;
     let scene = get_scene_row_by_id(connection, input.scene_id)?;
     if let Some(branch_id) = input.branch_id {
         branch_scope::assert_branch_belongs_to_project(connection, branch_id, scene.project_id)?;
@@ -728,6 +743,13 @@ pub fn update_object(
     connection: &Connection,
     input: &UpdateCanvasObjectInput,
 ) -> Result<CanvasObject> {
+    let obj_row = get_object_row(connection, input.id)?;
+    if let Some(kind) = input.kind.as_deref() {
+        validate_object_kind_for_scene(connection, obj_row.scene_id, kind)?;
+    }
+    if let Some(linked_id) = input.linked_scene_id {
+        validate_linked_scene(connection, obj_row.scene_id, Some(linked_id))?;
+    }
     let _ = get_object(
         connection,
         &GetCanvasObjectInput {
@@ -1106,7 +1128,7 @@ fn get_scene_row(connection: &Connection, id: i32) -> Result<SceneRow> {
         .query_row(
             r#"
             SELECT
-              id, project_id, parent_scene_id, parent_object_id, name, background_path,
+              id, project_id, parent_scene_id, parent_object_id, name, background_path, scene_type,
               viewport_json, metadata_json, created_at, updated_at, created_branch_id
             FROM canvas_scene
             WHERE id = ?1
@@ -1189,6 +1211,7 @@ fn map_scene_row(row: &Row<'_>) -> rusqlite::Result<SceneRow> {
         parent_object_id: row.get("parent_object_id")?,
         name: row.get("name")?,
         background_path: row.get("background_path")?,
+        scene_type: row.get("scene_type")?,
         viewport_json: row.get("viewport_json")?,
         metadata_json: row.get("metadata_json")?,
         created_at: row.get("created_at")?,
@@ -1246,6 +1269,7 @@ fn scene_row_to_model(row: SceneRow) -> CanvasScene {
         parent_object_id: row.parent_object_id,
         name: row.name,
         background_path: row.background_path,
+        scene_type: row.scene_type,
         viewport_json: parse_json_or_default(&row.viewport_json),
         metadata_json: parse_json_or_default(&row.metadata_json),
         created_at: row.created_at,
@@ -1330,6 +1354,265 @@ fn validate_object_kind(kind: &str) -> Result<()> {
     }
 }
 
+fn is_ancestor_scene(
+    connection: &Connection,
+    ancestor_id: i32,
+    descendant_id: i32,
+) -> Result<bool> {
+    if ancestor_id == descendant_id {
+        return Ok(true);
+    }
+    let mut current_id = descendant_id;
+    for _ in 0..100 {
+        let parent_id: Option<i32> = connection
+            .query_row(
+                "SELECT parent_scene_id FROM canvas_scene WHERE id = ?1",
+                params![current_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten();
+
+        match parent_id {
+            Some(pid) => {
+                if pid == ancestor_id {
+                    return Ok(true);
+                }
+                current_id = pid;
+            }
+            None => break,
+        }
+    }
+    Ok(false)
+}
+
+fn validate_object_kind_for_scene(
+    connection: &Connection,
+    scene_id: i32,
+    kind: &str,
+) -> Result<()> {
+    validate_object_kind(kind)?;
+
+    let scene_type: Option<String> = connection
+        .query_row(
+            "SELECT scene_type FROM canvas_scene WHERE id = ?1",
+            params![scene_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten();
+
+    if let Some(stype) = scene_type {
+        match stype.as_str() {
+            "root_canvas" => {
+                let allowed = [
+                    "text",
+                    "curve_text",
+                    "rectangle",
+                    "ellipse",
+                    "polygon",
+                    "polyline",
+                    "image",
+                    "scene_container",
+                ];
+                if !allowed.contains(&kind) {
+                    return Err(AppError::internal(
+                        "INVALID_OBJECT_KIND_FOR_ROOT_CANVAS",
+                        format!("Object kind '{kind}' is not allowed on root_canvas"),
+                    ));
+                }
+            }
+            "map" => {
+                let allowed = [
+                    "territory",
+                    "marker",
+                    "text",
+                    "curve_text",
+                    "rectangle",
+                    "ellipse",
+                    "polygon",
+                    "polyline",
+                    "image",
+                ];
+                if !allowed.contains(&kind) {
+                    return Err(AppError::internal(
+                        "INVALID_OBJECT_KIND_FOR_MAP",
+                        format!("Object kind '{kind}' is not allowed on map scene"),
+                    ));
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn validate_linked_scene(
+    connection: &Connection,
+    object_scene_id: i32,
+    linked_scene_id: Option<i32>,
+) -> Result<()> {
+    if let Some(linked_id) = linked_scene_id {
+        if linked_id == object_scene_id {
+            return Err(AppError::internal(
+                "LINKED_SCENE_SELF_REFERENCE",
+                "Cannot link an object to its own scene",
+            ));
+        }
+        if is_ancestor_scene(connection, linked_id, object_scene_id)? {
+            return Err(AppError::internal(
+                "LINKED_SCENE_ANCESTOR_REFERENCE",
+                "Cannot link an object to an ancestor scene (cycle detected)",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_root_canvas_invariant(
+    connection: &Connection,
+    project_id: i32,
+    scene_id: Option<i32>,
+) -> Result<()> {
+    let existing_root_id: Option<i32> = if let Some(sid) = scene_id {
+        connection.query_row(
+            "SELECT id FROM canvas_scene WHERE project_id = ?1 AND scene_type = 'root_canvas' AND id != ?2 LIMIT 1",
+            params![project_id, sid],
+            |row| row.get(0),
+        ).optional()?
+    } else {
+        connection.query_row(
+            "SELECT id FROM canvas_scene WHERE project_id = ?1 AND scene_type = 'root_canvas' LIMIT 1",
+            params![project_id],
+            |row| row.get(0),
+        ).optional()?
+    };
+
+    if existing_root_id.is_some() {
+        return Err(AppError::internal(
+            "MULTIPLE_ROOT_CANVASES",
+            "A project can only have one root_canvas scene",
+        ));
+    }
+    Ok(())
+}
+
+pub fn create_map_scene_container(
+    connection: &Connection,
+    input: &CreateMapSceneContainerInput,
+) -> Result<CreateMapSceneContainerResult> {
+    if input.background_path.trim().is_empty() {
+        return Err(AppError::internal(
+            "CREATE_MAP_MISSING_BACKGROUND",
+            "Background path is required for creating a map",
+        ));
+    }
+
+    let parent_scene = get_scene_row_by_id(connection, input.parent_scene_id)?;
+    if parent_scene.project_id != input.project_id {
+        return Err(AppError::internal(
+            "INVALID_PROJECT_ID",
+            "Parent scene does not belong to the specified project",
+        ));
+    }
+
+    let layer_scene_id: i32 = connection
+        .query_row(
+            "SELECT scene_id FROM canvas_layer WHERE id = ?1",
+            params![input.parent_layer_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| AppError::internal("LAYER_NOT_FOUND", "Specified parent layer not found"))?;
+
+    if layer_scene_id != input.parent_scene_id {
+        return Err(AppError::internal(
+            "INVALID_LAYER_SCENE",
+            "Specified layer does not belong to the parent scene",
+        ));
+    }
+
+    if let Some(branch_id) = input.branch_id {
+        branch_scope::assert_branch_belongs_to_project(connection, branch_id, input.project_id)?;
+    }
+
+    let tx = connection.unchecked_transaction()?;
+
+    let child_scene = create_scene(
+        &tx,
+        &CreateCanvasSceneInput {
+            project_id: input.project_id,
+            parent_scene_id: Some(input.parent_scene_id),
+            parent_object_id: None,
+            name: input.map_name.clone(),
+            background_path: Some(input.background_path.clone()),
+            scene_type: Some("map".to_string()),
+            viewport_json: None,
+            metadata_json: None,
+            branch_id: input.branch_id,
+        },
+    )?;
+
+    create_default_layers_for_scene(&tx, child_scene.id, input.branch_id)?;
+
+    let container_object = create_object(
+        &tx,
+        &CreateCanvasObjectInput {
+            scene_id: input.parent_scene_id,
+            layer_id: input.parent_layer_id,
+            kind: "scene_container".to_string(),
+            name: input
+                .object_name
+                .clone()
+                .or_else(|| Some(input.map_name.clone())),
+            z_index: None,
+            transform_json: input.transform_json.clone(),
+            geometry_json: None,
+            style_json: input.style_json.clone(),
+            content_json: input.content_json.clone(),
+            resource_path: None,
+            linked_note_id: None,
+            linked_scene_id: Some(child_scene.id),
+            is_hidden: Some(false),
+            is_locked: Some(false),
+            branch_id: input.branch_id,
+        },
+    )?;
+
+    if let Some(branch_id) = input.branch_id {
+        let patch = serde_json::json!({ "parentObjectId": container_object.id });
+        save_upsert_override(&tx, branch_id, "canvas_scene", child_scene.id, &patch)?;
+    } else {
+        tx.execute(
+            "UPDATE canvas_scene SET parent_object_id = ?1, updated_at = datetime('now') WHERE id = ?2",
+            params![container_object.id, child_scene.id],
+        )?;
+    }
+
+    tx.commit()?;
+
+    let container_object = get_object(
+        connection,
+        &GetCanvasObjectInput {
+            id: container_object.id,
+            branch_id: input.branch_id,
+        },
+    )?;
+
+    let map_scene = get_scene(
+        connection,
+        &GetCanvasSceneInput {
+            id: child_scene.id,
+            branch_id: input.branch_id,
+        },
+    )?;
+
+    Ok(CreateMapSceneContainerResult {
+        container_object,
+        map_scene,
+    })
+}
+
 fn next_layer_z_index(connection: &Connection, scene_id: i32) -> i32 {
     connection
         .query_row(
@@ -1357,6 +1640,9 @@ fn build_scene_patch(input: &UpdateCanvasSceneInput) -> Value {
     }
     if let Some(value) = input.background_path.as_ref() {
         patch.insert("backgroundPath".to_string(), Value::String(value.clone()));
+    }
+    if let Some(value) = input.scene_type.as_ref() {
+        patch.insert("sceneType".to_string(), Value::String(value.clone()));
     }
     if let Some(value) = input.viewport_json.as_ref() {
         patch.insert("viewportJson".to_string(), value.clone());
@@ -1737,6 +2023,13 @@ mod tests {
         .expect("root scene")
         .expect("root scene exists");
 
+        connection
+            .execute(
+                "UPDATE canvas_scene SET scene_type = 'map' WHERE id = ?1",
+                params![root.id],
+            )
+            .expect("update scene type");
+
         let layers = list_layers(
             connection,
             &ListCanvasLayersInput {
@@ -1937,6 +2230,13 @@ mod tests {
         )
         .expect("root")
         .expect("root exists");
+
+        connection
+            .execute(
+                "UPDATE canvas_scene SET scene_type = 'map' WHERE id = ?1",
+                params![root.id],
+            )
+            .expect("update scene type");
 
         let content_layer = list_layers(
             &connection,
@@ -2178,6 +2478,333 @@ mod tests {
         assert_eq!(
             territory_faction_id(&connection, second_territory.id, Some(branch.id)),
             Some(i64::from(faction.id))
+        );
+    }
+
+    #[test]
+    fn test_scene_type_and_scene_container_invariants() {
+        let connection = test_connection();
+        let project = create_project(
+            &connection,
+            &CreateProjectInput {
+                name: "Invariants Test".to_string(),
+                description: None,
+                status: None,
+                main_branch_name: None,
+            },
+        )
+        .expect("project");
+
+        let root = get_root_scene(
+            &connection,
+            &GetRootCanvasSceneInput {
+                project_id: project.id,
+                branch_id: None,
+            },
+        )
+        .expect("root")
+        .expect("root exists");
+
+        // 1. Invariant: one root_canvas per project
+        let second_root_res = create_scene(
+            &connection,
+            &CreateCanvasSceneInput {
+                project_id: project.id,
+                parent_scene_id: None,
+                parent_object_id: None,
+                name: "Second Root".to_string(),
+                background_path: None,
+                scene_type: Some("root_canvas".to_string()),
+                viewport_json: None,
+                metadata_json: None,
+                branch_id: None,
+            },
+        );
+        assert!(second_root_res.is_err());
+        assert_eq!(
+            second_root_res.unwrap_err().to_payload().code,
+            "MULTIPLE_ROOT_CANVASES"
+        );
+
+        // 2. Validate object kind accepts scene_container on root_canvas but rejects on map
+        let layers = list_layers(
+            &connection,
+            &ListCanvasLayersInput {
+                scene_id: root.id,
+                branch_id: None,
+            },
+        )
+        .expect("layers");
+        let content_layer = layers
+            .iter()
+            .find(|layer| layer.kind == "content")
+            .expect("content layer");
+
+        // Create scene_container on root_canvas - should succeed
+        let container_obj = create_object(
+            &connection,
+            &CreateCanvasObjectInput {
+                scene_id: root.id,
+                layer_id: content_layer.id,
+                kind: "scene_container".to_string(),
+                name: Some("Map Container".to_string()),
+                z_index: Some(0),
+                transform_json: json!({ "x": 0.0, "y": 0.0 }),
+                geometry_json: None,
+                style_json: None,
+                content_json: None,
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: None,
+                is_locked: None,
+                branch_id: None,
+            },
+        )
+        .expect("create scene_container on root_canvas");
+
+        // Try creating a marker on root_canvas - should fail
+        let marker_on_root_res = create_object(
+            &connection,
+            &CreateCanvasObjectInput {
+                scene_id: root.id,
+                layer_id: content_layer.id,
+                kind: "marker".to_string(),
+                name: Some("Marker".to_string()),
+                z_index: Some(0),
+                transform_json: json!({ "x": 0.0, "y": 0.0 }),
+                geometry_json: None,
+                style_json: None,
+                content_json: None,
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: None,
+                is_locked: None,
+                branch_id: None,
+            },
+        );
+        assert!(marker_on_root_res.is_err());
+        assert_eq!(
+            marker_on_root_res.unwrap_err().to_payload().code,
+            "INVALID_OBJECT_KIND_FOR_ROOT_CANVAS"
+        );
+
+        // Create a map scene
+        let map_scene = create_scene(
+            &connection,
+            &CreateCanvasSceneInput {
+                project_id: project.id,
+                parent_scene_id: Some(root.id),
+                parent_object_id: Some(container_obj.id),
+                name: "Map Scene".to_string(),
+                background_path: Some("bg.jpg".to_string()),
+                scene_type: Some("map".to_string()),
+                viewport_json: None,
+                metadata_json: None,
+                branch_id: None,
+            },
+        )
+        .expect("create map scene");
+
+        create_default_layers_for_scene(&connection, map_scene.id, None).expect("default layers");
+        let map_layers = list_layers(
+            &connection,
+            &ListCanvasLayersInput {
+                scene_id: map_scene.id,
+                branch_id: None,
+            },
+        )
+        .expect("map layers");
+        let map_content_layer = map_layers
+            .iter()
+            .find(|layer| layer.kind == "content")
+            .expect("map content layer");
+
+        // Try creating a scene_container on map scene - should fail
+        let container_on_map_res = create_object(
+            &connection,
+            &CreateCanvasObjectInput {
+                scene_id: map_scene.id,
+                layer_id: map_content_layer.id,
+                kind: "scene_container".to_string(),
+                name: Some("Submap".to_string()),
+                z_index: Some(0),
+                transform_json: json!({ "x": 0.0, "y": 0.0 }),
+                geometry_json: None,
+                style_json: None,
+                content_json: None,
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: None,
+                is_locked: None,
+                branch_id: None,
+            },
+        );
+        assert!(container_on_map_res.is_err());
+        assert_eq!(
+            container_on_map_res.unwrap_err().to_payload().code,
+            "INVALID_OBJECT_KIND_FOR_MAP"
+        );
+
+        // 3. Rejects self linked_scene_id
+        let self_link_res = update_object(
+            &connection,
+            &UpdateCanvasObjectInput {
+                id: container_obj.id,
+                layer_id: None,
+                kind: None,
+                name: None,
+                z_index: None,
+                transform_json: None,
+                geometry_json: None,
+                style_json: None,
+                content_json: None,
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: Some(root.id), // root.id is the scene of container_obj
+                is_hidden: None,
+                is_locked: None,
+                branch_id: None,
+            },
+        );
+        assert!(self_link_res.is_err());
+        assert_eq!(
+            self_link_res.unwrap_err().to_payload().code,
+            "LINKED_SCENE_SELF_REFERENCE"
+        );
+
+        // 4. Rejects ancestor linked_scene_id
+        // Let's link the container_obj to map_scene first (valid)
+        update_object(
+            &connection,
+            &UpdateCanvasObjectInput {
+                id: container_obj.id,
+                layer_id: None,
+                kind: None,
+                name: None,
+                z_index: None,
+                transform_json: None,
+                geometry_json: None,
+                style_json: None,
+                content_json: None,
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: Some(map_scene.id),
+                is_hidden: None,
+                is_locked: None,
+                branch_id: None,
+            },
+        )
+        .expect("link container to map_scene");
+
+        // Create an object inside map_scene
+        let map_object = create_object(
+            &connection,
+            &CreateCanvasObjectInput {
+                scene_id: map_scene.id,
+                layer_id: map_content_layer.id,
+                kind: "marker".to_string(),
+                name: Some("Sub Marker".to_string()),
+                z_index: Some(0),
+                transform_json: json!({ "x": 0.0, "y": 0.0 }),
+                geometry_json: None,
+                style_json: None,
+                content_json: None,
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: None,
+                is_locked: None,
+                branch_id: None,
+            },
+        )
+        .expect("create map_object");
+
+        // Try to link map_object to root.id (which is an ancestor of map_scene) - should fail!
+        let ancestor_link_res = update_object(
+            &connection,
+            &UpdateCanvasObjectInput {
+                id: map_object.id,
+                layer_id: None,
+                kind: None,
+                name: None,
+                z_index: None,
+                transform_json: None,
+                geometry_json: None,
+                style_json: None,
+                content_json: None,
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: Some(root.id),
+                is_hidden: None,
+                is_locked: None,
+                branch_id: None,
+            },
+        );
+        assert!(ancestor_link_res.is_err());
+        assert_eq!(
+            ancestor_link_res.unwrap_err().to_payload().code,
+            "LINKED_SCENE_ANCESTOR_REFERENCE"
+        );
+
+        // 5. Atomic create map + scene_container does not leave orphan scene on failure
+        // Let's count scenes before
+        let scenes_before: i32 = connection
+            .query_row("SELECT COUNT(*) FROM canvas_scene", [], |row| row.get(0))
+            .unwrap();
+
+        // Trigger a failure by passing an invalid parent_layer_id
+        let atomic_fail_res = create_map_scene_container(
+            &connection,
+            &CreateMapSceneContainerInput {
+                project_id: project.id,
+                parent_scene_id: root.id,
+                parent_layer_id: 999999, // Non-existent layer
+                map_name: "Atomic Fail Map".to_string(),
+                background_path: "bg.jpg".to_string(),
+                object_name: None,
+                transform_json: json!({ "x": 10.0, "y": 10.0 }),
+                style_json: None,
+                content_json: None,
+                branch_id: None,
+            },
+        );
+        assert!(atomic_fail_res.is_err());
+
+        // Verify that the scene was rolled back and not left as an orphan
+        let scenes_after: i32 = connection
+            .query_row("SELECT COUNT(*) FROM canvas_scene", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(scenes_before, scenes_after);
+
+        // Try a successful atomic creation
+        let atomic_success = create_map_scene_container(
+            &connection,
+            &CreateMapSceneContainerInput {
+                project_id: project.id,
+                parent_scene_id: root.id,
+                parent_layer_id: content_layer.id,
+                map_name: "Atomic Success Map".to_string(),
+                background_path: "bg.jpg".to_string(),
+                object_name: None,
+                transform_json: json!({ "x": 10.0, "y": 10.0 }),
+                style_json: None,
+                content_json: None,
+                branch_id: None,
+            },
+        )
+        .expect("atomic creation success");
+
+        assert_eq!(atomic_success.map_scene.scene_type, Some("map".to_string()));
+        assert_eq!(
+            atomic_success.container_object.kind,
+            "scene_container".to_string()
+        );
+        assert_eq!(
+            atomic_success.container_object.linked_scene_id,
+            Some(atomic_success.map_scene.id)
         );
     }
 }

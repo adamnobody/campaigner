@@ -64,6 +64,7 @@ export const commands = {
 	parentObjectId: number | null,
 	name: string,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown,
 	metadataJson: unknown,
 	createdAt: string,
@@ -90,6 +91,7 @@ export const commands = {
 	canvasObjectsBulkDelete: (input: BulkDeleteCanvasObjectsInput) => __TAURI_INVOKE<void>("canvas_objects_bulk_delete", { input }),
 	canvasReconcileScene: (input: ReconcileCanvasSceneInput) => __TAURI_INVOKE<CanvasReconcileResult>("canvas_reconcile_scene", { input }),
 	canvasMarkersAttachChildScene: (input: AttachChildSceneToMarkerInput) => __TAURI_INVOKE<AttachChildSceneToMarkerResult>("canvas_markers_attach_child_scene", { input }),
+	canvasCreateMapSceneContainer: (input: CreateMapSceneContainerInput) => __TAURI_INVOKE<CreateMapSceneContainerResult>("canvas_create_map_scene_container", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -299,6 +301,7 @@ export type CanvasScene = {
 	parentObjectId: number | null,
 	name: string,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown,
 	metadataJson: unknown,
 	createdAt: string,
@@ -469,6 +472,7 @@ export type CreateCanvasSceneInput = {
 	parentObjectId: number | null,
 	name: string,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown | null,
 	metadataJson: unknown | null,
 	branchId: number | null,
@@ -617,6 +621,24 @@ export type CreateFactionRelationInput = {
 	startedDate: string | null,
 	isBidirectional: boolean | null,
 	branchId: number | null,
+};
+
+export type CreateMapSceneContainerInput = {
+	projectId: number,
+	parentSceneId: number,
+	parentLayerId: number,
+	mapName: string,
+	backgroundPath: string,
+	objectName: string | null,
+	transformJson: unknown,
+	styleJson: unknown | null,
+	contentJson: unknown | null,
+	branchId: number | null,
+};
+
+export type CreateMapSceneContainerResult = {
+	containerObject: CanvasObject,
+	mapScene: CanvasScene,
 };
 
 export type CreateNoteInput = {
@@ -2317,6 +2339,7 @@ export type UpdateCanvasSceneInput = {
 	id: number,
 	name: string | null,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown | null,
 	metadataJson: unknown | null,
 	branchId: number | null,

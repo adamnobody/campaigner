@@ -764,7 +764,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           if (!drag.moved) {
             const clicked = liveObjectsRef.current.find((item) => item.id === drag.objectId);
             if (
-              clicked?.kind === 'marker'
+              (clicked?.kind === 'marker' || clicked?.kind === 'scene_container')
               && clicked.linkedSceneId != null
               && onMarkerOpenLinkedSceneRef.current
             ) {

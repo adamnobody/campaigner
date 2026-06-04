@@ -28,6 +28,8 @@ import type {
   UpdateCanvasObjectInput,
   UpdateCanvasSceneInput,
   UploadSavedPath,
+  CreateMapSceneContainerInput,
+  CreateMapSceneContainerResult,
 } from '@/types/generated/bindings';
 import { transport } from './transport';
 import { readFileForUpload } from './uploadFile';
@@ -144,6 +146,12 @@ export const canvasApi = {
   ): Promise<AttachChildSceneToMarkerResult> =>
     request('canvas_markers_attach_child_scene', withCanvasBranch(input, projectId)),
 
+  createMapSceneContainer: (
+    input: Omit<CreateMapSceneContainerInput, 'branchId'>,
+    projectId?: number,
+  ): Promise<CreateMapSceneContainerResult> =>
+    request('canvas_create_map_scene_container', withCanvasBranch(input, projectId)),
+
   listTerritorySummaries: (projectId: number): Promise<CanvasTerritorySummary[]> => {
     const input: ListCanvasTerritorySummariesInput = withCanvasBranch({ projectId }, projectId);
     return request('canvas_objects_list_territory_summaries', input);
@@ -151,7 +159,7 @@ export const canvasApi = {
 
   uploadSceneBackground: async (sceneId: number, projectId: number, file: File): Promise<CanvasScene> => {
     const path = await canvasApi.uploadCanvasAsset(file);
-    return canvasApi.updateScene({ id: sceneId, name: null, backgroundPath: path, viewportJson: null, metadataJson: null }, projectId);
+    return canvasApi.updateScene({ id: sceneId, name: null, backgroundPath: path, sceneType: null, viewportJson: null, metadataJson: null }, projectId);
   },
 
   uploadCanvasAsset: async (file: File): Promise<string> => {
@@ -171,4 +179,5 @@ export type {
   CanvasReconcileResult,
   CanvasScene,
   CanvasTerritorySummary,
+  CreateMapSceneContainerResult,
 };

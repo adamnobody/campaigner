@@ -75,6 +75,11 @@ const MIGRATIONS: &[Migration] = &[
         "canvas_replacement",
         include_str!("../../migrations/017_canvas_replacement.sql"),
     ),
+    (
+        18,
+        "canvas_scene_type",
+        include_str!("../../migrations/018_canvas_scene_type.sql"),
+    ),
 ];
 
 pub fn run_migrations(connection: &Connection) -> Result<()> {

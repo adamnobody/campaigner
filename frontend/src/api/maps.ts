@@ -175,6 +175,7 @@ export const mapApi = {
       parentObjectId: data.parentMarkerId ?? null,
       name: data.name,
       backgroundPath: data.imagePath ?? null,
+      sceneType: 'map',
       viewportJson: null,
       metadataJson: null,
     });
@@ -186,6 +187,7 @@ export const mapApi = {
       id: mapId,
       name: data.name ?? null,
       backgroundPath: data.imagePath ?? null,
+      sceneType: null,
       viewportJson: null,
       metadataJson: null,
     }, projectId);

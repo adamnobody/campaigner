@@ -14,7 +14,8 @@ export type CanvasMode =
   | 'rectangle'
   | 'ellipse'
   | 'curve_text'
-  | 'image';
+  | 'image'
+  | 'scene_container';
 
 export const MARKER_ICONS: Record<string, string> = {
   castle: '🏰', city: '🏙️', village: '🏘️', tavern: '🍺',

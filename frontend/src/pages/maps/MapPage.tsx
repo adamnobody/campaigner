@@ -13,6 +13,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import { MapToolbar } from './components/MapToolbar';
 import { MapMarkerDialog } from './components/MapMarkerDialog';
+import { MapSceneContainerDialog } from './components/MapSceneContainerDialog';
 import { MapMarkerPanel } from './components/MapMarkerPanel';
 import { MapTerritoryDialog } from './components/MapTerritoryDialog';
 import { MapTerritoryPanel } from './components/MapTerritoryPanel';
@@ -73,6 +74,7 @@ const createInitialScene = (projectId: number, sceneName: string): Promise<Canva
     parentObjectId: null,
     name: sceneName,
     backgroundPath: null,
+    sceneType: 'root_canvas',
     viewportJson: null,
     metadataJson: null,
   });
@@ -144,6 +146,8 @@ export function CanvasPage() {
   const [zoomPercent, setZoomPercent] = useState(100);
   const [contextMenu, setContextMenu] = useState<MapContextMenuState>(null);
   const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
+  const [sceneContainerDialogOpen, setSceneContainerDialogOpen] = useState(false);
+  const [pendingSceneContainerPoint, setPendingSceneContainerPoint] = useState<CanvasPoint | null>(null);
   const [editingMarker, setEditingMarker] = useState<CanvasObject | null>(null);
   const [markerForm, setMarkerForm] = useState<MarkerFormState>(DEFAULT_MARKER_FORM);
   const [createNestedMapInDialog, setCreateNestedMapInDialog] = useState(false);
@@ -359,6 +363,7 @@ export function CanvasPage() {
         id: pendingViewport.sceneId,
         name: null,
         backgroundPath: null,
+        sceneType: null,
         viewportJson: pendingViewport.viewport,
         metadataJson: null,
       }, projectIdRef.current)).catch((error) => {
@@ -657,8 +662,54 @@ export function CanvasPage() {
     handleOpenChildMap(marker.linkedSceneId);
   }, [handleOpenChildMap]);
 
+  const handleSaveSceneContainer = useCallback(async (mapName: string, file: File) => {
+    if (!scene || !pendingSceneContainerPoint) return;
+    setSceneContainerDialogOpen(false);
+    setLoading(true);
+    try {
+      const backgroundPath = await canvasApi.uploadCanvasAsset(file);
+      const layer = await contentLayer();
+      const transformJson = {
+        x: pendingSceneContainerPoint.x,
+        y: pendingSceneContainerPoint.y,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+      };
+
+      const result = await trackCanvasWrite(canvasApi.createMapSceneContainer({
+        projectId: projectIdNumber,
+        parentSceneId: scene.id,
+        parentLayerId: layer.id,
+        mapName,
+        backgroundPath,
+        objectName: mapName,
+        transformJson,
+        styleJson: null,
+        contentJson: null,
+      }));
+
+      setObjects((current) => [...current, result.containerObject]);
+      const tree = await canvasApi.getSceneTree(projectIdNumber);
+      setSceneTree(tree);
+
+      showSnackbar(t('map:snackbar.nestedMapCreated', { defaultValue: 'Карта успешно создана!' }), 'success');
+    } catch (error) {
+      console.error('[Canvas] createMapSceneContainer failed', error);
+      showSnackbar(t('map:snackbar.nestedMapCreateError', { defaultValue: 'Ошибка при создании карты' }), 'error');
+    } finally {
+      setLoading(false);
+      setPendingSceneContainerPoint(null);
+    }
+  }, [scene, pendingSceneContainerPoint, contentLayer, projectIdNumber, showSnackbar, t]);
+
   const handleCanvasClick = useCallback(async (point: CanvasPoint) => {
     if (!scene) return;
+    if (mode === 'scene_container') {
+      setPendingSceneContainerPoint(point);
+      setSceneContainerDialogOpen(true);
+      return;
+    }
     if (mode === 'marker') {
       openMarkerDialog(point);
       return;
@@ -713,6 +764,7 @@ export function CanvasPage() {
         id: pending.sceneId,
         name: null,
         backgroundPath: null,
+        sceneType: null,
         viewportJson: pending.viewport,
         metadataJson: null,
       }, projectIdNumber)).catch((error) => {
@@ -1051,6 +1103,7 @@ export function CanvasPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
       <MapToolbar
         sceneName={scene.name}
+        sceneType={scene.sceneType}
         navigationTrail={navigationTrail}
         onBreadcrumbNavigate={handleBreadcrumbNavigate}
         onNavigationBack={handleNavigationBack}
@@ -1284,16 +1337,26 @@ export function CanvasPage() {
               backdropFilter: 'blur(8px)',
             }}
           >
-            <Stack spacing={1}>
+            <Stack spacing={1.5}>
               <Typography variant="subtitle2" color="text.secondary">{t('map:canvas.selection.title')}</Typography>
               <Typography fontWeight={700}>{selectedObject.name ?? selectedObject.kind}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {t('map:canvas.selection.meta', {
+                {selectedObject.kind === 'scene_container' ? 'Тип: Карта (Scene Container)' : t('map:canvas.selection.meta', {
                   kind: selectedObject.kind,
                   layer: selectedObject.layerId,
                   z: selectedObject.zIndex,
                 })}
               </Typography>
+              {selectedObject.kind === 'scene_container' && selectedObject.linkedSceneId != null && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={() => handleOpenChildMap(selectedObject.linkedSceneId!)}
+                >
+                  Открыть карту
+                </Button>
+              )}
               <Button color="error" variant="outlined" size="small" startIcon={<DeleteIcon />} onClick={deleteSelected}>
                 {t('common:delete')}
               </Button>
@@ -1402,6 +1465,16 @@ export function CanvasPage() {
         onSave={() => {
           void saveMarker();
         }}
+      />
+
+      <MapSceneContainerDialog
+        open={sceneContainerDialogOpen}
+        onClose={() => {
+          setSceneContainerDialogOpen(false);
+          setPendingSceneContainerPoint(null);
+          setMode('select');
+        }}
+        onSave={handleSaveSceneContainer}
       />
 
       <BranchEntityMissingDialog

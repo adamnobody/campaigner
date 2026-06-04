@@ -300,6 +300,72 @@ const loadImageTexture = async (url: string): Promise<ImageTexture> => {
   return cachedTexture;
 };
 
+const drawSceneContainer = (container: Container, object: CanvasObject, selected: boolean): HitTest => {
+  const geometry = asRecord(object.geometryJson);
+  const style = asRecord(object.styleJson);
+  const content = asRecord(object.contentJson);
+  
+  const width = asNumber(geometry.width, 240);
+  const height = asNumber(geometry.height, 160);
+  
+  const graphics = new Graphics();
+  container.addChild(graphics);
+  
+  const fill = toColor(style.fill, 0x1a1a2e);
+  const stroke = toColor(style.stroke, selected ? 0xf8d7a4 : 0x4ecdc4);
+  const alpha = asNumber(style.opacity, 0.9);
+  const strokeWidth = selected ? 4 : 2;
+  const radius = 8;
+  
+  graphics
+    .roundRect(0, 0, width, height, radius)
+    .fill({ color: fill, alpha })
+    .stroke({ color: stroke, width: strokeWidth });
+    
+  const iconText = new Text({
+    text: '🗺️',
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fontSize: 36,
+    },
+  });
+  iconText.x = (width - iconText.width) / 2;
+  iconText.y = 30;
+  container.addChild(iconText);
+  
+  const titleText = new Text({
+    text: asString(content.titleOverride, object.name ?? 'Map'),
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fill: 0xffffff,
+      fontFamily: 'Crimson Text, serif',
+      fontSize: 18,
+      fontWeight: 'bold',
+      wordWrap: true,
+      wordWrapWidth: width - 20,
+      align: 'center',
+    },
+  });
+  titleText.x = (width - titleText.width) / 2;
+  titleText.y = 90;
+  container.addChild(titleText);
+  
+  const subText = new Text({
+    text: 'Double click to open',
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fill: 0x888888,
+      fontFamily: 'Crimson Text, serif',
+      fontSize: 12,
+    },
+  });
+  subText.x = (width - subText.width) / 2;
+  subText.y = 130;
+  container.addChild(subText);
+  
+  return boundsHit(0, 0, width, height);
+};
+
 const syncImageDisplay = (container: Container, object: CanvasObject, selected: boolean): HitTest => {
   const geometry = asRecord(object.geometryJson);
   const style = asRecord(object.styleJson);
@@ -360,6 +426,10 @@ const drawObject = (
   const strokeWidth = asNumber(style.strokeWidth, selected ? 4 : 2);
 
   if (object.kind === 'curve_text') return drawCurveText(container, object);
+
+  if (object.kind === 'scene_container') {
+    return drawSceneContainer(container, object, selected);
+  }
 
   if (object.kind === 'text') {
     const text = new Text({

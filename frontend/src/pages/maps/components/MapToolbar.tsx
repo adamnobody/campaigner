@@ -29,12 +29,14 @@ import ImageIcon from '@mui/icons-material/Image';
 import CheckIcon from '@mui/icons-material/Check';
 import UndoIcon from '@mui/icons-material/Undo';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import MapIcon from '@mui/icons-material/Map';
 import { useTranslation } from 'react-i18next';
 import type { CanvasMode } from '../canvas/canvasModel';
 import type { NavigationEntry } from '../canvas/navigationStack';
 
 type Props = {
   sceneName: string;
+  sceneType?: string | null;
   navigationTrail: NavigationEntry[];
   onBreadcrumbNavigate: (sceneId: number, index: number) => void;
   onNavigationBack: () => void;
@@ -57,6 +59,7 @@ type Props = {
 
 export function MapToolbar({
   sceneName,
+  sceneType,
   navigationTrail,
   onBreadcrumbNavigate,
   onNavigationBack,
@@ -178,6 +181,13 @@ export function MapToolbar({
             <ToggleButton value="ellipse"><Tooltip title={t('map:canvas.toolbar.toolEllipse')}><EllipseIcon fontSize="small" /></Tooltip></ToggleButton>
             <ToggleButton value="curve_text"><Tooltip title={t('map:canvas.toolbar.toolCurveText')}><GestureIcon fontSize="small" /></Tooltip></ToggleButton>
             <ToggleButton value="image"><Tooltip title={t('map:canvas.toolbar.toolImage')}><ImageIcon fontSize="small" /></Tooltip></ToggleButton>
+            {sceneType === 'root_canvas' && (
+              <ToggleButton value="scene_container">
+                <Tooltip title={t('map:canvas.toolbar.toolSceneContainer', { defaultValue: 'Карта' })}>
+                  <MapIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            )}
           </ToggleButtonGroup>
 
           {(mode === 'polygon' || mode === 'polyline') && (

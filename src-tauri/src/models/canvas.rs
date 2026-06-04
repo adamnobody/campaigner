@@ -14,6 +14,7 @@ pub const CANVAS_OBJECT_KINDS: &[&str] = &[
     "image",
     "icon",
     "group",
+    "scene_container",
 ];
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -25,6 +26,7 @@ pub struct CanvasScene {
     pub parent_object_id: Option<i32>,
     pub name: String,
     pub background_path: Option<String>,
+    pub scene_type: Option<String>,
     #[specta(type = specta_typescript::Unknown)]
     pub viewport_json: Value,
     #[specta(type = specta_typescript::Unknown)]
@@ -125,6 +127,7 @@ pub struct CreateCanvasSceneInput {
     pub parent_object_id: Option<i32>,
     pub name: String,
     pub background_path: Option<String>,
+    pub scene_type: Option<String>,
     #[specta(type = Option<specta_typescript::Unknown>)]
     pub viewport_json: Option<Value>,
     #[specta(type = Option<specta_typescript::Unknown>)]
@@ -138,6 +141,7 @@ pub struct UpdateCanvasSceneInput {
     pub id: i32,
     pub name: Option<String>,
     pub background_path: Option<String>,
+    pub scene_type: Option<String>,
     #[specta(type = Option<specta_typescript::Unknown>)]
     pub viewport_json: Option<Value>,
     #[specta(type = Option<specta_typescript::Unknown>)]
@@ -353,4 +357,29 @@ pub struct AttachChildSceneToMarkerInput {
 pub struct AttachChildSceneToMarkerResult {
     pub marker: CanvasObject,
     pub child_scene: CanvasScene,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateMapSceneContainerInput {
+    pub project_id: i32,
+    pub parent_scene_id: i32,
+    pub parent_layer_id: i32,
+    pub map_name: String,
+    pub background_path: String,
+    pub object_name: Option<String>,
+    #[specta(type = specta_typescript::Unknown)]
+    pub transform_json: Value,
+    #[specta(type = Option<specta_typescript::Unknown>)]
+    pub style_json: Option<Value>,
+    #[specta(type = Option<specta_typescript::Unknown>)]
+    pub content_json: Option<Value>,
+    pub branch_id: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateMapSceneContainerResult {
+    pub container_object: CanvasObject,
+    pub map_scene: CanvasScene,
 }

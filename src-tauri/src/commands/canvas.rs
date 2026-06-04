@@ -6,12 +6,12 @@ use crate::models::canvas::{
     AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult, BulkDeleteCanvasObjectsInput,
     BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject, CanvasReconcileResult, CanvasScene,
     CanvasTerritorySummary, CreateCanvasLayerInput, CreateCanvasObjectInput,
-    CreateCanvasSceneInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
-    DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput,
-    GetRootCanvasSceneInput, ListCanvasLayersInput, ListCanvasObjectsInput,
-    ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput, ReorderCanvasLayersInput,
-    ReorderCanvasObjectsInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput,
-    UpdateCanvasSceneInput,
+    CreateCanvasSceneInput, CreateMapSceneContainerInput, CreateMapSceneContainerResult,
+    DeleteCanvasLayerInput, DeleteCanvasObjectInput, DeleteCanvasSceneInput, GetCanvasObjectInput,
+    GetCanvasSceneInput, GetCanvasSceneTreeInput, GetRootCanvasSceneInput, ListCanvasLayersInput,
+    ListCanvasObjectsInput, ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput,
+    ReorderCanvasLayersInput, ReorderCanvasObjectsInput, UpdateCanvasLayerInput,
+    UpdateCanvasObjectInput, UpdateCanvasSceneInput,
 };
 use crate::repositories::canvas;
 
@@ -277,4 +277,16 @@ pub fn canvas_markers_attach_child_scene_command(
         .lock()
         .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
     canvas::attach_child_scene_to_marker(&connection, &input)
+}
+
+#[tauri::command(rename = "canvas_create_map_scene_container")]
+pub fn canvas_create_map_scene_container_command(
+    state: State<'_, DatabaseState>,
+    input: CreateMapSceneContainerInput,
+) -> Result<CreateMapSceneContainerResult> {
+    let connection = state
+        .connection
+        .lock()
+        .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
+    canvas::create_map_scene_container(&connection, &input)
 }
