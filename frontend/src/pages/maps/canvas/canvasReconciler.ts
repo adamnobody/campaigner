@@ -14,6 +14,7 @@ import {
   asString,
   MARKER_ICONS,
   objectTransform,
+  territoryRingsFromObject,
   type CanvasPoint,
 } from './canvasModel';
 
@@ -158,6 +159,35 @@ const polygonHit = (points: CanvasPoint[]): HitTest => (point) => {
   }
   return inside;
 };
+
+const drawRingList = (
+  graphics: Graphics,
+  ringList: CanvasPoint[][],
+  fill: number,
+  stroke: number,
+  alpha: number,
+  strokeWidth: number,
+): void => {
+  for (const points of ringList) {
+    if (points.length >= 3) {
+      const flat = points.flatMap((point) => [point.x, point.y]);
+      graphics.poly(flat).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+      continue;
+    }
+    if (points.length === 2) {
+      graphics.moveTo(points[0].x, points[0].y);
+      graphics.lineTo(points[1].x, points[1].y);
+      graphics.stroke({ color: stroke, width: strokeWidth || 4, alpha: 1 });
+    }
+  }
+};
+
+const hitTestRingList = (ringList: CanvasPoint[][], strokeWidth: number): HitTest => (point) =>
+  ringList.some((ring) => {
+    if (ring.length >= 3) return polygonHit(ring)(point);
+    if (ring.length >= 2) return nearPolyline(ring, Math.max(6, strokeWidth + 4))(point);
+    return false;
+  });
 
 const nearPolyline = (points: CanvasPoint[], tolerance: number): HitTest => (point) => {
   for (let i = 1; i < points.length; i += 1) {
@@ -369,10 +399,9 @@ const drawObject = (
     return (point) => (point.x / radiusX) ** 2 + (point.y / radiusY) ** 2 <= 1;
   }
 
-  const rings = Array.isArray(geometry.rings) ? geometry.rings : [geometry.points];
-  const points = asPoints(rings[0]);
-  if (points.length >= 2) {
-    if (object.kind === 'polyline') {
+  if (object.kind === 'polyline') {
+    const points = asPoints(geometry.points);
+    if (points.length >= 2) {
       graphics.moveTo(points[0].x, points[0].y);
       for (let index = 1; index < points.length; index += 1) {
         graphics.lineTo(points[index].x, points[index].y);
@@ -380,9 +409,14 @@ const drawObject = (
       graphics.stroke({ color: stroke, width: strokeWidth || 4, alpha: 1 });
       return nearPolyline(points, Math.max(6, strokeWidth + 4));
     }
-    const flat = points.flatMap((point) => [point.x, point.y]);
-    graphics.poly(flat).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
-    return polygonHit(points);
+  }
+
+  if (object.kind === 'territory' || object.kind === 'polygon') {
+    const ringList = territoryRingsFromObject(object);
+    if (ringList.length > 0) {
+      drawRingList(graphics, ringList, fill, stroke, alpha, strokeWidth);
+      return hitTestRingList(ringList, strokeWidth);
+    }
   }
 
   graphics.rect(-20, -20, 40, 40).fill({ color: fill, alpha: 0.4 }).stroke({ color: stroke, width: 1 });

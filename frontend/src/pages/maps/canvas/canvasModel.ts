@@ -322,8 +322,9 @@ export const defaultShapeObject = (
   };
 };
 
-export const territoryRingsFromObject = (object: CanvasObject): CanvasPoint[][] => {
-  const geometry = asRecord(object.geometryJson);
+/** Parses `geometry_json.rings[]` or legacy `points` into one or more rings (engine-agnostic). */
+export const geometryRingsFromJson = (geometryJson: unknown): CanvasPoint[][] => {
+  const geometry = asRecord(geometryJson);
   const ringsRaw = Array.isArray(geometry.rings) ? geometry.rings : [];
   if (ringsRaw.length > 0) {
     return ringsRaw.map((ring) => asPoints(ring)).filter((ring) => ring.length > 0);
@@ -331,6 +332,9 @@ export const territoryRingsFromObject = (object: CanvasObject): CanvasPoint[][] 
   const points = asPoints(geometry.points);
   return points.length > 0 ? [points] : [];
 };
+
+export const territoryRingsFromObject = (object: CanvasObject): CanvasPoint[][] =>
+  geometryRingsFromJson(object.geometryJson);
 
 export const territoryTotalPointCount = (object: CanvasObject): number =>
   territoryRingsFromObject(object).reduce((sum, ring) => sum + ring.length, 0);
