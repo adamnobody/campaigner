@@ -77,7 +77,7 @@ describe('applyTerritoryFormToObject', () => {
 describe('buildTerritoryCreateInput', () => {
   it('creates territory payload with rings and form fields', () => {
     const points = [{ x: 1, y: 2 }, { x: 3, y: 4 }, { x: 5, y: 6 }];
-    const input = buildTerritoryCreateInput(10, 2, points, {
+    const input = buildTerritoryCreateInput(10, 2, [points], {
       ...DEFAULT_TERRITORY_FORM,
       name: 'Realm',
       factionId: 9,

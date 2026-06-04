@@ -29,6 +29,10 @@ import {
   type NavigationEntry,
 } from './canvas/navigationStack';
 import {
+  appendCompletedTerritoryRing,
+  buildTerritoryRingsForCreateDialog,
+} from './canvas/territoryDrawing';
+import {
   applyMarkerFormToObject,
   applyTerritoryFormToObject,
   asRecord,
@@ -153,7 +157,8 @@ export function CanvasPage() {
   const pendingChildMapMarkerIdRef = useRef<number | null>(null);
   const pendingImagePointRef = useRef<CanvasPoint | null>(null);
   const pendingMarkerPointRef = useRef<CanvasPoint | null>(null);
-  const pendingTerritoryPointsRef = useRef<CanvasPoint[] | null>(null);
+  const pendingTerritoryRingsRef = useRef<CanvasPoint[][] | null>(null);
+  const [territoryCompletedRings, setTerritoryCompletedRings] = useState<CanvasPoint[][]>([]);
   const [territoryEditSession, setTerritoryEditSession] = useState<{
     objectId: number;
     rings: CanvasPoint[][];
@@ -394,8 +399,16 @@ export function CanvasPage() {
     resetNestedMapDialogState();
   }, [resetNestedMapDialogState]);
 
-  const openTerritoryDialog = useCallback((points: CanvasPoint[] | null, territory: CanvasObject | null = null) => {
-    pendingTerritoryPointsRef.current = points;
+  const clearTerritoryDrawingDraft = useCallback(() => {
+    setTerritoryCompletedRings([]);
+    pixiCanvasRef.current?.clearDrawingPoints();
+    setDraftPointsCount(0);
+  }, []);
+
+  const openTerritoryDialog = useCallback((rings: CanvasPoint[][] | null, territory: CanvasObject | null = null) => {
+    pendingTerritoryRingsRef.current = rings
+      ? rings.map((ring) => ring.map((point) => ({ ...point })))
+      : null;
     setEditingTerritory(territory);
     setTerritoryForm(territory ? territoryFormFromObject(territory) : DEFAULT_TERRITORY_FORM);
     setTerritoryDialogOpen(true);
@@ -404,8 +417,9 @@ export function CanvasPage() {
   const closeTerritoryDialog = useCallback(() => {
     setTerritoryDialogOpen(false);
     setEditingTerritory(null);
-    pendingTerritoryPointsRef.current = null;
-  }, []);
+    pendingTerritoryRingsRef.current = null;
+    clearTerritoryDrawingDraft();
+  }, [clearTerritoryDrawingDraft]);
 
   const saveTerritory = useCallback(async () => {
     if (!scene || !territoryForm.name.trim()) return;
@@ -417,11 +431,11 @@ export function CanvasPage() {
         closeTerritoryDialog();
         return;
       }
-      const points = pendingTerritoryPointsRef.current;
-      if (!points || points.length < 3) return;
+      const rings = pendingTerritoryRingsRef.current;
+      if (!rings || rings.length === 0) return;
       const layer = await contentLayer();
       const created = await createCanvasObject(
-        buildTerritoryCreateInput(scene.id, layer.id, points, territoryForm),
+        buildTerritoryCreateInput(scene.id, layer.id, rings, territoryForm),
       );
       console.debug('[Canvas] createObject territory', { sceneId: scene.id, objectId: created.id });
       setObjects((current) => [...current, created]);
@@ -783,11 +797,39 @@ export function CanvasPage() {
     setMode('select');
   }, [contentLayer, createCanvasObject, scene]);
 
-  const createTerritory = useCallback((points: CanvasPoint[]) => {
-    if (points.length < 3) return;
-    openTerritoryDialog(points);
+  const finishTerritoryDrawing = useCallback((currentRing: CanvasPoint[]) => {
+    const snapshot = buildTerritoryRingsForCreateDialog(territoryCompletedRings, currentRing);
+    if (!snapshot.ok) {
+      if (snapshot.reason === 'no_rings') {
+        showSnackbar(t('map:drawing.needClosedContour'), 'warning');
+      } else {
+        showSnackbar(t('map:drawing.minThreePerRing'), 'warning');
+      }
+      return;
+    }
+    pixiCanvasRef.current?.clearDrawingPoints();
+    setDraftPointsCount(0);
+    setTerritoryCompletedRings([]);
+    openTerritoryDialog(snapshot.rings);
     setMode('select');
-  }, [openTerritoryDialog]);
+  }, [openTerritoryDialog, showSnackbar, t, territoryCompletedRings]);
+
+  const handleCompleteTerritoryRing = useCallback(() => {
+    const currentRing = pixiCanvasRef.current?.getDrawingPoints() ?? [];
+    const result = appendCompletedTerritoryRing(territoryCompletedRings, currentRing);
+    if (!result.ok) {
+      showSnackbar(t('map:drawing.minThreePoints'), 'warning');
+      return;
+    }
+    setTerritoryCompletedRings(result.completedRings);
+    pixiCanvasRef.current?.clearDrawingPoints();
+    setDraftPointsCount(0);
+  }, [showSnackbar, t, territoryCompletedRings]);
+
+  const handleCancelTerritoryDrawing = useCallback(() => {
+    pixiCanvasRef.current?.cancelDrawing();
+    clearTerritoryDrawingDraft();
+  }, [clearTerritoryDrawingDraft]);
 
   const createPolyline = useCallback(async (points: CanvasPoint[]) => {
     if (!scene || points.length < 2) return;
@@ -926,7 +968,12 @@ export function CanvasPage() {
           cancelTerritoryShapeEdit();
           return;
         }
-        if (mode === 'polygon' || mode === 'draw_territory' || mode === 'polyline') {
+        if (mode === 'draw_territory') {
+          handleCancelTerritoryDrawing();
+          setMode('select');
+          return;
+        }
+        if (mode === 'polygon' || mode === 'polyline') {
           if (pixiCanvasRef.current?.cancelDrawing()) {
             setDraftPointsCount(0);
             return;
@@ -956,7 +1003,23 @@ export function CanvasPage() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [cancelTerritoryShapeEdit, mode, territoryEditSession]);
+  }, [cancelTerritoryShapeEdit, handleCancelTerritoryDrawing, mode, territoryEditSession]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (mode !== 'draw_territory') return;
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName.toLowerCase();
+      if (target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (document.querySelector('[role="dialog"]')) return;
+      if (event.code !== 'KeyR' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      event.preventDefault();
+      handleCompleteTerritoryRing();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleCompleteTerritoryRing, mode]);
 
   if (loading || !scene) {
     return (
@@ -975,12 +1038,18 @@ export function CanvasPage() {
         onNavigationBack={handleNavigationBack}
         mode={mode}
         onModeChange={(nextMode) => {
+          if (mode === 'draw_territory' && nextMode !== 'draw_territory') {
+            clearTerritoryDrawingDraft();
+          }
           setMode(nextMode);
           if (nextMode !== 'polygon' && nextMode !== 'draw_territory' && nextMode !== 'polyline') {
             pixiCanvasRef.current?.cancelDrawing();
             setDraftPointsCount(0);
           }
         }}
+        territoryCompletedRingCount={territoryCompletedRings.length}
+        canFinishTerritoryDrawing={territoryCompletedRings.length > 0 || draftPointsCount >= 3}
+        onCompleteTerritoryRing={handleCompleteTerritoryRing}
         zoomPercent={zoomPercent}
         onZoomIn={() => pixiCanvasRef.current?.zoomIn()}
         onZoomOut={() => pixiCanvasRef.current?.zoomOut()}
@@ -993,12 +1062,14 @@ export function CanvasPage() {
           setDraftPointsCount(nextCount);
         }}
         onFinishTerritory={() => {
+          if (mode === 'draw_territory') {
+            const currentRing = pixiCanvasRef.current?.getDrawingPoints() ?? [];
+            finishTerritoryDrawing(currentRing);
+            return;
+          }
           pixiCanvasRef.current?.finishDrawing();
         }}
-        onCancelTerritory={() => {
-          pixiCanvasRef.current?.cancelDrawing();
-          setDraftPointsCount(0);
-        }}
+        onCancelTerritory={handleCancelTerritoryDrawing}
         territoryEditActive={territoryEditSession != null}
         territoryEditLabel={
           territoryEditSession
@@ -1053,7 +1124,8 @@ export function CanvasPage() {
             setDraftPointsCount(count);
           }}
           onCreatePolygon={createPolygon}
-          onCreateTerritory={createTerritory}
+          onCreateTerritory={finishTerritoryDrawing}
+          territoryDraftCompletedRings={territoryCompletedRings}
           onCreatePolyline={createPolyline}
           onImageLoadError={handleImageLoadError}
           onViewportChange={handleViewportChange}

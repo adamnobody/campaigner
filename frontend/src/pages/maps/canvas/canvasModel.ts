@@ -387,7 +387,7 @@ export const applyTerritoryFormToObject = (object: CanvasObject, form: Territory
 export const buildTerritoryCreateInput = (
   sceneId: number,
   layerId: number,
-  points: CanvasPoint[],
+  rings: CanvasPoint[][],
   form: TerritoryFormState,
 ): Omit<CreateCanvasObjectInput, 'branchId'> => {
   const name = form.name.trim() || 'Territory';
@@ -398,7 +398,7 @@ export const buildTerritoryCreateInput = (
     name,
     zIndex: null,
     transformJson: {},
-    geometryJson: { rings: [points] },
+    geometryJson: { rings },
     styleJson: {
       fill: form.color,
       opacity: form.opacity,
@@ -419,4 +419,4 @@ export const buildTerritoryCreateInput = (
 };
 
 export const defaultTerritoryObject = (sceneId: number, layerId: number, points: CanvasPoint[]) =>
-  buildTerritoryCreateInput(sceneId, layerId, points, DEFAULT_TERRITORY_FORM);
+  buildTerritoryCreateInput(sceneId, layerId, [points], DEFAULT_TERRITORY_FORM);

@@ -50,6 +50,9 @@ type Props = {
   onUndoDraftPoint: () => void;
   onFinishTerritory: () => void;
   onCancelTerritory: () => void;
+  territoryCompletedRingCount?: number;
+  canFinishTerritoryDrawing?: boolean;
+  onCompleteTerritoryRing?: () => void;
   territoryEditActive?: boolean;
   territoryEditLabel?: string;
   onSaveTerritoryShape?: () => void;
@@ -74,6 +77,9 @@ export function MapToolbar({
   onUndoDraftPoint,
   onFinishTerritory,
   onCancelTerritory,
+  territoryCompletedRingCount = 0,
+  canFinishTerritoryDrawing = false,
+  onCompleteTerritoryRing,
   territoryEditActive = false,
   territoryEditLabel,
   onSaveTerritoryShape,
@@ -201,7 +207,41 @@ export function MapToolbar({
             </Box>
           )}
 
-          {(mode === 'polygon' || mode === 'draw_territory' || mode === 'polyline') && (
+          {mode === 'draw_territory' && (
+            <Box display="flex" gap={0.5} alignItems="center" flexWrap="wrap">
+              <Chip
+                size="small"
+                variant="outlined"
+                label={t('map:toolbar.drawingChip', {
+                  rings: territoryCompletedRingCount,
+                  points: draftPointsCount,
+                })}
+              />
+              <IconButton size="small" onClick={onUndoDraftPoint} disabled={draftPointsCount === 0}>
+                <UndoIcon fontSize="small" />
+              </IconButton>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={draftPointsCount < 3}
+                onClick={onCompleteTerritoryRing}
+              >
+                {t('map:toolbar.completeContour')}
+              </Button>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<CheckIcon />}
+                disabled={!canFinishTerritoryDrawing}
+                onClick={onFinishTerritory}
+              >
+                {t('map:canvas.toolbar.save')}
+              </Button>
+              <Button size="small" variant="outlined" onClick={onCancelTerritory}>{t('common:cancel')}</Button>
+            </Box>
+          )}
+
+          {(mode === 'polygon' || mode === 'polyline') && (
             <Box display="flex" gap={0.5} alignItems="center">
               <Chip
                 size="small"

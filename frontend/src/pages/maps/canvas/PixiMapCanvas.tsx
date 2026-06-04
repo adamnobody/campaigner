@@ -97,6 +97,8 @@ type Props = {
   territoryEditRings: CanvasPoint[][] | null;
   onTerritoryEditChange: (rings: CanvasPoint[][]) => void;
   onTerritoryVertexDeleteRejected: () => void;
+  /** Closed rings already finished via «Complete ring» (draw_territory only). */
+  territoryDraftCompletedRings?: CanvasPoint[][];
 };
 
 export type PixiMapCanvasHandle = {
@@ -108,6 +110,8 @@ export type PixiMapCanvasHandle = {
   undoDrawingPoint: () => number;
   finishDrawing: () => number;
   cancelDrawing: () => boolean;
+  getDrawingPoints: () => CanvasPoint[];
+  clearDrawingPoints: () => void;
 };
 
 const isClosedDrawMode = (mode: CanvasMode): boolean =>
@@ -214,6 +218,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   territoryEditRings,
   onTerritoryEditChange,
   onTerritoryVertexDeleteRejected,
+  territoryDraftCompletedRings = [],
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -233,6 +238,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const lastTerritoryEditClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
   const vertexDragRef = useRef<VertexDragState>(null);
   const territoryEditRingsRef = useRef<CanvasPoint[][] | null>(null);
+  const territoryDraftCompletedRingsRef = useRef<CanvasPoint[][]>([]);
   const onTerritoryEditChangeRef = useRef(onTerritoryEditChange);
   const onTerritoryVertexDeleteRejectedRef = useRef(onTerritoryVertexDeleteRejected);
   const lastMarkerClickRef = useRef<{ objectId: number; at: number } | null>(null);
@@ -277,6 +283,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onContextMenuRef.current = onContextMenu;
   onLargeBackgroundStatusRef.current = onLargeBackgroundStatus;
   territoryEditRingsRef.current = territoryEditRings;
+  territoryDraftCompletedRingsRef.current = territoryDraftCompletedRings;
   onTerritoryEditChangeRef.current = onTerritoryEditChange;
   onTerritoryVertexDeleteRejectedRef.current = onTerritoryVertexDeleteRejected;
 
@@ -323,6 +330,14 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     const viewport = viewportRef.current;
     const draft = draftRef.current;
     if (!viewport || !draft) return;
+    const completed = territoryDraftCompletedRingsRef.current;
+    if (completed.length > 0 && currentModeRef.current === 'draw_territory') {
+      for (const ring of completed) {
+        if (ring.length < 3) continue;
+        const flat = ring.flatMap((point) => [point.x, point.y]);
+        draft.poly(flat).stroke({ color: 0x5ecfff, alpha: 0.55, width: 1.5 });
+      }
+    }
     redrawDraftPolyline(
       draft,
       viewport,
@@ -453,6 +468,12 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       if (drawingPointsRef.current.length === 0) return false;
       clearDrawing();
       return true;
+    },
+    getDrawingPoints() {
+      return [...drawingPointsRef.current];
+    },
+    clearDrawingPoints() {
+      setDrawingPoints([]);
     },
   }), [onViewportChange, scene]);
 
@@ -1005,6 +1026,10 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     if (territoryEditRings) clearDrawing();
     redrawDraft();
   }, [territoryEditRings]);
+
+  useEffect(() => {
+    redrawDraft();
+  }, [territoryDraftCompletedRings]);
 
   return <div ref={hostRef} style={{ width: '100%', height: '100%', minHeight: 0, overflow: 'hidden' }} />;
 });
