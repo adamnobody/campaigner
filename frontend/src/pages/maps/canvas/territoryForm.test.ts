@@ -4,9 +4,11 @@ import {
   applyTerritoryFormToObject,
   buildTerritoryCreateInput,
   DEFAULT_TERRITORY_FORM,
+  territoryEditRingsFromObject,
   territoryFormFromObject,
   territoryRingsFromObject,
   territoryTotalPointCount,
+  withTerritoryEditRings,
 } from './canvasModel';
 
 const territoryObject = (overrides: Partial<CanvasObject> = {}): CanvasObject => ({
@@ -28,6 +30,26 @@ const territoryObject = (overrides: Partial<CanvasObject> = {}): CanvasObject =>
   isHidden: false,
   isLocked: false,
   ...overrides,
+});
+
+describe('territoryEditRings coordinate conversion', () => {
+  it('applies transform offset on read', () => {
+    const obj = territoryObject({
+      transformJson: { x: 10, y: 20 },
+      geometryJson: { rings: [[{ x: 5, y: 5 }]] },
+    });
+    const rings = territoryEditRingsFromObject(obj);
+    expect(rings[0][0]).toEqual({ x: 15, y: 25 });
+  });
+
+  it('subtracts transform offset on write', () => {
+    const obj = territoryObject({
+      transformJson: { x: 10, y: 20 },
+    });
+    const updated = withTerritoryEditRings(obj, [[{ x: 15, y: 25 }]]);
+    const rings = territoryRingsFromObject(updated);
+    expect(rings[0][0]).toEqual({ x: 5, y: 5 });
+  });
 });
 
 describe('territoryFormFromObject', () => {

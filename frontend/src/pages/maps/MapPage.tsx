@@ -35,6 +35,7 @@ import {
 import {
   applyMarkerFormToObject,
   applyTerritoryFormToObject,
+  asNumber,
   asRecord,
   asString,
   buildMarkerCreateInput,
@@ -48,9 +49,11 @@ import {
   factionDetailPath,
   objectTransform,
   objectToUpsert,
+  territoryEditRingsFromObject,
   territoryFormFromObject,
   territoryRingsFromObject,
   withObjectPosition,
+  withTerritoryEditRings,
   withTerritoryRings,
   type CanvasMode,
   type CanvasPoint,
@@ -494,7 +497,7 @@ export function CanvasPage() {
     const target = objects.find((object) => object.id === territoryEditSession.objectId);
     if (!target || target.kind !== 'territory') return;
     try {
-      const updated = withTerritoryRings(target, territoryEditSession.rings);
+      const updated = withTerritoryEditRings(target, territoryEditSession.rings);
       await persistObject(updated);
       showSnackbar(t('map:snackbar.territoryShapeSaved'), 'success');
       setTerritoryEditSession(null);
@@ -515,7 +518,7 @@ export function CanvasPage() {
     setMode('select');
     setTerritoryEditSession({
       objectId: territory.id,
-      rings: territoryRingsFromObject(territory).map((ring) => ring.map((point) => ({ ...point }))),
+      rings: territoryEditRingsFromObject(territory),
       snapshot: territory,
     });
     setSelectedObjectId(territory.id);

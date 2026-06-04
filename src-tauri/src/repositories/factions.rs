@@ -410,7 +410,7 @@ pub fn create_faction(connection: &Connection, input: &CreateFactionInput) -> Re
         .map_err(|_| AppError::internal("FACTION_ID_RANGE_ERROR", "Faction id is out of range"))?;
     if kind == "state" {
         if let Some(territory_ids) = input.territory_ids.as_ref() {
-            sync_state_territories(connection, input.project_id, id, territory_ids)?;
+            sync_state_territories(connection, input.project_id, id, territory_ids, input.branch_id)?;
         }
     }
 
@@ -575,7 +575,7 @@ pub fn update_faction(connection: &Connection, input: &UpdateFactionInput) -> Re
 
     if kind == "state" {
         if let Some(territory_ids) = input.territory_ids.as_ref() {
-            sync_state_territories(connection, current.project_id, input.id, territory_ids)?;
+            sync_state_territories(connection, current.project_id, input.id, territory_ids, input.branch_id)?;
         }
     }
 
@@ -2151,6 +2151,7 @@ fn sync_state_territories(
     project_id: i32,
     state_id: i32,
     territory_ids: &[i32],
+    branch_id: Option<i32>,
 ) -> Result<()> {
     let next_ids = dedupe_positive_ids(territory_ids);
     for territory_id in &next_ids {
@@ -2178,33 +2179,53 @@ fn sync_state_territories(
         }
     }
 
-    let previous_ids = {
-        let mut statement = connection.prepare(
-            r#"
-            SELECT co.id
-            FROM canvas_object co
-            JOIN canvas_scene cs ON cs.id = co.scene_id
-            WHERE
-              cs.project_id = ?1
-              AND co.kind = 'territory'
-              AND CAST(json_extract(co.content_json, '$.factionId') AS INTEGER) = ?2
-            "#,
-        )?;
-        let rows =
-            statement.query_map(params![project_id, state_id], |row| row.get::<_, i32>(0))?;
-        rows.collect::<std::result::Result<Vec<_>, _>>()?
-    };
+    let summaries = crate::repositories::canvas::list_territory_summaries(
+        connection,
+        &crate::models::canvas::ListCanvasTerritorySummariesInput {
+            project_id,
+            branch_id,
+        },
+    )?;
+    let previous_ids: Vec<i32> = summaries
+        .into_iter()
+        .filter(|s| s.faction_id == Some(state_id))
+        .map(|s| s.id)
+        .collect();
 
     for id in previous_ids.iter().filter(|id| !next_ids.contains(id)) {
-        connection.execute(
-            r#"
-            UPDATE canvas_object
-            SET
-              content_json = json_set(COALESCE(NULLIF(content_json, ''), '{}'), '$.factionId', NULL),
-              updated_at = datetime('now')
-            WHERE id = ?1
-            "#,
-            params![id],
+        let object = crate::repositories::canvas::get_object(
+            connection,
+            &crate::models::canvas::GetCanvasObjectInput {
+                id: *id,
+                branch_id,
+            },
+        )?;
+        let mut content_json = object.content_json;
+        if !content_json.is_object() {
+            content_json = serde_json::json!({});
+        }
+        if let Some(obj) = content_json.as_object_mut() {
+            obj.remove("factionId");
+        }
+        crate::repositories::canvas::update_object(
+            connection,
+            &crate::models::canvas::UpdateCanvasObjectInput {
+                id: *id,
+                layer_id: None,
+                kind: None,
+                name: None,
+                z_index: None,
+                transform_json: None,
+                geometry_json: None,
+                style_json: None,
+                content_json: Some(content_json),
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: None,
+                is_locked: None,
+                branch_id,
+            },
         )?;
     }
 
@@ -2237,22 +2258,47 @@ fn sync_state_territories(
         .to_string();
 
     for id in &next_ids {
-        connection.execute(
-            r#"
-            UPDATE canvas_object
-            SET
-              content_json = json_set(
-                COALESCE(NULLIF(content_json, ''), '{}'),
-                '$.factionId', ?1
-              ),
-              style_json = json_set(
-                json_set(COALESCE(NULLIF(style_json, ''), '{}'), '$.fill', ?2),
-                '$.stroke', ?3
-              ),
-              updated_at = datetime('now')
-            WHERE id = ?4
-            "#,
-            params![state_id, fill_color, border_color, id],
+        let object = crate::repositories::canvas::get_object(
+            connection,
+            &crate::models::canvas::GetCanvasObjectInput {
+                id: *id,
+                branch_id,
+            },
+        )?;
+        let mut content_json = object.content_json;
+        if !content_json.is_object() {
+            content_json = serde_json::json!({});
+        }
+        if let Some(obj) = content_json.as_object_mut() {
+            obj.insert("factionId".to_string(), serde_json::json!(state_id));
+        }
+        let mut style_json = object.style_json;
+        if !style_json.is_object() {
+            style_json = serde_json::json!({});
+        }
+        if let Some(obj) = style_json.as_object_mut() {
+            obj.insert("fill".to_string(), serde_json::json!(fill_color));
+            obj.insert("stroke".to_string(), serde_json::json!(border_color));
+        }
+        crate::repositories::canvas::update_object(
+            connection,
+            &crate::models::canvas::UpdateCanvasObjectInput {
+                id: *id,
+                layer_id: None,
+                kind: None,
+                name: None,
+                z_index: None,
+                transform_json: None,
+                geometry_json: None,
+                style_json: Some(style_json),
+                content_json: Some(content_json),
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: None,
+                is_locked: None,
+                branch_id,
+            },
         )?;
     }
     Ok(())

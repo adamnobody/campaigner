@@ -356,6 +356,27 @@ export const withTerritoryRings = (object: CanvasObject, rings: CanvasPoint[][])
   },
 });
 
+export const territoryEditRingsFromObject = (object: CanvasObject): CanvasPoint[][] => {
+  const transform = asRecord(object.transformJson);
+  const offsetX = asNumber(transform.x) || 0;
+  const offsetY = asNumber(transform.y) || 0;
+  return territoryRingsFromObject(object).map((ring) => ring.map((point) => ({
+    x: point.x + offsetX,
+    y: point.y + offsetY,
+  })));
+};
+
+export const withTerritoryEditRings = (object: CanvasObject, editRings: CanvasPoint[][]): CanvasObject => {
+  const transform = asRecord(object.transformJson);
+  const offsetX = asNumber(transform.x) || 0;
+  const offsetY = asNumber(transform.y) || 0;
+  const localRings = editRings.map((ring) => ring.map((point) => ({
+    x: point.x - offsetX,
+    y: point.y - offsetY,
+  })));
+  return withTerritoryRings(object, localRings);
+};
+
 export const territoryFormFromObject = (object: CanvasObject): TerritoryFormState => {
   const content = asRecord(object.contentJson);
   const style = asRecord(object.styleJson);
