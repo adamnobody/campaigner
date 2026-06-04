@@ -50,6 +50,17 @@ describe('territoryEditRings coordinate conversion', () => {
     const rings = territoryRingsFromObject(updated);
     expect(rings[0][0]).toEqual({ x: 5, y: 5 });
   });
+
+  it('keeps preview and reopened edit draft aligned for moved territories', () => {
+    const obj = territoryObject({
+      transformJson: { x: 10, y: 20 },
+      geometryJson: { rings: [[{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 10 }]] },
+    });
+    const draft = territoryEditRingsFromObject(obj);
+    const preview = withTerritoryEditRings(obj, draft);
+    expect(territoryRingsFromObject(preview)[0][0]).toEqual({ x: 0, y: 0 });
+    expect(territoryEditRingsFromObject(preview)).toEqual(draft);
+  });
 });
 
 describe('territoryFormFromObject', () => {

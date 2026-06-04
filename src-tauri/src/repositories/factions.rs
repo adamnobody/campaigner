@@ -311,7 +311,8 @@ pub fn get_faction_by_id(connection: &Connection, input: &GetFactionInput) -> Re
     })?;
     faction.custom_metrics = list_custom_metrics_internal(connection, faction.id)?;
     faction.child_factions = list_child_factions_internal(connection, faction.id)?;
-    faction.territories = list_territories_internal(connection, faction.project_id, faction.id)?;
+    faction.territories =
+        list_territories_internal(connection, faction.project_id, faction.id, input.branch_id)?;
 
     Ok(faction)
 }
@@ -408,10 +409,14 @@ pub fn create_faction(connection: &Connection, input: &CreateFactionInput) -> Re
 
     let id = i32::try_from(connection.last_insert_rowid())
         .map_err(|_| AppError::internal("FACTION_ID_RANGE_ERROR", "Faction id is out of range"))?;
-    if kind == "state" {
-        if let Some(territory_ids) = input.territory_ids.as_ref() {
-            sync_state_territories(connection, input.project_id, id, territory_ids, input.branch_id)?;
-        }
+    if let Some(territory_ids) = input.territory_ids.as_ref() {
+        sync_faction_territories(
+            connection,
+            input.project_id,
+            id,
+            territory_ids,
+            input.branch_id,
+        )?;
     }
 
     get_faction_by_id(
@@ -573,10 +578,14 @@ pub fn update_faction(connection: &Connection, input: &UpdateFactionInput) -> Re
         )?;
     }
 
-    if kind == "state" {
-        if let Some(territory_ids) = input.territory_ids.as_ref() {
-            sync_state_territories(connection, current.project_id, input.id, territory_ids, input.branch_id)?;
-        }
+    if let Some(territory_ids) = input.territory_ids.as_ref() {
+        sync_faction_territories(
+            connection,
+            current.project_id,
+            input.id,
+            territory_ids,
+            input.branch_id,
+        )?;
     }
 
     get_faction_by_id(
@@ -1595,27 +1604,29 @@ fn list_territories_internal(
     connection: &Connection,
     project_id: i32,
     faction_id: i32,
+    branch_id: Option<i32>,
 ) -> Result<Vec<IdNameRef>> {
-    let mut statement = connection.prepare(
-        r#"
-        SELECT co.id, COALESCE(co.name, '') AS name
-        FROM canvas_object co
-        JOIN canvas_scene cs ON cs.id = co.scene_id
-        WHERE
-          cs.project_id = ?1
-          AND co.kind = 'territory'
-          AND CAST(json_extract(co.content_json, '$.factionId') AS INTEGER) = ?2
-        ORDER BY co.name COLLATE NOCASE ASC
-        "#,
-    )?;
-    let rows = statement.query_map(params![project_id, faction_id], |row| {
-        Ok(IdNameRef {
-            id: row.get("id")?,
-            name: row.get("name")?,
-        })
-    })?;
-    rows.collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(Into::into)
+    let mut territories = crate::repositories::canvas::list_territory_summaries(
+        connection,
+        &crate::models::canvas::ListCanvasTerritorySummariesInput {
+            project_id,
+            branch_id,
+        },
+    )?
+    .into_iter()
+    .filter(|summary| summary.faction_id == Some(faction_id))
+    .map(|summary| IdNameRef {
+        id: summary.id,
+        name: summary.name,
+    })
+    .collect::<Vec<_>>();
+    territories.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then(a.id.cmp(&b.id))
+    });
+    Ok(territories)
 }
 
 fn get_faction_rank_by_id(connection: &Connection, id: i32) -> Result<FactionRank> {
@@ -2146,7 +2157,7 @@ fn validate_state_relations_input(
     Ok(())
 }
 
-fn sync_state_territories(
+fn sync_faction_territories(
     connection: &Connection,
     project_id: i32,
     state_id: i32,
@@ -2195,10 +2206,7 @@ fn sync_state_territories(
     for id in previous_ids.iter().filter(|id| !next_ids.contains(id)) {
         let object = crate::repositories::canvas::get_object(
             connection,
-            &crate::models::canvas::GetCanvasObjectInput {
-                id: *id,
-                branch_id,
-            },
+            &crate::models::canvas::GetCanvasObjectInput { id: *id, branch_id },
         )?;
         let mut content_json = object.content_json;
         if !content_json.is_object() {
@@ -2260,10 +2268,7 @@ fn sync_state_territories(
     for id in &next_ids {
         let object = crate::repositories::canvas::get_object(
             connection,
-            &crate::models::canvas::GetCanvasObjectInput {
-                id: *id,
-                branch_id,
-            },
+            &crate::models::canvas::GetCanvasObjectInput { id: *id, branch_id },
         )?;
         let mut content_json = object.content_json;
         if !content_json.is_object() {

@@ -342,16 +342,17 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   useEffect(() => {
     if (isNew || !currentFaction || currentFaction.id !== parseInt(factionId!)) return;
 
-    const isThisState =
-      resolvedEntityType === 'state' && currentFaction.id === parseInt(factionId!, 10);
-    const stateFields: Pick<FactionForm, 'rulingDynastyId' | 'rulerCharacterId' | 'rulerName' | 'territoryIds'> =
-      isThisState
+    const isCurrentEntity = currentFaction.id === parseInt(factionId!, 10);
+    const relationFields: Pick<FactionForm, 'rulingDynastyId' | 'rulerCharacterId' | 'rulerName' | 'territoryIds'> =
+      isCurrentEntity
         ? {
             rulingDynastyId:
-              currentFaction.rulingDynastyId != null ? String(currentFaction.rulingDynastyId) : '',
-            rulerCharacterId: currentFaction.rulerCharacterId ?? null,
+              resolvedEntityType === 'state' && currentFaction.rulingDynastyId != null
+                ? String(currentFaction.rulingDynastyId)
+                : '',
+            rulerCharacterId: resolvedEntityType === 'state' ? currentFaction.rulerCharacterId ?? null : null,
             rulerName:
-              currentFaction.rulerCharacterId != null
+              resolvedEntityType === 'state' && currentFaction.rulerCharacterId != null
                 ? (currentFaction.ruler?.name ?? '').trim() || '—'
                 : '',
             territoryIds: (currentFaction.territories || []).map((t) => t.id),
@@ -382,7 +383,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       foundedDate: currentFaction.foundedDate || '', disbandedDate: currentFaction.disbandedDate || '',
       parentFactionId: currentFaction.parentFactionId ? String(currentFaction.parentFactionId) : '',
       tagsStr: (currentFaction.tags || []).map((t: any) => t.name).join(', '),
-      ...stateFields,
+      ...relationFields,
     });
     setCustomMetrics(
       (currentFaction.customMetrics || []).map((metric, index) => ({
@@ -394,7 +395,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       }))
     );
     setTagsInput('');
-    if (isThisState && currentFaction.rulerCharacterId != null) {
+    if (resolvedEntityType === 'state' && currentFaction.rulerCharacterId != null) {
       setRulerInput((currentFaction.ruler?.name ?? '').trim() || '—');
     } else {
       setRulerInput('');
@@ -578,10 +579,10 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         foundedDate: form.foundedDate.trim(), disbandedDate: form.disbandedDate.trim(),
         parentFactionId: form.parentFactionId ? parseInt(form.parentFactionId) : null,
       };
+      payload.territoryIds = form.territoryIds;
       if (resolvedEntityType === 'state') {
         payload.territory = '';
         payload.rulingDynastyId = form.rulingDynastyId ? parseInt(form.rulingDynastyId, 10) : null;
-        payload.territoryIds = form.territoryIds;
         if (form.rulerCharacterId != null) {
           payload.rulerCharacterId = form.rulerCharacterId;
         } else {
@@ -604,10 +605,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         await replaceCustomMetrics(created.id, { metrics: preparedCustomMetrics });
         if (finalTags.trim()) await saveTagsForFaction(created.id, finalTags);
         setTagsInput('');
-        if (resolvedEntityType === 'state') {
-          bumpMapTerritories();
-          mapApi.getTerritorySummariesForProject(pid).then((res) => setTerritoryOptions(res.data.data || [])).catch(() => {});
-        }
+        bumpMapTerritories();
+        mapApi.getTerritorySummariesForProject(pid).then((res) => setTerritoryOptions(res.data.data || [])).catch(() => {});
         showSnackbar(isStateEntity ? t('factions:entityCreated.state') : t('factions:entityCreated.faction'), 'success');
         navigate(routes.factionDetail(pid, resolvedEntityType, created.id), { replace: true });
       } else {
@@ -615,10 +614,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         await replaceCustomMetrics(fid, { metrics: preparedCustomMetrics });
         await saveTagsForFaction(fid, finalTags);
         setTagsInput('');
-        if (resolvedEntityType === 'state') {
-          bumpMapTerritories();
-          mapApi.getTerritorySummariesForProject(pid).then((res) => setTerritoryOptions(res.data.data || [])).catch(() => {});
-        }
+        bumpMapTerritories();
+        mapApi.getTerritorySummariesForProject(pid).then((res) => setTerritoryOptions(res.data.data || [])).catch(() => {});
         showSnackbar(t('factions:snackbar.saved'), 'success');
       }
     } catch (err: any) { showSnackbar(err.message || t('factions:snackbar.genericError'), 'error'); }
@@ -903,19 +900,15 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                     value={form.headquarters}
                   />
                 )}
-                {isStateEntity ? (
-                  (currentFaction?.territories?.length ?? 0) > 0 && (
-                    <Box sx={{ pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{t('factions:detail.summary.territories')}</Typography>
-                      <Box display="flex" gap={0.5} flexWrap="wrap">
-                        {currentFaction!.territories!.map((terr) => (
-                          <Chip key={terr.id} label={terr.name} size="small" sx={{ height: 24, fontSize: '0.75rem' }} />
-                        ))}
-                      </Box>
+                {(currentFaction?.territories?.length ?? 0) > 0 && (
+                  <Box sx={{ pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{t('factions:detail.summary.territories')}</Typography>
+                    <Box display="flex" gap={0.5} flexWrap="wrap">
+                      {currentFaction!.territories!.map((terr) => (
+                        <Chip key={terr.id} label={terr.name} size="small" sx={{ height: 24, fontSize: '0.75rem' }} />
+                      ))}
                     </Box>
-                  )
-                ) : (
-                  form.territory && <InfoRow label={t('factions:detail.summary.territory')} value={form.territory} />
+                  </Box>
                 )}
                 {form.foundedDate && <InfoRow label={t('factions:detail.summary.founded')} value={form.foundedDate} />}
                 {form.disbandedDate && <InfoRow label={t('factions:detail.summary.disbanded')} value={form.disbandedDate} />}
@@ -970,7 +963,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                     onChange={e => handleChange('headquarters', e.target.value)}
                   />
                 </Grid>
-                {isStateEntity ? (
+                {isStateEntity && (
                   <>
                     <Grid item xs={12} sm={6}>
                       <FormControl fullWidth>
@@ -1070,60 +1063,60 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                         )}
                       />
                     </Grid>
-                    <Grid item xs={12}>
-                      <Autocomplete<MapTerritorySummary, true, false, false>
-                        multiple
-                        options={territoryOptions}
-                        value={territoryOptions.filter((terr) => form.territoryIds.includes(terr.id))}
-                        onChange={(_, v) => handleTerritoriesMultiChange(v)}
-                        getOptionLabel={(o) => `${o.name} (${o.mapName})`}
-                        isOptionEqualToValue={(a, b) => a.id === b.id}
-                        renderOption={(props, option) => {
-                          const occupied = option.factionId != null && (isNew || option.factionId !== fid);
-                          const label =
-                            occupied && option.occupantName
-                              ? t('factions:detail.territoryOccupied', {
-                                  name: option.name,
-                                  mapName: option.mapName,
-                                  occupant: option.occupantName,
-                                })
-                              : `${option.name} (${option.mapName})`;
-                          return (
-                            <li {...props} key={option.id}>
-                              <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                                <Typography variant="body2">{label}</Typography>
-                                {occupied && option.occupantKind === 'state' && (
-                                  <Chip
-                                    size="small"
-                                    label={t('factions:detail.territoryOccupantStateKind')}
-                                    variant="outlined"
-                                    sx={{ height: 22, fontSize: '0.7rem' }}
-                                  />
-                                )}
-                              </Box>
-                            </li>
-                          );
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label={t('factions:detail.fields.territoryMap')}
-                            placeholder={t('factions:detail.placeholders.territoryMap')}
-                          />
-                        )}
-                        renderTags={(value, getTagProps) =>
-                          value.map((option, index) => (
-                            <Chip {...getTagProps({ index })} key={option.id} size="small" label={option.name} />
-                          ))
-                        }
-                      />
-                    </Grid>
                   </>
-                ) : (
-                  <Grid item xs={12} sm={6}>
-                    <TextField fullWidth label={t('factions:detail.summary.territory')} value={form.territory} onChange={e => handleChange('territory', e.target.value)} />
-                  </Grid>
                 )}
+                <Grid item xs={12}>
+                  <Autocomplete<MapTerritorySummary, true, false, false>
+                    multiple
+                    options={territoryOptions}
+                    value={territoryOptions.filter((terr) => form.territoryIds.includes(terr.id))}
+                    onChange={(_, v) => handleTerritoriesMultiChange(v)}
+                    getOptionLabel={(o) => `${o.name} (${o.mapName})`}
+                    isOptionEqualToValue={(a, b) => a.id === b.id}
+                    renderOption={(props, option) => {
+                      const occupied = option.factionId != null && (isNew || option.factionId !== fid);
+                      const label =
+                        occupied && option.occupantName
+                          ? t('factions:detail.territoryOccupied', {
+                              name: option.name,
+                              mapName: option.mapName,
+                              occupant: option.occupantName,
+                            })
+                          : `${option.name} (${option.mapName})`;
+                      return (
+                        <li {...props} key={option.id}>
+                          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                            <Typography variant="body2">{label}</Typography>
+                            {occupied && (
+                              <Chip
+                                size="small"
+                                label={t(
+                                  option.occupantKind === 'state'
+                                    ? 'factions:detail.territoryOccupantStateKind'
+                                    : 'factions:entityKinds.faction',
+                                )}
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.7rem' }}
+                              />
+                            )}
+                          </Box>
+                        </li>
+                      );
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={t('factions:detail.fields.territoryMap')}
+                        placeholder={t('factions:detail.placeholders.territoryMap')}
+                      />
+                    )}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip {...getTagProps({ index })} key={option.id} size="small" label={option.name} />
+                      ))
+                    }
+                  />
+                </Grid>
                 <Grid item xs={12} sm={6}><TextField fullWidth label={t('factions:detail.fields.foundedDate')} value={form.foundedDate} onChange={e => handleChange('foundedDate', e.target.value)} /></Grid>
                 <Grid item xs={12} sm={6}><TextField fullWidth label={t('factions:detail.fields.disbandedDate')} value={form.disbandedDate} onChange={e => handleChange('disbandedDate', e.target.value)} /></Grid>
                 <Grid item xs={12} sm={6}>

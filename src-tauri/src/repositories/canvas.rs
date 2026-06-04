@@ -1025,12 +1025,12 @@ pub fn list_territory_summaries(
     let mut result = Vec::new();
     for (
         id,
-        name,
+        _name,
         scene_id,
         scene_name,
-        faction_id,
-        occupant_name,
-        occupant_kind,
+        _faction_id,
+        _occupant_name,
+        _occupant_kind,
         object_created_at,
         object_created_branch_id,
         scene_created_at,
@@ -1052,14 +1052,45 @@ pub fn list_territory_summaries(
             Some(scene_created_at.as_str()),
         )?;
         if object_visible && scene_visible {
+            let object = get_object(
+                connection,
+                &GetCanvasObjectInput {
+                    id,
+                    branch_id: input.branch_id,
+                },
+            )?;
+            let name = object.name.unwrap_or_default();
+            let faction_id = object
+                .content_json
+                .as_object()
+                .and_then(|content| content.get("factionId"))
+                .and_then(|value| value.as_i64())
+                .and_then(|value| i32::try_from(value).ok());
+            let occupant = if let Some(faction_id) = faction_id {
+                connection
+                    .query_row(
+                        "SELECT name, kind FROM factions WHERE id = ?1",
+                        params![faction_id],
+                        |row| {
+                            Ok((
+                                row.get::<_, Option<String>>(0)?,
+                                row.get::<_, Option<String>>(1)?,
+                            ))
+                        },
+                    )
+                    .optional()?
+                    .unwrap_or((None, None))
+            } else {
+                (None, None)
+            };
             result.push(CanvasTerritorySummary {
                 id,
                 name,
                 scene_id,
                 scene_name,
                 faction_id,
-                occupant_name,
-                occupant_kind,
+                occupant_name: occupant.0,
+                occupant_kind: occupant.1,
             });
         }
     }
@@ -1558,10 +1589,12 @@ fn map_branch_override_row(row: &Row<'_>) -> rusqlite::Result<BranchOverride> {
 mod tests {
     use super::*;
     use crate::db::migrations::run_migrations;
+    use crate::models::branch::CreateBranchInput;
     use crate::models::canvas::CreateCanvasObjectInput;
-    use crate::models::faction::{CreateFactionInput, UpdateFactionInput};
+    use crate::models::faction::{CreateFactionInput, GetFactionInput, UpdateFactionInput};
     use crate::models::project::CreateProjectInput;
-    use crate::repositories::factions::{create_faction, update_faction};
+    use crate::repositories::branches::{create_branch, get_main_branch_id_for_project};
+    use crate::repositories::factions::{create_faction, get_faction_by_id, update_faction};
     use crate::repositories::projects::create_project;
     use serde_json::json;
 
@@ -1572,6 +1605,108 @@ mod tests {
             .expect("foreign keys");
         run_migrations(&connection).expect("migrations");
         connection
+    }
+
+    fn faction_update_with_territories(
+        id: i32,
+        territory_ids: Vec<i32>,
+        branch_id: Option<i32>,
+    ) -> UpdateFactionInput {
+        UpdateFactionInput {
+            id,
+            name: None,
+            kind: None,
+            r#type: None,
+            motto: None,
+            description: None,
+            history: None,
+            goals: None,
+            headquarters: None,
+            territory: None,
+            ruling_dynasty_id: None,
+            ruler_character_id: None,
+            territory_ids: Some(territory_ids),
+            treasury: None,
+            population: None,
+            army_size: None,
+            navy_size: None,
+            territory_km2: None,
+            annual_income: None,
+            annual_expenses: None,
+            members_count: None,
+            influence: None,
+            status: None,
+            color: None,
+            secondary_color: None,
+            founded_date: None,
+            disbanded_date: None,
+            parent_faction_id: None,
+            sort_order: None,
+            branch_id,
+        }
+    }
+
+    fn create_test_territory(
+        connection: &Connection,
+        scene_id: i32,
+        layer_id: i32,
+        name: &str,
+        faction_id: Option<i32>,
+    ) -> CanvasObject {
+        create_object(
+            connection,
+            &CreateCanvasObjectInput {
+                scene_id,
+                layer_id,
+                kind: "territory".to_string(),
+                name: Some(name.to_string()),
+                z_index: Some(0),
+                transform_json: json!({}),
+                geometry_json: Some(json!({
+                    "rings": [[
+                        { "x": 0.0, "y": 0.0 },
+                        { "x": 120.0, "y": 0.0 },
+                        { "x": 60.0, "y": 80.0 }
+                    ]]
+                })),
+                style_json: Some(json!({
+                    "fill": "#4ecdc4",
+                    "opacity": 0.25,
+                    "stroke": "#9ff3df",
+                    "strokeWidth": 2
+                })),
+                content_json: Some(match faction_id {
+                    Some(id) => json!({ "description": "Northern border", "factionId": id }),
+                    None => json!({ "description": "Northern border" }),
+                }),
+                resource_path: None,
+                linked_note_id: None,
+                linked_scene_id: None,
+                is_hidden: Some(false),
+                is_locked: Some(false),
+                branch_id: None,
+            },
+        )
+        .expect("territory")
+    }
+
+    fn territory_faction_id(
+        connection: &Connection,
+        territory_id: i32,
+        branch_id: Option<i32>,
+    ) -> Option<i64> {
+        get_object(
+            connection,
+            &GetCanvasObjectInput {
+                id: territory_id,
+                branch_id,
+            },
+        )
+        .expect("territory reload")
+        .content_json
+        .as_object()
+        .and_then(|content| content.get("factionId"))
+        .and_then(|value| value.as_i64())
     }
 
     fn scene_count(connection: &Connection) -> i32 {
@@ -1852,41 +1987,13 @@ mod tests {
         )
         .expect("state faction");
 
-        let territory = create_object(
+        let territory = create_test_territory(
             &connection,
-            &CreateCanvasObjectInput {
-                scene_id: root.id,
-                layer_id: content_layer.id,
-                kind: "territory".to_string(),
-                name: Some("Borderlands".to_string()),
-                z_index: Some(0),
-                transform_json: json!({}),
-                geometry_json: Some(json!({
-                    "rings": [[
-                        { "x": 0.0, "y": 0.0 },
-                        { "x": 120.0, "y": 0.0 },
-                        { "x": 60.0, "y": 80.0 }
-                    ]]
-                })),
-                style_json: Some(json!({
-                    "fill": "#4ecdc4",
-                    "opacity": 0.25,
-                    "stroke": "#9ff3df",
-                    "strokeWidth": 2
-                })),
-                content_json: Some(json!({
-                    "description": "Northern border",
-                    "factionId": state.id
-                })),
-                resource_path: None,
-                linked_note_id: None,
-                linked_scene_id: None,
-                is_hidden: Some(false),
-                is_locked: Some(false),
-                branch_id: None,
-            },
-        )
-        .expect("territory");
+            root.id,
+            content_layer.id,
+            "Borderlands",
+            Some(state.id),
+        );
 
         let summaries = list_territory_summaries(
             &connection,
@@ -1903,38 +2010,7 @@ mod tests {
 
         update_faction(
             &connection,
-            &UpdateFactionInput {
-                id: state.id,
-                name: None,
-                kind: None,
-                r#type: None,
-                motto: None,
-                description: None,
-                history: None,
-                goals: None,
-                headquarters: None,
-                territory: None,
-                ruling_dynasty_id: None,
-                ruler_character_id: None,
-                territory_ids: Some(vec![territory.id]),
-                treasury: None,
-                population: None,
-                army_size: None,
-                navy_size: None,
-                territory_km2: None,
-                annual_income: None,
-                annual_expenses: None,
-                members_count: None,
-                influence: None,
-                status: None,
-                color: None,
-                secondary_color: None,
-                founded_date: None,
-                disbanded_date: None,
-                parent_faction_id: None,
-                sort_order: None,
-                branch_id: None,
-            },
+            &faction_update_with_territories(state.id, vec![territory.id], None),
         )
         .expect("faction sync");
 
@@ -1962,5 +2038,146 @@ mod tests {
         );
         assert!(style.get("fillColor").is_none());
         assert!(style.get("strokeColor").is_none());
+
+        let second_territory =
+            create_test_territory(&connection, root.id, content_layer.id, "Southlands", None);
+        update_faction(
+            &connection,
+            &faction_update_with_territories(
+                state.id,
+                vec![territory.id, second_territory.id],
+                None,
+            ),
+        )
+        .expect("multiple territory sync");
+        let state_detail = get_faction_by_id(
+            &connection,
+            &GetFactionInput {
+                id: state.id,
+                branch_id: None,
+            },
+        )
+        .expect("state detail");
+        assert_eq!(
+            state_detail
+                .territories
+                .iter()
+                .map(|item| item.id)
+                .collect::<Vec<_>>(),
+            vec![territory.id, second_territory.id]
+        );
+
+        update_faction(
+            &connection,
+            &faction_update_with_territories(state.id, vec![second_territory.id], None),
+        )
+        .expect("unassign first territory");
+        assert_eq!(territory_faction_id(&connection, territory.id, None), None);
+        assert_eq!(
+            territory_faction_id(&connection, second_territory.id, None),
+            Some(i64::from(state.id))
+        );
+
+        let faction = create_faction(
+            &connection,
+            &CreateFactionInput {
+                project_id: project.id,
+                name: "Guild".to_string(),
+                kind: Some("faction".to_string()),
+                r#type: None,
+                motto: None,
+                description: None,
+                history: None,
+                goals: None,
+                headquarters: None,
+                territory: None,
+                ruling_dynasty_id: None,
+                ruler_character_id: None,
+                territory_ids: Some(vec![territory.id]),
+                treasury: None,
+                population: None,
+                army_size: None,
+                navy_size: None,
+                territory_km2: None,
+                annual_income: None,
+                annual_expenses: None,
+                members_count: None,
+                influence: None,
+                status: None,
+                color: Some("#663399".to_string()),
+                secondary_color: Some("#442266".to_string()),
+                founded_date: None,
+                disbanded_date: None,
+                parent_faction_id: None,
+                sort_order: None,
+                branch_id: None,
+            },
+        )
+        .expect("faction with territory");
+        assert_eq!(
+            territory_faction_id(&connection, territory.id, None),
+            Some(i64::from(faction.id))
+        );
+        assert_eq!(
+            get_faction_by_id(
+                &connection,
+                &GetFactionInput {
+                    id: faction.id,
+                    branch_id: None,
+                },
+            )
+            .expect("faction detail")
+            .territories
+            .iter()
+            .map(|item| item.id)
+            .collect::<Vec<_>>(),
+            vec![territory.id]
+        );
+
+        let main_branch_id = get_main_branch_id_for_project(&connection, project.id)
+            .expect("main branch lookup")
+            .expect("main branch");
+        let branch = create_branch(
+            &connection,
+            &CreateBranchInput {
+                project_id: project.id,
+                name: "Branch".to_string(),
+                parent_branch_id: Some(main_branch_id),
+                base_revision: None,
+            },
+        )
+        .expect("branch");
+        update_faction(
+            &connection,
+            &faction_update_with_territories(
+                faction.id,
+                vec![second_territory.id],
+                Some(branch.id),
+            ),
+        )
+        .expect("branch territory sync");
+        assert_eq!(
+            get_faction_by_id(
+                &connection,
+                &GetFactionInput {
+                    id: faction.id,
+                    branch_id: Some(branch.id),
+                },
+            )
+            .expect("branch faction detail")
+            .territories
+            .iter()
+            .map(|item| item.id)
+            .collect::<Vec<_>>(),
+            vec![second_territory.id]
+        );
+        assert_eq!(
+            territory_faction_id(&connection, territory.id, None),
+            Some(i64::from(faction.id))
+        );
+        assert_eq!(
+            territory_faction_id(&connection, second_territory.id, Some(branch.id)),
+            Some(i64::from(faction.id))
+        );
     }
 }

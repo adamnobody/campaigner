@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Box, Button, CircularProgress, Paper, Stack, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, Paper, Stack, Typography, alpha, useTheme } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -189,7 +189,7 @@ export function CanvasPage() {
     if (!territoryEditSession) return objects;
     return objects.map((object) => (
       object.id === territoryEditSession.objectId
-        ? withTerritoryRings(object, territoryEditSession.rings)
+        ? withTerritoryEditRings(object, territoryEditSession.rings)
         : object
     ));
   }, [objects, territoryEditSession]);
@@ -1065,9 +1065,6 @@ export function CanvasPage() {
             setDraftPointsCount(0);
           }
         }}
-        territoryCompletedRingCount={territoryCompletedRings.length}
-        canFinishTerritoryDrawing={territoryCompletedRings.length > 0 || draftPointsCount >= 3}
-        onCompleteTerritoryRing={handleCompleteTerritoryRing}
         zoomPercent={zoomPercent}
         onZoomIn={() => pixiCanvasRef.current?.zoomIn()}
         onZoomOut={() => pixiCanvasRef.current?.zoomOut()}
@@ -1090,21 +1087,6 @@ export function CanvasPage() {
           pixiCanvasRef.current?.finishDrawing();
         }}
         onCancelTerritory={handleCancelTerritoryDrawing}
-        territoryEditActive={territoryEditSession != null}
-        territoryEditLabel={
-          territoryEditSession
-            ? t('map:editingPoints.banner', {
-              name: territoryEditSession.snapshot.name?.trim()
-                || t('map:territoryDialog.previewNameFallback'),
-              ringCount: territoryEditSession.rings.length,
-              pointCount: territoryEditSession.rings.reduce((sum, ring) => sum + ring.length, 0),
-            })
-            : undefined
-        }
-        onSaveTerritoryShape={() => {
-          void saveTerritoryShapeEdit();
-        }}
-        onCancelTerritoryShape={cancelTerritoryShapeEdit}
         onAddImage={() => openImagePickerAt()}
       />
 
@@ -1175,6 +1157,86 @@ export function CanvasPage() {
           onLargeBackgroundStatus={setLargeBackgroundStatus}
           onContextMenu={setContextMenu}
         />
+
+        {(mode === 'draw_territory' || territoryEditSession) && (
+          <Box
+            sx={{
+              position: 'absolute',
+              left: '50%',
+              bottom: 16,
+              transform: 'translateX(-50%)',
+              zIndex: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.75,
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              maxWidth: 'calc(100% - 32px)',
+              px: 1,
+              py: 0.75,
+              borderRadius: 2,
+              border: `1px solid ${alpha(theme.palette.divider, 0.65)}`,
+              backgroundColor: alpha(theme.palette.background.paper, 0.92),
+              boxShadow: theme.shadows[6],
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            {territoryEditSession ? (
+              <>
+                <Chip
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  label={t('map:editingPoints.banner', {
+                    name: territoryEditSession.snapshot.name?.trim()
+                      || t('map:territoryDialog.previewNameFallback'),
+                    ringCount: territoryEditSession.rings.length,
+                    pointCount: territoryEditSession.rings.reduce((sum, ring) => sum + ring.length, 0),
+                  })}
+                />
+                <Button size="small" variant="outlined" onClick={cancelTerritoryShapeEdit}>
+                  {t('common:cancel')}
+                </Button>
+                <Button size="small" variant="contained" onClick={() => { void saveTerritoryShapeEdit(); }}>
+                  {t('map:canvas.toolbar.save')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={t('map:canvas.toolbar.drawingChip', {
+                    rings: territoryCompletedRings.length,
+                    points: draftPointsCount,
+                  })}
+                />
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={draftPointsCount < 3}
+                  onClick={handleCompleteTerritoryRing}
+                >
+                  {t('map:canvas.toolbar.completeContour')}
+                </Button>
+                <Button size="small" variant="outlined" onClick={handleCancelTerritoryDrawing}>
+                  {t('common:cancel')}
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={territoryCompletedRings.length === 0 && draftPointsCount < 3}
+                  onClick={() => {
+                    const currentRing = pixiCanvasRef.current?.getDrawingPoints() ?? [];
+                    finishTerritoryDrawing(currentRing);
+                  }}
+                >
+                  {t('map:canvas.toolbar.save')}
+                </Button>
+              </>
+            )}
+          </Box>
+        )}
 
         {selectedObject?.kind === 'marker' && (
           <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
