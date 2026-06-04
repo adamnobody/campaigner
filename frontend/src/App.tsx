@@ -6,7 +6,7 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { CircularProgress, Box } from '@mui/material';
 
 const HomePage = React.lazy(() => import('./pages/home/HomePage').then(m => ({ default: m.HomePage })));
-const MapPage = React.lazy(() => import('./pages/maps/MapPage').then(m => ({ default: m.MapPage })));
+const MapPage = React.lazy(() => import('./pages/maps/MapPage').then(m => ({ default: m.CanvasPage })));
 const CharactersPage = React.lazy(() => import('./pages/characters/CharactersPage').then(m => ({ default: m.CharactersPage })));
 const CharacterDetailPage = React.lazy(() => import('./pages/characters/CharacterDetailPage').then(m => ({ default: m.CharacterDetailPage })));
 const CharacterGraphPage = React.lazy(() => import('./pages/characters/CharacterGraphPage').then(m => ({ default: m.CharacterGraphPage })));

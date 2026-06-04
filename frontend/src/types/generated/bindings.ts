@@ -5,15 +5,6 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	appHealth: () => __TAURI_INVOKE<AppHealthResponse>("app_health"),
-	checkLegacyMigrationAvailable: () => __TAURI_INVOKE<{
-	projects: number,
-	characters: number,
-	factions: number,
-	notes: number,
-	sourcePath: string,
-} | null>("check_legacy_migration_available"),
-	runLegacyMigration: () => __TAURI_INVOKE<LegacyMigrationReport>("run_legacy_migration"),
-	skipLegacyMigration: () => __TAURI_INVOKE<void>("skip_legacy_migration"),
 	branchesList: (input: ListBranchesInput) => __TAURI_INVOKE<ScenarioBranch[]>("branches_list", { input }),
 	branchesCreate: (input: CreateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_create", { input }),
 	branchesUpdate: (input: UpdateBranchInput) => __TAURI_INVOKE<ScenarioBranch>("branches_update", { input }),
@@ -66,30 +57,39 @@ export const commands = {
 	graphLayoutGet: (input: GetGraphLayoutInput) => __TAURI_INVOKE<GraphLayoutResponse_Serialize>("graph_layout_get", { input }),
 	graphLayoutUpsert: (input: UpsertGraphLayoutInput_Deserialize) => __TAURI_INVOKE<GraphLayoutResponse_Serialize>("graph_layout_upsert", { input }),
 	graphLayoutDelete: (input: DeleteGraphLayoutInput) => __TAURI_INVOKE<void>("graph_layout_delete", { input }),
-	mapsGetRoot: (input: GetRootMapInput) => __TAURI_INVOKE<{
+	canvasScenesGetRoot: (input: GetRootCanvasSceneInput) => __TAURI_INVOKE<{
 	id: number,
 	projectId: number,
-	parentMapId: number | null,
-	parentMarkerId: number | null,
+	parentSceneId: number | null,
+	parentObjectId: number | null,
 	name: string,
-	imagePath: string | null,
+	backgroundPath: string | null,
+	viewportJson: unknown,
+	metadataJson: unknown,
 	createdAt: string,
 	updatedAt: string,
-} | null>("maps_get_root", { input }),
-	mapsGetTree: (input: GetMapTreeInput) => __TAURI_INVOKE<MapRecord[]>("maps_get_tree", { input }),
-	mapsGet: (input: GetMapInput) => __TAURI_INVOKE<MapRecord>("maps_get", { input }),
-	mapsCreate: (input: CreateMapInput) => __TAURI_INVOKE<MapRecord>("maps_create", { input }),
-	mapsUpdate: (input: UpdateMapInput) => __TAURI_INVOKE<MapRecord>("maps_update", { input }),
-	mapsDelete: (input: DeleteMapInput) => __TAURI_INVOKE<void>("maps_delete", { input }),
-	mapsMarkersList: (input: ListMapMarkersInput) => __TAURI_INVOKE<MapMarker[]>("maps_markers_list", { input }),
-	mapsMarkersCreate: (input: CreateMapMarkerInput) => __TAURI_INVOKE<MapMarker>("maps_markers_create", { input }),
-	mapsMarkersUpdate: (input: UpdateMapMarkerInput) => __TAURI_INVOKE<MapMarker>("maps_markers_update", { input }),
-	mapsMarkersDelete: (input: DeleteMapMarkerInput) => __TAURI_INVOKE<void>("maps_markers_delete", { input }),
-	mapsTerritoriesList: (input: ListMapTerritoriesInput) => __TAURI_INVOKE<MapTerritory[]>("maps_territories_list", { input }),
-	mapsTerritoriesCreate: (input: CreateMapTerritoryInput) => __TAURI_INVOKE<MapTerritory>("maps_territories_create", { input }),
-	mapsTerritoriesUpdate: (input: UpdateMapTerritoryInput) => __TAURI_INVOKE<MapTerritory>("maps_territories_update", { input }),
-	mapsTerritoriesDelete: (input: DeleteMapTerritoryInput) => __TAURI_INVOKE<void>("maps_territories_delete", { input }),
-	mapsTerritorySummariesList: (input: ListTerritorySummariesInput) => __TAURI_INVOKE<MapTerritorySummary[]>("maps_territory_summaries_list", { input }),
+} | null>("canvas_scenes_get_root", { input }),
+	canvasScenesGetTree: (input: GetCanvasSceneTreeInput) => __TAURI_INVOKE<CanvasScene[]>("canvas_scenes_get_tree", { input }),
+	canvasScenesGet: (input: GetCanvasSceneInput) => __TAURI_INVOKE<CanvasScene>("canvas_scenes_get", { input }),
+	canvasScenesCreate: (input: CreateCanvasSceneInput) => __TAURI_INVOKE<CanvasScene>("canvas_scenes_create", { input }),
+	canvasScenesUpdate: (input: UpdateCanvasSceneInput) => __TAURI_INVOKE<CanvasScene>("canvas_scenes_update", { input }),
+	canvasScenesDelete: (input: DeleteCanvasSceneInput) => __TAURI_INVOKE<void>("canvas_scenes_delete", { input }),
+	canvasLayersList: (input: ListCanvasLayersInput) => __TAURI_INVOKE<CanvasLayer[]>("canvas_layers_list", { input }),
+	canvasLayersCreate: (input: CreateCanvasLayerInput) => __TAURI_INVOKE<CanvasLayer>("canvas_layers_create", { input }),
+	canvasLayersUpdate: (input: UpdateCanvasLayerInput) => __TAURI_INVOKE<CanvasLayer>("canvas_layers_update", { input }),
+	canvasLayersDelete: (input: DeleteCanvasLayerInput) => __TAURI_INVOKE<void>("canvas_layers_delete", { input }),
+	canvasLayersReorder: (input: ReorderCanvasLayersInput) => __TAURI_INVOKE<CanvasLayer[]>("canvas_layers_reorder", { input }),
+	canvasObjectsList: (input: ListCanvasObjectsInput) => __TAURI_INVOKE<CanvasObject[]>("canvas_objects_list", { input }),
+	canvasObjectsListTerritorySummaries: (input: ListCanvasTerritorySummariesInput) => __TAURI_INVOKE<CanvasTerritorySummary[]>("canvas_objects_list_territory_summaries", { input }),
+	canvasObjectsGet: (input: GetCanvasObjectInput) => __TAURI_INVOKE<CanvasObject>("canvas_objects_get", { input }),
+	canvasObjectsCreate: (input: CreateCanvasObjectInput) => __TAURI_INVOKE<CanvasObject>("canvas_objects_create", { input }),
+	canvasObjectsUpdate: (input: UpdateCanvasObjectInput) => __TAURI_INVOKE<CanvasObject>("canvas_objects_update", { input }),
+	canvasObjectsDelete: (input: DeleteCanvasObjectInput) => __TAURI_INVOKE<void>("canvas_objects_delete", { input }),
+	canvasObjectsReorder: (input: ReorderCanvasObjectsInput) => __TAURI_INVOKE<CanvasObject[]>("canvas_objects_reorder", { input }),
+	canvasObjectsBulkUpsert: (input: BulkUpsertCanvasObjectsInput) => __TAURI_INVOKE<CanvasObject[]>("canvas_objects_bulk_upsert", { input }),
+	canvasObjectsBulkDelete: (input: BulkDeleteCanvasObjectsInput) => __TAURI_INVOKE<void>("canvas_objects_bulk_delete", { input }),
+	canvasReconcileScene: (input: ReconcileCanvasSceneInput) => __TAURI_INVOKE<CanvasReconcileResult>("canvas_reconcile_scene", { input }),
+	canvasMarkersAttachChildScene: (input: AttachChildSceneToMarkerInput) => __TAURI_INVOKE<AttachChildSceneToMarkerResult>("canvas_markers_attach_child_scene", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -109,7 +109,6 @@ export const commands = {
 	factionsUploadImage: (input: FactionUploadImageInput) => __TAURI_INVOKE<Faction>("factions_upload_image", { input }),
 	factionsUploadBanner: (input: FactionUploadBannerInput) => __TAURI_INVOKE<Faction>("factions_upload_banner", { input }),
 	dynastiesUploadImage: (input: DynastyUploadImageInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_upload_image", { input }),
-	mapsUploadImage: (input: MapUploadImageInput) => __TAURI_INVOKE<MapRecord>("maps_upload_image", { input }),
 	projectsUploadMapImage: (input: ProjectUploadMapImageInput) => __TAURI_INVOKE<Project>("projects_upload_map_image", { input }),
 	charactersList: (input: CharactersListInput) => __TAURI_INVOKE<CharactersListResult>("characters_list", { input }),
 	charactersGet: (input: GetCharacterInput) => __TAURI_INVOKE<Character>("characters_get", { input }),
@@ -229,6 +228,93 @@ export type AssignFactionAmbitionInput = {
 	ambitionId: number,
 };
 
+export type AttachChildSceneToMarkerInput = {
+	markerId: number,
+	sceneName: string,
+	backgroundPath: string | null,
+	branchId: number | null,
+};
+
+export type AttachChildSceneToMarkerResult = {
+	marker: CanvasObject,
+	childScene: CanvasScene,
+};
+
+export type BulkDeleteCanvasObjectsInput = {
+	sceneId: number,
+	objectIds: number[],
+	branchId: number | null,
+};
+
+export type BulkUpsertCanvasObjectsInput = {
+	sceneId: number,
+	objects: UpsertCanvasObjectInput[],
+	branchId: number | null,
+};
+
+export type CanvasLayer = {
+	id: number,
+	sceneId: number,
+	name: string,
+	kind: string,
+	zIndex: number,
+	isHidden: boolean,
+	isLocked: boolean,
+	opacity: number | null,
+	blendMode: string,
+	metadataJson: unknown,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type CanvasObject = {
+	id: number,
+	sceneId: number,
+	layerId: number,
+	kind: string,
+	name: string | null,
+	zIndex: number,
+	transformJson: unknown,
+	geometryJson: unknown,
+	styleJson: unknown,
+	contentJson: unknown,
+	resourcePath: string | null,
+	linkedNoteId: number | null,
+	linkedSceneId: number | null,
+	isHidden: boolean,
+	isLocked: boolean,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type CanvasReconcileResult = {
+	upserted: CanvasObject[],
+	deletedIds: number[],
+};
+
+export type CanvasScene = {
+	id: number,
+	projectId: number,
+	parentSceneId: number | null,
+	parentObjectId: number | null,
+	name: string,
+	backgroundPath: string | null,
+	viewportJson: unknown,
+	metadataJson: unknown,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type CanvasTerritorySummary = {
+	id: number,
+	name: string,
+	sceneId: number,
+	sceneName: string,
+	factionId: number | null,
+	occupantName: string | null,
+	occupantKind: string | null,
+};
+
 export type Character = {
 	id: number,
 	projectId: number,
@@ -344,6 +430,48 @@ export type CreateBranchInput = {
 	name: string,
 	parentBranchId: number | null,
 	baseRevision: number | null,
+};
+
+export type CreateCanvasLayerInput = {
+	sceneId: number,
+	name: string,
+	kind: string,
+	zIndex: number | null,
+	isHidden: boolean | null,
+	isLocked: boolean | null,
+	opacity: number | null,
+	blendMode: string | null,
+	metadataJson: unknown | null,
+	branchId: number | null,
+};
+
+export type CreateCanvasObjectInput = {
+	sceneId: number,
+	layerId: number,
+	kind: string,
+	name: string | null,
+	zIndex: number | null,
+	transformJson: unknown,
+	geometryJson: unknown | null,
+	styleJson: unknown | null,
+	contentJson: unknown | null,
+	resourcePath: string | null,
+	linkedNoteId: number | null,
+	linkedSceneId: number | null,
+	isHidden: boolean | null,
+	isLocked: boolean | null,
+	branchId: number | null,
+};
+
+export type CreateCanvasSceneInput = {
+	projectId: number,
+	parentSceneId: number | null,
+	parentObjectId: number | null,
+	name: string,
+	backgroundPath: string | null,
+	viewportJson: unknown | null,
+	metadataJson: unknown | null,
+	branchId: number | null,
 };
 
 export type CreateCharacterInput = {
@@ -491,43 +619,6 @@ export type CreateFactionRelationInput = {
 	branchId: number | null,
 };
 
-export type CreateMapInput = {
-	projectId: number,
-	parentMapId: number | null,
-	parentMarkerId: number | null,
-	name: string,
-	imagePath: string | null,
-	branchId: number | null,
-};
-
-export type CreateMapMarkerInput = {
-	mapId: number,
-	title: string,
-	description: string | null,
-	positionX: number | null,
-	positionY: number | null,
-	color: string | null,
-	icon: string | null,
-	linkedNoteId: number | null,
-	childMapId: number | null,
-	branchId: number | null,
-};
-
-export type CreateMapTerritoryInput = {
-	mapId: number,
-	name: string,
-	description: string | null,
-	color: string | null,
-	opacity: number | null,
-	borderColor: string | null,
-	borderWidth: number | null,
-	smoothing: number | null,
-	rings: MapTerritoryPoint[][],
-	factionId: number | null,
-	sortOrder: number | null,
-	branchId: number | null,
-};
-
 export type CreateNoteInput = {
 	projectId: number,
 	folderId: number | null,
@@ -623,6 +714,21 @@ export type DeleteBranchInput = {
 	id: number,
 };
 
+export type DeleteCanvasLayerInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type DeleteCanvasObjectInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type DeleteCanvasSceneInput = {
+	id: number,
+	branchId: number | null,
+};
+
 export type DeleteCharacterInput = {
 	id: number,
 	branchId: number | null,
@@ -681,20 +787,6 @@ export type DeleteFactionRelationInput = {
 export type DeleteGraphLayoutInput = {
 	projectId: number,
 	graphType: string,
-	branchId: number | null,
-};
-
-export type DeleteMapInput = {
-	id: number,
-};
-
-export type DeleteMapMarkerInput = {
-	id: number,
-	branchId: number | null,
-};
-
-export type DeleteMapTerritoryInput = {
-	id: number,
 	branchId: number | null,
 };
 
@@ -1629,6 +1721,21 @@ export type GetAssignedCharacterTraitsInput = {
 	characterId: number,
 };
 
+export type GetCanvasObjectInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type GetCanvasSceneInput = {
+	id: number,
+	branchId: number | null,
+};
+
+export type GetCanvasSceneTreeInput = {
+	projectId: number,
+	branchId: number | null,
+};
+
 export type GetCharacterInput = {
 	id: number,
 	branchId: number | null,
@@ -1659,15 +1766,6 @@ export type GetGraphLayoutInput = {
 	branchId: number | null,
 };
 
-export type GetMapInput = {
-	id: number,
-};
-
-export type GetMapTreeInput = {
-	projectId: number,
-	branchId: number | null,
-};
-
 export type GetNoteInput = {
 	id: number,
 	branchId: number | null,
@@ -1677,7 +1775,7 @@ export type GetProjectInput = {
 	id: number,
 };
 
-export type GetRootMapInput = {
+export type GetRootCanvasSceneInput = {
 	projectId: number,
 	branchId: number | null,
 };
@@ -1810,22 +1908,23 @@ export type ImportedProjectPayload_Serialize = {
 	graphLayouts: ExportGraphLayoutRow_Serialize[],
 };
 
-export type LegacyMigrationPreview = {
-	projects: number,
-	characters: number,
-	factions: number,
-	notes: number,
-	sourcePath: string,
-};
-
-export type LegacyMigrationReport = {
-	importedCounts: { [key in string]: number },
-	uploadsCopied: boolean,
-	errors: string[],
-};
-
 export type ListBranchesInput = {
 	projectId: number,
+};
+
+export type ListCanvasLayersInput = {
+	sceneId: number,
+	branchId: number | null,
+};
+
+export type ListCanvasObjectsInput = {
+	sceneId: number,
+	branchId: number | null,
+};
+
+export type ListCanvasTerritorySummariesInput = {
+	projectId: number,
+	branchId: number | null,
 };
 
 export type ListCharacterTraitsInput = {
@@ -1847,16 +1946,6 @@ export type ListFactionRanksInput = {
 	branchId: number | null,
 };
 
-export type ListMapMarkersInput = {
-	mapId: number,
-	branchId: number | null,
-};
-
-export type ListMapTerritoriesInput = {
-	mapId: number,
-	branchId: number | null,
-};
-
 export type ListPoliticalScaleAssignmentsInput = {
 	entityType: string,
 	entityId: number,
@@ -1865,11 +1954,6 @@ export type ListPoliticalScaleAssignmentsInput = {
 export type ListPoliticalScalesInput = {
 	entityType: string,
 	worldId: number,
-};
-
-export type ListTerritorySummariesInput = {
-	projectId: number,
-	branchId: number | null,
 };
 
 export type ListWikiCategoriesInput = {
@@ -1881,71 +1965,6 @@ export type ListWikiLinksInput = {
 	projectId: number,
 	noteId: number | null,
 	branchId: number | null,
-};
-
-export type MapMarker = {
-	id: number,
-	mapId: number,
-	title: string,
-	description: string,
-	positionX: number | null,
-	positionY: number | null,
-	color: string,
-	icon: string,
-	linkedNoteId: number | null,
-	childMapId: number | null,
-	createdAt: string,
-	updatedAt: string,
-};
-
-export type MapRecord = {
-	id: number,
-	projectId: number,
-	parentMapId: number | null,
-	parentMarkerId: number | null,
-	name: string,
-	imagePath: string | null,
-	createdAt: string,
-	updatedAt: string,
-};
-
-export type MapTerritory = {
-	id: number,
-	mapId: number,
-	name: string,
-	description: string,
-	color: string,
-	opacity: number | null,
-	borderColor: string,
-	borderWidth: number | null,
-	smoothing: number | null,
-	rings: MapTerritoryPoint[][],
-	factionId: number | null,
-	sortOrder: number,
-	createdAt: string,
-	updatedAt: string,
-};
-
-export type MapTerritoryPoint = {
-	x: number | null,
-	y: number | null,
-};
-
-export type MapTerritorySummary = {
-	id: number,
-	name: string,
-	mapId: number,
-	mapName: string,
-	factionId: number | null,
-	occupantName: string | null,
-	occupantKind: string | null,
-};
-
-export type MapUploadImageInput = {
-	mapId: number,
-	fileBytes: number[],
-	fileName: string,
-	mime: string,
 };
 
 export type Note = {
@@ -2058,6 +2077,13 @@ export type ProjectUploadMapImageInput = {
 	mime: string,
 };
 
+export type ReconcileCanvasSceneInput = {
+	sceneId: number,
+	upsert: UpsertCanvasObjectInput[],
+	deleteIds: number[],
+	branchId: number | null,
+};
+
 export type RelationshipsListInput = {
 	projectId: number,
 	branchId: number | null,
@@ -2066,6 +2092,19 @@ export type RelationshipsListInput = {
 export type RemoveDynastyMemberInput = {
 	dynastyId: number,
 	memberId: number,
+};
+
+export type ReorderCanvasLayersInput = {
+	sceneId: number,
+	orderedIds: number[],
+	branchId: number | null,
+};
+
+export type ReorderCanvasObjectsInput = {
+	sceneId: number,
+	layerId: number | null,
+	orderedIds: number[],
+	branchId: number | null,
 };
 
 export type ReorderDogmasInput = {
@@ -2243,6 +2282,46 @@ export type UpdateBranchInput = {
 	name: string | null,
 };
 
+export type UpdateCanvasLayerInput = {
+	id: number,
+	name: string | null,
+	kind: string | null,
+	zIndex: number | null,
+	isHidden: boolean | null,
+	isLocked: boolean | null,
+	opacity: number | null,
+	blendMode: string | null,
+	metadataJson: unknown | null,
+	branchId: number | null,
+};
+
+export type UpdateCanvasObjectInput = {
+	id: number,
+	layerId: number | null,
+	kind: string | null,
+	name: string | null,
+	zIndex: number | null,
+	transformJson: unknown | null,
+	geometryJson: unknown | null,
+	styleJson: unknown | null,
+	contentJson: unknown | null,
+	resourcePath: string | null,
+	linkedNoteId: number | null,
+	linkedSceneId: number | null,
+	isHidden: boolean | null,
+	isLocked: boolean | null,
+	branchId: number | null,
+};
+
+export type UpdateCanvasSceneInput = {
+	id: number,
+	name: string | null,
+	backgroundPath: string | null,
+	viewportJson: unknown | null,
+	metadataJson: unknown | null,
+	branchId: number | null,
+};
+
 export type UpdateCharacterInput = {
 	id: number,
 	name: string | null,
@@ -2400,40 +2479,6 @@ export type UpdateFactionRelationInput = {
 	isBidirectional: boolean | null,
 };
 
-export type UpdateMapInput = {
-	id: number,
-	name: string | null,
-	imagePath: string | null,
-};
-
-export type UpdateMapMarkerInput = {
-	id: number,
-	title: string | null,
-	description: string | null,
-	positionX: number | null,
-	positionY: number | null,
-	color: string | null,
-	icon: string | null,
-	linkedNoteId: number | null,
-	childMapId: number | null,
-	branchId: number | null,
-};
-
-export type UpdateMapTerritoryInput = {
-	id: number,
-	name: string | null,
-	description: string | null,
-	color: string | null,
-	opacity: number | null,
-	borderColor: string | null,
-	borderWidth: number | null,
-	smoothing: number | null,
-	rings: MapTerritoryPoint[][] | null,
-	factionId: number | null,
-	sortOrder: number | null,
-	branchId: number | null,
-};
-
 export type UpdateNoteInput = {
 	id: number,
 	title: string | null,
@@ -2510,6 +2555,23 @@ export type UploadFileInput = {
 
 export type UploadSavedPath = {
 	path: string,
+};
+
+export type UpsertCanvasObjectInput = {
+	id: number | null,
+	layerId: number,
+	kind: string,
+	name: string | null,
+	zIndex: number,
+	transformJson: unknown,
+	geometryJson: unknown | null,
+	styleJson: unknown | null,
+	contentJson: unknown | null,
+	resourcePath: string | null,
+	linkedNoteId: number | null,
+	linkedSceneId: number | null,
+	isHidden: boolean | null,
+	isLocked: boolean | null,
 };
 
 export type UpsertFactionCustomMetricInput = {

@@ -6,27 +6,21 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { DndButton } from '@/components/ui/DndButton';
-import { TERRITORY_COLORS, hexToRgb } from './mapUtils';
-import type { Territory, FactionOption } from './mapUtils';
-
-export type MapTerritoryFormState = {
-  name: string;
-  description: string;
-  color: string;
-  opacity: number;
-  borderColor: string;
-  borderWidth: number;
-  smoothing: number;
-  factionId: number | null;
-};
+import type { CanvasObject } from '@/api/canvas';
+import {
+  TERRITORY_COLORS,
+  hexToRgb,
+  type TerritoryFactionOption,
+  type TerritoryFormState,
+} from '../canvas/canvasModel';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  editingTerritory: Territory | null;
-  territoryForm: MapTerritoryFormState;
-  setTerritoryForm: React.Dispatch<React.SetStateAction<MapTerritoryFormState>>;
-  factions: FactionOption[];
+  editingTerritory: CanvasObject | null;
+  territoryForm: TerritoryFormState;
+  setTerritoryForm: React.Dispatch<React.SetStateAction<TerritoryFormState>>;
+  factions: TerritoryFactionOption[];
   onSave: () => void;
 };
 

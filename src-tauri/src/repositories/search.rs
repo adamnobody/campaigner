@@ -177,15 +177,25 @@ pub fn search_query(
         connection,
         project_id,
         input.branch_id,
-        "mm.created_branch_id",
-        "mm.created_at",
+        "co.created_branch_id",
+        "co.created_at",
     )?;
     let mut marker_sql = String::from(
         r#"
-        SELECT mm.id, mm.title, mm.description, mm.icon
-        FROM map_markers mm
-        JOIN maps m ON mm.map_id = m.id
-        WHERE m.project_id = ? AND (mm.title LIKE ? OR mm.description LIKE ?)
+        SELECT
+            co.id,
+            COALESCE(NULLIF(co.name, ''), json_extract(co.content_json, '$.title'), 'Marker') AS title,
+            COALESCE(json_extract(co.content_json, '$.description'), '') AS description,
+            COALESCE(json_extract(co.content_json, '$.icon'), '') AS icon
+        FROM canvas_object co
+        JOIN canvas_scene cs ON co.scene_id = cs.id
+        WHERE cs.project_id = ?
+          AND co.kind = 'marker'
+          AND (
+            COALESCE(co.name, '') LIKE ?
+            OR COALESCE(json_extract(co.content_json, '$.title'), '') LIKE ?
+            OR COALESCE(json_extract(co.content_json, '$.description'), '') LIKE ?
+          )
         "#,
     );
     marker_sql.push_str(&marker_scope.sql);
@@ -193,6 +203,7 @@ pub fn search_query(
 
     let mut marker_params: Vec<SqlValue> = vec![
         SqlValue::Integer(i64::from(project_id)),
+        SqlValue::Text(like.clone()),
         SqlValue::Text(like.clone()),
         SqlValue::Text(like.clone()),
     ];

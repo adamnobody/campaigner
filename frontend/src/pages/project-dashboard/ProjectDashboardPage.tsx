@@ -332,14 +332,14 @@ export const ProjectDashboardPage: React.FC = () => {
     timeline: isRu ? 'Таймлайн' : 'Timeline',
     suggestions: isRu ? 'Что можно улучшить' : 'Suggestions',
     welcome: isRu ? 'Добро пожаловать в новый проект' : 'Welcome to your new project',
-    startBuilding: isRu ? 'Начните собирать мир: создайте заметку, персонажа, фракцию, событие или карту.' : 'Start building your world: create a note, character, faction, event or map.',
+    startBuilding: isRu ? 'Начните собирать мир: создайте заметку, персонажа, фракцию, событие или холст.' : 'Start building your world: create a note, character, faction, event or canvas.',
     altWorld: isRu ? 'Вы смотрите альтернативную версию мира.' : 'You are viewing an alternate version of the world.',
     mainWorld: isRu ? 'Это каноническая версия мира.' : 'This is the canonical version of the world.',
     createNote: isRu ? 'Создать заметку' : 'Create note',
     createChar: isRu ? 'Создать персонажа' : 'Create character',
     createFaction: isRu ? 'Создать фракцию' : 'Create faction',
     addEvent: isRu ? 'Добавить событие' : 'Add event',
-    createMap: isRu ? 'Создать карту' : 'Create map',
+    createMap: isRu ? 'Создать холст' : 'Create canvas',
     openGraph: isRu ? 'Открыть графы' : 'Open graphs',
     emptyList: isRu ? 'Список пуст' : 'No items',
     viewAll: isRu ? 'Смотреть все' : 'View all',
@@ -387,7 +387,7 @@ export const ProjectDashboardPage: React.FC = () => {
       items.push({ id: e.id, title: e.title, type: isRu ? 'Событие' : 'Event', updatedAt: new Date(e.updatedAt), link: `/project/${pid}/timeline` })
     );
     mapStore.mapTree.forEach((m) =>
-      items.push({ id: m.id, title: m.name, type: isRu ? 'Карта' : 'Map', updatedAt: new Date(m.updatedAt), link: `/project/${pid}/map/${m.id}` })
+      items.push({ id: m.id, title: m.name, type: isRu ? 'Холст' : 'Canvas', updatedAt: new Date(m.updatedAt), link: `/project/${pid}/map/${m.id}` })
     );
     dynastyStore.dynasties.forEach((d) =>
       items.push({ id: d.id, title: d.name, type: isRu ? 'Династия' : 'Dynasty', updatedAt: new Date(d.updatedAt), link: `/project/${pid}/dynasties/${d.id}` })
@@ -419,7 +419,7 @@ export const ProjectDashboardPage: React.FC = () => {
     if (charStore.total === 0) list.push(isRu ? 'Создайте первого персонажа: героя, правителя, свидетеля или важную фигуру.' : 'Create your first character: a hero, ruler, witness or key figure.');
     if (factionStore.total === 0) list.push(isRu ? 'Добавьте фракцию, чтобы начать политическую структуру мира.' : 'Add a faction to start the political structure of your world.');
     if (timelineStore.events.length === 0) list.push(isRu ? 'Добавьте событие на таймлайн, чтобы мир получил историю.' : 'Add a timeline event to give your world history.');
-    if (mapStore.mapTree.length === 0) list.push(isRu ? 'Добавьте карту мира, региона или города.' : 'Add a map of the world, region or city.');
+    if (mapStore.mapTree.length === 0) list.push(isRu ? 'Добавьте холст мира, региона или города.' : 'Add a canvas of the world, region or city.');
     if (dogmaStore.total === 0) list.push(isRu ? 'Опишите догмы, верования или принципы мира.' : 'Describe the dogmas, beliefs or principles of the world.');
     return list.slice(0, 4);
   }, [noteStore.total, charStore.total, factionStore.total, timelineStore.events.length, mapStore.mapTree.length, dogmaStore.total, isRu]);

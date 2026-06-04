@@ -13,13 +13,13 @@ use crate::models::project_io::{
     ExportCharacterRow, ExportDogmaRow, ExportDynastyEventRow, ExportDynastyFamilyLinkRow,
     ExportDynastyMemberRow, ExportDynastyRow, ExportFactionCustomMetricRow, ExportFactionMemberRow,
     ExportFactionRankRow, ExportFactionRelationRow, ExportFactionRow, ExportGraphLayoutRow,
-    ExportMapRow, ExportMarkerRow, ExportNoteRow, ExportProjectMeta, ExportRelationshipRow,
-    ExportScenarioBranchRow, ExportTagAssociationRow, ExportTagRow, ExportTerritoryRow,
-    ExportTimelineEventRow, ExportWikiLinkRow, ImportedProjectPayload,
+    ExportNoteRow, ExportProjectMeta, ExportRelationshipRow, ExportScenarioBranchRow,
+    ExportTagAssociationRow, ExportTagRow, ExportTimelineEventRow, ExportWikiLinkRow,
+    ImportedProjectPayload,
 };
 use crate::paths::UploadSubdir;
+use crate::repositories::canvas;
 use crate::repositories::graph_layouts;
-use crate::repositories::maps;
 use crate::repositories::projects::get_project;
 use crate::uploads::storage::{read_web_path_as_data_url, save_base64_data_url};
 
@@ -64,14 +64,6 @@ fn export_project_inner<R: Runtime>(
     let relationships = load_relationships(connection, project_id)?;
     let notes = load_notes(connection, project_id)?;
 
-    let mut maps = load_maps(connection, project_id)?;
-    for map in &mut maps {
-        map.image_base64 =
-            read_optional_web_path_as_data_url(app, map.image_path.as_deref().unwrap_or(""))?;
-    }
-
-    let markers = load_markers(connection, project_id)?;
-    let territories = load_territories(connection, project_id)?;
     let timeline_events = load_timeline_events(connection, project_id)?;
     let tags = load_tags(connection, project_id)?;
     let tag_associations = load_tag_associations(connection, project_id)?;
@@ -118,9 +110,9 @@ fn export_project_inner<R: Runtime>(
         relationships,
         notes,
         folders: Vec::new(),
-        maps,
-        markers,
-        territories,
+        maps: Vec::new(),
+        markers: Vec::new(),
+        territories: Vec::new(),
         timeline_events,
         tags,
         tag_associations,
@@ -264,9 +256,7 @@ fn import_project_in_transaction<R: Runtime>(
         &mut branch_id_map,
     )?;
 
-    if data.maps.is_empty() {
-        maps::create_root_map_for_project(connection, project_id, None, Some(main_branch_id))?;
-    }
+    canvas::create_root_scene_for_project(connection, project_id, None, Some(main_branch_id))?;
 
     if let Some(ref map_image_base64) = data.project.map_image_base64 {
         if let Some(map_path) =
@@ -282,8 +272,6 @@ fn import_project_in_transaction<R: Runtime>(
     let mut character_id_map = HashMap::new();
     let mut note_id_map = HashMap::new();
     let mut tag_id_map = HashMap::new();
-    let mut map_id_map = HashMap::new();
-    let mut marker_id_map = HashMap::new();
     let mut timeline_event_id_map = HashMap::new();
     let mut dogma_id_map = HashMap::new();
     let mut faction_id_map = HashMap::new();
@@ -291,14 +279,6 @@ fn import_project_in_transaction<R: Runtime>(
     let mut faction_rank_id_map = HashMap::new();
     let mut dynasty_id_map = HashMap::new();
 
-    import_maps(
-        app,
-        connection,
-        project_id,
-        main_branch_id,
-        &data.maps,
-        &mut map_id_map,
-    )?;
     import_tags(connection, project_id, &data.tags, &mut tag_id_map)?;
     import_characters(
         app,
@@ -321,15 +301,6 @@ fn import_project_in_transaction<R: Runtime>(
         main_branch_id,
         &data.relationships,
         &character_id_map,
-    )?;
-    import_markers_and_parent_links(
-        connection,
-        main_branch_id,
-        &data.markers,
-        &data.maps,
-        &map_id_map,
-        &note_id_map,
-        &mut marker_id_map,
     )?;
     import_timeline_events(
         connection,
@@ -390,13 +361,6 @@ fn import_project_in_transaction<R: Runtime>(
         connection,
         project_id,
         &data.faction_relations,
-        &faction_id_map,
-    )?;
-    import_territories(
-        connection,
-        main_branch_id,
-        &data.territories,
-        &map_id_map,
         &faction_id_map,
     )?;
     import_dynasties(
@@ -784,122 +748,6 @@ fn load_notes(connection: &Connection, project_id: i32) -> Result<Vec<ExportNote
             format: row.get("format")?,
             note_type: row.get("note_type")?,
             is_pinned: row.get::<_, i32>("is_pinned")? != 0,
-            created_at: row.get("created_at")?,
-            updated_at: row.get("updated_at")?,
-        })
-    })?;
-    collect_rows(rows)
-}
-
-fn load_maps(connection: &Connection, project_id: i32) -> Result<Vec<ExportMapRow>> {
-    let mut statement = connection.prepare(
-        r#"
-        SELECT
-            id,
-            project_id AS project_id,
-            parent_map_id AS parent_map_id,
-            parent_marker_id AS parent_marker_id,
-            name,
-            image_path AS image_path,
-            created_at AS created_at,
-            updated_at AS updated_at
-        FROM maps
-        WHERE project_id = ?1
-        "#,
-    )?;
-    let rows = statement.query_map(params![project_id], |row| {
-        Ok(ExportMapRow {
-            id: row.get("id")?,
-            project_id: row.get("project_id")?,
-            parent_map_id: row.get("parent_map_id")?,
-            parent_marker_id: row.get("parent_marker_id")?,
-            name: row.get("name")?,
-            image_path: row.get("image_path")?,
-            created_at: row.get("created_at")?,
-            updated_at: row.get("updated_at")?,
-            image_base64: None,
-        })
-    })?;
-    collect_rows(rows)
-}
-
-fn load_markers(connection: &Connection, project_id: i32) -> Result<Vec<ExportMarkerRow>> {
-    let mut statement = connection.prepare(
-        r#"
-        SELECT
-            mm.id AS id,
-            mm.map_id AS map_id,
-            mm.title AS title,
-            mm.description AS description,
-            mm.position_x AS position_x,
-            mm.position_y AS position_y,
-            mm.color AS color,
-            mm.icon AS icon,
-            mm.linked_note_id AS linked_note_id,
-            mm.child_map_id AS child_map_id,
-            mm.created_at AS created_at,
-            mm.updated_at AS updated_at
-        FROM map_markers mm
-        JOIN maps m ON mm.map_id = m.id
-        WHERE m.project_id = ?1
-        "#,
-    )?;
-    let rows = statement.query_map(params![project_id], |row| {
-        Ok(ExportMarkerRow {
-            id: row.get("id")?,
-            map_id: row.get("map_id")?,
-            title: row.get("title")?,
-            description: row.get("description")?,
-            position_x: row.get("position_x")?,
-            position_y: row.get("position_y")?,
-            color: row.get("color")?,
-            icon: row.get("icon")?,
-            linked_note_id: row.get("linked_note_id")?,
-            child_map_id: row.get("child_map_id")?,
-            created_at: row.get("created_at")?,
-            updated_at: row.get("updated_at")?,
-        })
-    })?;
-    collect_rows(rows)
-}
-
-fn load_territories(connection: &Connection, project_id: i32) -> Result<Vec<ExportTerritoryRow>> {
-    let mut statement = connection.prepare(
-        r#"
-        SELECT
-            mt.id AS id,
-            mt.map_id AS map_id,
-            mt.name AS name,
-            mt.description AS description,
-            mt.color AS color,
-            mt.opacity AS opacity,
-            mt.border_color AS border_color,
-            mt.border_width AS border_width,
-            mt.points AS points,
-            mt.faction_id AS faction_id,
-            mt.smoothing AS smoothing,
-            mt.sort_order AS sort_order,
-            mt.created_at AS created_at,
-            mt.updated_at AS updated_at
-        FROM map_territories mt
-        JOIN maps m ON mt.map_id = m.id
-        WHERE m.project_id = ?1
-        "#,
-    )?;
-    let rows = statement.query_map(params![project_id], |row| {
-        Ok(ExportTerritoryRow {
-            id: row.get("id")?,
-            map_id: row.get("map_id")?,
-            name: row.get("name")?,
-            description: row.get("description")?,
-            color: row.get("color")?,
-            opacity: row.get("opacity")?,
-            border_color: row.get("border_color")?,
-            border_width: row.get("border_width")?,
-            points: row.get("points")?,
-            faction_id: row.get("faction_id")?,
-            smoothing: row.get("smoothing")?,
-            sort_order: row.get("sort_order")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
@@ -1398,42 +1246,6 @@ fn load_graph_layouts(
 
 // --- Import inserters ---
 
-fn import_maps<R: Runtime>(
-    app: Option<&AppHandle<R>>,
-    connection: &Connection,
-    project_id: i32,
-    main_branch_id: i32,
-    maps: &[ExportMapRow],
-    map_id_map: &mut HashMap<i32, i32>,
-) -> Result<()> {
-    for map in maps {
-        let new_parent_map_id = map
-            .parent_map_id
-            .and_then(|parent_id| map_id_map.get(&parent_id).copied());
-        let imported_map_image_path = if let Some(ref image_base64) = map.image_base64 {
-            save_optional_base64_data_url(app, UploadSubdir::Maps, image_base64)?
-        } else {
-            map.image_path.clone()
-        };
-
-        connection.execute(
-            r#"
-            INSERT INTO maps (project_id, parent_map_id, parent_marker_id, name, image_path, created_branch_id)
-            VALUES (?1, ?2, NULL, ?3, ?4, ?5)
-            "#,
-            params![
-                project_id,
-                new_parent_map_id,
-                map.name,
-                imported_map_image_path,
-                main_branch_id
-            ],
-        )?;
-        map_id_map.insert(map.id, last_insert_id(connection)?);
-    }
-    Ok(())
-}
-
 fn import_tags(
     connection: &Connection,
     project_id: i32,
@@ -1555,68 +1367,6 @@ fn import_relationships(
             ],
         )?;
     }
-    Ok(())
-}
-
-fn import_markers_and_parent_links(
-    connection: &Connection,
-    main_branch_id: i32,
-    markers: &[ExportMarkerRow],
-    maps: &[ExportMapRow],
-    map_id_map: &HashMap<i32, i32>,
-    note_id_map: &HashMap<i32, i32>,
-    marker_id_map: &mut HashMap<i32, i32>,
-) -> Result<()> {
-    for marker in markers {
-        let new_linked_note_id = marker
-            .linked_note_id
-            .and_then(|note_id| note_id_map.get(&note_id).copied());
-        let new_child_map_id = marker
-            .child_map_id
-            .and_then(|map_id| map_id_map.get(&map_id).copied());
-        let Some(new_map_id) = map_id_map.get(&marker.map_id).copied() else {
-            continue;
-        };
-
-        connection.execute(
-            r#"
-            INSERT INTO map_markers (
-                map_id, title, description, position_x, position_y,
-                color, icon, linked_note_id, child_map_id, created_branch_id
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-            "#,
-            params![
-                new_map_id,
-                marker.title,
-                marker.description,
-                marker.position_x,
-                marker.position_y,
-                marker.color,
-                marker.icon,
-                new_linked_note_id,
-                new_child_map_id,
-                main_branch_id,
-            ],
-        )?;
-        marker_id_map.insert(marker.id, last_insert_id(connection)?);
-    }
-
-    for map in maps {
-        let Some(parent_marker_id) = map.parent_marker_id else {
-            continue;
-        };
-        let Some(new_map_id) = map_id_map.get(&map.id).copied() else {
-            continue;
-        };
-        let Some(new_parent_marker_id) = marker_id_map.get(&parent_marker_id).copied() else {
-            continue;
-        };
-        connection.execute(
-            "UPDATE maps SET parent_marker_id = ?1 WHERE id = ?2",
-            params![new_parent_marker_id, new_map_id],
-        )?;
-    }
-
     Ok(())
 }
 
@@ -2001,46 +1751,6 @@ fn import_faction_relations(
                 relation.description,
                 relation.started_date,
                 if relation.is_bidirectional { 1 } else { 0 },
-            ],
-        )?;
-    }
-    Ok(())
-}
-
-fn import_territories(
-    connection: &Connection,
-    main_branch_id: i32,
-    territories: &[ExportTerritoryRow],
-    map_id_map: &HashMap<i32, i32>,
-    faction_id_map: &HashMap<i32, i32>,
-) -> Result<()> {
-    for territory in territories {
-        let Some(new_map_id) = map_id_map.get(&territory.map_id) else {
-            continue;
-        };
-        let new_faction_id = territory
-            .faction_id
-            .and_then(|faction_id| faction_id_map.get(&faction_id).copied());
-        connection.execute(
-            r#"
-            INSERT INTO map_territories (
-                map_id, name, description, color, opacity, border_color, border_width,
-                points, faction_id, smoothing, sort_order, created_branch_id
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
-            "#,
-            params![
-                new_map_id,
-                territory.name,
-                territory.description,
-                territory.color,
-                territory.opacity,
-                territory.border_color,
-                territory.border_width,
-                territory.points,
-                new_faction_id,
-                territory.smoothing,
-                territory.sort_order,
-                main_branch_id,
             ],
         )?;
     }

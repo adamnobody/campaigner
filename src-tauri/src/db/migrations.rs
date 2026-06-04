@@ -70,6 +70,11 @@ const MIGRATIONS: &[Migration] = &[
         "wiki_links",
         include_str!("../../migrations/016_wiki_links.sql"),
     ),
+    (
+        17,
+        "canvas_replacement",
+        include_str!("../../migrations/017_canvas_replacement.sql"),
+    ),
 ];
 
 pub fn run_migrations(connection: &Connection) -> Result<()> {

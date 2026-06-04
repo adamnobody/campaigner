@@ -7,21 +7,27 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CloseIcon from '@mui/icons-material/Close';
 import MapIcon from '@mui/icons-material/Map';
-import ImageIcon from '@mui/icons-material/Image';
 import AddIcon from '@mui/icons-material/Add';
-import { MARKER_ICONS, sxDivider, sxSectionLabel, sxPanelRoot } from './mapUtils';
-import type { Marker, NoteOption } from './mapUtils';
+import type { CanvasObject } from '@/api/canvas';
+import {
+  MARKER_ICONS,
+  markerFormFromObject,
+  objectTransform,
+  sxDivider,
+  sxPanelRoot,
+  sxSectionLabel,
+  type NoteOption,
+} from '../canvas/canvasModel';
 
 type Props = {
-  selectedMarker: Marker;
+  selectedMarker: CanvasObject;
   linkedNote: NoteOption | undefined;
   onClose: () => void;
   onNavigateToNote: (noteId: number) => void;
-  onNavigateToChildMap: (childMapId: number) => void;
-  onCreateChildMap: (marker: Marker) => void;
-  onUploadChildMapImage: (marker: Marker, file: File) => void;
-  onEditMarker: (marker: Marker) => void;
-  onDeleteMarker: (marker: Marker) => void;
+  onOpenChildMap?: () => void;
+  onCreateChildMap?: () => void;
+  onEditMarker: (marker: CanvasObject) => void;
+  onDeleteMarker: (marker: CanvasObject) => void;
 };
 
 export const MapMarkerPanel: React.FC<Props> = ({
@@ -29,13 +35,14 @@ export const MapMarkerPanel: React.FC<Props> = ({
   linkedNote,
   onClose,
   onNavigateToNote,
-  onNavigateToChildMap,
+  onOpenChildMap,
   onCreateChildMap,
-  onUploadChildMapImage,
   onEditMarker,
   onDeleteMarker,
 }) => {
-  const hasChildMap = !!selectedMarker.childMapId;
+  const form = markerFormFromObject(selectedMarker);
+  const transform = objectTransform(selectedMarker);
+  const hasChildMap = selectedMarker.linkedSceneId != null;
   const theme = useTheme();
   const { t } = useTranslation(['map', 'common']);
 
@@ -44,19 +51,19 @@ export const MapMarkerPanel: React.FC<Props> = ({
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
         <Box sx={{
           width: 40, height: 40, borderRadius: '50%',
-          backgroundColor: selectedMarker.color,
+          backgroundColor: form.color,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '20px', flexShrink: 0,
-          boxShadow: `0 0 12px ${alpha(selectedMarker.color, 0.4)}`,
+          boxShadow: `0 0 12px ${alpha(form.color, 0.4)}`,
         }}>
-          {selectedMarker.icon ? (MARKER_ICONS[selectedMarker.icon] || '📍') : '📍'}
+          {form.icon ? (MARKER_ICONS[form.icon] || '📍') : '📍'}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {selectedMarker.title}
+            {form.title}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {t('map:markerPanel.positionLabel', { x: selectedMarker.x.toFixed(1), y: selectedMarker.y.toFixed(1) })}
+            {t('map:markerPanel.positionLabel', { x: transform.x.toFixed(1), y: transform.y.toFixed(1) })}
           </Typography>
         </Box>
         <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }} aria-label={t('common:close')}>
@@ -65,11 +72,11 @@ export const MapMarkerPanel: React.FC<Props> = ({
       </Box>
 
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-        {selectedMarker.description && (
+        {form.description && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" sx={sxSectionLabel(theme)}>{t('map:markerPanel.sectionDescription')}</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, lineHeight: 1.6 }}>
-              {selectedMarker.description}
+              {form.description}
             </Typography>
           </Box>
         )}
@@ -109,25 +116,28 @@ export const MapMarkerPanel: React.FC<Props> = ({
           <Typography variant="caption" sx={sxSectionLabel(theme)}>{t('map:markerPanel.sectionChildMap')}</Typography>
           {hasChildMap ? (
             <Box sx={{ mt: 1 }}>
-              <Button fullWidth variant="outlined" startIcon={<MapIcon />}
-                onClick={() => onNavigateToChildMap(selectedMarker.childMapId!)}
-                sx={{ borderColor: alpha(theme.palette.secondary.main, 0.3), color: theme.palette.secondary.main, justifyContent: 'flex-start',
-                  '&:hover': { borderColor: alpha(theme.palette.secondary.main, 0.5), backgroundColor: alpha(theme.palette.secondary.main, 0.08) } }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<MapIcon />}
+                disabled={!onOpenChildMap}
+                onClick={() => onOpenChildMap?.()}
+                sx={{ borderColor: alpha(theme.palette.secondary.main, 0.3), color: theme.palette.secondary.main, justifyContent: 'flex-start' }}
+              >
                 {t('map:markerPanel.openChildMap')}
-              </Button>
-              <Button component="label" fullWidth variant="text" startIcon={<ImageIcon />} size="small"
-                sx={{ mt: 0.5, color: 'text.secondary', justifyContent: 'flex-start' }}>
-                {t('map:markerPanel.uploadImage')}
-                <input type="file" hidden accept="image/*"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) onUploadChildMapImage(selectedMarker, f); }} />
               </Button>
             </Box>
           ) : (
             <Box sx={{ mt: 1 }}>
-              <Button fullWidth variant="outlined" startIcon={<AddIcon />} size="small"
-                onClick={() => onCreateChildMap(selectedMarker)}
-                sx={{ borderColor: theme.palette.divider, color: 'text.secondary', borderStyle: 'dashed', justifyContent: 'flex-start',
-                  '&:hover': { borderColor: alpha(theme.palette.secondary.main, 0.4), color: theme.palette.secondary.main } }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<AddIcon />}
+                size="small"
+                disabled={!onCreateChildMap}
+                onClick={() => onCreateChildMap?.()}
+                sx={{ borderColor: theme.palette.divider, color: 'text.secondary', borderStyle: 'dashed', justifyContent: 'flex-start' }}
+              >
                 {t('map:markerPanel.createChildMap')}
               </Button>
             </Box>

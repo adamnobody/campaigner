@@ -1,14 +1,13 @@
 pub mod ambitions;
 pub mod app;
 pub mod branches;
+pub mod canvas;
 pub mod character_traits;
 pub mod characters;
 pub mod dogmas;
 pub mod dynasties;
 pub mod factions;
 pub mod graph_layouts;
-pub mod legacy_migration;
-pub mod maps;
 pub mod notes;
 pub mod political_scales;
 pub mod project_io;

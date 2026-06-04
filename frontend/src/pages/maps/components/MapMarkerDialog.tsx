@@ -3,39 +3,32 @@ import {
   Box, Typography, TextField, Button, Dialog,
   DialogTitle, DialogContent, DialogActions,
   Select, MenuItem, FormControl, InputLabel, Autocomplete,
-  Chip,
+  Chip, FormControlLabel, Checkbox,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
-import MapIcon from '@mui/icons-material/Map';
-import ImageIcon from '@mui/icons-material/Image';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useTranslation } from 'react-i18next';
 import { DndButton } from '@/components/ui/DndButton';
+import type { CanvasObject } from '@/api/canvas';
 import {
   MARKER_ICONS, MARKER_ICON_ENTRIES, MARKER_COLORS,
-} from './mapUtils';
-import type { MarkerIcon, Marker, NoteOption } from './mapUtils';
-
-export type MapMarkerFormState = {
-  title: string;
-  description: string;
-  icon: MarkerIcon;
-  color: string;
-  linkedNoteId: number | null;
-  createChildMap: boolean;
-};
+  type MarkerFormState, type NoteOption,
+} from '../canvas/canvasModel';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  editingMarker: Marker | null;
-  markerForm: MapMarkerFormState;
-  setMarkerForm: React.Dispatch<React.SetStateAction<MapMarkerFormState>>;
+  editingMarker: CanvasObject | null;
+  markerForm: MarkerFormState;
+  setMarkerForm: React.Dispatch<React.SetStateAction<MarkerFormState>>;
   notes: NoteOption[];
   notesMap: Map<number, NoteOption>;
-  childMapFile: File | null;
-  childMapPreview: string | null;
-  onChildMapFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  clearChildMapFile: () => void;
+  canCreateNestedMap: boolean;
+  createNestedMap: boolean;
+  onCreateNestedMapChange: (value: boolean) => void;
+  nestedMapImageName: string | null;
+  onPickNestedMapImage: () => void;
+  onClearNestedMapImage: () => void;
   onSave: () => void;
 };
 
@@ -47,10 +40,12 @@ export const MapMarkerDialog: React.FC<Props> = ({
   setMarkerForm,
   notes,
   notesMap,
-  childMapFile,
-  childMapPreview,
-  onChildMapFileChange,
-  clearChildMapFile,
+  canCreateNestedMap,
+  createNestedMap,
+  onCreateNestedMapChange,
+  nestedMapImageName,
+  onPickNestedMapImage,
+  onClearNestedMapImage,
   onSave,
 }) => {
   const { t } = useTranslation(['map', 'common']);
@@ -101,66 +96,41 @@ export const MapMarkerDialog: React.FC<Props> = ({
           sx={{ mt: 1 }}
         />
 
-        {!editingMarker && (
-          <Box sx={{ mt: 2 }}>
-            <Box
-              onClick={() => {
-                const next = !markerForm.createChildMap;
-                setMarkerForm(prev => ({ ...prev, createChildMap: next }));
-                if (!next) clearChildMapFile();
-              }}
-              sx={{
-                p: 1.5, borderRadius: 1, cursor: 'pointer', transition: 'all 0.2s',
-                backgroundColor: markerForm.createChildMap ? 'rgba(187,143,206,0.08)' : 'transparent',
-                border: markerForm.createChildMap ? '1px solid rgba(187,143,206,0.3)' : '1px solid rgba(255,255,255,0.08)',
-                '&:hover': { borderColor: 'rgba(187,143,206,0.4)' },
-              }}
-            >
-              <Box display="flex" alignItems="center" gap={1.5}>
-                <Box sx={{
-                  width: 20, height: 20, borderRadius: '4px', transition: 'all 0.2s',
-                  border: markerForm.createChildMap ? '2px solid #BB8FCE' : '2px solid rgba(255,255,255,0.2)',
-                  backgroundColor: markerForm.createChildMap ? '#BB8FCE' : 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {markerForm.createChildMap && (
-                    <Typography sx={{ color: '#fff', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>✓</Typography>
-                  )}
-                </Box>
+        {canCreateNestedMap && (
+          <Box mt={2} p={1.5} sx={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={createNestedMap}
+                  onChange={(_, checked) => onCreateNestedMapChange(checked)}
+                  size="small"
+                />
+              }
+              label={
                 <Box>
-                  <Typography sx={{ color: markerForm.createChildMap ? '#BB8FCE' : 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: '0.9rem' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {t('map:markerDialog.createNestedMapTitle')}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
                     {t('map:markerDialog.createNestedMapHint')}
                   </Typography>
                 </Box>
-                <MapIcon sx={{ ml: 'auto', color: markerForm.createChildMap ? '#BB8FCE' : 'rgba(255,255,255,0.15)', fontSize: 20 }} />
-              </Box>
-            </Box>
-
-            {markerForm.createChildMap && (
-              <Box sx={{ mt: 1.5, ml: 0.5 }}>
-                {childMapPreview ? (
+              }
+            />
+            {createNestedMap && (
+              <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" mt={1}>
+                <Button size="small" variant="outlined" startIcon={<CloudUploadIcon />} onClick={onPickNestedMapImage}>
+                  {t('map:markerDialog.uploadChildMapImage')}
+                </Button>
+                {nestedMapImageName && (
                   <>
-                    <Box sx={{ width: '100%', height: 120, borderRadius: 1, overflow: 'hidden', border: '1px solid rgba(187,143,206,0.3)' }}>
-                      <img src={childMapPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </Box>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mt={0.5}>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>{childMapFile?.name}</Typography>
-                      <Button size="small" onClick={clearChildMapFile}
-                        sx={{ color: 'rgba(255,100,100,0.6)', minWidth: 'auto', fontSize: '0.75rem' }}>
-                        {t('map:markerDialog.removeAttachment')}
-                      </Button>
-                    </Box>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }} noWrap>
+                      {nestedMapImageName}
+                    </Typography>
+                    <Button size="small" onClick={onClearNestedMapImage}>
+                      {t('map:markerDialog.removeAttachment')}
+                    </Button>
                   </>
-                ) : (
-                  <Button component="label" fullWidth variant="outlined" startIcon={<ImageIcon />} size="small"
-                    sx={{ borderColor: 'rgba(187,143,206,0.2)', color: 'rgba(187,143,206,0.6)', borderStyle: 'dashed', py: 1.5,
-                      '&:hover': { borderColor: 'rgba(187,143,206,0.4)', backgroundColor: 'rgba(187,143,206,0.05)' } }}>
-                    {t('map:markerDialog.uploadChildMapImage')}
-                    <input type="file" hidden accept="image/*" onChange={onChildMapFileChange} />
-                  </Button>
                 )}
               </Box>
             )}
@@ -170,7 +140,7 @@ export const MapMarkerDialog: React.FC<Props> = ({
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('map:markerDialog.fieldIcon')}</InputLabel>
           <Select value={markerForm.icon} label={t('map:markerDialog.fieldIcon')}
-            onChange={e => setMarkerForm(prev => ({ ...prev, icon: e.target.value as MarkerIcon }))}>
+            onChange={e => setMarkerForm(prev => ({ ...prev, icon: e.target.value as MarkerFormState['icon'] }))}>
             {MARKER_ICON_ENTRIES.map(([key, emoji]) => (
               <MenuItem key={key} value={key}>
                 <Box display="flex" alignItems="center" gap={1}>

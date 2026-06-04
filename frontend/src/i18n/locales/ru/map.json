@@ -22,13 +22,13 @@
     "custom": "Своя"
   },
   "defaults": {
-    "rootMapName": "Корневая карта"
+    "rootMapName": "Корневой холст"
   },
   "breadcrumb": {
-    "worldMap": "Мир"
+    "worldMap": "Мировой холст"
   },
   "page": {
-    "entityName": "Карта",
+    "entityName": "Холст",
     "loading": "Загрузка карты…",
     "loadingOverlay": "Загрузка карты…",
     "noMapImage": "Карта не загружена",
@@ -39,6 +39,76 @@
     "hintSelectMode": "ЛКМ drag — перемещение карты · СКМ drag — панорамирование · Колёсико — зум",
     "hintMarkerMode": "ЛКМ — добавить маркер · Ctrl + ЛКМ drag или СКМ drag — панорамирование · Колёсико — зум",
     "modeShortcutsHint": "Ctrl+1 — перемещение · Ctrl+2 — маркеры · Ctrl+3 — территории"
+  },
+  "canvas": {
+    "entityName": "холст",
+    "defaults": {
+      "sceneName": "Сцена 1"
+    },
+    "breadcrumbs": {
+      "back": "Назад к родительской карте",
+      "navigateTo": "Открыть {{name}}"
+    },
+    "toolbar": {
+      "sceneStats": "Сцена холста · {{count}} объектов{{selected}}",
+      "selectedWithName": " · выбрано: {{name}}",
+      "toolSelect": "Выбрать / переместить (Ctrl+1)",
+      "toolMarker": "Маркер (Ctrl+2)",
+      "toolText": "Текст (Ctrl+3)",
+      "toolTerritory": "Рисовать территорию",
+      "toolPolygon": "Полигон (Ctrl+4)",
+      "toolPolyline": "Полилиния (Ctrl+5)",
+      "toolRectangle": "Прямоугольник (Ctrl+6)",
+      "toolEllipse": "Эллипс (Ctrl+7)",
+      "toolCurveText": "Текст по кривой (Ctrl+8)",
+      "toolImage": "Изображение (Ctrl+9)",
+      "drawingPoints": "{{count}} т.",
+      "drawingChip": "{{rings}} конт. · {{points}} т.к.",
+      "completeContour": "Контур готов",
+      "zoomPercent": "{{value}}%",
+      "statsChip": "{{markers}} маркеров · {{territories}} территорий",
+      "tooltipSelect": "Режим перемещения (Ctrl+1)",
+      "tooltipMarker": "Режим маркера (Ctrl+2)",
+      "tooltipDrawTerritory": "Рисовать территорию (Ctrl+3)",
+      "save": "Сохранить",
+      "addImage": "Добавить изображение"
+    },
+    "selection": {
+      "title": "Выбранный объект",
+      "meta": "тип={{kind}} · слой={{layer}} · z={{z}}"
+    },
+    "confirm": {
+      "deleteObjectTitle": "Удалить объект?",
+      "deleteObjectBody": "Удалить «{{name}}»?"
+    },
+    "snackbar": {
+      "objectSaveError": "Не удалось сохранить объект холста",
+      "imageUploadError": "Не удалось загрузить изображение",
+      "imageReadError": "Не удалось прочитать изображение",
+      "imagePersistError": "Не удалось добавить изображение на холст",
+      "imageLoadError": "Не удалось загрузить изображение",
+      "sceneAutoCreateError": "Не удалось создать первую сцену холста",
+      "maxTextureExceeded": "Изображение превышает лимит текстуры {{max}}",
+      "objectSelectedForEdit": "Объект выбран для редактирования"
+    },
+    "status": {
+      "maxTextureExceeded": "Лимит текстуры {{max}} превышен: {{width}}x{{height}}"
+    },
+    "context": {
+      "addMarker": "Добавить маркер",
+      "addText": "Добавить текст",
+      "addCurveText": "Добавить текст по кривой",
+      "addImage": "Добавить изображение",
+      "addPolygon": "Добавить полигон",
+      "addRectangle": "Добавить прямоугольник",
+      "addEllipse": "Добавить эллипс",
+      "addPolyline": "Добавить полилинию",
+      "edit": "Редактировать",
+      "duplicate": "Дублировать",
+      "bringToFront": "На передний план",
+      "sendToBack": "На задний план",
+      "delete": "Удалить"
+    }
   },
   "confirm": {
     "cancelDrawingTitle": "Отменить рисование?",

@@ -1,7 +1,7 @@
 {
   "menu": {
     "overview": "Overview",
-    "map": "Map",
+    "map": "Canvas",
     "graph": "Graph",
     "characters": "Characters",
     "states": "States",
@@ -30,7 +30,7 @@
     "home": "Home",
     "newEntity": "New",
     "section": {
-      "map": "Map",
+      "map": "Canvas",
       "characters": "Characters",
       "states": "States",
       "factions": "Factions",

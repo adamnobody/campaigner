@@ -5,12 +5,10 @@ use crate::error::{AppError, Result};
 use crate::models::character::Character;
 use crate::models::dynasty::Dynasty;
 use crate::models::faction::Faction;
-use crate::models::map::MapRecord;
 use crate::models::project::Project;
 use crate::models::upload::{
     CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
-    FactionUploadImageInput, MapUploadImageInput, ProjectUploadMapImageInput, UploadFileInput,
-    UploadSavedPath,
+    FactionUploadImageInput, ProjectUploadMapImageInput, UploadFileInput, UploadSavedPath,
 };
 use crate::uploads::service;
 use crate::uploads::web_path;
@@ -119,19 +117,6 @@ pub fn dynasties_upload_image_command(
         .lock()
         .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
     service::dynasties_upload_image(&app, &connection, input)
-}
-
-#[tauri::command(rename = "maps_upload_image")]
-pub fn maps_upload_image_command(
-    app: AppHandle,
-    state: State<'_, DatabaseState>,
-    input: MapUploadImageInput,
-) -> Result<MapRecord> {
-    let connection = state
-        .connection
-        .lock()
-        .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
-    service::maps_upload_image(&app, &connection, input)
 }
 
 #[tauri::command(rename = "projects_upload_map_image")]

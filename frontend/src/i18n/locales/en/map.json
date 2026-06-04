@@ -22,13 +22,13 @@
     "custom": "Custom"
   },
   "defaults": {
-    "rootMapName": "Root map"
+    "rootMapName": "Root canvas"
   },
   "breadcrumb": {
-    "worldMap": "World"
+    "worldMap": "World canvas"
   },
   "page": {
-    "entityName": "Map",
+    "entityName": "Canvas",
     "loading": "Loading map…",
     "loadingOverlay": "Loading map…",
     "noMapImage": "No map image loaded",
@@ -39,6 +39,76 @@
     "hintSelectMode": "Left-drag to pan map · Middle-drag to pan · Wheel to zoom",
     "hintMarkerMode": "Left-click to add marker · Ctrl + left-drag or middle-drag to pan · Wheel to zoom",
     "modeShortcutsHint": "Ctrl+1 — pan · Ctrl+2 — markers · Ctrl+3 — territories"
+  },
+  "canvas": {
+    "entityName": "canvas",
+    "defaults": {
+      "sceneName": "Scene 1"
+    },
+    "breadcrumbs": {
+      "back": "Back to parent map",
+      "navigateTo": "Open {{name}}"
+    },
+    "toolbar": {
+      "sceneStats": "Canvas scene · {{count}} objects{{selected}}",
+      "selectedWithName": " · selected: {{name}}",
+      "toolSelect": "Select / move (Ctrl+1)",
+      "toolMarker": "Marker (Ctrl+2)",
+      "toolText": "Text (Ctrl+3)",
+      "toolTerritory": "Draw territory",
+      "toolPolygon": "Polygon (Ctrl+4)",
+      "toolPolyline": "Polyline (Ctrl+5)",
+      "toolRectangle": "Rectangle (Ctrl+6)",
+      "toolEllipse": "Ellipse (Ctrl+7)",
+      "toolCurveText": "Curve text (Ctrl+8)",
+      "toolImage": "Image (Ctrl+9)",
+      "drawingPoints": "{{count}} pts",
+      "drawingChip": "{{rings}} closed · {{points}} pts",
+      "completeContour": "Complete ring",
+      "zoomPercent": "{{value}}%",
+      "statsChip": "{{markers}} markers · {{territories}} territories",
+      "tooltipSelect": "Pan mode (Ctrl+1)",
+      "tooltipMarker": "Marker mode (Ctrl+2)",
+      "tooltipDrawTerritory": "Draw territory (Ctrl+3)",
+      "save": "Save",
+      "addImage": "Add image"
+    },
+    "selection": {
+      "title": "Selected object",
+      "meta": "kind={{kind}} · layer={{layer}} · z={{z}}"
+    },
+    "confirm": {
+      "deleteObjectTitle": "Delete object?",
+      "deleteObjectBody": "Delete \"{{name}}\"?"
+    },
+    "snackbar": {
+      "objectSaveError": "Could not save canvas object",
+      "imageUploadError": "Could not upload image",
+      "imageReadError": "Could not read image file",
+      "imagePersistError": "Could not place image on canvas",
+      "imageLoadError": "Could not load image",
+      "sceneAutoCreateError": "Could not create the first canvas scene",
+      "maxTextureExceeded": "Image exceeds texture limit {{max}}",
+      "objectSelectedForEdit": "Object selected for editing"
+    },
+    "status": {
+      "maxTextureExceeded": "Texture limit {{max}} exceeded: {{width}}x{{height}}"
+    },
+    "context": {
+      "addMarker": "Add marker",
+      "addText": "Add text",
+      "addCurveText": "Add curve text",
+      "addImage": "Add image",
+      "addPolygon": "Add polygon",
+      "addRectangle": "Add rectangle",
+      "addEllipse": "Add ellipse",
+      "addPolyline": "Add polyline",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "bringToFront": "Bring to front",
+      "sendToBack": "Send to back",
+      "delete": "Delete"
+    }
   },
   "confirm": {
     "cancelDrawingTitle": "Cancel drawing?",
