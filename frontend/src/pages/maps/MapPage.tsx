@@ -44,7 +44,9 @@ import {
   objectTransform,
   objectToUpsert,
   territoryFormFromObject,
+  territoryRingsFromObject,
   withObjectPosition,
+  withTerritoryRings,
   type CanvasMode,
   type CanvasPoint,
   type MarkerFormState,
@@ -152,6 +154,11 @@ export function CanvasPage() {
   const pendingImagePointRef = useRef<CanvasPoint | null>(null);
   const pendingMarkerPointRef = useRef<CanvasPoint | null>(null);
   const pendingTerritoryPointsRef = useRef<CanvasPoint[] | null>(null);
+  const [territoryEditSession, setTerritoryEditSession] = useState<{
+    objectId: number;
+    rings: CanvasPoint[][];
+    snapshot: CanvasObject;
+  } | null>(null);
   const reportedImageLoadErrorsRef = useRef(new Set<string>());
   const viewportPersistTimerRef = useRef<number | null>(null);
   const pendingViewportRef = useRef<{ sceneId: number; viewport: ViewportPersist } | null>(null);
@@ -168,6 +175,15 @@ export function CanvasPage() {
     () => objects.find((object) => object.id === selectedObjectId) ?? null,
     [objects, selectedObjectId],
   );
+
+  const canvasObjects = useMemo(() => {
+    if (!territoryEditSession) return objects;
+    return objects.map((object) => (
+      object.id === territoryEditSession.objectId
+        ? withTerritoryRings(object, territoryEditSession.rings)
+        : object
+    ));
+  }, [objects, territoryEditSession]);
 
   const notesMap = useMemo(
     () => new Map(notes.map((note) => [note.id, note])),
@@ -436,9 +452,46 @@ export function CanvasPage() {
     navigate(path);
   }, [navigate, projectIdNumber]);
 
-  const handleStartTerritoryPointEdit = useCallback(() => {
-    showSnackbar(t('map:canvas.snackbar.vertexEditPending'), 'info');
-  }, [showSnackbar, t]);
+  const cancelTerritoryShapeEdit = useCallback(() => {
+    if (!territoryEditSession) return;
+    setObjects((current) => current.map((object) => (
+      object.id === territoryEditSession.objectId ? territoryEditSession.snapshot : object
+    )));
+    setTerritoryEditSession(null);
+    showSnackbar(t('map:snackbar.shapeEditCancelled'), 'info');
+  }, [showSnackbar, t, territoryEditSession]);
+
+  const saveTerritoryShapeEdit = useCallback(async () => {
+    if (!territoryEditSession) return;
+    const target = objects.find((object) => object.id === territoryEditSession.objectId);
+    if (!target || target.kind !== 'territory') return;
+    try {
+      const updated = withTerritoryRings(target, territoryEditSession.rings);
+      await persistObject(updated);
+      showSnackbar(t('map:snackbar.territoryShapeSaved'), 'success');
+      setTerritoryEditSession(null);
+    } catch (error) {
+      console.error('[Canvas] saveTerritoryShapeEdit failed', error);
+      showSnackbar(t('map:snackbar.territoryPointsSaveError'), 'error');
+    }
+  }, [objects, persistObject, showSnackbar, t, territoryEditSession]);
+
+  const handleStartTerritoryPointEdit = useCallback((territory: CanvasObject) => {
+    if (territory.kind !== 'territory') return;
+    if (territoryEditSession) {
+      showSnackbar(t('map:snackbar.finishShapeEditFirst'), 'warning');
+      return;
+    }
+    pixiCanvasRef.current?.cancelDrawing();
+    setDraftPointsCount(0);
+    setMode('select');
+    setTerritoryEditSession({
+      objectId: territory.id,
+      rings: territoryRingsFromObject(territory).map((ring) => ring.map((point) => ({ ...point }))),
+      snapshot: territory,
+    });
+    setSelectedObjectId(territory.id);
+  }, [showSnackbar, t, territoryEditSession]);
 
   const nestedMapSceneName = useCallback((markerTitle: string) => (
     t('map:childMap.autoName', { title: markerTitle.trim() || t('map:canvas.defaults.sceneName') })
@@ -869,6 +922,10 @@ export function CanvasPage() {
       if (isBlockedTarget(event.target)) return;
 
       if (event.key === 'Escape') {
+        if (territoryEditSession) {
+          cancelTerritoryShapeEdit();
+          return;
+        }
         if (mode === 'polygon' || mode === 'draw_territory' || mode === 'polyline') {
           if (pixiCanvasRef.current?.cancelDrawing()) {
             setDraftPointsCount(0);
@@ -899,7 +956,7 @@ export function CanvasPage() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mode]);
+  }, [cancelTerritoryShapeEdit, mode, territoryEditSession]);
 
   if (loading || !scene) {
     return (
@@ -942,6 +999,20 @@ export function CanvasPage() {
           pixiCanvasRef.current?.cancelDrawing();
           setDraftPointsCount(0);
         }}
+        territoryEditActive={territoryEditSession != null}
+        territoryEditLabel={
+          territoryEditSession
+            ? t('map:editingPoints.banner', {
+              name: territoryEditSession.snapshot.name ?? 'Territory',
+              ringCount: territoryEditSession.rings.length,
+              pointCount: territoryEditSession.rings.reduce((sum, ring) => sum + ring.length, 0),
+            })
+            : undefined
+        }
+        onSaveTerritoryShape={() => {
+          void saveTerritoryShapeEdit();
+        }}
+        onCancelTerritoryShape={cancelTerritoryShapeEdit}
         onAddImage={() => openImagePickerAt()}
       />
 
@@ -964,7 +1035,14 @@ export function CanvasPage() {
           ref={pixiCanvasRef}
           scene={scene}
           layers={layers}
-          objects={objects}
+          objects={canvasObjects}
+          territoryEditRings={territoryEditSession?.rings ?? null}
+          onTerritoryEditChange={(rings) => {
+            setTerritoryEditSession((current) => (current ? { ...current, rings } : null));
+          }}
+          onTerritoryVertexDeleteRejected={() => {
+            showSnackbar(t('map:snackbar.deleteRingMinVertices'), 'warning');
+          }}
           selectedObjectId={selectedObjectId}
           mode={mode}
           onCanvasClick={handleCanvasClick}
@@ -1011,7 +1089,7 @@ export function CanvasPage() {
               onNavigateToFaction={handleNavigateToFaction}
               onEditTerritory={(territory) => openTerritoryDialog(null, territory)}
               onDeleteTerritory={() => deleteSelected()}
-              onStartEditingPoints={handleStartTerritoryPointEdit}
+              onStartEditingPoints={(territory) => handleStartTerritoryPointEdit(territory)}
             />
           </Box>
         )}

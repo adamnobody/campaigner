@@ -335,6 +335,14 @@ export const territoryRingsFromObject = (object: CanvasObject): CanvasPoint[][] 
 export const territoryTotalPointCount = (object: CanvasObject): number =>
   territoryRingsFromObject(object).reduce((sum, ring) => sum + ring.length, 0);
 
+export const withTerritoryRings = (object: CanvasObject, rings: CanvasPoint[][]): CanvasObject => ({
+  ...object,
+  geometryJson: {
+    ...asRecord(object.geometryJson),
+    rings,
+  },
+});
+
 export const territoryFormFromObject = (object: CanvasObject): TerritoryFormState => {
   const content = asRecord(object.contentJson);
   const style = asRecord(object.styleJson);

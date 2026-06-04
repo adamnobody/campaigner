@@ -17,6 +17,13 @@ import type { CanvasMode, CanvasPoint } from './canvasModel';
 import { objectTransform } from './canvasModel';
 import { hitTestObjects, reconcilePixiObjects, type ReconcileState } from './canvasReconciler';
 import {
+  deleteTerritoryVertex,
+  findNearestTerritoryEdge,
+  hitTerritoryVertex,
+  insertTerritoryVertexOnEdge,
+  moveTerritoryVertex,
+} from './territoryGeometry';
+import {
   applyPersistToViewport,
   clampZoom,
   fitViewportToBounds,
@@ -58,6 +65,15 @@ type DrawPointerState = {
   moved: boolean;
 } | null;
 
+type VertexDragState = {
+  ringIndex: number;
+  pointIndex: number;
+} | null;
+
+const VERTEX_HIT_PX = 10;
+const EDGE_HIT_PX = 14;
+const VERTEX_GUARD_PX = 8;
+
 type Props = {
   scene: CanvasScene;
   layers: CanvasLayer[];
@@ -77,6 +93,10 @@ type Props = {
   onViewportChange: (viewport: ViewportPersist) => void;
   onLargeBackgroundStatus: (status: string) => void;
   onContextMenu: (menu: MapContextMenuState) => void;
+  /** When set, shows vertex handles and edits rings in world coordinates (all rings drawn in overlay). */
+  territoryEditRings: CanvasPoint[][] | null;
+  onTerritoryEditChange: (rings: CanvasPoint[][]) => void;
+  onTerritoryVertexDeleteRejected: () => void;
 };
 
 export type PixiMapCanvasHandle = {
@@ -191,6 +211,9 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onViewportChange,
   onLargeBackgroundStatus,
   onContextMenu,
+  territoryEditRings,
+  onTerritoryEditChange,
+  onTerritoryVertexDeleteRejected,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -207,6 +230,11 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const drawingHoverRef = useRef<CanvasPoint | null>(null);
   const snapToFirstRef = useRef(false);
   const lastDrawClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
+  const lastTerritoryEditClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
+  const vertexDragRef = useRef<VertexDragState>(null);
+  const territoryEditRingsRef = useRef<CanvasPoint[][] | null>(null);
+  const onTerritoryEditChangeRef = useRef(onTerritoryEditChange);
+  const onTerritoryVertexDeleteRejectedRef = useRef(onTerritoryVertexDeleteRejected);
   const lastMarkerClickRef = useRef<{ objectId: number; at: number } | null>(null);
   const spacePressedRef = useRef(false);
   const canvasHostRef = useRef<HTMLCanvasElement | null>(null);
@@ -248,13 +276,50 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onViewportChangeRef.current = onViewportChange;
   onContextMenuRef.current = onContextMenu;
   onLargeBackgroundStatusRef.current = onLargeBackgroundStatus;
+  territoryEditRingsRef.current = territoryEditRings;
+  onTerritoryEditChangeRef.current = onTerritoryEditChange;
+  onTerritoryVertexDeleteRejectedRef.current = onTerritoryVertexDeleteRejected;
 
   const updateCursor = (cursor: string) => {
     if (!canvasHostRef.current) return;
     canvasHostRef.current.style.cursor = cursor;
   };
 
+  const redrawTerritoryEdit = () => {
+    const viewport = viewportRef.current;
+    const draft = draftRef.current;
+    const rings = territoryEditRingsRef.current;
+    if (!viewport || !draft) return;
+    draft.clear();
+    if (!rings) return;
+    const scale = Math.max(viewport.scale.x, 0.05);
+    rings.forEach((ring, ringIndex) => {
+      if (ring.length < 2) return;
+      const strokeColor = ringIndex === 0 ? 0xf8d7a4 : 0x5ecfff;
+      if (ring.length >= 3) {
+        const flat = ring.flatMap((point) => [point.x, point.y]);
+        draft.poly(flat).fill({ color: strokeColor, alpha: ringIndex === 0 ? 0.14 : 0.08 })
+          .stroke({ color: strokeColor, width: 2, alpha: 0.85 });
+      } else {
+        draft.moveTo(ring[0].x, ring[0].y);
+        for (let index = 1; index < ring.length; index += 1) {
+          draft.lineTo(ring[index].x, ring[index].y);
+        }
+        draft.stroke({ color: strokeColor, width: 2, alpha: 0.85 });
+      }
+      ring.forEach((point) => {
+        draft.circle(point.x, point.y, 5 / scale).fill({ color: 0xf8d7a4, alpha: 0.95 });
+        draft.circle(point.x, point.y, 7 / scale).stroke({ color: 0xffffff, width: 1.5 / scale, alpha: 0.9 });
+      });
+    });
+    forceRender();
+  };
+
   const redrawDraft = () => {
+    if (territoryEditRingsRef.current) {
+      redrawTerritoryEdit();
+      return;
+    }
     const viewport = viewportRef.current;
     const draft = draftRef.current;
     if (!viewport || !draft) return;
@@ -455,11 +520,50 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       viewport.on('zoomed', syncViewport);
 
       const handlePointerDown = (event: FederatedPointerEvent) => {
-        if (event.button !== 0) return;
         const worldPoint = pointFromEvent(viewport, event);
+        const editRings = territoryEditRingsRef.current;
+        const isEditingTerritory = Boolean(editRings && editRings.length > 0);
+        const forcePan = spacePressedRef.current;
+
+        if (isEditingTerritory && !forcePan) {
+          const scale = viewport.scale.x;
+          if (event.button === 2) {
+            event.preventDefault();
+            const vertexHit = hitTerritoryVertex(worldPoint, editRings!, VERTEX_HIT_PX, scale);
+            if (vertexHit) {
+              const result = deleteTerritoryVertex(editRings!, vertexHit.ringIndex, vertexHit.pointIndex);
+              if (result.ok) {
+                territoryEditRingsRef.current = result.rings;
+                onTerritoryEditChangeRef.current(result.rings);
+                redrawTerritoryEdit();
+              } else {
+                onTerritoryVertexDeleteRejectedRef.current();
+              }
+            }
+            return;
+          }
+          if (event.button === 0) {
+            const vertexHit = hitTerritoryVertex(worldPoint, editRings!, VERTEX_HIT_PX, scale);
+            if (vertexHit) {
+              vertexDragRef.current = vertexHit;
+              updateCursor('move');
+              return;
+            }
+            panStateRef.current = {
+              startX: event.global.x,
+              startY: event.global.y,
+              viewportX: viewport.x,
+              viewportY: viewport.y,
+            };
+            updateCursor('grabbing');
+            return;
+          }
+          return;
+        }
+
+        if (event.button !== 0) return;
         const hit = hitTestObjects(reconcileStateRef.current, liveObjectsRef.current, worldPoint);
         const isDrawing = isDrawingMode(currentModeRef.current);
-        const forcePan = spacePressedRef.current;
 
         if (isDrawing && !forcePan) {
           drawPointerRef.current = {
@@ -504,6 +608,19 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const handlePointerMove = (event: FederatedPointerEvent) => {
         const worldPoint = pointFromEvent(viewport, event);
         const isDrawing = isDrawingMode(currentModeRef.current);
+
+        if (vertexDragRef.current) {
+          const drag = vertexDragRef.current;
+          const rings = territoryEditRingsRef.current;
+          if (rings) {
+            const next = moveTerritoryVertex(rings, drag.ringIndex, drag.pointIndex, worldPoint);
+            territoryEditRingsRef.current = next;
+            onTerritoryEditChangeRef.current(next);
+            redrawTerritoryEdit();
+          }
+          updateCursor('move');
+          return;
+        }
 
         if (drawPointerRef.current) {
           const draw = drawPointerRef.current;
@@ -559,7 +676,11 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         }
 
         const hovered = hitTestObjects(reconcileStateRef.current, liveObjectsRef.current, worldPoint);
-        if (spacePressedRef.current) {
+        if (territoryEditRingsRef.current) {
+          const scale = viewport.scale.x;
+          const vertexHit = hitTerritoryVertex(worldPoint, territoryEditRingsRef.current, VERTEX_HIT_PX, scale);
+          updateCursor(vertexHit ? 'pointer' : 'grab');
+        } else if (spacePressedRef.current) {
           updateCursor('grab');
         } else if (isDrawing) {
           updateCursor('crosshair');
@@ -572,6 +693,41 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
       const handlePointerUp = (event: FederatedPointerEvent) => {
         const worldPoint = pointFromEvent(viewport, event);
+        const editRings = territoryEditRingsRef.current;
+
+        if (vertexDragRef.current) {
+          vertexDragRef.current = null;
+          updateCursor('grab');
+        }
+
+        if (editRings && editRings.length > 0 && event.button === 0) {
+          const now = Date.now();
+          const last = lastTerritoryEditClickRef.current;
+          const isDoubleClick = Boolean(
+            last && now - last.at < 280 && Math.hypot(last.x - worldPoint.x, last.y - worldPoint.y) < 12,
+          );
+          lastTerritoryEditClickRef.current = { at: now, x: worldPoint.x, y: worldPoint.y };
+          if (isDoubleClick) {
+            const edge = findNearestTerritoryEdge(
+              worldPoint,
+              editRings,
+              EDGE_HIT_PX,
+              VERTEX_GUARD_PX,
+              viewport.scale.x,
+            );
+            if (edge) {
+              const next = insertTerritoryVertexOnEdge(
+                editRings,
+                edge.ringIndex,
+                edge.edgeIndex,
+                edge.projection,
+              );
+              territoryEditRingsRef.current = next;
+              onTerritoryEditChangeRef.current(next);
+              redrawTerritoryEdit();
+            }
+          }
+        }
 
         if (panStateRef.current) {
           panStateRef.current = null;
@@ -668,6 +824,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const handleContextMenu = (event: MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
+        if (territoryEditRingsRef.current) return;
         const rect = app.canvas.getBoundingClientRect();
         const local = new Point(event.clientX - rect.left, event.clientY - rect.top);
         const world = viewport.toWorld(local);
@@ -843,6 +1000,11 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   useEffect(() => {
     redrawDraft();
   }, [mode]);
+
+  useEffect(() => {
+    if (territoryEditRings) clearDrawing();
+    redrawDraft();
+  }, [territoryEditRings]);
 
   return <div ref={hostRef} style={{ width: '100%', height: '100%', minHeight: 0, overflow: 'hidden' }} />;
 });
