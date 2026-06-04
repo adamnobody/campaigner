@@ -45,6 +45,7 @@ import {
   defaultShapeObject,
   defaultTextObject,
   markerFormFromObject,
+  factionDetailPath,
   objectTransform,
   objectToUpsert,
   territoryFormFromObject,
@@ -460,10 +461,7 @@ export function CanvasPage() {
   ]);
 
   const handleNavigateToFaction = useCallback((faction: TerritoryFactionOption) => {
-    const path = faction.kind === 'state'
-      ? `/project/${projectIdNumber}/states/${faction.id}`
-      : `/project/${projectIdNumber}/factions/${faction.id}`;
-    navigate(path);
+    navigate(factionDetailPath(projectIdNumber, faction));
   }, [navigate, projectIdNumber]);
 
   const cancelTerritoryShapeEdit = useCallback(() => {

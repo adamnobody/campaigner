@@ -46,6 +46,15 @@ export type TerritoryFactionOption = {
   kind: 'state' | 'faction';
 };
 
+/** App route for faction/state detail (parity D2; `content_json.factionId` link target). */
+export const factionDetailPath = (
+  projectId: number,
+  faction: Pick<TerritoryFactionOption, 'id' | 'kind'>,
+): string =>
+  faction.kind === 'state'
+    ? `/project/${projectId}/states/${faction.id}`
+    : `/project/${projectId}/factions/${faction.id}`;
+
 export type TerritoryFormState = {
   name: string;
   description: string;
