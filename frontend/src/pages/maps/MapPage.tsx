@@ -18,6 +18,8 @@ import { MapSceneContainerDialog } from './components/MapSceneContainerDialog';
 import { MapMarkerPanel } from './components/MapMarkerPanel';
 import { MapTerritoryDialog } from './components/MapTerritoryDialog';
 import { MapTerritoryPanel } from './components/MapTerritoryPanel';
+import { MapInlineTextEditor } from './components/MapInlineTextEditor';
+import { MapTextPanel } from './components/MapTextPanel';
 import { MapCanvasContextMenu, type MapContextMenuState } from './components/MapCanvasContextMenu';
 import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas';
 import type { ViewportPersist } from './canvas/canvasViewport';
@@ -31,6 +33,17 @@ import {
   type NavigationEntry,
   type NavigationVia,
 } from './canvas/navigationStack';
+import { curveTextGeometryJsonEquals, mergeCurveTextGeometryDraft } from './canvas/curveTextHandles';
+import {
+  applyTextContentToObject,
+  resolveTextContent,
+} from './canvas/textObjectForm';
+import {
+  loadActiveTextPresetId,
+  loadTextPresets,
+  resolveTextPresetStyleForCreate,
+  type MapTextStylePreset,
+} from './canvas/textPresets';
 import { isMapScene, normalizeCanvasModeForSceneType } from './canvas/canvasTools';
 import { mapSceneNeedsBackground } from './canvas/mapBackground';
 import type { SceneContainerDisplayLabels } from './canvas/canvasReconciler';
@@ -178,6 +191,14 @@ export function CanvasPage() {
     rings: CanvasPoint[][];
     snapshot: CanvasObject;
   } | null>(null);
+  const [textPresets, setTextPresets] = useState<MapTextStylePreset[]>([]);
+  const [activeTextPresetId, setActiveTextPresetId] = useState<string | null>(null);
+  const [inlineTextEdit, setInlineTextEdit] = useState<{
+    objectId: number;
+    selectAll?: boolean;
+    replaceWithSeed?: string;
+  } | null>(null);
+  const [textLayoutTick, setTextLayoutTick] = useState(0);
   const reportedImageLoadErrorsRef = useRef(new Set<string>());
   const viewportPersistTimerRef = useRef<number | null>(null);
   const pendingViewportRef = useRef<{ sceneId: number; viewport: ViewportPersist } | null>(null);
@@ -195,14 +216,27 @@ export function CanvasPage() {
     [objects, selectedObjectId],
   );
 
+  const [curveTextGeometryDraft, setCurveTextGeometryDraft] = useState<CanvasObject | null>(null);
+
   const canvasObjects = useMemo(() => {
-    if (!territoryEditSession) return objects;
-    return objects.map((object) => (
-      object.id === territoryEditSession.objectId
-        ? withTerritoryEditRings(object, territoryEditSession.rings)
-        : object
-    ));
-  }, [objects, territoryEditSession]);
+    let list = objects;
+    if (territoryEditSession) {
+      list = list.map((object) => (
+        object.id === territoryEditSession.objectId
+          ? withTerritoryEditRings(object, territoryEditSession.rings)
+          : object
+      ));
+    }
+    list = mergeCurveTextGeometryDraft(list, curveTextGeometryDraft);
+    return list;
+  }, [objects, territoryEditSession, curveTextGeometryDraft]);
+
+  const inlineEditObject = useMemo(
+    () => (inlineTextEdit
+      ? canvasObjects.find((object) => object.id === inlineTextEdit.objectId) ?? null
+      : null),
+    [canvasObjects, inlineTextEdit],
+  );
 
   const notesMap = useMemo(
     () => new Map(notes.map((note) => [note.id, note])),
@@ -276,6 +310,10 @@ export function CanvasPage() {
       if (selectedObject.linkedSceneId != null) {
         return linkedSceneNames.get(selectedObject.linkedSceneId) ?? selectedObject.name ?? t('map:canvas.breadcrumbs.mapFallback');
       }
+    }
+    if (selectedObject.kind === 'text' || selectedObject.kind === 'curve_text') {
+      const line = (selectedObject.name ?? '').trim();
+      if (line) return line;
     }
     return selectedObject.name ?? selectedObject.kind;
   }, [linkedSceneNames, selectedObject, t]);
@@ -372,6 +410,12 @@ export function CanvasPage() {
   useEffect(() => {
     loadScene();
   }, [loadScene]);
+
+  useEffect(() => {
+    if (!projectIdNumber) return;
+    setTextPresets(loadTextPresets(projectIdNumber));
+    setActiveTextPresetId(loadActiveTextPresetId(projectIdNumber));
+  }, [projectIdNumber]);
 
   useEffect(() => {
     if (!projectIdNumber) return;
@@ -758,6 +802,80 @@ export function CanvasPage() {
     }
   }, [scene, pendingSceneContainerPoint, contentLayer, projectIdNumber, showSnackbar, t]);
 
+  const handleShiftCanvasClick = useCallback((point: CanvasPoint) => {
+    openMarkerDialog(point);
+  }, [openMarkerDialog]);
+
+  const handleObjectMove = useCallback((object: CanvasObject, point: CanvasPoint) => {
+    persistObject(withObjectPosition(object, point.x, point.y));
+  }, [persistObject]);
+
+  const handleTextObjectSave = useCallback((object: CanvasObject) => {
+    void persistObject(object);
+  }, [persistObject]);
+
+  const buildNewTextObject = useCallback((
+    layerId: number,
+    point: CanvasPoint,
+    kind: 'text' | 'curve_text',
+  ) => {
+    if (!scene) return null;
+    const object = defaultTextObject(scene.id, layerId, point, kind);
+    const style = resolveTextPresetStyleForCreate(textPresets, activeTextPresetId);
+    return {
+      ...object,
+      styleJson: {
+        ...object.styleJson,
+        fill: style.fill,
+        fontSize: style.fontSize,
+        opacity: style.opacity,
+      },
+    };
+  }, [activeTextPresetId, scene, textPresets]);
+
+  const openInlineTextEdit = useCallback((object: CanvasObject, options?: {
+    selectAll?: boolean;
+    replaceWithSeed?: string;
+  }) => {
+    setSelectedObjectId(object.id);
+    setInlineTextEdit({
+      objectId: object.id,
+      selectAll: options?.selectAll,
+      replaceWithSeed: options?.replaceWithSeed,
+    });
+    setTextLayoutTick((tick) => tick + 1);
+  }, []);
+
+  const handleTextEditRequest = useCallback((object: CanvasObject) => {
+    openInlineTextEdit(object, { selectAll: true });
+  }, [openInlineTextEdit]);
+
+  const handleInlineTextCommit = useCallback((text: string) => {
+    const object = objects.find((item) => item.id === inlineTextEdit?.objectId);
+    setInlineTextEdit(null);
+    if (!object) return;
+    void persistObject(applyTextContentToObject(object, text));
+  }, [inlineTextEdit?.objectId, objects, persistObject]);
+
+  const handleInlineTextCancel = useCallback(() => {
+    setInlineTextEdit(null);
+  }, []);
+
+  const placeCreatedText = useCallback(async (
+    point: CanvasPoint,
+    kind: 'text' | 'curve_text' = 'text',
+  ) => {
+    if (!scene) return;
+    const layer = await contentLayer();
+    const draft = buildNewTextObject(layer.id, point, kind);
+    if (!draft) return;
+    const created = await createCanvasObject(draft);
+    setObjects((current) => [...current, created]);
+    setSelectedObjectId(created.id);
+    setMode('select');
+    openInlineTextEdit(created, { selectAll: true });
+  }, [buildNewTextObject, contentLayer, createCanvasObject, openInlineTextEdit, scene]);
+
   const handleCanvasClick = useCallback(async (point: CanvasPoint) => {
     if (!scene) return;
     if (mode === 'scene_container') {
@@ -770,11 +888,7 @@ export function CanvasPage() {
       return;
     }
     if (mode === 'text' || mode === 'curve_text') {
-      const layer = await contentLayer();
-      const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, mode));
-      setObjects((current) => [...current, created]);
-      setSelectedObjectId(created.id);
-      setMode('select');
+      await placeCreatedText(point, mode);
       return;
     }
     if (mode === 'rectangle' || mode === 'ellipse') {
@@ -789,15 +903,24 @@ export function CanvasPage() {
       pendingImagePointRef.current = point;
       imageInputRef.current?.click();
     }
-  }, [contentLayer, createCanvasObject, mode, openMarkerDialog, projectIdNumber, scene]);
+  }, [contentLayer, createCanvasObject, mode, openMarkerDialog, placeCreatedText, scene]);
 
-  const handleShiftCanvasClick = useCallback((point: CanvasPoint) => {
-    openMarkerDialog(point);
-  }, [openMarkerDialog]);
+  const handleCurveTextGeometryDraft = useCallback((object: CanvasObject) => {
+    setCurveTextGeometryDraft(object);
+  }, []);
 
-  const handleObjectMove = useCallback((object: CanvasObject, point: CanvasPoint) => {
-    persistObject(withObjectPosition(object, point.x, point.y));
+  const handleCurveTextGeometryCommit = useCallback((object: CanvasObject) => {
+    setCurveTextGeometryDraft(object);
+    void persistObject(object);
   }, [persistObject]);
+
+  useEffect(() => {
+    if (!curveTextGeometryDraft) return;
+    const committed = objects.find((item) => item.id === curveTextGeometryDraft.id);
+    if (committed && curveTextGeometryJsonEquals(committed, curveTextGeometryDraft)) {
+      setCurveTextGeometryDraft(null);
+    }
+  }, [objects, curveTextGeometryDraft]);
 
   const handleObjectSelect = useCallback((object: CanvasObject | null) => {
     setSelectedObjectId(object?.id ?? null);
@@ -810,8 +933,30 @@ export function CanvasPage() {
     showSnackbar(t('map:canvas.snackbar.imageLoadError'), 'error');
   }, [showSnackbar, t]);
 
+  useEffect(() => {
+    if (inlineTextEdit) return;
+    if (!selectedObject) return;
+    if (selectedObject.kind !== 'text' && selectedObject.kind !== 'curve_text') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (event.key.length !== 1) return;
+      event.preventDefault();
+      openInlineTextEdit(selectedObject, { replaceWithSeed: event.key });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inlineTextEdit, openInlineTextEdit, selectedObject]);
+
   const handleViewportChange = useCallback((viewport: ViewportPersist) => {
     setZoomPercent(Math.round(viewport.scale * 100));
+    if (inlineTextEdit) setTextLayoutTick((tick) => tick + 1);
     if (!scene) return;
     pendingViewportRef.current = { sceneId: scene.id, viewport };
     if (viewportPersistTimerRef.current != null) window.clearTimeout(viewportPersistTimerRef.current);
@@ -830,7 +975,14 @@ export function CanvasPage() {
         console.error('[Canvas] viewport persist failed', { sceneId: pending.sceneId, error });
       });
     }, 400);
-  }, [projectIdNumber, scene]);
+  }, [inlineTextEdit, projectIdNumber, scene]);
+
+  useEffect(() => {
+    if (!inlineTextEdit) return;
+    if (selectedObjectId !== inlineTextEdit.objectId) {
+      setInlineTextEdit(null);
+    }
+  }, [inlineTextEdit, selectedObjectId]);
 
   const readImageSize = useCallback((file: File) => new Promise<{ width: number; height: number }>((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -1017,6 +1169,27 @@ export function CanvasPage() {
     );
   }, [contextMenu?.targetObject, projectIdNumber, selectedObject, showConfirmDialog, t]);
 
+  useEffect(() => {
+    if (inlineTextEdit) return;
+    if (!selectedObject) return;
+    if (selectedObject.kind !== 'text' && selectedObject.kind !== 'curve_text') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.key !== 'Delete') return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      deleteSelected();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteSelected, inlineTextEdit, selectedObject]);
+
   const selectedForMenu = useMemo(
     () => contextMenu?.targetObject ?? selectedObject ?? null,
     [contextMenu?.targetObject, selectedObject],
@@ -1104,7 +1277,6 @@ export function CanvasPage() {
       '5': 'polyline',
       '6': 'rectangle',
       '7': 'ellipse',
-      '8': 'curve_text',
       '9': 'image',
     };
 
@@ -1282,6 +1454,10 @@ export function CanvasPage() {
           onShiftCanvasClick={handleShiftCanvasClick}
           onObjectSelect={handleObjectSelect}
           onObjectMove={handleObjectMove}
+          onCurveTextGeometryDraft={handleCurveTextGeometryDraft}
+          onCurveTextGeometryCommit={handleCurveTextGeometryCommit}
+          onTextEditRequest={handleTextEditRequest}
+          editingTextObjectId={inlineTextEdit?.objectId ?? null}
           onMarkerOpenLinkedScene={handleMarkerOpenLinkedScene}
           onDraftPointCountChange={(count) => {
             setDraftPointsCount(count);
@@ -1295,6 +1471,18 @@ export function CanvasPage() {
           onLargeBackgroundStatus={setLargeBackgroundStatus}
           onContextMenu={setContextMenu}
         />
+
+        {inlineTextEdit && inlineEditObject && (
+          <MapInlineTextEditor
+            getLayout={() => pixiCanvasRef.current?.getTextEditLayout(inlineTextEdit.objectId) ?? null}
+            layoutTick={textLayoutTick}
+            initialText={resolveTextContent(inlineEditObject)}
+            selectAll={inlineTextEdit.selectAll}
+            replaceWithSeed={inlineTextEdit.replaceWithSeed}
+            onCommit={handleInlineTextCommit}
+            onCancel={handleInlineTextCancel}
+          />
+        )}
 
         {mapSceneNeedsBackground(scene) && (
           <Box
@@ -1442,7 +1630,27 @@ export function CanvasPage() {
           </Box>
         )}
 
-        {selectedObject && selectedObject.kind !== 'marker' && selectedObject.kind !== 'territory' && (
+        {(selectedObject?.kind === 'text' || selectedObject?.kind === 'curve_text') && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapTextPanel
+              key={selectedObject.id}
+              projectId={projectIdNumber}
+              selectedObject={selectedObject}
+              presets={textPresets}
+              onPresetsChange={setTextPresets}
+              onActivePresetChange={setActiveTextPresetId}
+              onClose={() => setSelectedObjectId(null)}
+              onSave={handleTextObjectSave}
+              onDelete={() => deleteSelected()}
+            />
+          </Box>
+        )}
+
+        {selectedObject
+          && selectedObject.kind !== 'marker'
+          && selectedObject.kind !== 'territory'
+          && selectedObject.kind !== 'text'
+          && selectedObject.kind !== 'curve_text' && (
           <Paper
             elevation={6}
             sx={{
@@ -1500,20 +1708,7 @@ export function CanvasPage() {
         }}
         onAddText={() => {
           placeByContextMenu(async (point) => {
-            if (!scene) return;
-            const layer = await contentLayer();
-            const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, 'text'));
-            setObjects((current) => [...current, created]);
-            setSelectedObjectId(created.id);
-          });
-        }}
-        onAddCurveText={() => {
-          placeByContextMenu(async (point) => {
-            if (!scene) return;
-            const layer = await contentLayer();
-            const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, 'curve_text'));
-            setObjects((current) => [...current, created]);
-            setSelectedObjectId(created.id);
+            await placeCreatedText(point, 'text');
           });
         }}
         onAddImage={() => {

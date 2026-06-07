@@ -9,6 +9,9 @@ const ROOT_ONLY_TOOLS: readonly CanvasMode[] = ['scene_container'];
 /** Overlay image tool — map background uses scene.background_path instead. */
 const MAP_EXCLUDED_TOOLS: readonly CanvasMode[] = ['image'];
 
+/** Creation tools hidden from primary toolbar (existing objects still supported). */
+const TOOLBAR_HIDDEN_TOOLS: readonly CanvasMode[] = ['curve_text'];
+
 export function isRootCanvasScene(sceneType: string | null | undefined): boolean {
   return sceneType === 'root_canvas';
 }
@@ -33,6 +36,17 @@ export function isToolAllowedForSceneType(
   return true;
 }
 
+export function isToolbarToolVisible(mode: CanvasMode): boolean {
+  return !TOOLBAR_HIDDEN_TOOLS.includes(mode);
+}
+
+export function listToolbarCanvasModes(
+  sceneType: string | null | undefined,
+  allModes: readonly CanvasMode[],
+): CanvasMode[] {
+  return listAllowedCanvasModes(sceneType, allModes).filter(isToolbarToolVisible);
+}
+
 export function listAllowedCanvasModes(
   sceneType: string | null | undefined,
   allModes: readonly CanvasMode[],
@@ -45,5 +59,7 @@ export function normalizeCanvasModeForSceneType(
   mode: CanvasMode,
   sceneType: string | null | undefined,
 ): CanvasMode {
-  return isToolAllowedForSceneType(mode, sceneType) ? mode : 'select';
+  if (!isToolAllowedForSceneType(mode, sceneType)) return 'select';
+  if (!isToolbarToolVisible(mode)) return 'select';
+  return mode;
 }

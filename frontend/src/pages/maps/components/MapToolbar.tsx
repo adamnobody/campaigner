@@ -21,7 +21,6 @@ import PlaceIcon from '@mui/icons-material/Place';
 import PentagonIcon from '@mui/icons-material/Pentagon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
-import GestureIcon from '@mui/icons-material/Gesture';
 import PolylineIcon from '@mui/icons-material/Timeline';
 import RectangleIcon from '@mui/icons-material/Crop75';
 import EllipseIcon from '@mui/icons-material/PanoramaFishEye';
@@ -32,7 +31,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MapIcon from '@mui/icons-material/Map';
 import { useTranslation } from 'react-i18next';
 import type { CanvasMode } from '../canvas/canvasModel';
-import { isMapScene, isRootCanvasScene, isToolAllowedForSceneType } from '../canvas/canvasTools';
+import { isMapScene, isRootCanvasScene, isToolAllowedForSceneType, isToolbarToolVisible } from '../canvas/canvasTools';
 import {
   formatNavigationBreadcrumbLabel,
   type NavigationEntry,
@@ -99,7 +98,8 @@ export function MapToolbar({
       ? t('map:canvas.sceneType.map')
       : null;
 
-  const allowTool = (toolMode: CanvasMode) => isToolAllowedForSceneType(toolMode, sceneType);
+  const allowTool = (toolMode: CanvasMode) =>
+    isToolAllowedForSceneType(toolMode, sceneType) && isToolbarToolVisible(toolMode);
 
   return (
     <Box data-tour="map-toolbar" display="flex" flexDirection="column" gap={0.5} mb={1}>
@@ -258,13 +258,6 @@ export function MapToolbar({
               <ToggleButton value="ellipse">
                 <Tooltip title={t('map:canvas.toolbar.toolEllipse')}>
                   <EllipseIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-            )}
-            {allowTool('curve_text') && (
-              <ToggleButton value="curve_text">
-                <Tooltip title={t('map:canvas.toolbar.toolCurveText')}>
-                  <GestureIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>
             )}

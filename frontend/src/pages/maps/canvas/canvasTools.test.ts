@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   isMapScene,
   isRootCanvasScene,
+  isToolbarToolVisible,
   isToolAllowedForSceneType,
   listAllowedCanvasModes,
+  listToolbarCanvasModes,
   normalizeCanvasModeForSceneType,
 } from './canvasTools';
 import type { CanvasMode } from './canvasModel';
@@ -70,6 +72,27 @@ describe('normalizeCanvasModeForSceneType', () => {
   it('keeps mode when allowed', () => {
     expect(normalizeCanvasModeForSceneType('polygon', 'root_canvas')).toBe('polygon');
     expect(normalizeCanvasModeForSceneType('marker', 'map')).toBe('marker');
+  });
+});
+
+describe('toolbar visibility', () => {
+  it('hides curve_text from primary toolbar while keeping kind allowed', () => {
+    expect(isToolbarToolVisible('text')).toBe(true);
+    expect(isToolbarToolVisible('curve_text')).toBe(false);
+    expect(isToolAllowedForSceneType('curve_text', 'root_canvas')).toBe(true);
+    expect(isToolAllowedForSceneType('curve_text', 'map')).toBe(true);
+  });
+
+  it('lists text but not curve_text for toolbar on root_canvas and map', () => {
+    expect(listToolbarCanvasModes('root_canvas', ALL_MODES)).toContain('text');
+    expect(listToolbarCanvasModes('root_canvas', ALL_MODES)).not.toContain('curve_text');
+    expect(listToolbarCanvasModes('map', ALL_MODES)).toContain('text');
+    expect(listToolbarCanvasModes('map', ALL_MODES)).not.toContain('curve_text');
+  });
+
+  it('normalizes hidden toolbar modes to select', () => {
+    expect(normalizeCanvasModeForSceneType('curve_text', 'root_canvas')).toBe('select');
+    expect(normalizeCanvasModeForSceneType('text', 'root_canvas')).toBe('text');
   });
 });
 

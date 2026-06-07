@@ -19,6 +19,7 @@ import {
 } from './canvasModel';
 import { territoryLabelPlacement } from './territoryLabel';
 import { resolveTerritoryStyleFields, traceSmoothedClosedRing } from './territoryRender';
+import { resolveTextContent } from './textObjectForm';
 
 type HitTest = (point: CanvasPoint) => boolean;
 type ImageLoadErrorHandler = (object: CanvasObject, resourcePath: string) => void;
@@ -50,6 +51,8 @@ export type ReconcileOptions = {
   /** Linked child map scene backgrounds for scene_container thumbnails. */
   linkedSceneBackgroundPaths?: ReadonlyMap<number, string>;
   sceneContainerLabels?: SceneContainerDisplayLabels;
+  /** Hide glyphs while inline text editor is open. */
+  editingTextObjectId?: number | null;
 };
 
 const loadedImageTextures = new Map<string, ImageTexture>();
@@ -247,13 +250,30 @@ const curveSamples = (geometry: Record<string, unknown>): CanvasPoint[] => {
   return samples;
 };
 
-const drawCurveText = (container: Container, object: CanvasObject): HitTest => {
+const drawCurveText = (
+  container: Container,
+  object: CanvasObject,
+  options?: ReconcileOptions,
+): HitTest => {
+  if (options?.editingTextObjectId === object.id) {
+    const geometry = asRecord(object.geometryJson);
+    const style = asRecord(object.styleJson);
+    const fontSize = asNumber(style.fontSize, 24);
+    const text = resolveTextContent(object);
+    const points = curveSamples(geometry);
+    const width = Math.max(160, text.length * fontSize * 0.55);
+    const height = fontSize * 1.2;
+    const anchor = points[0] ?? { x: 0, y: 0 };
+    return boundsHit(anchor.x, anchor.y, width, height);
+  }
+
   const geometry = asRecord(object.geometryJson);
   const style = asRecord(object.styleJson);
   const content = asRecord(object.contentJson);
-  const text = asString(content.text, object.name ?? 'Curve text');
+  const text = resolveTextContent(object);
   const fontSize = asNumber(style.fontSize, 24);
   const color = toColor(style.fill ?? style.color, 0xf8d7a4);
+  const opacity = asNumber(style.opacity, 1);
   const points = curveSamples(geometry);
   const hitBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
   const total = Math.max(1, text.length - 1);
@@ -274,6 +294,7 @@ const drawCurveText = (container: Container, object: CanvasObject): HitTest => {
     glyph.anchor.set(0.5);
     glyph.position.set(x, y);
     glyph.rotation = Math.atan2(b.y - a.y, b.x - a.x);
+    glyph.alpha = opacity;
     container.addChild(glyph);
     hitBoxes.push({ x: x - fontSize * 0.35, y: y - fontSize * 0.55, width: fontSize * 0.7, height: fontSize * 1.1 });
   }
@@ -557,7 +578,7 @@ const drawObject = (
   const alpha = asNumber(style.opacity, object.kind === 'territory' ? 0.25 : 0.9);
   const strokeWidth = asNumber(style.strokeWidth, selected ? 4 : 2);
 
-  if (object.kind === 'curve_text') return drawCurveText(container, object);
+  if (object.kind === 'curve_text') return drawCurveText(container, object, options);
 
   if (object.kind === 'scene_container') {
     const labels = options?.sceneContainerLabels ?? {
@@ -577,17 +598,25 @@ const drawObject = (
   }
 
   if (object.kind === 'text') {
-    const text = new Text({
-      text: asString(content.text, object.name ?? 'Text'),
-      resolution: TEXT_RESOLUTION,
-      style: {
-        fill,
-        fontFamily: 'Crimson Text, serif',
-        fontSize: asNumber(style.fontSize, 28),
-      },
-    });
-    container.addChild(text);
-    return boundsHit(0, 0, text.width, text.height);
+    const fontSize = asNumber(style.fontSize, 28);
+    const text = resolveTextContent(object);
+    const width = Math.max(160, text.length * fontSize * 0.55);
+    const height = fontSize * 1.2;
+    if (options?.editingTextObjectId !== object.id) {
+      const label = new Text({
+        text,
+        resolution: TEXT_RESOLUTION,
+        style: {
+          fill,
+          fontFamily: 'Crimson Text, serif',
+          fontSize,
+        },
+      });
+      label.alpha = asNumber(style.opacity, 1);
+      container.addChild(label);
+      return boundsHit(0, 0, label.width, label.height);
+    }
+    return boundsHit(0, 0, width, height);
   }
 
   if (object.kind === 'marker') {
@@ -768,6 +797,7 @@ export const reconcilePixiObjects = (
           sceneContainerLabels: object.kind === 'scene_container'
             ? options?.sceneContainerLabels
             : undefined,
+          editingTextObjectId: options?.editingTextObjectId ?? null,
         });
     let entry = state.objects.get(object.id);
     if (!entry) {

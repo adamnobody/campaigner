@@ -19,6 +19,7 @@ import { computeObjectsBounds } from './canvasBounds';
 import { isMapScene } from './canvasTools';
 import {
   buildMapAutoFitKey,
+  clampPointToMapBounds,
   clampViewportPersistToMapBounds,
   computeFitToBoundsViewport,
   getCanvasWorldSize,
@@ -31,8 +32,19 @@ import {
   shouldUseInfiniteCanvas,
   type MapBackgroundSize,
 } from './mapBackground';
+import {
+  canEditCurveTextBezierHandles,
+  curveTextGeometryJsonEquals,
+  getCurveTextBezierGeometry,
+  getCurveTextHandleWorldPositions,
+  hitCurveTextHandle,
+  mergeCurveTextGeometryDraft,
+  withUpdatedCurveTextHandle,
+  type CurveTextHandleId,
+} from './curveTextHandles';
 import type { CanvasMode, CanvasPoint } from './canvasModel';
-import { objectTransform } from './canvasModel';
+import { objectTransform, withObjectPosition } from './canvasModel';
+import { textEditLayoutFromObject, textObjectWorldAnchor, type TextEditScreenLayout } from './textEditLayout';
 import {
   hitTestObjects,
   reconcilePixiObjects,
@@ -62,9 +74,9 @@ import {
 } from './canvasViewport';
 
 const DOT_STEP = 64;
-const DOT_COLOR = 0x9fb0bf;
-const DOT_ALPHA = 0.18;
-const DOT_RADIUS = 0.95;
+const DOT_COLOR = 0xb4c5d6;
+const DOT_ALPHA = 0.38;
+const DOT_RADIUS = 2;
 
 type DragState = {
   objectId: number;
@@ -93,7 +105,13 @@ type VertexDragState = {
   pointIndex: number;
 } | null;
 
+type CurveHandleDragState = {
+  objectId: number;
+  handle: CurveTextHandleId;
+} | null;
+
 const VERTEX_HIT_PX = 10;
+const CURVE_HANDLE_HIT_PX = 12;
 const EDGE_HIT_PX = 14;
 const VERTEX_GUARD_PX = 8;
 
@@ -107,6 +125,11 @@ type Props = {
   onShiftCanvasClick?: (point: CanvasPoint) => void;
   onObjectSelect: (object: CanvasObject | null) => void;
   onObjectMove: (object: CanvasObject, point: CanvasPoint) => void;
+  onCurveTextGeometryDraft?: (object: CanvasObject) => void;
+  onCurveTextGeometryCommit?: (object: CanvasObject) => void;
+  /** Double-click on text / curve_text opens inline editor. */
+  onTextEditRequest?: (object: CanvasObject) => void;
+  editingTextObjectId?: number | null;
   /** Double-click on a marker that has linkedSceneId (select mode, no drag). */
   onMarkerOpenLinkedScene?: (object: CanvasObject) => void;
   onDraftPointCountChange: (count: number) => void;
@@ -139,6 +162,7 @@ export type PixiMapCanvasHandle = {
   cancelDrawing: () => boolean;
   getDrawingPoints: () => CanvasPoint[];
   clearDrawingPoints: () => void;
+  getTextEditLayout: (objectId: number) => TextEditScreenLayout | null;
 };
 
 const isClosedDrawMode = (mode: CanvasMode): boolean =>
@@ -162,8 +186,9 @@ const redrawDraftPolyline = (
   points: CanvasPoint[],
   hoverPoint: CanvasPoint | null,
   snapToFirst: boolean,
+  skipClear = false,
 ): void => {
-  graphics.clear();
+  if (!skipClear) graphics.clear();
   if (points.length === 0) return;
   graphics.moveTo(points[0].x, points[0].y);
   for (let index = 1; index < points.length; index += 1) {
@@ -234,6 +259,10 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onShiftCanvasClick,
   onObjectSelect,
   onObjectMove,
+  onCurveTextGeometryDraft,
+  onCurveTextGeometryCommit,
+  onTextEditRequest,
+  editingTextObjectId = null,
   onMarkerOpenLinkedScene,
   onDraftPointCountChange,
   onCreatePolygon,
@@ -271,11 +300,18 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const lastDrawClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
   const lastTerritoryEditClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
   const vertexDragRef = useRef<VertexDragState>(null);
+  const curveHandleDragRef = useRef<CurveHandleDragState>(null);
+  const curveTextGeometryDraftRef = useRef<CanvasObject | null>(null);
+  const objectDragPositionRef = useRef<{ objectId: number; x: number; y: number } | null>(null);
+  const objectsPropRef = useRef<CanvasObject[]>(objects);
+  const selectedObjectIdRef = useRef<number | null>(selectedObjectId);
   const territoryEditRingsRef = useRef<CanvasPoint[][] | null>(null);
   const territoryDraftCompletedRingsRef = useRef<CanvasPoint[][]>([]);
   const onTerritoryEditChangeRef = useRef(onTerritoryEditChange);
   const onTerritoryVertexDeleteRejectedRef = useRef(onTerritoryVertexDeleteRejected);
   const lastMarkerClickRef = useRef<{ objectId: number; at: number } | null>(null);
+  const lastTextClickRef = useRef<{ objectId: number; at: number } | null>(null);
+  const editingTextObjectIdRef = useRef<number | null>(editingTextObjectId);
   const spacePressedRef = useRef(false);
   const canvasHostRef = useRef<HTMLCanvasElement | null>(null);
   const liveObjectsRef = useRef<CanvasObject[]>(objects);
@@ -286,6 +322,9 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const shiftClickPointerRef = useRef<{ downX: number; downY: number; worldPoint: CanvasPoint } | null>(null);
   const onObjectSelectRef = useRef(onObjectSelect);
   const onObjectMoveRef = useRef(onObjectMove);
+  const onCurveTextGeometryDraftRef = useRef(onCurveTextGeometryDraft);
+  const onCurveTextGeometryCommitRef = useRef(onCurveTextGeometryCommit);
+  const onTextEditRequestRef = useRef(onTextEditRequest);
   const onMarkerOpenLinkedSceneRef = useRef(onMarkerOpenLinkedScene);
   const onDraftPointCountChangeRef = useRef(onDraftPointCountChange);
   const onCreatePolygonRef = useRef(onCreatePolygon);
@@ -301,18 +340,95 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const applyingCameraRef = useRef(false);
   const [pixiReady, setPixiReady] = useState(false);
   const [viewportScale, setViewportScale] = useState(1);
+  const layersRef = useRef(layers);
+  const viewportScaleRef = useRef(viewportScale);
+  const linkedSceneNamesRef = useRef(linkedSceneNames);
+  const linkedSceneBackgroundPathsRef = useRef(linkedSceneBackgroundPaths);
+  const sceneContainerLabelsRef = useRef(sceneContainerLabels);
 
   const forceRender = () => {
     appRef.current?.render();
   };
 
-  liveObjectsRef.current = objects;
+  const resolveEffectiveObjects = (source = objectsPropRef.current): CanvasObject[] => {
+    let list = mergeCurveTextGeometryDraft(source, curveTextGeometryDraftRef.current);
+    const dragPosition = objectDragPositionRef.current;
+    if (dragPosition) {
+      list = list.map((object) => (
+        object.id === dragPosition.objectId
+          ? withObjectPosition(object, dragPosition.x, dragPosition.y)
+          : object
+      ));
+    }
+    return list;
+  };
+
+  const objectPositionNear = (object: CanvasObject, x: number, y: number): boolean => {
+    const transform = objectTransform(object);
+    return Math.abs(transform.x - x) < 0.5 && Math.abs(transform.y - y) < 0.5;
+  };
+
+  const syncPendingObjectDragPosition = (source: CanvasObject[]) => {
+    const dragPosition = objectDragPositionRef.current;
+    if (!dragPosition) return;
+    const committed = source.find((item) => item.id === dragPosition.objectId);
+    if (committed && objectPositionNear(committed, dragPosition.x, dragPosition.y)) {
+      objectDragPositionRef.current = null;
+    }
+  };
+
+  const isInteractiveObjectDragActive = () => (
+    Boolean(curveHandleDragRef.current || objectDragPositionRef.current)
+  );
+
+  const syncCurveTextDraft = (draft: CanvasObject) => {
+    curveTextGeometryDraftRef.current = draft;
+    liveObjectsRef.current = resolveEffectiveObjects();
+  };
+
+  const reconcileLiveObjects = () => {
+    const root = rootObjectsRef.current;
+    if (!root) return;
+    const effectiveObjects = resolveEffectiveObjects();
+    liveObjectsRef.current = effectiveObjects;
+    reconcilePixiObjects(
+      root,
+      reconcileStateRef.current,
+      layersRef.current,
+      effectiveObjects,
+      selectedObjectIdRef.current,
+      (object, resourcePath) => {
+        onImageLoadErrorRef.current(object, resourcePath);
+      },
+      {
+        viewportScale: viewportScaleRef.current,
+        linkedSceneNames: linkedSceneNamesRef.current,
+        linkedSceneBackgroundPaths: linkedSceneBackgroundPathsRef.current,
+        sceneContainerLabels: sceneContainerLabelsRef.current,
+        editingTextObjectId: editingTextObjectIdRef.current,
+      },
+    );
+    forceRender();
+  };
+
+  objectsPropRef.current = objects;
+  layersRef.current = layers;
+  viewportScaleRef.current = viewportScale;
+  linkedSceneNamesRef.current = linkedSceneNames;
+  linkedSceneBackgroundPathsRef.current = linkedSceneBackgroundPaths;
+  sceneContainerLabelsRef.current = sceneContainerLabels;
+  liveObjectsRef.current = resolveEffectiveObjects();
   currentModeRef.current = mode;
   sceneRef.current = scene;
   onCanvasClickRef.current = onCanvasClick;
   onShiftCanvasClickRef.current = onShiftCanvasClick;
   onObjectSelectRef.current = onObjectSelect;
   onObjectMoveRef.current = onObjectMove;
+  onCurveTextGeometryDraftRef.current = onCurveTextGeometryDraft;
+  onCurveTextGeometryCommitRef.current = onCurveTextGeometryCommit;
+  onTextEditRequestRef.current = onTextEditRequest;
+  editingTextObjectIdRef.current = editingTextObjectId;
+  selectedObjectIdRef.current = selectedObjectId;
   onMarkerOpenLinkedSceneRef.current = onMarkerOpenLinkedScene;
   onDraftPointCountChangeRef.current = onDraftPointCountChange;
   onCreatePolygonRef.current = onCreatePolygon;
@@ -370,6 +486,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     const viewport = viewportRef.current;
     const draft = draftRef.current;
     if (!viewport || !draft) return;
+    draft.clear();
     const completed = territoryDraftCompletedRingsRef.current;
     if (completed.length > 0 && currentModeRef.current === 'draw_territory') {
       for (const ring of completed) {
@@ -385,7 +502,19 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       drawingPointsRef.current,
       drawingHoverRef.current,
       snapToFirstRef.current,
+      true,
     );
+
+    const selectedCurveText = getSelectedCurveTextObject();
+    if (
+      selectedCurveText
+      && canEditCurveTextBezierHandles(selectedCurveText)
+      && currentModeRef.current === 'select'
+    ) {
+      drawCurveTextHandles(draft, viewport, selectedCurveText);
+    }
+
+    forceRender();
   };
 
   const setDrawingPoints = (points: CanvasPoint[]) => {
@@ -452,6 +581,56 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     const bounds = getFiniteMapBounds();
     if (!bounds) return point;
     return isPointInsideMapBounds(point, bounds) ? point : null;
+  };
+
+  const clampCurveHandleWorldPoint = (point: CanvasPoint): CanvasPoint => {
+    if (!isFiniteMapActive()) return point;
+    const size = backgroundSizeRef.current;
+    if (!size) return point;
+    return clampPointToMapBounds(point, getMapSceneWorldBounds(size));
+  };
+
+  const getSelectedCurveTextObject = (): CanvasObject | null => {
+    const selectedId = selectedObjectIdRef.current;
+    if (selectedId == null) return null;
+    const object = liveObjectsRef.current.find((item) => item.id === selectedId);
+    if (!object || object.kind !== 'curve_text') return null;
+    return object;
+  };
+
+  const applyCurveHandleWorldPoint = (object: CanvasObject, handle: CurveTextHandleId, worldPoint: CanvasPoint) =>
+    withUpdatedCurveTextHandle(object, handle, clampCurveHandleWorldPoint(worldPoint));
+
+  const drawCurveTextHandles = (draft: Graphics, viewport: Viewport, object: CanvasObject) => {
+    const scale = Math.max(viewport.scale.x, 0.05);
+    const geometry = getCurveTextBezierGeometry(object);
+    const transform = objectTransform(object);
+    const toWorld = (local: CanvasPoint): CanvasPoint => ({
+      x: transform.x + local.x,
+      y: transform.y + local.y,
+    });
+    const start = toWorld(geometry.start);
+    const control = toWorld(geometry.control);
+    const end = toWorld(geometry.end);
+
+    draft.moveTo(start.x, start.y);
+    for (let index = 1; index <= 32; index += 1) {
+      const t = index / 32;
+      const mt = 1 - t;
+      draft.lineTo(
+        mt * mt * start.x + 2 * mt * t * control.x + t * t * end.x,
+        mt * mt * start.y + 2 * mt * t * control.y + t * t * end.y,
+      );
+    }
+    draft.stroke({ color: 0xf8d7a4, width: 1.5 / scale, alpha: 0.75 });
+
+    const drawHandle = (point: CanvasPoint, fill: number) => {
+      draft.circle(point.x, point.y, 6 / scale).fill({ color: fill, alpha: 0.95 });
+      draft.circle(point.x, point.y, 8 / scale).stroke({ color: 0xffffff, width: 1.5 / scale, alpha: 0.9 });
+    };
+    drawHandle(start, 0x5ecfff);
+    drawHandle(control, 0xf8d7a4);
+    drawHandle(end, 0xbb8fce);
   };
 
   const fitToContentInternal = (source: 'auto' | 'manual') => {
@@ -624,6 +803,20 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     clearDrawingPoints() {
       setDrawingPoints([]);
     },
+    getTextEditLayout(objectId: number) {
+      const viewport = viewportRef.current;
+      const host = hostRef.current;
+      if (!viewport || !host) return null;
+      const object = liveObjectsRef.current.find((item) => item.id === objectId);
+      if (!object || (object.kind !== 'text' && object.kind !== 'curve_text')) return null;
+      const anchor = textObjectWorldAnchor(object);
+      const screen = viewport.toScreen(anchor.x, anchor.y);
+      return {
+        left: screen.x,
+        top: screen.y,
+        ...textEditLayoutFromObject(object, viewport.scale.x),
+      };
+    },
   }), [onViewportChange, scene]);
 
   useEffect(() => {
@@ -789,6 +982,25 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         }
 
         if (event.button !== 0) return;
+
+        if (currentModeRef.current === 'select' && !forcePan) {
+          const selectedCurve = getSelectedCurveTextObject();
+          if (selectedCurve) {
+            const handleHit = hitCurveTextHandle(
+              worldPoint,
+              selectedCurve,
+              CURVE_HANDLE_HIT_PX,
+              viewport.scale.x,
+            );
+            if (handleHit) {
+              curveHandleDragRef.current = { objectId: selectedCurve.id, handle: handleHit };
+              syncCurveTextDraft(selectedCurve);
+              updateCursor('move');
+              return;
+            }
+          }
+        }
+
         const hit = hitTestObjects(reconcileStateRef.current, liveObjectsRef.current, worldPoint);
         const isDrawing = isDrawingMode(currentModeRef.current);
 
@@ -839,6 +1051,20 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const handlePointerMove = (event: FederatedPointerEvent) => {
         const worldPoint = pointFromEvent(viewport, event);
         const isDrawing = isDrawingMode(currentModeRef.current);
+
+        if (curveHandleDragRef.current) {
+          const drag = curveHandleDragRef.current;
+          const object = liveObjectsRef.current.find((item) => item.id === drag.objectId);
+          if (object) {
+            const updated = applyCurveHandleWorldPoint(object, drag.handle, worldPoint);
+            syncCurveTextDraft(updated);
+            reconcileLiveObjects();
+            onCurveTextGeometryDraftRef.current?.(updated);
+            redrawDraft();
+          }
+          updateCursor('move');
+          return;
+        }
 
         if (vertexDragRef.current) {
           const drag = vertexDragRef.current;
@@ -899,10 +1125,16 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           if (Math.hypot(event.global.x - drag.startX, event.global.y - drag.startY) > 2) {
             drag.moved = true;
           }
+          const x = worldPoint.x - drag.offsetX;
+          const y = worldPoint.y - drag.offsetY;
+          objectDragPositionRef.current = { objectId: drag.objectId, x, y };
+          liveObjectsRef.current = resolveEffectiveObjects();
           const entry = reconcileStateRef.current.objects.get(drag.objectId);
           if (entry) {
-            entry.display.position.set(worldPoint.x - drag.offsetX, worldPoint.y - drag.offsetY);
+            entry.display.position.set(x, y);
           }
+          redrawDraft();
+          forceRender();
           updateCursor('move');
           return;
         }
@@ -938,6 +1170,21 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
             }
             return;
           }
+        }
+
+        if (curveHandleDragRef.current) {
+          const drag = curveHandleDragRef.current;
+          curveHandleDragRef.current = null;
+          const object = liveObjectsRef.current.find((item) => item.id === drag.objectId);
+          if (object) {
+            const updated = applyCurveHandleWorldPoint(object, drag.handle, worldPoint);
+            syncCurveTextDraft(updated);
+            reconcileLiveObjects();
+            onCurveTextGeometryCommitRef.current?.(updated);
+          }
+          redrawDraft();
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
+          return;
         }
 
         if (vertexDragRef.current) {
@@ -983,7 +1230,24 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           const drag = dragStateRef.current;
           dragStateRef.current = null;
           if (!drag.moved) {
+            objectDragPositionRef.current = null;
             const clicked = liveObjectsRef.current.find((item) => item.id === drag.objectId);
+            if (
+              (clicked?.kind === 'text' || clicked?.kind === 'curve_text')
+              && onTextEditRequestRef.current
+            ) {
+              const now = Date.now();
+              const last = lastTextClickRef.current;
+              if (last?.objectId === clicked.id && now - last.at < 400) {
+                lastTextClickRef.current = null;
+                onTextEditRequestRef.current(clicked);
+                updateCursor('text');
+                return;
+              }
+              lastTextClickRef.current = { objectId: clicked.id, at: now };
+              updateCursor('pointer');
+              return;
+            }
             if (
               (clicked?.kind === 'marker' || clicked?.kind === 'scene_container')
               && clicked.linkedSceneId != null
@@ -1005,12 +1269,13 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
             return;
           }
           lastMarkerClickRef.current = null;
+          const x = worldPoint.x - drag.offsetX;
+          const y = worldPoint.y - drag.offsetY;
+          objectDragPositionRef.current = { objectId: drag.objectId, x, y };
+          liveObjectsRef.current = resolveEffectiveObjects();
           const movedObject = liveObjectsRef.current.find((item) => item.id === drag.objectId);
           if (movedObject) {
-            onObjectMoveRef.current(movedObject, {
-              x: worldPoint.x - drag.offsetX,
-              y: worldPoint.y - drag.offsetY,
-            });
+            onObjectMoveRef.current(movedObject, { x, y });
           }
           updateCursor('pointer');
           return;
@@ -1329,15 +1594,20 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   }, [pixiReady, scene, objects, backgroundLoadTick]);
 
   useEffect(() => {
+    syncPendingObjectDragPosition(objects);
+
     if (!pixiReady) return;
+    if (isInteractiveObjectDragActive()) return;
     const root = rootObjectsRef.current;
     if (!root) return;
 
+    const effectiveObjects = resolveEffectiveObjects(objects);
+    liveObjectsRef.current = effectiveObjects;
     reconcilePixiObjects(
       root,
       reconcileStateRef.current,
       layers,
-      objects,
+      effectiveObjects,
       selectedObjectId,
       (object, resourcePath) => {
         onImageLoadErrorRef.current(object, resourcePath);
@@ -1347,15 +1617,37 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         linkedSceneNames,
         linkedSceneBackgroundPaths,
         sceneContainerLabels,
+        editingTextObjectId,
       },
     );
     forceRender();
-  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale, linkedSceneNames, linkedSceneBackgroundPaths, sceneContainerLabels]);
+  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale, linkedSceneNames, linkedSceneBackgroundPaths, sceneContainerLabels, editingTextObjectId]);
+
+  useEffect(() => {
+    const draft = curveTextGeometryDraftRef.current;
+    if (!draft || curveHandleDragRef.current) return;
+    const committed = objects.find((item) => item.id === draft.id);
+    if (committed && curveTextGeometryJsonEquals(committed, draft)) {
+      curveTextGeometryDraftRef.current = null;
+      liveObjectsRef.current = resolveEffectiveObjects(objects);
+    }
+  }, [objects]);
 
   useEffect(() => {
     redrawDraft();
     updateCursor(mode === 'select' ? 'grab' : 'pointer');
   }, [mode]);
+
+  useEffect(() => {
+    curveHandleDragRef.current = null;
+    curveTextGeometryDraftRef.current = null;
+    objectDragPositionRef.current = null;
+    redrawDraft();
+  }, [selectedObjectId]);
+
+  useEffect(() => {
+    redrawDraft();
+  }, [objects]);
 
   useEffect(() => {
     if (territoryEditRings) clearDrawing();

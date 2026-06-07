@@ -17,7 +17,6 @@ type Props = {
   onClose: () => void;
   onAddMarker: () => void;
   onAddText: () => void;
-  onAddCurveText: () => void;
   onAddImage: () => void;
   onAddPolygon: () => void;
   onAddRectangle: () => void;
@@ -36,7 +35,6 @@ export function MapCanvasContextMenu({
   onClose,
   onAddMarker,
   onAddText,
-  onAddCurveText,
   onAddImage,
   onAddPolygon,
   onAddRectangle,
@@ -65,9 +63,6 @@ export function MapCanvasContextMenu({
           </MenuItem>
           <MenuItem onClick={() => { onAddText(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.addText')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddCurveText(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addCurveText')}</ListItemText>
           </MenuItem>
           {!isMapScene(sceneType) && (
             <MenuItem onClick={() => { onAddImage(); onClose(); }}>

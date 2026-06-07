@@ -1,5 +1,6 @@
 import type { CanvasObject } from '@/api/canvas';
 import { asNumber, asPoints, asRecord, asString, objectTransform } from './canvasModel';
+import { resolveTextContent } from './textObjectForm';
 
 export type ContentBounds = {
   minX: number;
@@ -107,7 +108,7 @@ const boundsForObject = (object: CanvasObject): ContentBounds | null => {
 
   if (object.kind === 'text') {
     const fontSize = asNumber(style.fontSize, 28);
-    const text = asString(content.text, object.name ?? 'Text');
+    const text = resolveTextContent(object);
     const width = Math.max(asNumber(geometry.width, 160), text.length * fontSize * 0.55);
     const height = Math.max(asNumber(geometry.height, 48), fontSize * 1.2);
     return growLocalRect(bounds, transform.x, transform.y, width, height);
