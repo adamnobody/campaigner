@@ -1,18 +1,28 @@
 import {
   Application,
+  Assets,
   Container,
   Graphics,
   Point,
   Rectangle,
+  Sprite,
   Texture,
   TilingSprite,
   type FederatedPointerEvent,
 } from 'pixi.js';
+import { resolveUploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { Viewport } from 'pixi-viewport';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { CanvasLayer, CanvasObject, CanvasScene } from '@/api/canvas';
 import type { MapContextMenuState } from '../components/MapCanvasContextMenu';
 import { computeObjectsBounds } from './canvasBounds';
+import { isMapScene } from './canvasTools';
+import {
+  computeMapSceneFitBounds,
+  resolveMapBackgroundAssetPath,
+  shouldAutoFitMapBackgroundOnLoad,
+  type MapBackgroundSize,
+} from './mapBackground';
 import type { CanvasMode, CanvasPoint } from './canvasModel';
 import { objectTransform } from './canvasModel';
 import {
@@ -234,6 +244,9 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const viewportRef = useRef<Viewport | null>(null);
+  const backgroundLayerRef = useRef<Container | null>(null);
+  const backgroundSizeRef = useRef<MapBackgroundSize | null>(null);
+  const [backgroundLoadTick, setBackgroundLoadTick] = useState(0);
   const rootObjectsRef = useRef<Container | null>(null);
   const reconcileStateRef = useRef<ReconcileState>({ layerContainers: new Map(), objects: new Map() });
   const dotsRef = useRef<TilingSprite | null>(null);
@@ -389,7 +402,9 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     if (!viewport) return;
 
     const visibleObjects = liveObjectsRef.current.filter((object) => !object.isHidden);
-    const bounds = computeObjectsBounds(visibleObjects);
+    const bounds = isMapScene(sceneRef.current.sceneType)
+      ? computeMapSceneFitBounds(backgroundSizeRef.current, visibleObjects)
+      : computeObjectsBounds(visibleObjects);
     const cameraBefore = snapshotFromViewport(viewport);
 
     console.debug('[Canvas] fitToContent', {
@@ -407,7 +422,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       cameraBefore,
     });
 
-    if (!bounds || visibleObjects.length === 0) {
+    if (!bounds || (visibleObjects.length === 0 && !backgroundSizeRef.current)) {
       if (!viewport) return;
       const fallback = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
       applyPersistToViewport(viewport, fallback);
@@ -539,6 +554,11 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       dotsRef.current = dots;
       app.stage.addChild(dots);
       app.stage.addChild(viewport);
+
+      const backgroundLayer = new Container();
+      backgroundLayer.eventMode = 'none';
+      backgroundLayerRef.current = backgroundLayer;
+      viewport.addChild(backgroundLayer);
 
       const rootObjects = new Container();
       rootObjects.sortableChildren = true;
@@ -994,6 +1014,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       viewportRef.current = null;
       setPixiReady(false);
       autoFitSceneRef.current = null;
+      backgroundLayerRef.current = null;
+      backgroundSizeRef.current = null;
       rootObjectsRef.current = null;
       dotsRef.current = null;
       dotTextureRef.current?.destroy(true);
@@ -1020,13 +1042,64 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
   useEffect(() => {
     if (!pixiReady) return;
+    const layer = backgroundLayerRef.current;
+    if (!layer) return;
+
+    const assetPath = resolveMapBackgroundAssetPath(scene);
+    backgroundSizeRef.current = null;
+    layer.removeChildren();
+
+    if (!assetPath) {
+      if (dotsRef.current) dotsRef.current.visible = true;
+      setBackgroundLoadTick((tick) => tick + 1);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const url = await resolveUploadAssetUrl(assetPath);
+      if (cancelled || !url || layer.destroyed) return;
+      try {
+        const texture = await Assets.load(url);
+        if (cancelled || layer.destroyed) return;
+        const sprite = new Sprite(texture);
+        sprite.position.set(0, 0);
+        sprite.width = texture.width;
+        sprite.height = texture.height;
+        sprite.eventMode = 'none';
+        layer.addChild(sprite);
+        backgroundSizeRef.current = { width: texture.width, height: texture.height };
+        if (dotsRef.current) dotsRef.current.visible = false;
+        setBackgroundLoadTick((tick) => tick + 1);
+      } catch (error) {
+        console.error('[Canvas] map background load failed', { sceneId: scene.id, assetPath, error });
+        if (dotsRef.current) dotsRef.current.visible = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pixiReady, scene.id, scene.sceneType, scene.backgroundPath]);
+
+  useEffect(() => {
+    if (!pixiReady) return;
     if (autoFitSceneRef.current === scene.id) return;
 
     const visibleObjects = objects.filter((object) => !object.isHidden);
     const viewport = viewportRef.current;
     if (!viewport) return;
+
+    const isMap = isMapScene(scene.sceneType);
+    const waitingForBackground = isMap
+      && Boolean(resolveMapBackgroundAssetPath(scene))
+      && !backgroundSizeRef.current;
+    if (waitingForBackground) return;
+
     const savedViewport = sceneViewportPersist(scene, viewport.screenWidth, viewport.screenHeight);
-    const bounds = computeObjectsBounds(visibleObjects);
+    const bounds = isMap
+      ? computeMapSceneFitBounds(backgroundSizeRef.current, visibleObjects)
+      : computeObjectsBounds(visibleObjects);
     const camera = snapshotFromViewport(viewport);
 
     console.debug('[Canvas] scene load camera', {
@@ -1049,16 +1122,19 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
     autoFitSceneRef.current = scene.id;
 
-    if (!shouldAutoFitOnLoad(
-      visibleObjects.length,
-      bounds,
-      savedViewport,
-      viewport.screenWidth,
-      viewport.screenHeight,
-    )) return;
+    const shouldFit = isMap && backgroundSizeRef.current
+      ? shouldAutoFitMapBackgroundOnLoad(bounds, savedViewport, viewport.screenWidth, viewport.screenHeight)
+      : shouldAutoFitOnLoad(
+        visibleObjects.length,
+        bounds,
+        savedViewport,
+        viewport.screenWidth,
+        viewport.screenHeight,
+      );
+    if (!shouldFit) return;
 
     fitToContentInternal('auto');
-  }, [pixiReady, scene, objects]);
+  }, [pixiReady, scene, objects, backgroundLoadTick]);
 
   useEffect(() => {
     if (!pixiReady) return;

@@ -327,9 +327,11 @@ export function MapToolbar({
             <IconButton size="small" onClick={onResetView}><CenterFocusStrongIcon fontSize="small" /></IconButton>
           </Box>
 
-          <Button variant="outlined" startIcon={<CloudUploadIcon />} size="small" onClick={onAddImage}>
-            {t('map:canvas.toolbar.addImage')}
-          </Button>
+          {!isMapScene(sceneType) && (
+            <Button variant="outlined" startIcon={<CloudUploadIcon />} size="small" onClick={onAddImage}>
+              {t('map:canvas.toolbar.addImage')}
+            </Button>
+          )}
         </Box>
       </Box>
     </Box>

@@ -30,8 +30,9 @@ describe('isToolAllowedForSceneType', () => {
     expect(isToolAllowedForSceneType('text', 'root_canvas')).toBe(true);
   });
 
-  it('map hides create-map / scene_container tool', () => {
+  it('map hides create-map / scene_container and overlay image tool', () => {
     expect(isToolAllowedForSceneType('scene_container', 'map')).toBe(false);
+    expect(isToolAllowedForSceneType('image', 'map')).toBe(false);
     expect(isToolAllowedForSceneType('marker', 'map')).toBe(true);
     expect(isToolAllowedForSceneType('draw_territory', 'map')).toBe(true);
   });
@@ -52,9 +53,10 @@ describe('listAllowedCanvasModes', () => {
     expect(allowed).toContain('scene_container');
   });
 
-  it('map list excludes scene_container', () => {
+  it('map list excludes scene_container and image', () => {
     const allowed = listAllowedCanvasModes('map', ALL_MODES);
     expect(allowed).not.toContain('scene_container');
+    expect(allowed).not.toContain('image');
     expect(allowed).toContain('marker');
   });
 });

@@ -6,6 +6,9 @@ const MAP_ONLY_TOOLS: readonly CanvasMode[] = ['marker', 'draw_territory'];
 /** Tools that only make sense on the project root canvas. */
 const ROOT_ONLY_TOOLS: readonly CanvasMode[] = ['scene_container'];
 
+/** Overlay image tool — map background uses scene.background_path instead. */
+const MAP_EXCLUDED_TOOLS: readonly CanvasMode[] = ['image'];
+
 export function isRootCanvasScene(sceneType: string | null | undefined): boolean {
   return sceneType === 'root_canvas';
 }
@@ -25,7 +28,7 @@ export function isToolAllowedForSceneType(
     return !MAP_ONLY_TOOLS.includes(mode);
   }
   if (isMapScene(sceneType)) {
-    return !ROOT_ONLY_TOOLS.includes(mode);
+    return !ROOT_ONLY_TOOLS.includes(mode) && !MAP_EXCLUDED_TOOLS.includes(mode);
   }
   return true;
 }

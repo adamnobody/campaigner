@@ -2749,6 +2749,27 @@ mod tests {
             "LINKED_SCENE_ANCESTOR_REFERENCE"
         );
 
+        let empty_bg_res = create_map_scene_container(
+            &connection,
+            &CreateMapSceneContainerInput {
+                project_id: project.id,
+                parent_scene_id: root.id,
+                parent_layer_id: content_layer.id,
+                map_name: "Empty BG Map".to_string(),
+                background_path: "   ".to_string(),
+                object_name: None,
+                transform_json: json!({ "x": 10.0, "y": 10.0 }),
+                style_json: None,
+                content_json: None,
+                branch_id: None,
+            },
+        );
+        assert!(empty_bg_res.is_err());
+        assert_eq!(
+            empty_bg_res.unwrap_err().to_payload().code,
+            "CREATE_MAP_MISSING_BACKGROUND"
+        );
+
         // 5. Atomic create map + scene_container does not leave orphan scene on failure
         // Let's count scenes before
         let scenes_before: i32 = connection
@@ -2798,6 +2819,10 @@ mod tests {
         .expect("atomic creation success");
 
         assert_eq!(atomic_success.map_scene.scene_type, Some("map".to_string()));
+        assert_eq!(
+            atomic_success.map_scene.background_path.as_deref(),
+            Some("bg.jpg")
+        );
         assert_eq!(
             atomic_success.container_object.kind,
             "scene_container".to_string()

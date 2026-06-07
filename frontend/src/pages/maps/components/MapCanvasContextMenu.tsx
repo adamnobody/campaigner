@@ -1,6 +1,7 @@
 import { Divider, ListItemText, Menu, MenuItem } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { CanvasObject } from '@/api/canvas';
+import { isMapScene } from '../canvas/canvasTools';
 
 export type MapContextMenuState = {
   mouseX: number;
@@ -12,6 +13,7 @@ export type MapContextMenuState = {
 
 type Props = {
   menu: MapContextMenuState;
+  sceneType?: string | null;
   onClose: () => void;
   onAddMarker: () => void;
   onAddText: () => void;
@@ -30,6 +32,7 @@ type Props = {
 
 export function MapCanvasContextMenu({
   menu,
+  sceneType,
   onClose,
   onAddMarker,
   onAddText,
@@ -66,9 +69,11 @@ export function MapCanvasContextMenu({
           <MenuItem onClick={() => { onAddCurveText(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.addCurveText')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onAddImage(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addImage')}</ListItemText>
-          </MenuItem>
+          {!isMapScene(sceneType) && (
+            <MenuItem onClick={() => { onAddImage(); onClose(); }}>
+              <ListItemText>{t('map:canvas.context.addImage')}</ListItemText>
+            </MenuItem>
+          )}
           <Divider />
           <MenuItem onClick={() => { onAddPolygon(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.addPolygon')}</ListItemText>

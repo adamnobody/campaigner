@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Box, Button, Chip, CircularProgress, Paper, Stack, Typography, alpha, useTheme } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
@@ -30,7 +31,8 @@ import {
   type NavigationEntry,
   type NavigationVia,
 } from './canvas/navigationStack';
-import { normalizeCanvasModeForSceneType } from './canvas/canvasTools';
+import { isMapScene, normalizeCanvasModeForSceneType } from './canvas/canvasTools';
+import { mapSceneNeedsBackground } from './canvas/mapBackground';
 import type { SceneContainerDisplayLabels } from './canvas/canvasReconciler';
 import {
   appendCompletedTerritoryRing,
@@ -163,6 +165,7 @@ export function CanvasPage() {
   const [territoryForm, setTerritoryForm] = useState<TerritoryFormState>(DEFAULT_TERRITORY_FORM);
   const pixiCanvasRef = useRef<PixiMapCanvasHandle | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const mapBackgroundInputRef = useRef<HTMLInputElement | null>(null);
   const childMapImageInputRef = useRef<HTMLInputElement | null>(null);
   const dialogNestedMapImageInputRef = useRef<HTMLInputElement | null>(null);
   const pendingChildMapMarkerIdRef = useRef<number | null>(null);
@@ -871,10 +874,30 @@ export function CanvasPage() {
     }
   }, [contentLayer, createCanvasObject, readImageSize, scene, showSnackbar, t]);
 
+  const uploadMapSceneBackground = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !scene || !isMapScene(scene.sceneType)) return;
+    setLoading(true);
+    try {
+      const updated = await trackCanvasWrite(
+        canvasApi.uploadSceneBackground(scene.id, projectIdNumber, file),
+      );
+      setScene(updated);
+      showSnackbar(t('map:snackbar.mapUploaded'), 'success');
+    } catch (error) {
+      console.error('[Canvas] upload map background failed', { sceneId: scene.id, error });
+      showSnackbar(t('map:snackbar.mapUploadError'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectIdNumber, scene, showSnackbar, t]);
+
   const uploadBackground = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !scene) return;
+    if (isMapScene(scene.sceneType)) return;
     const fallbackPoint = pixiCanvasRef.current?.getViewportCenter() ?? { x: 0, y: 0 };
     const point = pendingImagePointRef.current ?? fallbackPoint;
     const role: 'background' | null = pendingImagePointRef.current ? null : 'background';
@@ -1109,7 +1132,7 @@ export function CanvasPage() {
       const next = keyToMode[event.key];
       if (!next) return;
       event.preventDefault();
-      setMode(next);
+      setMode(normalizeCanvasModeForSceneType(next, scene?.sceneType));
       if (next !== 'polygon' && next !== 'draw_territory' && next !== 'polyline') {
         pixiCanvasRef.current?.cancelDrawing();
         setDraftPointsCount(0);
@@ -1213,6 +1236,7 @@ export function CanvasPage() {
       )}
 
       <input ref={imageInputRef} type="file" hidden accept="image/*" onChange={uploadBackground} />
+      <input ref={mapBackgroundInputRef} type="file" hidden accept="image/*" onChange={uploadMapSceneBackground} />
       <input ref={childMapImageInputRef} type="file" hidden accept="image/*" onChange={(event) => { void handleChildMapImageSelected(event); }} />
       <input ref={dialogNestedMapImageInputRef} type="file" hidden accept="image/*" onChange={handleDialogNestedMapImagePick} />
 
@@ -1260,6 +1284,39 @@ export function CanvasPage() {
           onLargeBackgroundStatus={setLargeBackgroundStatus}
           onContextMenu={setContextMenu}
         />
+
+        {mapSceneNeedsBackground(scene) && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+              px: 3,
+              textAlign: 'center',
+              backgroundColor: alpha(theme.palette.background.default, 0.88),
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            <Typography variant="h6" sx={{ fontFamily: '"Cinzel", serif' }}>
+              {t('map:mapBackground.missingTitle')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
+              {t('map:mapBackground.missingHint')}
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => mapBackgroundInputRef.current?.click()}
+            >
+              {t('map:mapBackground.addButton')}
+            </Button>
+          </Box>
+        )}
 
         {(mode === 'draw_territory' || territoryEditSession) && (
           <Box
@@ -1424,6 +1481,7 @@ export function CanvasPage() {
 
       <MapCanvasContextMenu
         menu={contextMenu}
+        sceneType={scene.sceneType}
         onClose={() => setContextMenu(null)}
         onAddMarker={() => {
           if (!contextMenu) return;

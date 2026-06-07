@@ -212,12 +212,23 @@
   "childMap": {
     "autoName": "Map: {{title}}"
   },
+  "mapBackground": {
+    "missingTitle": "This map has no base image",
+    "missingHint": "Add a map image to continue. It will be used as the map foundation.",
+    "addButton": "Add map background"
+  },
   "sceneContainerDialog": {
     "title": "New map on canvas",
     "hint": "The map appears on the canvas as a card. Open it with a double-click or from the selection panel.",
     "nameLabel": "Map name",
     "nameRequired": "Enter a map name",
     "pickBackground": "Choose background image",
+    "replaceBackground": "Replace image",
+    "previewAlt": "Map background preview",
+    "crop": "Crop",
+    "cropTitle": "Crop map image",
+    "cropHint": "Drag the frame to move it. Drag corners to resize the crop area.",
+    "cropApply": "Apply crop",
     "backgroundRequired": "Background image is required",
     "backgroundNote": "This image becomes the geographic map background. You can replace it later.",
     "create": "Create map"
