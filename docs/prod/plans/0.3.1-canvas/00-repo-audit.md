@@ -1,5 +1,7 @@
 # 0.3.1 Canvas — Repository Audit Baseline
 
+> **Historical.** Baseline audit before mainline canvas migration. Implementation and parity tracks are closed; see `docs/prod/vision/canvas.md` §6.
+
 Status: factual baseline for ADR-0002 / ADR-0003. No implementation decisions are made here.
 
 ## Corrections from pre-audit discussion

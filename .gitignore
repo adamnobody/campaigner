@@ -15,8 +15,6 @@ frontend/dist/
 dist-electron/
 dist-electron-check/
 dist-electron-check2/
-prototypes/*/node_modules
-prototypes/*/dist
 
 # ==================== Local data (SQLite, uploads) ====================
 # Runtime data is generated locally and should not be committed.

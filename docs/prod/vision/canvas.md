@@ -74,16 +74,23 @@ Canvas в Campaigner — универсальная рабочая поверх�
 
 ## 6. Этапность
 
-- **0.3.1** — Pixi canvas, примитивы, curve text, UI «Холст», route `/map`, миграция 017, canvas tables.
-- **0.3.1.x (parity)** — маркеры, территории, вложенные карты через marker, breadcrumbs; **без** миграции схемы (`docs/plans/0.3.1.x-canvas-parity.md`).
-- **0.3.2 (Canvas architecture)** — ADR-0004: `scene_type` (`root_canvas` | `map`), `scene_container`, атомарное создание карты с карточкой, backend validation kinds, navigation stack; миграция **018+** (`docs/plans/0.3.2-canvas-architecture.md`). **Без** silent migration legacy root.
-- **0.3.2+ (product)** — CV04 слои, SD01 Sidebar, SD02 Context panel, `note`, `file_ref` — параллельный product track, не блокирует architecture PR5–8.
+| Веха | Статус | Содержание |
+|------|--------|------------|
+| **0.3.1** | ✅ closed | Pixi canvas, примитивы, curve text render, UI «Холст», route `/map`, migration 017 |
+| **0.3.1.x parity** | ✅ closed | Маркеры, территории, nested maps (marker), breadcrumbs — [`docs/plans/0.3.1.x-canvas-parity.md`](../plans/0.3.1.x-canvas-parity.md) |
+| **0.3.5 text parity** | ✅ closed | Inline edit, `MapTextPanel`, presets, curve handle UX, Delete key |
+| **0.3.2 architecture (core)** | ✅ closed | ADR-0004 **Accepted**: migration 018, `scene_type`, `scene_container`, atomic create, kind matrix — [`docs/plans/0.3.2-canvas-architecture.md`](../plans/0.3.2-canvas-architecture.md) |
+| **0.3.2 PR9** | ⏸ deferred | Legacy opt-in migrator (no silent migration) |
+| **0.3.2+ product** | open | CV04 слои, SD01 Sidebar, SD02 Context panel, shape/image inspectors, `note`, `file_ref` |
 - **0.4.x** — CV05 многоуровневые проекции, CV06 режимы, CV07 `entity_ref`, CV08 `connection`, CV09 `region` / `board_link`, CV10.
 - **0.6.x+** — DG01 timeline (Plot), DG02 branches UI, DG03 Knowledge Graph как Relations mode.
 
 **Снятый конфликт (2026-06):** `scene_container` ранее был отнесён только к 0.4.x (CV09). Карточка карты на Холсте перенесена в **0.3.2 architecture**, потому что без неё нельзя разделить Холст и географическую карту в модели. Полноценный Plot mode и `entity_ref` на доске остаются в 0.4.x.
 
-Примечание по реализации: файл `MapPage.tsx`, route `/project/:id/map` и param `mapId` сохраняются; UI может называть страницу «Холст». Alias `/canvas` — опционально позже.
+Примечание по реализации: файл `MapPage.tsx`, route `/project/:id/map` и param `mapId` сохраняются; UI может называть страницу «Холст». Alias `/canvas` — **deferred**.
+
+**Runtime debt** (reconciler, culling, shader dots) — отдельно: [`docs/canvas-debt.md`](../canvas-debt.md).  
+**Актуальные UX gaps** — [`docs/canvas-functional-gaps.md`](../canvas-functional-gaps.md).
 
 ## 7. Принципы
 

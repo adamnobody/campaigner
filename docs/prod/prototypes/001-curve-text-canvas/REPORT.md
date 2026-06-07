@@ -123,7 +123,7 @@ See [CARRYOVER.md](./CARRYOVER.md) for deferred items that must be addressed in 
 
 ## Technical debt / carry-over to main project
 
-- **StrictMode disabled** in `prototypes/001-curve-text-canvas/src/main.tsx` due to incomplete Pixi `Application` teardown in the React `useEffect` cleanup (double-mount under StrictMode leaves duplicate listeners/textures). Acceptable for this throwaway prototype; **main project must implement proper `destroy()` + listener removal before re-enabling StrictMode.**
+- **StrictMode disabled** in sandbox `main.tsx` (throwaway code, removed 2026-06-07) due to incomplete Pixi `Application` teardown in the React `useEffect` cleanup (double-mount under StrictMode leaves duplicate listeners/textures). Acceptable for this throwaway prototype; **main project must implement proper `destroy()` + listener removal before re-enabling StrictMode.**
 
 ## Lessons / snippets worth keeping for mainline
 

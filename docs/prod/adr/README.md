@@ -14,7 +14,7 @@ write a new ADR that supersedes the old one — do not edit history.
 | 0001 | Canvas rendering technology            | Accepted | 2026-05-22 |
 | 0002 | MapPage migration strategy             | Accepted | 2026-05-24 |
 | 0003 | Canvas data model                      | Accepted | 2026-05-24 |
-| 0004 | Canvas scene types and scene_container | Proposed | 2026-06-03 |
+| 0004 | Canvas scene types and scene_container | Accepted | 2026-06-07 |
 
 ## Status values
 
