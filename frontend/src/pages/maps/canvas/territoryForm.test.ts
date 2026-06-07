@@ -77,6 +77,30 @@ describe('territoryFormFromObject', () => {
       factionId: 7,
     });
   });
+
+  it('falls back to content_json when style_json is empty', () => {
+    const form = territoryFormFromObject(territoryObject({
+      styleJson: {},
+      contentJson: {
+        description: 'Legacy',
+        factionId: 5,
+        fill: '#112233',
+        opacity: 0.33,
+        borderColor: '#445566',
+        borderWidth: 5,
+        smoothing: 0.5,
+      },
+    }));
+    expect(form).toMatchObject({
+      description: 'Legacy',
+      color: '#112233',
+      opacity: 0.33,
+      borderColor: '#445566',
+      borderWidth: 5,
+      smoothing: 0.5,
+      factionId: 5,
+    });
+  });
 });
 
 describe('applyTerritoryFormToObject', () => {
@@ -97,7 +121,12 @@ describe('applyTerritoryFormToObject', () => {
       description: 'New',
       factionId: 3,
       smoothing: 0.1,
+      fill: '#ff0000',
+      opacity: 0.8,
+      borderColor: '#00ff00',
+      borderWidth: 4,
     });
+    expect(updated.geometryJson).toEqual(territoryObject().geometryJson);
     expect(updated.styleJson).toMatchObject({
       fill: '#ff0000',
       opacity: 0.8,
@@ -118,7 +147,14 @@ describe('buildTerritoryCreateInput', () => {
     expect(input.kind).toBe('territory');
     expect(input.name).toBe('Realm');
     expect(input.geometryJson).toEqual({ rings: [points] });
-    expect(input.contentJson).toMatchObject({ factionId: 9 });
+    expect(input.contentJson).toMatchObject({
+      factionId: 9,
+      fill: DEFAULT_TERRITORY_FORM.color,
+      opacity: DEFAULT_TERRITORY_FORM.opacity,
+      borderColor: DEFAULT_TERRITORY_FORM.borderColor,
+      borderWidth: DEFAULT_TERRITORY_FORM.borderWidth,
+      smoothing: DEFAULT_TERRITORY_FORM.smoothing,
+    });
   });
 });
 

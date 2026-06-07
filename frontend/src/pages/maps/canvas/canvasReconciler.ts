@@ -18,6 +18,7 @@ import {
   type CanvasPoint,
 } from './canvasModel';
 import { territoryLabelPlacement } from './territoryLabel';
+import { resolveTerritoryStyleFields, traceSmoothedClosedRing } from './territoryRender';
 
 type HitTest = (point: CanvasPoint) => boolean;
 type ImageLoadErrorHandler = (object: CanvasObject, resourcePath: string) => void;
@@ -182,11 +183,17 @@ const drawRingList = (
   stroke: number,
   alpha: number,
   strokeWidth: number,
+  smoothing = 0,
 ): void => {
   for (const points of ringList) {
     if (points.length >= 3) {
-      const flat = points.flatMap((point) => [point.x, point.y]);
-      graphics.poly(flat).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+      if (smoothing > 0) {
+        traceSmoothedClosedRing(graphics, points, smoothing);
+        graphics.fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+      } else {
+        const flat = points.flatMap((point) => [point.x, point.y]);
+        graphics.poly(flat).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+      }
       continue;
     }
     if (points.length === 2) {
@@ -574,11 +581,25 @@ const drawObject = (
   if (object.kind === 'territory' || object.kind === 'polygon') {
     const ringList = territoryRingsFromObject(object);
     if (ringList.length > 0) {
-      drawRingList(graphics, ringList, fill, stroke, alpha, strokeWidth);
+      const territoryStyle = object.kind === 'territory'
+        ? resolveTerritoryStyleFields(object, {
+            fill: '#4ecdc4',
+            opacity: 0.25,
+            borderColor: '#9ff3df',
+            borderWidth: 2,
+            smoothing: 0,
+          })
+        : null;
+      const ringFill = territoryStyle ? toColor(territoryStyle.fill, fill) : fill;
+      const ringStroke = territoryStyle ? toColor(territoryStyle.borderColor, stroke) : stroke;
+      const ringAlpha = territoryStyle ? territoryStyle.opacity : alpha;
+      const ringStrokeWidth = territoryStyle ? territoryStyle.borderWidth : strokeWidth;
+      const ringSmoothing = territoryStyle?.smoothing ?? 0;
+      drawRingList(graphics, ringList, ringFill, ringStroke, ringAlpha, ringStrokeWidth, ringSmoothing);
       if (object.kind === 'territory') {
         drawTerritoryLabel(container, ringList, object.name ?? '', viewportScale);
       }
-      return hitTestRingList(ringList, strokeWidth);
+      return hitTestRingList(ringList, ringStrokeWidth);
     }
   }
 
