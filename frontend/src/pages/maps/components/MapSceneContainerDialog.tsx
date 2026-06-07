@@ -35,6 +35,12 @@ export const MapSceneContainerDialog: React.FC<Props> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   useEffect(() => {
     if (!previewUrl) return;
     return () => URL.revokeObjectURL(previewUrl);
@@ -47,13 +53,22 @@ export const MapSceneContainerDialog: React.FC<Props> = ({
     setNameError(null);
     setFileError(null);
     setCropOpen(false);
+    resetFileInput();
   }, [open]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setFile(e.target.files[0]);
+    const nextFile = e.target.files?.[0] ?? null;
+    e.target.value = '';
+    if (nextFile) {
+      setFile(nextFile);
       setFileError(null);
     }
+  };
+
+  const handleRemoveBackground = () => {
+    setFile(null);
+    setFileError(null);
+    resetFileInput();
   };
 
   const handleSave = () => {
@@ -167,12 +182,9 @@ export const MapSceneContainerDialog: React.FC<Props> = ({
                     size="small"
                     variant="outlined"
                     color="error"
-                    onClick={() => {
-                      setFile(null);
-                      setFileError(null);
-                    }}
+                    onClick={handleRemoveBackground}
                   >
-                    {t('common:clear')}
+                    {t('map:sceneContainerDialog.removeBackground')}
                   </Button>
                 </Box>
               </Box>

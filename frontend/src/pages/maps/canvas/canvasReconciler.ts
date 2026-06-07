@@ -47,6 +47,8 @@ export type ReconcileOptions = {
   viewportScale?: number;
   /** Linked child scene names for scene_container cards. */
   linkedSceneNames?: ReadonlyMap<number, string>;
+  /** Linked child map scene backgrounds for scene_container thumbnails. */
+  linkedSceneBackgroundPaths?: ReadonlyMap<number, string>;
   sceneContainerLabels?: SceneContainerDisplayLabels;
 };
 
@@ -333,18 +335,84 @@ const resolveSceneContainerTitle = (
   return defaultTitle;
 };
 
+const drawSceneContainerPreview = (
+  container: Container,
+  object: CanvasObject,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  backgroundPath: string | undefined,
+  onImageLoadError?: ImageLoadErrorHandler,
+): void => {
+  const mask = new Graphics();
+  mask.roundRect(x, y, width, height, 6).fill({ color: 0xffffff });
+  container.addChild(mask);
+
+  const previewLayer = new Container();
+  previewLayer.mask = mask;
+  container.addChild(previewLayer);
+
+  const placeholder = new Graphics();
+  placeholder.roundRect(x, y, width, height, 6).fill({ color: 0x0a1018, alpha: 1 });
+  previewLayer.addChild(placeholder);
+
+  const iconText = new Text({
+    text: '🗺',
+    resolution: TEXT_RESOLUTION,
+    style: { fontSize: 28 },
+  });
+  iconText.x = x + (width - iconText.width) / 2;
+  iconText.y = y + (height - iconText.height) / 2;
+  previewLayer.addChild(iconText);
+
+  if (!backgroundPath) return;
+
+  void resolveUploadAssetUrl(backgroundPath)
+    .then(async (url) => {
+      if (!url || container.destroyed) return;
+      try {
+        const texture = await loadImageTexture(url);
+        if (!texture || container.destroyed) return;
+        previewLayer.removeChildren();
+        const sprite = new Sprite(texture);
+        const texWidth = sprite.texture.width;
+        const texHeight = sprite.texture.height;
+        const scale = Math.max(width / texWidth, height / texHeight);
+        sprite.width = texWidth * scale;
+        sprite.height = texHeight * scale;
+        sprite.x = x + (width - sprite.width) / 2;
+        sprite.y = y + (height - sprite.height) / 2;
+        sprite.eventMode = 'none';
+        previewLayer.addChild(sprite);
+      } catch {
+        onImageLoadError?.(object, backgroundPath);
+      }
+    })
+    .catch(() => {
+      onImageLoadError?.(object, backgroundPath);
+    });
+};
+
 const drawSceneContainer = (
   container: Container,
   object: CanvasObject,
   selected: boolean,
   labels: SceneContainerDisplayLabels,
   linkedSceneNames?: ReadonlyMap<number, string>,
+  linkedSceneBackgroundPaths?: ReadonlyMap<number, string>,
+  onImageLoadError?: ImageLoadErrorHandler,
 ): HitTest => {
   const geometry = asRecord(object.geometryJson);
   const style = asRecord(object.styleJson);
 
   const width = asNumber(geometry.width, 240);
   const height = asNumber(geometry.height, 160);
+  const footerHeight = 54;
+  const previewX = 8;
+  const previewY = 26;
+  const previewWidth = width - 16;
+  const previewHeight = Math.max(48, height - previewY - footerHeight);
 
   const graphics = new Graphics();
   container.addChild(graphics);
@@ -366,6 +434,20 @@ const drawSceneContainer = (
       .stroke({ color: 0xf8d7a4, width: 1, alpha: 0.45 });
   }
 
+  const backgroundPath = object.linkedSceneId != null
+    ? linkedSceneBackgroundPaths?.get(object.linkedSceneId)
+    : undefined;
+  drawSceneContainerPreview(
+    container,
+    object,
+    previewX,
+    previewY,
+    previewWidth,
+    previewHeight,
+    backgroundPath,
+    onImageLoadError,
+  );
+
   const kindBadge = new Text({
     text: labels.kindLabel,
     resolution: TEXT_RESOLUTION,
@@ -380,15 +462,6 @@ const drawSceneContainer = (
   kindBadge.x = 12;
   kindBadge.y = 10;
   container.addChild(kindBadge);
-
-  const iconText = new Text({
-    text: '🗺',
-    resolution: TEXT_RESOLUTION,
-    style: { fontSize: 32 },
-  });
-  iconText.x = (width - iconText.width) / 2;
-  iconText.y = 28;
-  container.addChild(iconText);
 
   const title = resolveSceneContainerTitle(object, linkedSceneNames, labels.defaultTitle);
   const titleText = new Text({
@@ -405,7 +478,7 @@ const drawSceneContainer = (
     },
   });
   titleText.x = (width - titleText.width) / 2;
-  titleText.y = 78;
+  titleText.y = height - footerHeight + 4;
   container.addChild(titleText);
 
   const subText = new Text({
@@ -492,7 +565,15 @@ const drawObject = (
       openHint: 'Двойной клик — открыть',
       kindLabel: 'Карта',
     };
-    return drawSceneContainer(container, object, selected, labels, options?.linkedSceneNames);
+    return drawSceneContainer(
+      container,
+      object,
+      selected,
+      labels,
+      options?.linkedSceneNames,
+      options?.linkedSceneBackgroundPaths,
+      onImageLoadError,
+    );
   }
 
   if (object.kind === 'text') {
@@ -680,6 +761,9 @@ export const reconcilePixiObjects = (
           viewportScale: Math.round(viewportScale * 1000) / 1000,
           linkedSceneName: object.kind === 'scene_container' && object.linkedSceneId != null
             ? options?.linkedSceneNames?.get(object.linkedSceneId)
+            : undefined,
+          linkedSceneBackground: object.kind === 'scene_container' && object.linkedSceneId != null
+            ? options?.linkedSceneBackgroundPaths?.get(object.linkedSceneId)
             : undefined,
           sceneContainerLabels: object.kind === 'scene_container'
             ? options?.sceneContainerLabels

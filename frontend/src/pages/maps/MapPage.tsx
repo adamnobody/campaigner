@@ -247,6 +247,16 @@ export function CanvasPage() {
     [sceneTree],
   );
 
+  const linkedSceneBackgroundPaths = useMemo(
+    () => new Map(
+      sceneTree.flatMap((item) => {
+        const path = item.backgroundPath?.trim();
+        return path ? [[item.id, path] as const] : [];
+      }),
+    ),
+    [sceneTree],
+  );
+
   const sceneContainerLabels = useMemo((): SceneContainerDisplayLabels => ({
     defaultTitle: t('map:canvas.breadcrumbs.mapFallback'),
     openHint: t('map:canvas.sceneContainer.openHint'),
@@ -1257,6 +1267,7 @@ export function CanvasPage() {
           layers={layers}
           objects={canvasObjects}
           linkedSceneNames={linkedSceneNames}
+          linkedSceneBackgroundPaths={linkedSceneBackgroundPaths}
           sceneContainerLabels={sceneContainerLabels}
           territoryEditRings={territoryEditSession?.rings ?? null}
           onTerritoryEditChange={(rings) => {

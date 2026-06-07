@@ -224,6 +224,7 @@
     "nameRequired": "Enter a map name",
     "pickBackground": "Choose background image",
     "replaceBackground": "Replace image",
+    "removeBackground": "Remove image",
     "previewAlt": "Map background preview",
     "crop": "Crop",
     "cropTitle": "Crop map image",

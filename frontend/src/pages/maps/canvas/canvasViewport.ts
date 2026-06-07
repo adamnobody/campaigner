@@ -1,4 +1,3 @@
-import { Point } from 'pixi.js';
 import type { Viewport } from 'pixi-viewport';
 import type { ContentBounds } from './canvasBounds';
 import { asNumber, asRecord } from './canvasModel';
@@ -50,7 +49,7 @@ export const screenOffsetFromPersist = (
 
 export const persistFromViewport = (viewport: Viewport): ViewportPersist => {
   const scale = clampZoom(viewport.scale.x);
-  const center = viewport.toWorld(new Point(viewport.screenWidth / 2, viewport.screenHeight / 2));
+  const center = viewport.center;
   return {
     centerX: center.x,
     centerY: center.y,
@@ -95,10 +94,17 @@ export const applyPersistToViewport = (
   viewport: Viewport,
   persist: ViewportPersist,
 ): ViewportSnapshot => {
-  const screen = screenOffsetFromPersist(persist, viewport.screenWidth, viewport.screenHeight);
-  viewport.position.set(screen.x, screen.y);
-  viewport.setZoom(screen.scale, true);
-  return { ...persist, x: viewport.x, y: viewport.y, scale: viewport.scale.x };
+  const scale = clampZoom(persist.scale);
+  // Apply zoom first, then center. position.set + setZoom(true) breaks when scale changes
+  // because setZoom(true) preserves the pre-zoom center computed under the old scale.
+  viewport.setZoom(scale, false);
+  viewport.moveCenter(persist.centerX, persist.centerY);
+  const screen = screenOffsetFromPersist(
+    { centerX: persist.centerX, centerY: persist.centerY, scale: viewport.scale.x },
+    viewport.screenWidth,
+    viewport.screenHeight,
+  );
+  return { centerX: persist.centerX, centerY: persist.centerY, scale: viewport.scale.x, x: screen.x, y: screen.y };
 };
 
 export const isBoundsVisibleInViewport = (
