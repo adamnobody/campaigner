@@ -18,18 +18,16 @@ import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import MouseIcon from '@mui/icons-material/Mouse';
 import PlaceIcon from '@mui/icons-material/Place';
-import PentagonIcon from '@mui/icons-material/Pentagon';
 import LandscapeIcon from '@mui/icons-material/Landscape';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
-import PolylineIcon from '@mui/icons-material/Timeline';
-import RectangleIcon from '@mui/icons-material/Crop75';
-import EllipseIcon from '@mui/icons-material/PanoramaFishEye';
 import ImageIcon from '@mui/icons-material/Image';
 import CheckIcon from '@mui/icons-material/Check';
 import UndoIcon from '@mui/icons-material/Undo';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MapIcon from '@mui/icons-material/Map';
 import { useTranslation } from 'react-i18next';
+import { MapAddShapeMenu } from './MapAddShapeMenu';
+import type { ShapeVariant } from '../canvas/shapeObjectForm';
 import type { CanvasMode } from '../canvas/canvasModel';
 import { isMapScene, isRootCanvasScene, isToolAllowedForSceneType, isToolbarToolVisible } from '../canvas/canvasTools';
 import {
@@ -60,6 +58,7 @@ type Props = {
   onFinishTerritory: () => void;
   onCancelTerritory: () => void;
   onAddImage: () => void;
+  onAddShape: (variant: ShapeVariant) => void;
 };
 
 export function MapToolbar({
@@ -84,6 +83,7 @@ export function MapToolbar({
   onFinishTerritory,
   onCancelTerritory,
   onAddImage,
+  onAddShape,
 }: Props) {
   const theme = useTheme();
   const { t } = useTranslation(['map', 'common']);
@@ -233,33 +233,8 @@ export function MapToolbar({
                 </Tooltip>
               </ToggleButton>
             )}
-            {allowTool('polygon') && (
-              <ToggleButton value="polygon">
-                <Tooltip title={t('map:canvas.toolbar.toolPolygon')}>
-                  <PentagonIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-            )}
-            {allowTool('polyline') && (
-              <ToggleButton value="polyline">
-                <Tooltip title={t('map:canvas.toolbar.toolPolyline')}>
-                  <PolylineIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-            )}
             {allowTool('rectangle') && (
-              <ToggleButton value="rectangle">
-                <Tooltip title={t('map:canvas.toolbar.toolRectangle')}>
-                  <RectangleIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-            )}
-            {allowTool('ellipse') && (
-              <ToggleButton value="ellipse">
-                <Tooltip title={t('map:canvas.toolbar.toolEllipse')}>
-                  <EllipseIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
+              <MapAddShapeMenu onSelect={onAddShape} />
             )}
             {allowTool('image') && (
               <ToggleButton value="image">

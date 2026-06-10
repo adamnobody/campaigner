@@ -156,6 +156,42 @@
     "uploadImage": "Upload image",
     "createChildMap": "Create nested map"
   },
+  "shapePanel": {
+    "title": "Shape",
+    "addShape": "Add shape",
+    "addShapeTooltip": "Add a shape to the canvas",
+    "addShapeTitle": "Choose a shape",
+    "sectionShape": "Shape",
+    "sectionStyle": "Shape style",
+    "sectionText": "Text",
+    "sectionPosition": "Position",
+    "width": "Width",
+    "height": "Height",
+    "fill": "Fill",
+    "fillHex": "Fill (#)",
+    "stroke": "Stroke",
+    "strokeHex": "Stroke (#)",
+    "strokeWidth": "Stroke width · {{value}}",
+    "opacity": "Opacity · {{value}}%",
+    "labelPosition": "Label position",
+    "labelText": "Label text",
+    "labelFontSize": "Label size",
+    "labelColor": "Label color",
+    "labelBold": "Bold",
+    "variants": {
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "triangle": "Triangle",
+      "diamond": "Diamond",
+      "line": "Line"
+    },
+    "labelPositions": {
+      "none": "No label",
+      "inside": "Inside",
+      "above": "Above",
+      "below": "Below"
+    }
+  },
   "textPanel": {
     "titleText": "Text",
     "titleCurve": "Curve text",

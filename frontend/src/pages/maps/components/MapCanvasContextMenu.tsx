@@ -2,6 +2,7 @@ import { Divider, ListItemText, Menu, MenuItem } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { CanvasObject } from '@/api/canvas';
 import { isMapScene } from '../canvas/canvasTools';
+import type { ShapeVariant } from '../canvas/shapeObjectForm';
 
 export type MapContextMenuState = {
   mouseX: number;
@@ -18,16 +19,15 @@ type Props = {
   onAddMarker: () => void;
   onAddText: () => void;
   onAddImage: () => void;
-  onAddPolygon: () => void;
-  onAddRectangle: () => void;
-  onAddEllipse: () => void;
-  onAddPolyline: () => void;
+  onAddShape: (variant: ShapeVariant) => void;
   onDeleteSelected: () => void;
   onEditSelected: () => void;
   onDuplicateSelected: () => void;
   onBringToFront: () => void;
   onSendToBack: () => void;
 };
+
+const SHAPE_MENU_VARIANTS: ShapeVariant[] = ['rectangle', 'ellipse', 'triangle', 'diamond', 'line'];
 
 export function MapCanvasContextMenu({
   menu,
@@ -36,10 +36,7 @@ export function MapCanvasContextMenu({
   onAddMarker,
   onAddText,
   onAddImage,
-  onAddPolygon,
-  onAddRectangle,
-  onAddEllipse,
-  onAddPolyline,
+  onAddShape,
   onDeleteSelected,
   onEditSelected,
   onDuplicateSelected,
@@ -70,18 +67,11 @@ export function MapCanvasContextMenu({
             </MenuItem>
           )}
           <Divider />
-          <MenuItem onClick={() => { onAddPolygon(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addPolygon')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddRectangle(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addRectangle')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddEllipse(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addEllipse')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddPolyline(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addPolyline')}</ListItemText>
-          </MenuItem>
+          {SHAPE_MENU_VARIANTS.map((variant) => (
+            <MenuItem key={variant} onClick={() => { onAddShape(variant); onClose(); }}>
+              <ListItemText>{t(`map:shapePanel.variants.${variant}`)}</ListItemText>
+            </MenuItem>
+          ))}
         </>
       )}
       {hasSelection && (

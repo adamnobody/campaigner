@@ -20,6 +20,8 @@ import {
 import { territoryLabelPlacement } from './territoryLabel';
 import { resolveTerritoryStyleFields, traceSmoothedClosedRing } from './territoryRender';
 import { resolveTextContent } from './textObjectForm';
+import { isShapeKind } from './shapeObjectForm';
+import { shapeLabelPlacement } from './shapeLabel';
 
 type HitTest = (point: CanvasPoint) => boolean;
 type ImageLoadErrorHandler = (object: CanvasObject, resourcePath: string) => void;
@@ -536,6 +538,26 @@ const syncImageDisplay = (container: Container, object: CanvasObject, selected: 
   return boundsHit(0, 0, width, height);
 };
 
+
+const drawShapeLabel = (container: Container, object: CanvasObject): void => {
+  const placement = shapeLabelPlacement(object);
+  if (!placement) return;
+  const label = new Text({
+    text: placement.text,
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fill: toColor(placement.color, 0xf8f4ec),
+      fontFamily: 'Crimson Text, serif',
+      fontSize: placement.fontSize,
+      fontWeight: placement.fontWeight === 'bold' ? '700' : '400',
+    },
+  });
+  label.anchor.set(0.5);
+  label.position.set(placement.x, placement.y);
+  label.eventMode = 'none';
+  container.addChild(label);
+};
+
 const drawTerritoryLabel = (
   container: Container,
   ringList: CanvasPoint[][],
@@ -666,6 +688,7 @@ const drawObject = (
     const width = asNumber(geometry.width, 120);
     const height = asNumber(geometry.height, 80);
     graphics.rect(0, 0, width, height).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+    if (isShapeKind(object.kind)) drawShapeLabel(container, object);
     return boundsHit(0, 0, width, height);
   }
 
@@ -673,6 +696,7 @@ const drawObject = (
     const radiusX = asNumber(geometry.radiusX, 60);
     const radiusY = asNumber(geometry.radiusY, 36);
     graphics.ellipse(0, 0, radiusX, radiusY).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+    drawShapeLabel(container, object);
     return (point) => (point.x / radiusX) ** 2 + (point.y / radiusY) ** 2 <= 1;
   }
 
@@ -684,6 +708,7 @@ const drawObject = (
         graphics.lineTo(points[index].x, points[index].y);
       }
       graphics.stroke({ color: stroke, width: strokeWidth || 4, alpha: 1 });
+      drawShapeLabel(container, object);
       return nearPolyline(points, Math.max(6, strokeWidth + 4));
     }
   }
@@ -708,6 +733,8 @@ const drawObject = (
       drawRingList(graphics, ringList, ringFill, ringStroke, ringAlpha, ringStrokeWidth, ringSmoothing);
       if (object.kind === 'territory') {
         drawTerritoryLabel(container, ringList, object.name ?? '', viewportScale);
+      } else {
+        drawShapeLabel(container, object);
       }
       return hitTestRingList(ringList, ringStrokeWidth);
     }

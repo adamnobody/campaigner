@@ -10,7 +10,13 @@ const ROOT_ONLY_TOOLS: readonly CanvasMode[] = ['scene_container'];
 const MAP_EXCLUDED_TOOLS: readonly CanvasMode[] = ['image'];
 
 /** Creation tools hidden from primary toolbar (existing objects still supported). */
-const TOOLBAR_HIDDEN_TOOLS: readonly CanvasMode[] = ['curve_text'];
+const TOOLBAR_HIDDEN_TOOLS: readonly CanvasMode[] = [
+  'curve_text',
+  'polygon',
+  'polyline',
+  'rectangle',
+  'ellipse',
+];
 
 export function isRootCanvasScene(sceneType: string | null | undefined): boolean {
   return sceneType === 'root_canvas';

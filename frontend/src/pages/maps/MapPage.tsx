@@ -20,6 +20,7 @@ import { MapTerritoryDialog } from './components/MapTerritoryDialog';
 import { MapTerritoryPanel } from './components/MapTerritoryPanel';
 import { MapInlineTextEditor } from './components/MapInlineTextEditor';
 import { MapTextPanel } from './components/MapTextPanel';
+import { MapShapePanel } from './components/MapShapePanel';
 import { MapCanvasContextMenu, type MapContextMenuState } from './components/MapCanvasContextMenu';
 import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas';
 import type { ViewportPersist } from './canvas/canvasViewport';
@@ -44,9 +45,13 @@ import {
   resolveTextPresetStyleForCreate,
   type MapTextStylePreset,
 } from './canvas/textPresets';
+import {
+  buildShapeCreateInput,
+  isShapeKind,
+  type ShapeVariant,
+} from './canvas/shapeObjectForm';
 import { isMapScene, normalizeCanvasModeForSceneType } from './canvas/canvasTools';
 import { mapSceneNeedsBackground } from './canvas/mapBackground';
-import type { SceneContainerDisplayLabels } from './canvas/canvasReconciler';
 import {
   appendCompletedTerritoryRing,
   buildTerritoryRingsForCreateDialog,
@@ -62,7 +67,6 @@ import {
   DEFAULT_MARKER_FORM,
   DEFAULT_TERRITORY_FORM,
   defaultImageObject,
-  defaultShapeObject,
   defaultTextObject,
   markerFormFromObject,
   factionDetailPath,
@@ -81,6 +85,7 @@ import {
   type TerritoryFactionOption,
   type TerritoryFormState,
 } from './canvas/canvasModel';
+import type { SceneContainerDisplayLabels } from './canvas/canvasReconciler';
 
 const MAX_TEXTURE_SIZE = 16384;
 const pendingInitialSceneLoads = new Map<string, Promise<CanvasScene>>();
@@ -814,6 +819,10 @@ export function CanvasPage() {
     void persistObject(object);
   }, [persistObject]);
 
+  const handleShapeObjectSave = useCallback((object: CanvasObject) => {
+    void persistObject(object);
+  }, [persistObject]);
+
   const buildNewTextObject = useCallback((
     layerId: number,
     point: CanvasPoint,
@@ -889,14 +898,6 @@ export function CanvasPage() {
     }
     if (mode === 'text' || mode === 'curve_text') {
       await placeCreatedText(point, mode);
-      return;
-    }
-    if (mode === 'rectangle' || mode === 'ellipse') {
-      const layer = await contentLayer();
-      const created = await createCanvasObject(defaultShapeObject(scene.id, layer.id, point, mode));
-      setObjects((current) => [...current, created]);
-      setSelectedObjectId(created.id);
-      setMode('select');
       return;
     }
     if (mode === 'image') {
@@ -1210,14 +1211,19 @@ export function CanvasPage() {
     void factory({ x: contextMenu.worldX, y: contextMenu.worldY });
   }, [contextMenu]);
 
-  const createShapeAt = useCallback(async (point: CanvasPoint, kind: 'polygon' | 'rectangle' | 'ellipse' | 'polyline') => {
+  const createShapePresetAt = useCallback(async (point: CanvasPoint, variant: ShapeVariant) => {
     if (!scene) return;
     const layer = await contentLayer();
-    const created = await createCanvasObject(defaultShapeObject(scene.id, layer.id, point, kind));
+    const created = await createCanvasObject(buildShapeCreateInput(scene.id, layer.id, point, variant));
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
     setMode('select');
   }, [contentLayer, createCanvasObject, scene]);
+
+  const addShapePreset = useCallback((variant: ShapeVariant, point?: CanvasPoint) => {
+    const placement = point ?? pixiCanvasRef.current?.getViewportCenter() ?? { x: 0, y: 0 };
+    void createShapePresetAt(placement, variant);
+  }, [createShapePresetAt]);
 
   const duplicateSelected = useCallback(async () => {
     if (!selectedForMenu || !scene) return;
@@ -1273,10 +1279,6 @@ export function CanvasPage() {
       '1': 'select',
       '2': 'marker',
       '3': 'text',
-      '4': 'polygon',
-      '5': 'polyline',
-      '6': 'rectangle',
-      '7': 'ellipse',
       '9': 'image',
     };
 
@@ -1393,6 +1395,7 @@ export function CanvasPage() {
         }}
         onCancelTerritory={handleCancelTerritoryDrawing}
         onAddImage={() => openImagePickerAt()}
+        onAddShape={(variant) => addShapePreset(variant)}
       />
 
       <Typography
@@ -1646,11 +1649,24 @@ export function CanvasPage() {
           </Box>
         )}
 
+        {selectedObject && isShapeKind(selectedObject.kind) && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapShapePanel
+              key={selectedObject.id}
+              selectedObject={selectedObject}
+              onClose={() => setSelectedObjectId(null)}
+              onSave={handleShapeObjectSave}
+              onDelete={() => deleteSelected()}
+            />
+          </Box>
+        )}
+
         {selectedObject
           && selectedObject.kind !== 'marker'
           && selectedObject.kind !== 'territory'
           && selectedObject.kind !== 'text'
-          && selectedObject.kind !== 'curve_text' && (
+          && selectedObject.kind !== 'curve_text'
+          && !isShapeKind(selectedObject.kind) && (
           <Paper
             elevation={6}
             sx={{
@@ -1715,17 +1731,8 @@ export function CanvasPage() {
           if (!contextMenu) return;
           openImagePickerAt({ x: contextMenu.worldX, y: contextMenu.worldY });
         }}
-        onAddPolygon={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'polygon'));
-        }}
-        onAddRectangle={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'rectangle'));
-        }}
-        onAddEllipse={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'ellipse'));
-        }}
-        onAddPolyline={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'polyline'));
+        onAddShape={(variant) => {
+          placeByContextMenu(async (point) => createShapePresetAt(point, variant));
         }}
         onEditSelected={() => {
           if (!selectedForMenu) return;

@@ -70,7 +70,7 @@ describe('normalizeCanvasModeForSceneType', () => {
   });
 
   it('keeps mode when allowed', () => {
-    expect(normalizeCanvasModeForSceneType('polygon', 'root_canvas')).toBe('polygon');
+    expect(normalizeCanvasModeForSceneType('text', 'root_canvas')).toBe('text');
     expect(normalizeCanvasModeForSceneType('marker', 'map')).toBe('marker');
   });
 });
@@ -90,8 +90,17 @@ describe('toolbar visibility', () => {
     expect(listToolbarCanvasModes('map', ALL_MODES)).not.toContain('curve_text');
   });
 
+  it('hides legacy shape tools from primary toolbar', () => {
+    for (const mode of ['polygon', 'polyline', 'rectangle', 'ellipse'] as const) {
+      expect(isToolbarToolVisible(mode)).toBe(false);
+      expect(isToolAllowedForSceneType(mode, 'root_canvas')).toBe(true);
+    }
+    expect(listToolbarCanvasModes('root_canvas', ALL_MODES)).not.toContain('rectangle');
+  });
+
   it('normalizes hidden toolbar modes to select', () => {
     expect(normalizeCanvasModeForSceneType('curve_text', 'root_canvas')).toBe('select');
+    expect(normalizeCanvasModeForSceneType('rectangle', 'root_canvas')).toBe('select');
     expect(normalizeCanvasModeForSceneType('text', 'root_canvas')).toBe('text');
   });
 });

@@ -156,6 +156,42 @@
     "uploadImage": "Загрузить изображение",
     "createChildMap": "Создать вложенную карту"
   },
+  "shapePanel": {
+    "title": "Фигура",
+    "addShape": "Добавить фигуру",
+    "addShapeTooltip": "Добавить фигуру на холст",
+    "addShapeTitle": "Выберите форму",
+    "sectionShape": "Форма",
+    "sectionStyle": "Стиль фигуры",
+    "sectionText": "Текст",
+    "sectionPosition": "Положение",
+    "width": "Ширина",
+    "height": "Высота",
+    "fill": "Заливка",
+    "fillHex": "Заливка (#)",
+    "stroke": "Обводка",
+    "strokeHex": "Обводка (#)",
+    "strokeWidth": "Толщина обводки · {{value}}",
+    "opacity": "Прозрачность · {{value}}%",
+    "labelPosition": "Положение текста",
+    "labelText": "Текст",
+    "labelFontSize": "Размер текста",
+    "labelColor": "Цвет текста",
+    "labelBold": "Жирный",
+    "variants": {
+      "rectangle": "Прямоугольник",
+      "ellipse": "Эллипс",
+      "triangle": "Треугольник",
+      "diamond": "Ромб",
+      "line": "Линия"
+    },
+    "labelPositions": {
+      "none": "Без текста",
+      "inside": "Внутри",
+      "above": "Над фигурой",
+      "below": "Под фигурой"
+    }
+  },
   "textPanel": {
     "titleText": "Текст",
     "titleCurve": "Текст по кривой",
