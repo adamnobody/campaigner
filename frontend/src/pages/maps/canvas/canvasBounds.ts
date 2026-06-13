@@ -140,8 +140,12 @@ const boundsForObject = (object: CanvasObject): ContentBounds | null => {
   }
 
   if (object.kind === 'rectangle' || object.kind === 'group' || object.kind === 'image' || object.kind === 'scene_container') {
-    const width = object.kind === 'scene_container' ? asNumber(geometry.width, 240) : asNumber(geometry.width, 120);
-    const height = object.kind === 'scene_container' ? asNumber(geometry.height, 160) : asNumber(geometry.height, 80);
+    const width = object.kind === 'scene_container' || object.kind === 'image'
+      ? asNumber(geometry.width, 240)
+      : asNumber(geometry.width, 120);
+    const height = object.kind === 'scene_container' || object.kind === 'image'
+      ? asNumber(geometry.height, 160)
+      : asNumber(geometry.height, 80);
     return growLocalRect(bounds, transform.x, transform.y, width, height);
   }
 

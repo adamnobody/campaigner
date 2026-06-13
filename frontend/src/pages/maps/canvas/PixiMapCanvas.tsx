@@ -48,6 +48,7 @@ import { textEditLayoutFromObject, textObjectWorldAnchor, type TextEditScreenLay
 import {
   hitTestObjects,
   reconcilePixiObjects,
+  type ImageCardDisplayLabels,
   type ReconcileState,
   type SceneContainerDisplayLabels,
 } from './canvasReconciler';
@@ -87,6 +88,25 @@ type DragState = {
   moved: boolean;
 } | null;
 
+type ResizeHandleId = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+type CardResizeState = {
+  objectId: number;
+  handle: ResizeHandleId;
+  startPointer: CanvasPoint;
+  startX: number;
+  startY: number;
+  startWidth: number;
+  startHeight: number;
+  minWidth: number;
+  minHeight: number;
+} | null;
+
+type ResizeHandleHit = {
+  handle: ResizeHandleId;
+  cursor: string;
+};
+
 type PanState = {
   startX: number;
   startY: number;
@@ -114,6 +134,9 @@ const VERTEX_HIT_PX = 10;
 const CURVE_HANDLE_HIT_PX = 12;
 const EDGE_HIT_PX = 14;
 const VERTEX_GUARD_PX = 8;
+const CARD_RESIZE_HANDLE_SCREEN = 12;
+const MIN_CARD_WIDTH = 72;
+const MIN_CARD_HEIGHT = 72;
 
 type Props = {
   scene: CanvasScene;
@@ -149,6 +172,7 @@ type Props = {
   linkedSceneNames?: ReadonlyMap<number, string>;
   linkedSceneBackgroundPaths?: ReadonlyMap<number, string>;
   sceneContainerLabels?: SceneContainerDisplayLabels;
+  imageCardLabels?: ImageCardDisplayLabels;
 };
 
 export type PixiMapCanvasHandle = {
@@ -279,6 +303,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   linkedSceneNames,
   linkedSceneBackgroundPaths,
   sceneContainerLabels,
+  imageCardLabels,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
@@ -303,6 +328,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const curveHandleDragRef = useRef<CurveHandleDragState>(null);
   const curveTextGeometryDraftRef = useRef<CanvasObject | null>(null);
   const objectDragPositionRef = useRef<{ objectId: number; x: number; y: number } | null>(null);
+  const cardResizeStateRef = useRef<CardResizeState>(null);
+  const cardResizeDraftRef = useRef<CanvasObject | null>(null);
   const objectsPropRef = useRef<CanvasObject[]>(objects);
   const selectedObjectIdRef = useRef<number | null>(selectedObjectId);
   const territoryEditRingsRef = useRef<CanvasPoint[][] | null>(null);
@@ -345,13 +372,118 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const linkedSceneNamesRef = useRef(linkedSceneNames);
   const linkedSceneBackgroundPathsRef = useRef(linkedSceneBackgroundPaths);
   const sceneContainerLabelsRef = useRef(sceneContainerLabels);
+  const imageCardLabelsRef = useRef(imageCardLabels);
 
   const forceRender = () => {
     appRef.current?.render();
   };
 
+  const isResizableCardObject = (object: CanvasObject | null | undefined): object is CanvasObject =>
+    Boolean(object && (object.kind === 'scene_container' || object.kind === 'image'));
+
+  const resolveCardGeometry = (object: CanvasObject): { width: number; height: number } => {
+    const geometry = object.geometryJson as Record<string, unknown> | null;
+    const width = typeof geometry?.width === 'number' ? geometry.width : 240;
+    const height = typeof geometry?.height === 'number' ? geometry.height : 160;
+    return { width, height };
+  };
+
+  const withCardSizeAndPosition = (
+    object: CanvasObject,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): CanvasObject => ({
+    ...object,
+    transformJson: {
+      ...object.transformJson as Record<string, unknown>,
+      x,
+      y,
+    },
+    geometryJson: {
+      ...object.geometryJson as Record<string, unknown>,
+      width,
+      height,
+    },
+  });
+
+  const resizeCursorForHandle = (handle: ResizeHandleId): string => {
+    if (handle === 'n' || handle === 's') return 'ns-resize';
+    if (handle === 'e' || handle === 'w') return 'ew-resize';
+    if (handle === 'ne' || handle === 'sw') return 'nesw-resize';
+    return 'nwse-resize';
+  };
+
+  const hitCardResizeHandle = (
+    object: CanvasObject,
+    worldPoint: CanvasPoint,
+    viewportScale: number,
+  ): ResizeHandleHit | null => {
+    if (!isResizableCardObject(object)) return null;
+    const transform = objectTransform(object);
+    const { width, height } = resolveCardGeometry(object);
+    const localX = worldPoint.x - transform.x;
+    const localY = worldPoint.y - transform.y;
+    const threshold = CARD_RESIZE_HANDLE_SCREEN / Math.max(viewportScale, 0.05);
+    const nearLeft = Math.abs(localX) <= threshold;
+    const nearRight = Math.abs(localX - width) <= threshold;
+    const nearTop = Math.abs(localY) <= threshold;
+    const nearBottom = Math.abs(localY - height) <= threshold;
+    const insideX = localX >= -threshold && localX <= width + threshold;
+    const insideY = localY >= -threshold && localY <= height + threshold;
+
+    if (insideX && insideY && nearLeft && nearTop) return { handle: 'nw', cursor: resizeCursorForHandle('nw') };
+    if (insideX && insideY && nearRight && nearTop) return { handle: 'ne', cursor: resizeCursorForHandle('ne') };
+    if (insideX && insideY && nearLeft && nearBottom) return { handle: 'sw', cursor: resizeCursorForHandle('sw') };
+    if (insideX && insideY && nearRight && nearBottom) return { handle: 'se', cursor: resizeCursorForHandle('se') };
+    if (insideX && nearLeft && localY >= 0 && localY <= height) return { handle: 'w', cursor: resizeCursorForHandle('w') };
+    if (insideX && nearRight && localY >= 0 && localY <= height) return { handle: 'e', cursor: resizeCursorForHandle('e') };
+    if (insideY && nearTop && localX >= 0 && localX <= width) return { handle: 'n', cursor: resizeCursorForHandle('n') };
+    if (insideY && nearBottom && localX >= 0 && localX <= width) return { handle: 's', cursor: resizeCursorForHandle('s') };
+    return null;
+  };
+
+  const resolveResizeFrame = (
+    resizeState: Exclude<CardResizeState, null>,
+    pointer: CanvasPoint,
+  ): { x: number; y: number; width: number; height: number } => {
+    const dx = pointer.x - resizeState.startPointer.x;
+    const dy = pointer.y - resizeState.startPointer.y;
+
+    let x = resizeState.startX;
+    let y = resizeState.startY;
+    let width = resizeState.startWidth;
+    let height = resizeState.startHeight;
+
+    if (resizeState.handle.includes('e')) {
+      width = Math.max(resizeState.minWidth, resizeState.startWidth + dx);
+    }
+    if (resizeState.handle.includes('s')) {
+      height = Math.max(resizeState.minHeight, resizeState.startHeight + dy);
+    }
+    if (resizeState.handle.includes('w')) {
+      const maxLeft = resizeState.startWidth - resizeState.minWidth;
+      const applied = Math.min(dx, maxLeft);
+      x = resizeState.startX + applied;
+      width = resizeState.startWidth - applied;
+    }
+    if (resizeState.handle.includes('n')) {
+      const maxTop = resizeState.startHeight - resizeState.minHeight;
+      const applied = Math.min(dy, maxTop);
+      y = resizeState.startY + applied;
+      height = resizeState.startHeight - applied;
+    }
+
+    return { x, y, width, height };
+  };
+
   const resolveEffectiveObjects = (source = objectsPropRef.current): CanvasObject[] => {
     let list = mergeCurveTextGeometryDraft(source, curveTextGeometryDraftRef.current);
+    const resizeDraft = cardResizeDraftRef.current;
+    if (resizeDraft) {
+      list = list.map((object) => (object.id === resizeDraft.id ? resizeDraft : object));
+    }
     const dragPosition = objectDragPositionRef.current;
     if (dragPosition) {
       list = list.map((object) => (
@@ -377,8 +509,21 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     }
   };
 
+  const syncPendingCardResizeDraft = (source: CanvasObject[]) => {
+    const draft = cardResizeDraftRef.current;
+    if (!draft) return;
+    const committed = source.find((item) => item.id === draft.id);
+    if (!committed) return;
+    if (
+      JSON.stringify(committed.transformJson) === JSON.stringify(draft.transformJson)
+      && JSON.stringify(committed.geometryJson) === JSON.stringify(draft.geometryJson)
+    ) {
+      cardResizeDraftRef.current = null;
+    }
+  };
+
   const isInteractiveObjectDragActive = () => (
-    Boolean(curveHandleDragRef.current || objectDragPositionRef.current)
+    Boolean(curveHandleDragRef.current || objectDragPositionRef.current || cardResizeStateRef.current || cardResizeDraftRef.current)
   );
 
   const syncCurveTextDraft = (draft: CanvasObject) => {
@@ -405,6 +550,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         linkedSceneNames: linkedSceneNamesRef.current,
         linkedSceneBackgroundPaths: linkedSceneBackgroundPathsRef.current,
         sceneContainerLabels: sceneContainerLabelsRef.current,
+        imageCardLabels: imageCardLabelsRef.current,
         editingTextObjectId: editingTextObjectIdRef.current,
       },
     );
@@ -417,6 +563,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   linkedSceneNamesRef.current = linkedSceneNames;
   linkedSceneBackgroundPathsRef.current = linkedSceneBackgroundPaths;
   sceneContainerLabelsRef.current = sceneContainerLabels;
+  imageCardLabelsRef.current = imageCardLabels;
   liveObjectsRef.current = resolveEffectiveObjects();
   currentModeRef.current = mode;
   sceneRef.current = scene;
@@ -984,6 +1131,28 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         if (event.button !== 0) return;
 
         if (currentModeRef.current === 'select' && !forcePan) {
+          const selectedObject = liveObjectsRef.current.find((item) => item.id === selectedObjectIdRef.current) ?? null;
+          const handleHit = selectedObject
+            ? hitCardResizeHandle(selectedObject, worldPoint, viewport.scale.x)
+            : null;
+          if (handleHit && isResizableCardObject(selectedObject)) {
+            const transform = objectTransform(selectedObject);
+            const geometry = resolveCardGeometry(selectedObject);
+            cardResizeStateRef.current = {
+              objectId: selectedObject.id,
+              handle: handleHit.handle,
+              startPointer: worldPoint,
+              startX: transform.x,
+              startY: transform.y,
+              startWidth: geometry.width,
+              startHeight: geometry.height,
+              minWidth: MIN_CARD_WIDTH,
+              minHeight: MIN_CARD_HEIGHT,
+            };
+            updateCursor(handleHit.cursor);
+            return;
+          }
+
           const selectedCurve = getSelectedCurveTextObject();
           if (selectedCurve) {
             const handleHit = hitCurveTextHandle(
@@ -1051,6 +1220,20 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const handlePointerMove = (event: FederatedPointerEvent) => {
         const worldPoint = pointFromEvent(viewport, event);
         const isDrawing = isDrawingMode(currentModeRef.current);
+
+        if (cardResizeStateRef.current && currentModeRef.current === 'select') {
+          const resizeState = cardResizeStateRef.current;
+          const object = liveObjectsRef.current.find((item) => item.id === resizeState.objectId);
+          if (object && isResizableCardObject(object)) {
+            const frame = resolveResizeFrame(resizeState, worldPoint);
+            const draft = withCardSizeAndPosition(object, frame.x, frame.y, frame.width, frame.height);
+            cardResizeDraftRef.current = draft;
+            liveObjectsRef.current = resolveEffectiveObjects();
+            reconcileLiveObjects();
+            updateCursor(resizeCursorForHandle(resizeState.handle));
+            return;
+          }
+        }
 
         if (curveHandleDragRef.current) {
           const drag = curveHandleDragRef.current;
@@ -1129,12 +1312,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           const y = worldPoint.y - drag.offsetY;
           objectDragPositionRef.current = { objectId: drag.objectId, x, y };
           liveObjectsRef.current = resolveEffectiveObjects();
-          const entry = reconcileStateRef.current.objects.get(drag.objectId);
-          if (entry) {
-            entry.display.position.set(x, y);
-          }
-          redrawDraft();
-          forceRender();
+          reconcileLiveObjects();
           updateCursor('move');
           return;
         }
@@ -1148,10 +1326,20 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           updateCursor('grab');
         } else if (currentModeRef.current !== 'select') {
           updateCursor('pointer');
-        } else if (hovered) {
-          updateCursor('pointer');
         } else {
-          updateCursor('grab');
+          const selectedObject = liveObjectsRef.current.find((item) => item.id === selectedObjectIdRef.current) ?? null;
+          const handleHit = selectedObject
+            ? hitCardResizeHandle(selectedObject, worldPoint, viewport.scale.x)
+            : null;
+          if (handleHit) {
+            updateCursor(handleHit.cursor);
+            return;
+          }
+          if (hovered) {
+            updateCursor('pointer');
+          } else {
+            updateCursor('grab');
+          }
         }
       };
 
@@ -1224,6 +1412,19 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         if (panStateRef.current) {
           panStateRef.current = null;
           updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
+        }
+
+        if (cardResizeStateRef.current && currentModeRef.current === 'select') {
+          const resizeState = cardResizeStateRef.current;
+          cardResizeStateRef.current = null;
+          const draft = cardResizeDraftRef.current;
+          if (draft) {
+            cardResizeDraftRef.current = null;
+            liveObjectsRef.current = resolveEffectiveObjects();
+            onObjectMoveRef.current(draft, objectTransform(draft));
+          }
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
+          return;
         }
 
         if (dragStateRef.current && currentModeRef.current === 'select') {
@@ -1428,6 +1629,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       dotTextureRef.current = null;
       draftRef.current = null;
       dragStateRef.current = null;
+      cardResizeStateRef.current = null;
+      cardResizeDraftRef.current = null;
       reconcileStateRef.current = { layerContainers: new Map(), objects: new Map() };
     };
   }, []);
@@ -1595,6 +1798,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
   useEffect(() => {
     syncPendingObjectDragPosition(objects);
+    syncPendingCardResizeDraft(objects);
 
     if (!pixiReady) return;
     if (isInteractiveObjectDragActive()) return;
@@ -1617,11 +1821,12 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         linkedSceneNames,
         linkedSceneBackgroundPaths,
         sceneContainerLabels,
+        imageCardLabels,
         editingTextObjectId,
       },
     );
     forceRender();
-  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale, linkedSceneNames, linkedSceneBackgroundPaths, sceneContainerLabels, editingTextObjectId]);
+  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale, linkedSceneNames, linkedSceneBackgroundPaths, sceneContainerLabels, imageCardLabels, editingTextObjectId]);
 
   useEffect(() => {
     const draft = curveTextGeometryDraftRef.current;
@@ -1642,6 +1847,8 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     curveHandleDragRef.current = null;
     curveTextGeometryDraftRef.current = null;
     objectDragPositionRef.current = null;
+    cardResizeStateRef.current = null;
+    cardResizeDraftRef.current = null;
     redrawDraft();
   }, [selectedObjectId]);
 

@@ -45,6 +45,11 @@ export type SceneContainerDisplayLabels = {
   kindLabel: string;
 };
 
+export type ImageCardDisplayLabels = {
+  defaultTitle: string;
+  kindLabel: string;
+};
+
 export type ReconcileOptions = {
   /** Viewport scale (world → screen) for territory label sizing. */
   viewportScale?: number;
@@ -53,6 +58,7 @@ export type ReconcileOptions = {
   /** Linked child map scene backgrounds for scene_container thumbnails. */
   linkedSceneBackgroundPaths?: ReadonlyMap<number, string>;
   sceneContainerLabels?: SceneContainerDisplayLabels;
+  imageCardLabels?: ImageCardDisplayLabels;
   /** Hide glyphs while inline text editor is open. */
   editingTextObjectId?: number | null;
 };
@@ -305,43 +311,18 @@ const drawCurveText = (
     hitBoxes.some((box) => point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height);
 };
 
-const drawImagePlaceholder = (graphics: Graphics, width: number, height: number, stroke: number, strokeWidth: number): void => {
-  graphics
-    .rect(0, 0, width, height)
-    .fill({ color: 0x5f6872, alpha: 0.42 })
-    .stroke({ color: stroke, width: strokeWidth });
-  graphics
-    .moveTo(width * 0.25, height * 0.35)
-    .lineTo(width * 0.45, height * 0.55)
-    .lineTo(width * 0.58, height * 0.42)
-    .lineTo(width * 0.78, height * 0.68)
-    .stroke({ color: 0xd8dee8, width: Math.max(2, strokeWidth), alpha: 0.75 });
-  graphics
-    .circle(width * 0.72, height * 0.28, Math.max(4, Math.min(width, height) * 0.05))
-    .fill({ color: 0xd8dee8, alpha: 0.72 });
-};
-
 const clearDisplay = (container: Container): void => {
   container.removeChildren().forEach((child) => child.destroy({ children: true }));
 };
 
-const imageFingerprint = (object: CanvasObject): string => {
-  return JSON.stringify({
-    kind: object.kind,
-    resourcePath: object.resourcePath,
-  });
+type MediaCardLabels = {
+  kindLabel: string;
+  defaultTitle: string;
+  footerHint?: string;
+  previewIcon?: string;
 };
 
-const loadImageTexture = async (url: string): Promise<ImageTexture> => {
-  const knownTexture = loadedImageTextures.get(url);
-  if (knownTexture) return Assets.get(url) ?? knownTexture;
-  const loadedTexture = await Assets.load(url);
-  const cachedTexture = Assets.get(url) ?? loadedTexture;
-  loadedImageTextures.set(url, cachedTexture);
-  return cachedTexture;
-};
-
-const resolveSceneContainerTitle = (
+const resolveCardTitle = (
   object: CanvasObject,
   linkedSceneNames?: ReadonlyMap<number, string>,
   defaultTitle = 'Карта',
@@ -358,7 +339,7 @@ const resolveSceneContainerTitle = (
   return defaultTitle;
 };
 
-const drawSceneContainerPreview = (
+const drawCardPreview = (
   container: Container,
   object: CanvasObject,
   x: number,
@@ -366,6 +347,7 @@ const drawSceneContainerPreview = (
   width: number,
   height: number,
   backgroundPath: string | undefined,
+  previewIcon: string,
   onImageLoadError?: ImageLoadErrorHandler,
 ): void => {
   const mask = new Graphics();
@@ -381,7 +363,7 @@ const drawSceneContainerPreview = (
   previewLayer.addChild(placeholder);
 
   const iconText = new Text({
-    text: '🗺',
+    text: previewIcon,
     resolution: TEXT_RESOLUTION,
     style: { fontSize: 28 },
   });
@@ -417,13 +399,13 @@ const drawSceneContainerPreview = (
     });
 };
 
-const drawSceneContainer = (
+const drawMediaCard = (
   container: Container,
   object: CanvasObject,
   selected: boolean,
-  labels: SceneContainerDisplayLabels,
+  labels: MediaCardLabels,
+  backgroundPath: string | undefined,
   linkedSceneNames?: ReadonlyMap<number, string>,
-  linkedSceneBackgroundPaths?: ReadonlyMap<number, string>,
   onImageLoadError?: ImageLoadErrorHandler,
 ): HitTest => {
   const geometry = asRecord(object.geometryJson);
@@ -457,10 +439,7 @@ const drawSceneContainer = (
       .stroke({ color: 0xf8d7a4, width: 1, alpha: 0.45 });
   }
 
-  const backgroundPath = object.linkedSceneId != null
-    ? linkedSceneBackgroundPaths?.get(object.linkedSceneId)
-    : undefined;
-  drawSceneContainerPreview(
+  drawCardPreview(
     container,
     object,
     previewX,
@@ -468,6 +447,7 @@ const drawSceneContainer = (
     previewWidth,
     previewHeight,
     backgroundPath,
+    labels.previewIcon ?? '🗺',
     onImageLoadError,
   );
 
@@ -486,7 +466,7 @@ const drawSceneContainer = (
   kindBadge.y = 10;
   container.addChild(kindBadge);
 
-  const title = resolveSceneContainerTitle(object, linkedSceneNames, labels.defaultTitle);
+  const title = resolveCardTitle(object, linkedSceneNames, labels.defaultTitle);
   const titleText = new Text({
     text: title,
     resolution: TEXT_RESOLUTION,
@@ -504,40 +484,60 @@ const drawSceneContainer = (
   titleText.y = height - footerHeight + 4;
   container.addChild(titleText);
 
-  const subText = new Text({
-    text: labels.openHint,
-    resolution: TEXT_RESOLUTION,
-    style: {
-      fill: selected ? 0xc8dce8 : 0x7a8f9c,
-      fontFamily: 'Crimson Text, serif',
-      fontSize: 12,
-    },
-  });
-  subText.x = (width - subText.width) / 2;
-  subText.y = height - 28;
-  container.addChild(subText);
-
-  return boundsHit(0, 0, width, height);
-};
-
-const syncImageDisplay = (container: Container, object: CanvasObject, selected: boolean): HitTest => {
-  const geometry = asRecord(object.geometryJson);
-  const style = asRecord(object.styleJson);
-  const width = asNumber(geometry.width, 120);
-  const height = asNumber(geometry.height, 80);
-  const stroke = toColor(style.stroke, selected ? 0xf8d7a4 : 0x20303a);
-  const strokeWidth = asNumber(style.strokeWidth, selected ? 4 : 2);
-  const child = container.children[0];
-  if (child instanceof Sprite) {
-    child.width = width;
-    child.height = height;
-  } else if (child instanceof Graphics) {
-    child.clear();
-    drawImagePlaceholder(child, width, height, stroke, strokeWidth);
+  const footerHint = labels.footerHint?.trim();
+  if (footerHint) {
+    const subText = new Text({
+      text: footerHint,
+      resolution: TEXT_RESOLUTION,
+      style: {
+        fill: selected ? 0xc8dce8 : 0x7a8f9c,
+        fontFamily: 'Crimson Text, serif',
+        fontSize: 12,
+      },
+    });
+    subText.x = (width - subText.width) / 2;
+    subText.y = titleText.y + titleText.height + 4;
+    container.addChild(subText);
   }
+
   return boundsHit(0, 0, width, height);
 };
 
+const drawSceneContainer = (
+  container: Container,
+  object: CanvasObject,
+  selected: boolean,
+  labels: SceneContainerDisplayLabels,
+  linkedSceneNames?: ReadonlyMap<number, string>,
+  linkedSceneBackgroundPaths?: ReadonlyMap<number, string>,
+  onImageLoadError?: ImageLoadErrorHandler,
+): HitTest => {
+  const backgroundPath = object.linkedSceneId != null
+    ? linkedSceneBackgroundPaths?.get(object.linkedSceneId)
+    : undefined;
+  return drawMediaCard(
+    container,
+    object,
+    selected,
+    {
+      kindLabel: labels.kindLabel,
+      defaultTitle: labels.defaultTitle,
+      footerHint: labels.openHint,
+      previewIcon: '🗺',
+    },
+    backgroundPath,
+    linkedSceneNames,
+    onImageLoadError,
+  );
+};
+const loadImageTexture = async (url: string): Promise<ImageTexture> => {
+  const knownTexture = loadedImageTextures.get(url);
+  if (knownTexture) return Assets.get(url) ?? knownTexture;
+  const loadedTexture = await Assets.load(url);
+  const cachedTexture = Assets.get(url) ?? loadedTexture;
+  loadedImageTextures.set(url, cachedTexture);
+  return cachedTexture;
+};
 
 const drawShapeLabel = (container: Container, object: CanvasObject): void => {
   const placement = shapeLabelPlacement(object);
@@ -619,6 +619,26 @@ const drawObject = (
     );
   }
 
+  if (object.kind === 'image') {
+    const labels = options?.imageCardLabels ?? {
+      defaultTitle: 'Image',
+      kindLabel: 'Image',
+    };
+    return drawMediaCard(
+      container,
+      object,
+      selected,
+      {
+        kindLabel: labels.kindLabel,
+        defaultTitle: labels.defaultTitle,
+        previewIcon: '🖼',
+      },
+      object.resourcePath ?? undefined,
+      undefined,
+      onImageLoadError,
+    );
+  }
+
   if (object.kind === 'text') {
     const fontSize = asNumber(style.fontSize, 28);
     const text = resolveTextContent(object);
@@ -652,36 +672,6 @@ const drawObject = (
     const radius = asNumber(geometry.radius, 12);
     graphics.circle(0, 0, radius).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
     return circleHit(radius + strokeWidth);
-  }
-
-  if (object.kind === 'image') {
-    const width = asNumber(geometry.width, 120);
-    const height = asNumber(geometry.height, 80);
-    drawImagePlaceholder(graphics, width, height, stroke, strokeWidth);
-    if (object.resourcePath) {
-      void resolveUploadAssetUrl(object.resourcePath)
-        .then(async (url) => {
-          if (!url || container.destroyed) return;
-          try {
-            const texture = await loadImageTexture(url);
-            if (!texture || container.destroyed) {
-              throw new Error('Image texture did not load');
-            }
-            const sprite = new Sprite(texture);
-            sprite.width = width;
-            sprite.height = height;
-            clearDisplay(container);
-            container.addChild(sprite);
-          } catch {
-            onImageLoadError?.(object, object.resourcePath ?? '');
-          }
-        })
-        .catch(() => {
-          onImageLoadError?.(object, object.resourcePath ?? '');
-        });
-      return boundsHit(0, 0, width, height);
-    }
-    return boundsHit(0, 0, width, height);
   }
 
   if (object.kind === 'rectangle' || object.kind === 'group') {
@@ -809,23 +799,24 @@ export const reconcilePixiObjects = (
     if (!layerContainer || object.isHidden) continue;
 
     const transform = objectTransform(object);
-    const fingerprint = object.kind === 'image'
-      ? imageFingerprint(object)
-      : JSON.stringify({
-          object,
-          selected: selectedObjectId === object.id,
-          viewportScale: Math.round(viewportScale * 1000) / 1000,
-          linkedSceneName: object.kind === 'scene_container' && object.linkedSceneId != null
-            ? options?.linkedSceneNames?.get(object.linkedSceneId)
-            : undefined,
-          linkedSceneBackground: object.kind === 'scene_container' && object.linkedSceneId != null
-            ? options?.linkedSceneBackgroundPaths?.get(object.linkedSceneId)
-            : undefined,
-          sceneContainerLabels: object.kind === 'scene_container'
-            ? options?.sceneContainerLabels
-            : undefined,
-          editingTextObjectId: options?.editingTextObjectId ?? null,
-        });
+    const fingerprint = JSON.stringify({
+      object,
+      selected: selectedObjectId === object.id,
+      viewportScale: Math.round(viewportScale * 1000) / 1000,
+      linkedSceneName: object.kind === 'scene_container' && object.linkedSceneId != null
+        ? options?.linkedSceneNames?.get(object.linkedSceneId)
+        : undefined,
+      linkedSceneBackground: object.kind === 'scene_container' && object.linkedSceneId != null
+        ? options?.linkedSceneBackgroundPaths?.get(object.linkedSceneId)
+        : undefined,
+      sceneContainerLabels: object.kind === 'scene_container'
+        ? options?.sceneContainerLabels
+        : undefined,
+      imageCardLabels: object.kind === 'image'
+        ? options?.imageCardLabels
+        : undefined,
+      editingTextObjectId: options?.editingTextObjectId ?? null,
+    });
     let entry = state.objects.get(object.id);
     if (!entry) {
       entry = {
@@ -857,8 +848,6 @@ export const reconcilePixiObjects = (
         options,
       );
       entry.fingerprint = fingerprint;
-    } else if (object.kind === 'image') {
-      entry.hitTest = syncImageDisplay(entry.display, object, selectedObjectId === object.id);
     }
   }
 };

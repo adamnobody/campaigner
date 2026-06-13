@@ -88,6 +88,10 @@
       "openAction": "Open map",
       "selectionType": "Map on canvas"
     },
+    "imageCard": {
+      "kindLabel": "Image",
+      "defaultTitle": "Image"
+    },
     "selection": {
       "title": "Selected object",
       "meta": "kind={{kind}} · layer={{layer}} · z={{z}}"
@@ -156,6 +160,16 @@
     "uploadImage": "Upload image",
     "createChildMap": "Create nested map"
   },
+  "cardPanel": {
+    "imageTitle": "Image on canvas",
+    "subtitle": "Card size and caption",
+    "sectionTitle": "Caption",
+    "titleLabel": "Title",
+    "sectionSize": "Size",
+    "sectionPosition": "Position",
+    "width": "Width",
+    "height": "Height"
+  },
   "shapePanel": {
     "title": "Shape",
     "addShape": "Add shape",
@@ -214,6 +228,7 @@
     "curveEndY": "End Y",
     "pointPathHint": "This curve uses a point path in geometry_json. Edit text and style here; path points are preserved.",
     "curveHandlesHint": "Edit the curve shape using handles on the canvas.",
+    "convertToCurveText": "Convert to curve text",
     "inlineEditHint": "Double-click text on the canvas to edit, or select it and start typing.",
     "sectionPresets": "Presets",
     "preset": "Style preset",

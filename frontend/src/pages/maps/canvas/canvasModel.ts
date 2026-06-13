@@ -17,6 +17,11 @@ export type CanvasMode =
   | 'image'
   | 'scene_container';
 
+export const CARD_OBJECT_DEFAULT_SIZE = {
+  width: 240,
+  height: 160,
+} as const;
+
 export const MARKER_ICONS: Record<string, string> = {
   castle: '🏰', city: '🏙️', village: '🏘️', tavern: '🍺',
   dungeon: '⚔️', forest: '🌲', mountain: '⛰️', river: '🌊',
@@ -254,8 +259,8 @@ export const defaultImageObject = (
   layerId: number,
   point: CanvasPoint,
   resourcePath: string,
-  width: number,
-  height: number,
+  naturalWidth: number,
+  naturalHeight: number,
 ) => ({
   sceneId,
   layerId,
@@ -263,9 +268,9 @@ export const defaultImageObject = (
   name: 'Image',
   zIndex: null,
   transformJson: { x: point.x, y: point.y },
-  geometryJson: { width, height },
+  geometryJson: { width: CARD_OBJECT_DEFAULT_SIZE.width, height: CARD_OBJECT_DEFAULT_SIZE.height },
   styleJson: { opacity: 1 },
-  contentJson: {},
+  contentJson: { naturalWidth, naturalHeight },
   resourcePath,
   linkedNoteId: null,
   linkedSceneId: null,

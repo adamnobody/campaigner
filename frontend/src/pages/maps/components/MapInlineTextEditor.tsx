@@ -23,25 +23,32 @@ export const MapInlineTextEditor: React.FC<Props> = ({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [layout, setLayout] = useState<TextEditScreenLayout | null>(() => getLayout());
   const [value, setValue] = useState(() => replaceWithSeed ?? initialText);
+  const appliedInitialSelectionRef = useRef(false);
 
   useLayoutEffect(() => {
     setLayout(getLayout());
   }, [getLayout, layoutTick]);
 
   useEffect(() => {
+    appliedInitialSelectionRef.current = false;
+  }, [initialText, replaceWithSeed, selectAll]);
+
+  useEffect(() => {
     const input = inputRef.current;
-    if (!input) return;
+    if (!input || appliedInitialSelectionRef.current) return;
+    appliedInitialSelectionRef.current = true;
     input.focus();
+    const len = input.value.length;
     if (replaceWithSeed != null) {
-      input.setSelectionRange(value.length, value.length);
+      input.setSelectionRange(len, len);
       return;
     }
     if (selectAll) {
       input.select();
       return;
     }
-    input.setSelectionRange(value.length, value.length);
-  }, [replaceWithSeed, selectAll, value.length]);
+    input.setSelectionRange(len, len);
+  }, [replaceWithSeed, selectAll, initialText]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

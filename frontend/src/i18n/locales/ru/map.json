@@ -88,6 +88,10 @@
       "openAction": "Открыть карту",
       "selectionType": "Карта на холсте"
     },
+    "imageCard": {
+      "kindLabel": "Изображение",
+      "defaultTitle": "Изображение"
+    },
     "selection": {
       "title": "Выбранный объект",
       "meta": "тип={{kind}} · слой={{layer}} · z={{z}}"
@@ -156,6 +160,16 @@
     "uploadImage": "Загрузить изображение",
     "createChildMap": "Создать вложенную карту"
   },
+  "cardPanel": {
+    "imageTitle": "Изображение на холсте",
+    "subtitle": "Размер и подпись карточки",
+    "sectionTitle": "Подпись",
+    "titleLabel": "Заголовок",
+    "sectionSize": "Размер",
+    "sectionPosition": "Положение",
+    "width": "Ширина",
+    "height": "Высота"
+  },
   "shapePanel": {
     "title": "Фигура",
     "addShape": "Добавить фигуру",
@@ -214,6 +228,7 @@
     "curveEndY": "Конец Y",
     "pointPathHint": "Кривая задана массивом точек в geometry_json. Здесь можно менять текст и стиль; точки пути сохраняются.",
     "curveHandlesHint": "Форма кривой редактируется точками на холсте.",
+    "convertToCurveText": "Сделать текст по кривой",
     "inlineEditHint": "Дважды кликните по тексту на холсте или выделите его и начните печатать.",
     "sectionPresets": "Пресеты",
     "preset": "Пресет стиля",

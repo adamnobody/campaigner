@@ -30,6 +30,8 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 
+import GestureIcon from '@mui/icons-material/Gesture';
+
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
 
 import type { CanvasObject } from '@/api/canvas';
@@ -37,6 +39,8 @@ import type { CanvasObject } from '@/api/canvas';
 import {
 
   applyTextFormToObject,
+
+  convertTextToCurveText,
 
   textFormFromObject,
 
@@ -229,6 +233,14 @@ export const MapTextPanel: React.FC<Props> = ({
   const updateForm = (patch: Partial<TextObjectFormState>) => {
 
     setForm((current) => ({ ...current, ...patch }));
+
+  };
+
+
+
+  const handleConvertToCurveText = () => {
+
+    onSave(convertTextToCurveText(selectedObject));
 
   };
 
@@ -635,6 +647,34 @@ export const MapTextPanel: React.FC<Props> = ({
           </Box>
 
         </Box>
+
+
+
+        {!isCurveText && (
+
+          <>
+
+            <Divider sx={sxDivider(theme)} />
+
+            <Button
+
+              variant="outlined"
+
+              startIcon={<GestureIcon />}
+
+              onClick={handleConvertToCurveText}
+
+              sx={{ alignSelf: 'flex-start', fontWeight: 600 }}
+
+            >
+
+              {t('map:textPanel.convertToCurveText')}
+
+            </Button>
+
+          </>
+
+        )}
 
       </Box>
 

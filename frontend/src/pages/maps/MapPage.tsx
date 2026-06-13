@@ -21,6 +21,7 @@ import { MapTerritoryPanel } from './components/MapTerritoryPanel';
 import { MapInlineTextEditor } from './components/MapInlineTextEditor';
 import { MapTextPanel } from './components/MapTextPanel';
 import { MapShapePanel } from './components/MapShapePanel';
+import { MapCardPanel } from './components/MapCardPanel';
 import { MapCanvasContextMenu, type MapContextMenuState } from './components/MapCanvasContextMenu';
 import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas';
 import type { ViewportPersist } from './canvas/canvasViewport';
@@ -85,7 +86,7 @@ import {
   type TerritoryFactionOption,
   type TerritoryFormState,
 } from './canvas/canvasModel';
-import type { SceneContainerDisplayLabels } from './canvas/canvasReconciler';
+import type { ImageCardDisplayLabels, SceneContainerDisplayLabels } from './canvas/canvasReconciler';
 
 const MAX_TEXTURE_SIZE = 16384;
 const pendingInitialSceneLoads = new Map<string, Promise<CanvasScene>>();
@@ -300,6 +301,11 @@ export function CanvasPage() {
     defaultTitle: t('map:canvas.breadcrumbs.mapFallback'),
     openHint: t('map:canvas.sceneContainer.openHint'),
     kindLabel: t('map:canvas.sceneContainer.kindLabel'),
+  }), [t]);
+
+  const imageCardLabels = useMemo((): ImageCardDisplayLabels => ({
+    defaultTitle: t('map:canvas.imageCard.defaultTitle'),
+    kindLabel: t('map:canvas.imageCard.kindLabel'),
   }), [t]);
 
   const selectedLabel = useMemo(() => {
@@ -820,6 +826,10 @@ export function CanvasPage() {
   }, [persistObject]);
 
   const handleShapeObjectSave = useCallback((object: CanvasObject) => {
+    void persistObject(object);
+  }, [persistObject]);
+
+  const handleCardObjectSave = useCallback((object: CanvasObject) => {
     void persistObject(object);
   }, [persistObject]);
 
@@ -1444,6 +1454,7 @@ export function CanvasPage() {
           linkedSceneNames={linkedSceneNames}
           linkedSceneBackgroundPaths={linkedSceneBackgroundPaths}
           sceneContainerLabels={sceneContainerLabels}
+          imageCardLabels={imageCardLabels}
           territoryEditRings={territoryEditSession?.rings ?? null}
           onTerritoryEditChange={(rings) => {
             setTerritoryEditSession((current) => (current ? { ...current, rings } : null));
@@ -1477,6 +1488,7 @@ export function CanvasPage() {
 
         {inlineTextEdit && inlineEditObject && (
           <MapInlineTextEditor
+            key={inlineTextEdit.objectId}
             getLayout={() => pixiCanvasRef.current?.getTextEditLayout(inlineTextEdit.objectId) ?? null}
             layoutTick={textLayoutTick}
             initialText={resolveTextContent(inlineEditObject)}
@@ -1661,11 +1673,30 @@ export function CanvasPage() {
           </Box>
         )}
 
+        {(selectedObject?.kind === 'scene_container' || selectedObject?.kind === 'image') && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapCardPanel
+              key={selectedObject.id}
+              selectedObject={selectedObject}
+              onClose={() => setSelectedObjectId(null)}
+              onSave={handleCardObjectSave}
+              onDelete={() => deleteSelected()}
+              onOpenLinkedScene={
+                selectedObject.kind === 'scene_container' && selectedObject.linkedSceneId != null
+                  ? () => handleOpenChildMap(selectedObject.linkedSceneId!, 'container')
+                  : undefined
+              }
+            />
+          </Box>
+        )}
+
         {selectedObject
           && selectedObject.kind !== 'marker'
           && selectedObject.kind !== 'territory'
           && selectedObject.kind !== 'text'
           && selectedObject.kind !== 'curve_text'
+          && selectedObject.kind !== 'scene_container'
+          && selectedObject.kind !== 'image'
           && !isShapeKind(selectedObject.kind) && (
           <Paper
             elevation={6}
@@ -1683,22 +1714,12 @@ export function CanvasPage() {
               <Typography variant="subtitle2" color="text.secondary">{t('map:canvas.selection.title')}</Typography>
               <Typography fontWeight={700}>{selectedObject.name ?? selectedObject.kind}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {selectedObject.kind === 'scene_container' ? t('map:canvas.sceneContainer.selectionType') : t('map:canvas.selection.meta', {
+                {t('map:canvas.selection.meta', {
                   kind: selectedObject.kind,
                   layer: selectedObject.layerId,
                   z: selectedObject.zIndex,
                 })}
               </Typography>
-              {selectedObject.kind === 'scene_container' && selectedObject.linkedSceneId != null && (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  onClick={() => handleOpenChildMap(selectedObject.linkedSceneId!, 'container')}
-                >
-                  {t('map:canvas.sceneContainer.openAction')}
-                </Button>
-              )}
               <Button color="error" variant="outlined" size="small" startIcon={<DeleteIcon />} onClick={deleteSelected}>
                 {t('common:delete')}
               </Button>

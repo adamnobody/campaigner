@@ -89,6 +89,32 @@ export const applyTextStylePreset = (
   },
 });
 
+export const convertTextToCurveText = (object: CanvasObject): CanvasObject => {
+  if (object.kind !== 'text') return object;
+  const form = textFormFromObject(object);
+  return applyTextFormToObject(
+    {
+      ...object,
+      kind: 'curve_text',
+      geometryJson: {
+        start: { x: 0, y: 0 },
+        control: { x: 140, y: -80 },
+        end: { x: 280, y: 0 },
+      },
+    },
+    form,
+    curveTextGeometryFromObject({
+      ...object,
+      kind: 'curve_text',
+      geometryJson: {
+        start: { x: 0, y: 0 },
+        control: { x: 140, y: -80 },
+        end: { x: 280, y: 0 },
+      },
+    }),
+  );
+};
+
 export const applyTextFormToObject = (
   object: CanvasObject,
   form: TextObjectFormState,
