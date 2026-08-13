@@ -38,9 +38,6 @@ const uploadGeneric = async (
 };
 
 export const uploadsApi = {
-  uploadAppearanceImage: (file: File) =>
-    uploadGeneric('uploads_save_appearance_image', file),
-
   uploadTraitImage: (file: File) =>
     uploadGeneric('uploads_save_trait_image', file),
 

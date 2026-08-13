@@ -46,9 +46,9 @@ type Scene = {
 
 type HomeContourCanvasProps = {
   accentColor: string;
+  baseColor: string;
   animate: boolean;
   pulse: HomeContourPulse;
-  transparentBase?: boolean;
   visible?: boolean;
 };
 
@@ -95,18 +95,18 @@ const createGrainTile = () => {
 
 export function HomeContourCanvas({
   accentColor,
+  baseColor,
   animate,
   pulse,
-  transparentBase = false,
   visible = true,
 }: HomeContourCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const configRef = useRef({ color: parseColor(accentColor), animate, transparentBase });
+  const configRef = useRef({ color: parseColor(accentColor), baseColor, animate });
   const pulseRef = useRef({ id: pulse.id, direction: pulse.direction, startedAt: -10_000 });
 
   useEffect(() => {
-    configRef.current = { color: parseColor(accentColor), animate, transparentBase };
-  }, [accentColor, animate, transparentBase]);
+    configRef.current = { color: parseColor(accentColor), baseColor, animate };
+  }, [accentColor, animate, baseColor]);
 
   useEffect(() => {
     pulseRef.current = {
@@ -206,14 +206,14 @@ export function HomeContourCanvas({
     const paint = (now: number) => {
       if (!scene) return;
       const { context, width, height, lines, dust, arches } = scene;
-      const { color, transparentBase: translucent } = configRef.current;
+      const { color, baseColor: background } = configRef.current;
       const elapsed = (now - startedAt) / 1000;
       const time = elapsed;
       const breathe = 0.82 + 0.3 * (0.5 + 0.5 * Math.sin(time * 0.08));
       const reveal = Math.min(1, Math.min(1, elapsed / 1.8) ** 0.7);
 
       context.clearRect(0, 0, width, height);
-      context.fillStyle = translucent ? 'rgba(10,11,14,.78)' : '#0a0b0e';
+      context.fillStyle = background;
       context.fillRect(0, 0, width, height);
 
       const glow = context.createRadialGradient(width / 2, height * 0.52, 0, width / 2, height * 0.52, Math.max(width, height) * 0.72);
@@ -350,7 +350,7 @@ export function HomeContourCanvas({
       document.documentElement.removeEventListener('mouseleave', onMouseLeave);
       document.removeEventListener('visibilitychange', start);
     };
-  }, [accentColor, animate, transparentBase]);
+  }, [accentColor, animate, baseColor]);
 
   return (
     <canvas

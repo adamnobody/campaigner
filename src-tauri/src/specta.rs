@@ -1648,14 +1648,6 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
-    pub fn uploads_save_appearance_image(_input: UploadFileInput) -> UploadSavedPath {
-        UploadSavedPath {
-            path: "/uploads/appearance/appearance-0.png".to_string(),
-        }
-    }
-
-    #[tauri::command]
-    #[specta::specta]
     pub fn characters_upload_image(_input: CharacterUploadImageInput) -> Character {
         Character {
             id: 0,
@@ -1859,7 +1851,6 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::uploads_save_character_image,
             codegen_commands::uploads_save_trait_image,
             codegen_commands::uploads_save_ambition_image,
-            codegen_commands::uploads_save_appearance_image,
             codegen_commands::characters_upload_image,
             codegen_commands::factions_upload_image,
             codegen_commands::factions_upload_banner,

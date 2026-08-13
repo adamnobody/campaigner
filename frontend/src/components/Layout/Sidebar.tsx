@@ -20,7 +20,6 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
-import PaletteIcon from '@mui/icons-material/Palette';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -116,11 +115,9 @@ export const Sidebar: React.FC = () => {
     sidebarWidth: state.sidebarWidth,
     toggleSidebar: state.toggleSidebar,
   }), shallow);
-  const { projects, currentProject, fetchProject, fetchProjects } = useProjectStore((state) => ({
-    projects: state.projects,
+  const { currentProject, fetchProject } = useProjectStore((state) => ({
     currentProject: state.currentProject,
     fetchProject: state.fetchProject,
-    fetchProjects: state.fetchProjects,
   }), shallow);
   const characters = useCharacterStore((state) => state.characters);
   const factions = useFactionStore((state) => state.factions);
@@ -135,7 +132,6 @@ export const Sidebar: React.FC = () => {
   const [expanded, setExpanded] = useState<Set<ProjectRoutePath>>(new Set());
 
   const isProjectPage = !!projectId;
-  const isAppearancePage = location.pathname === '/appearance';
   const pid = projectId ? Number(projectId) : null;
 
   const activePath = useMemo<ProjectRoutePath>(() => {
@@ -177,10 +173,6 @@ export const Sidebar: React.FC = () => {
   }, [projectId, currentProject, fetchProject]);
 
   useEffect(() => {
-    if (isAppearancePage && projects.length === 0) void fetchProjects();
-  }, [isAppearancePage, projects.length, fetchProjects]);
-
-  useEffect(() => {
     if (!activePath) return;
     setExpanded((current) => current.has(activePath) ? current : new Set(current).add(activePath));
   }, [activePath]);
@@ -202,35 +194,11 @@ export const Sidebar: React.FC = () => {
       width: sidebarWidth,
       boxSizing: 'border-box',
       overflowX: 'hidden',
-      backgroundColor: '#0c0e13',
+      backgroundColor: 'background.paper',
       borderRight: '1px solid rgba(255,255,255,.055)',
       transition: 'width 220ms cubic-bezier(.4,0,.2,1)',
     },
   } as const;
-
-  if (isAppearancePage) {
-    return (
-      <Drawer variant="permanent" sx={drawerSx}>
-        <Box sx={{ p: 2, minHeight: 72, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <PaletteIcon color="primary" />
-          {sidebarOpen ? <Typography variant="h6">{t('sidebar.appearance')}</Typography> : null}
-        </Box>
-        <Divider />
-        <List>
-          <ListItemButton onClick={() => navigate('/')}>
-            <ListItemIcon><HomeIcon color="primary" /></ListItemIcon>
-            {sidebarOpen ? <ListItemText primary={t('sidebar.allCampaigns')} /> : null}
-          </ListItemButton>
-          {projects.map((project) => (
-            <ListItemButton key={project.id} onClick={() => navigate(`/project/${project.id}`)}>
-              <ListItemIcon><AccountTreeIcon /></ListItemIcon>
-              {sidebarOpen ? <ListItemText primary={project.name} primaryTypographyProps={{ noWrap: true }} /> : null}
-            </ListItemButton>
-          ))}
-        </List>
-      </Drawer>
-    );
-  }
 
   return (
     <Drawer variant="permanent" sx={drawerSx}>
@@ -278,8 +246,8 @@ export const Sidebar: React.FC = () => {
                   borderRadius: '9px',
                   gap: 1.25,
                   mb: 0.25,
-                  '&.Mui-selected': { backgroundColor: alpha('#c9a961', 0.1) },
-                  '&.Mui-selected:hover': { backgroundColor: alpha('#c9a961', 0.14) },
+                  '&.Mui-selected': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1) },
+                  '&.Mui-selected:hover': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.14) },
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 0, color: active ? 'primary.main' : 'rgba(232,228,220,.42)' }}><Icon sx={{ fontSize: 19 }} /></ListItemIcon>

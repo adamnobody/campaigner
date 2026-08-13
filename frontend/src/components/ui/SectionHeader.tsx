@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Typography, alpha, useTheme } from '@mui/material';
-import { isDesignSystemTheme } from '@/theme/designSystem';
 
 export const SectionHeader: React.FC<{
   icon: React.ReactNode;
@@ -8,7 +7,6 @@ export const SectionHeader: React.FC<{
   subtitle?: string;
 }> = ({ icon, title, subtitle }) => {
   const theme = useTheme();
-  const isRedesign = isDesignSystemTheme(theme);
 
   return (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
@@ -17,13 +15,13 @@ export const SectionHeader: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: isRedesign ? 34 : 40,
-        height: isRedesign ? 34 : 40,
-        borderRadius: isRedesign ? '9px' : 2,
-        bgcolor: isRedesign ? alpha(theme.palette.primary.main, 0.09) : 'primary.main',
-        color: isRedesign ? 'primary.main' : '#fff',
-        border: isRedesign ? `1px solid ${alpha(theme.palette.primary.main, 0.2)}` : 'none',
-        boxShadow: isRedesign ? 'none' : `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+        width: 34,
+        height: 34,
+        borderRadius: '9px',
+        bgcolor: alpha(theme.palette.primary.main, 0.09),
+        color: 'primary.main',
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+        boxShadow: 'none',
       }}
     >
       {icon}
@@ -32,8 +30,8 @@ export const SectionHeader: React.FC<{
       <Typography
         variant="h6"
         sx={{
-          fontFamily: isRedesign ? theme.campaigner.typography.display : '"Cinzel", serif',
-          fontWeight: isRedesign ? 600 : 700,
+          fontFamily: theme.campaigner.typography.display,
+          fontWeight: 600,
           fontSize: '1.15rem',
           lineHeight: 1.2,
         }}

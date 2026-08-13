@@ -173,7 +173,6 @@ pub fn run() {
             commands::uploads::uploads_save_character_image_command,
             commands::uploads::uploads_save_trait_image_command,
             commands::uploads::uploads_save_ambition_image_command,
-            commands::uploads::uploads_save_appearance_image_command,
             commands::uploads::characters_upload_image_command,
             commands::uploads::factions_upload_image_command,
             commands::uploads::factions_upload_banner_command,

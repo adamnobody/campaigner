@@ -60,14 +60,6 @@ pub fn uploads_save_ambition_image_command(
     service::uploads_save_ambition_image(&app, input)
 }
 
-#[tauri::command(rename = "uploads_save_appearance_image")]
-pub fn uploads_save_appearance_image_command(
-    app: AppHandle,
-    input: UploadFileInput,
-) -> Result<UploadSavedPath> {
-    service::uploads_save_appearance_image(&app, input)
-}
-
 #[tauri::command(rename = "characters_upload_image")]
 pub fn characters_upload_image_command(
     app: AppHandle,

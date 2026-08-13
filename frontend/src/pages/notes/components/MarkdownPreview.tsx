@@ -15,25 +15,32 @@ interface MarkdownPreviewProps {
   scrollRef?: React.Ref<HTMLDivElement>;
 }
 
-const markdownStyles: SxProps<Theme> = {
-  '& h1': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.8rem', mt: 3, mb: 1, borderBottom: '1px solid rgba(201,169,89,0.2)', pb: 1 },
-  '& h2': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.4rem', mt: 2.5, mb: 1 },
-  '& h3': { fontFamily: '"Cinzel", serif', color: 'primary.main', fontSize: '1.15rem', mt: 2, mb: 0.5 },
-  '& p': { mb: 1.5, lineHeight: 1.8, color: 'rgba(255,255,255,0.85)' },
-  '& a': { color: '#4ECDC4', textDecoration: 'underline', textDecorationColor: 'rgba(78,205,196,0.3)' },
-  '& code': { backgroundColor: 'rgba(201,169,89,0.1)', padding: '2px 6px', borderRadius: '4px', fontFamily: '"Fira Code", monospace', fontSize: '0.85em' },
-  '& pre': { backgroundColor: 'rgba(0,0,0,0.4)', p: 2, borderRadius: 2, overflow: 'auto', border: '1px solid rgba(255,255,255,0.06)', '& code': { backgroundColor: 'transparent', p: 0 } },
+const markdownStyles: SxProps<Theme> = (theme) => ({
+  width: '100%',
+  maxWidth: theme.campaigner.reading.columnWidth,
+  mx: 'auto',
+  color: 'text.secondary',
+  fontFamily: theme.campaigner.reading.fontFamily,
+  fontSize: `${theme.campaigner.reading.fontSize}px`,
+  lineHeight: theme.campaigner.reading.lineHeight,
+  '& h1': { fontFamily: theme.campaigner.typography.display, color: 'primary.main', fontSize: '1.8rem', mt: 3, mb: 1, borderBottom: '1px solid', borderColor: 'divider', pb: 1 },
+  '& h2': { fontFamily: theme.campaigner.typography.display, color: 'primary.main', fontSize: '1.4rem', mt: 2.5, mb: 1 },
+  '& h3': { fontFamily: theme.campaigner.typography.display, color: 'primary.main', fontSize: '1.15rem', mt: 2, mb: 0.5 },
+  '& p': { mb: 1.5, lineHeight: 'inherit' },
+  '& a': { color: 'primary.main', textDecoration: 'underline', textDecorationColor: 'currentColor' },
+  '& code': { backgroundColor: 'action.hover', padding: '2px 6px', borderRadius: '4px', fontFamily: theme.campaigner.typography.mono, fontSize: '0.85em' },
+  '& pre': { backgroundColor: 'rgba(0,0,0,0.4)', p: 2, borderRadius: 2, overflow: 'auto', border: '1px solid', borderColor: 'divider', '& code': { backgroundColor: 'transparent', p: 0 } },
   '& blockquote': { borderLeft: '3px solid', borderColor: 'primary.main', pl: 2, ml: 0, opacity: 0.85, fontStyle: 'italic' },
   '& ul, & ol': { pl: 3, mb: 1.5 },
-  '& li': { mb: 0.5, lineHeight: 1.7 },
+  '& li': { mb: 0.5, lineHeight: 'inherit' },
   '& table': { borderCollapse: 'collapse', width: '100%', mb: 2 },
   '& th, & td': { border: '1px solid rgba(255,255,255,0.1)', px: 2, py: 1, textAlign: 'left' },
   '& th': { backgroundColor: 'rgba(255,255,255,0.05)', fontWeight: 600 },
   '& hr': { border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', my: 3 },
   '& img': { maxWidth: '100%', borderRadius: 1 },
-  '& strong': { color: '#fff', fontWeight: 700 },
-  '& em': { color: 'rgba(255,255,255,0.9)' },
-};
+  '& strong': { color: 'text.primary', fontWeight: 700 },
+  '& em': { color: 'text.primary' },
+});
 
 export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   content, isMarkdown, wikiNotes, projectId, scrollRef,
@@ -45,7 +52,8 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   }, [wikiNotes]);
 
   return (
-    <Box ref={scrollRef} sx={{ height: '100%', overflow: 'auto', p: 3, ...markdownStyles }}>
+    <Box ref={scrollRef} sx={{ height: '100%', overflow: 'auto', p: 3 }}>
+      <Box sx={markdownStyles}>
       {isMarkdown ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
@@ -65,12 +73,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                         e.preventDefault();
                         navigate(`/project/${projectId}/notes/${targetNoteId}`);
                       }}
-                      style={{
-                        color: '#4ECDC4',
-                        textDecoration: 'underline',
-                        textDecorationColor: 'rgba(78,205,196,0.3)',
-                        cursor: 'pointer',
-                      }}
+                      style={{ cursor: 'pointer' }}
                     >
                       {children}
                     </a>
@@ -98,12 +101,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                       e.preventDefault();
                       navigate(href);
                     }}
-                    style={{
-                      color: '#4ECDC4',
-                      textDecoration: 'underline',
-                      textDecorationColor: 'rgba(78,205,196,0.3)',
-                      cursor: 'pointer',
-                    }}
+                    style={{ cursor: 'pointer' }}
                   >
                     {children}
                   </a>
@@ -126,14 +124,16 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           component="pre"
           sx={{
             whiteSpace: 'pre-wrap',
-            fontFamily: '"Crimson Text", serif',
-            lineHeight: 1.8,
-            color: 'rgba(255,255,255,0.85)',
+            fontFamily: 'inherit',
+            fontSize: 'inherit',
+            lineHeight: 'inherit',
+            color: 'inherit',
           }}
         >
           {content || t('notes:preview.empty')}
         </Typography>
       )}
+      </Box>
     </Box>
   );
 };

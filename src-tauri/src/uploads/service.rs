@@ -90,20 +90,6 @@ pub fn uploads_save_ambition_image<R: Runtime>(
     )
 }
 
-pub fn uploads_save_appearance_image<R: Runtime>(
-    app: &AppHandle<R>,
-    input: UploadFileInput,
-) -> Result<UploadSavedPath> {
-    save_generic(
-        app,
-        UploadSubdir::Appearance,
-        "appearance",
-        &input,
-        UploadProfile::Appearance,
-        MAX_FILE_SIZE,
-    )
-}
-
 pub fn characters_upload_image<R: Runtime>(
     app: &AppHandle<R>,
     connection: &Connection,

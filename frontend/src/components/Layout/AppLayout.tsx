@@ -16,11 +16,12 @@ export const AppLayout: React.FC = () => {
   const pageKey = `${location.pathname}${location.search}`;
 
   const isHomePage = location.pathname === '/';
+  const isAppearancePage = location.pathname === '/appearance';
   const isCanvasPage = /^\/project\/[^/]+\/map(?:\/.*)?$/.test(location.pathname);
 
-  if (isHomePage) {
+  if (isHomePage || isAppearancePage) {
     return (
-      <Box sx={{ minHeight: '100vh', backgroundColor: '#090b0f', position: 'relative' }}>
+      <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default', position: 'relative' }}>
         <Outlet />
       </Box>
     );

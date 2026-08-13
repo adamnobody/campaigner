@@ -106,7 +106,6 @@ export const commands = {
 	uploadsSaveCharacterImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_character_image", { input }),
 	uploadsSaveTraitImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_trait_image", { input }),
 	uploadsSaveAmbitionImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_ambition_image", { input }),
-	uploadsSaveAppearanceImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_appearance_image", { input }),
 	charactersUploadImage: (input: CharacterUploadImageInput) => __TAURI_INVOKE<Character>("characters_upload_image", { input }),
 	factionsUploadImage: (input: FactionUploadImageInput) => __TAURI_INVOKE<Faction>("factions_upload_image", { input }),
 	factionsUploadBanner: (input: FactionUploadBannerInput) => __TAURI_INVOKE<Faction>("factions_upload_banner", { input }),

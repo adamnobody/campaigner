@@ -1,3 +1,12 @@
+import type {
+  AccentGlow,
+  AppearanceFontMode,
+  AppearanceMotionMode,
+  AppearanceUiDensity,
+  BackgroundTone,
+  ReadingLineHeight,
+} from './appearanceTokens';
+
 export type InterfaceStyleId =
   | 'dark-fantasy'
   | 'high-fantasy'
@@ -12,29 +21,16 @@ export type InterfaceStyleId =
   | 'holographic'
   | 'scholar-manuscript';
 
-type SurfaceMode = 'glass' | 'solid';
-type FontMode = 'serif' | 'sans' | 'custom';
-type UiDensity = 'compact' | 'comfortable' | 'spacious';
-type MotionMode = 'full' | 'reduced';
-type PatternMode = 'none' | 'dots' | 'grid' | 'diagonal' | 'custom';
-
 export type InterfaceStyleDefaults = {
-  surfaceMode: SurfaceMode;
-  fontMode: FontMode;
-  customFontCssUrl: string;
-  customBodyFontFamily: string;
-  customHeadingFontFamily: string;
-  uiDensity: UiDensity;
-  motionMode: MotionMode;
-  transparency: number;
-  blur: number;
-  borderRadius: number;
-  panelPatternMode: PatternMode;
-  panelPatternOpacity: number;
-  panelPatternSize: number;
-  cardPatternMode: PatternMode;
-  cardPatternOpacity: number;
-  cardPatternSize: number;
+  backgroundTone: BackgroundTone;
+  accentGlow: AccentGlow;
+  fontMode: AppearanceFontMode;
+  fontPresetId: string;
+  uiDensity: AppearanceUiDensity;
+  motionMode: AppearanceMotionMode;
+  readingFontSize: number;
+  readingLineHeight: ReadingLineHeight;
+  readingColumnWidth: 620 | 760 | 900;
 };
 
 export type PaletteCompatibility = 'ideal' | 'good' | 'experimental';
@@ -73,22 +69,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['obsidian-gold', 'brass-smoke'],
     compatiblePalettes: ['ember-crimson', 'royal-violet', 'deep-amber'],
     defaults: {
-      surfaceMode: 'glass',
-      fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap',
-      customBodyFontFamily: '"Cormorant Garamond", "Crimson Text", serif',
-      customHeadingFontFamily: '"Cinzel", serif',
+      backgroundTone: 'ink',
+      accentGlow: 'soft',
+      fontMode: 'serif',
+      fontPresetId: 'lore-serif',
       uiDensity: 'comfortable',
       motionMode: 'full',
-      transparency: 0.72,
-      blur: 14,
-      borderRadius: 14,
-      panelPatternMode: 'none',
-      panelPatternOpacity: 0.12,
-      panelPatternSize: 28,
-      cardPatternMode: 'none',
-      cardPatternOpacity: 0.1,
-      cardPatternSize: 22,
+      readingFontSize: 16,
+      readingLineHeight: 'normal',
+      readingColumnWidth: 760,
     },
   },
   'high-fantasy': {
@@ -99,22 +88,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['moonstone-silver', 'parchment-ivory'],
     compatiblePalettes: ['obsidian-gold', 'sable-rose', 'deep-amber'],
     defaults: {
-      surfaceMode: 'glass',
-      fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Marcellus&family=EB+Garamond:wght@400;500;600;700&display=swap',
-      customBodyFontFamily: '"EB Garamond", "Crimson Text", serif',
-      customHeadingFontFamily: '"Marcellus", "Cinzel", serif',
+      backgroundTone: 'graphite',
+      accentGlow: 'soft',
+      fontMode: 'serif',
+      fontPresetId: 'lore-serif',
       uiDensity: 'spacious',
       motionMode: 'full',
-      transparency: 0.78,
-      blur: 12,
-      borderRadius: 16,
-      panelPatternMode: 'dots',
-      panelPatternOpacity: 0.09,
-      panelPatternSize: 32,
-      cardPatternMode: 'none',
-      cardPatternOpacity: 0.08,
-      cardPatternSize: 24,
+      readingFontSize: 17,
+      readingLineHeight: 'loose',
+      readingColumnWidth: 760,
     },
   },
   'sci-fi': {
@@ -125,22 +107,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['midnight-cyan', 'storm-indigo'],
     compatiblePalettes: ['ashen-teal', 'moonstone-silver', 'neon-magenta'],
     defaults: {
-      surfaceMode: 'solid',
+      backgroundTone: 'blue',
+      accentGlow: 'none',
       fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Rajdhani:wght@400;500;600;700&display=swap',
-      customBodyFontFamily: '"Rajdhani", "Inter", sans-serif',
-      customHeadingFontFamily: '"Orbitron", "Rajdhani", sans-serif',
+      fontPresetId: 'clean-sans',
       uiDensity: 'comfortable',
       motionMode: 'reduced',
-      transparency: 0.9,
-      blur: 2,
-      borderRadius: 10,
-      panelPatternMode: 'grid',
-      panelPatternOpacity: 0.1,
-      panelPatternSize: 22,
-      cardPatternMode: 'grid',
-      cardPatternOpacity: 0.08,
-      cardPatternSize: 20,
+      readingFontSize: 15,
+      readingLineHeight: 'tight',
+      readingColumnWidth: 760,
     },
   },
   cyberpunk: {
@@ -151,22 +126,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['neon-magenta', 'royal-violet'],
     compatiblePalettes: ['storm-indigo', 'ember-crimson', 'midnight-cyan'],
     defaults: {
-      surfaceMode: 'glass',
+      backgroundTone: 'ink',
+      accentGlow: 'strong',
       fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&family=Exo+2:wght@400;500;600;700&display=swap',
-      customBodyFontFamily: '"Exo 2", "Inter", sans-serif',
-      customHeadingFontFamily: '"Oxanium", "Exo 2", sans-serif',
+      fontPresetId: 'technical-mono',
       uiDensity: 'compact',
       motionMode: 'full',
-      transparency: 0.66,
-      blur: 16,
-      borderRadius: 10,
-      panelPatternMode: 'grid',
-      panelPatternOpacity: 0.16,
-      panelPatternSize: 18,
-      cardPatternMode: 'diagonal',
-      cardPatternOpacity: 0.15,
-      cardPatternSize: 16,
+      readingFontSize: 15,
+      readingLineHeight: 'tight',
+      readingColumnWidth: 760,
     },
   },
   solarpunk: {
@@ -177,22 +145,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['verdant-lime', 'forest-emerald'],
     compatiblePalettes: ['ashen-teal', 'midnight-cyan', 'moonstone-silver'],
     defaults: {
-      surfaceMode: 'glass',
-      fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Nunito:wght@400;500;700&display=swap',
-      customBodyFontFamily: '"Nunito", "Inter", sans-serif',
-      customHeadingFontFamily: '"Manrope", "Nunito", sans-serif',
+      backgroundTone: 'warm',
+      accentGlow: 'soft',
+      fontMode: 'sans',
+      fontPresetId: 'clean-sans',
       uiDensity: 'spacious',
       motionMode: 'reduced',
-      transparency: 0.8,
-      blur: 8,
-      borderRadius: 18,
-      panelPatternMode: 'dots',
-      panelPatternOpacity: 0.08,
-      panelPatternSize: 34,
-      cardPatternMode: 'none',
-      cardPatternOpacity: 0.06,
-      cardPatternSize: 26,
+      readingFontSize: 16,
+      readingLineHeight: 'normal',
+      readingColumnWidth: 760,
     },
   },
   steampunk: {
@@ -203,22 +164,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['brass-smoke', 'deep-amber'],
     compatiblePalettes: ['obsidian-gold', 'ember-crimson', 'sable-rose'],
     defaults: {
-      surfaceMode: 'solid',
+      backgroundTone: 'warm',
+      accentGlow: 'soft',
       fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Crimson+Text:wght@400;600;700&display=swap',
-      customBodyFontFamily: '"Crimson Text", "Georgia", serif',
-      customHeadingFontFamily: '"Cinzel Decorative", "Cinzel", serif',
+      fontPresetId: 'archive-pair',
       uiDensity: 'comfortable',
       motionMode: 'reduced',
-      transparency: 0.92,
-      blur: 0,
-      borderRadius: 8,
-      panelPatternMode: 'diagonal',
-      panelPatternOpacity: 0.12,
-      panelPatternSize: 24,
-      cardPatternMode: 'dots',
-      cardPatternOpacity: 0.1,
-      cardPatternSize: 18,
+      readingFontSize: 16,
+      readingLineHeight: 'normal',
+      readingColumnWidth: 760,
     },
   },
   'noir-detective': {
@@ -229,22 +183,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['moonstone-silver', 'ashen-teal'],
     compatiblePalettes: ['obsidian-gold', 'storm-indigo', 'parchment-ivory'],
     defaults: {
-      surfaceMode: 'solid',
-      fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap',
-      customBodyFontFamily: '"Source Sans 3", "Inter", sans-serif',
-      customHeadingFontFamily: '"Libre Baskerville", "Georgia", serif',
+      backgroundTone: 'graphite',
+      accentGlow: 'none',
+      fontMode: 'sans',
+      fontPresetId: 'clean-sans',
       uiDensity: 'compact',
       motionMode: 'reduced',
-      transparency: 0.95,
-      blur: 0,
-      borderRadius: 8,
-      panelPatternMode: 'none',
-      panelPatternOpacity: 0.06,
-      panelPatternSize: 20,
-      cardPatternMode: 'none',
-      cardPatternOpacity: 0.06,
-      cardPatternSize: 18,
+      readingFontSize: 15,
+      readingLineHeight: 'normal',
+      readingColumnWidth: 620,
     },
   },
   'arcane-mystic': {
@@ -255,22 +202,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['royal-violet', 'neon-magenta'],
     compatiblePalettes: ['midnight-cyan', 'sable-rose', 'storm-indigo'],
     defaults: {
-      surfaceMode: 'glass',
-      fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=Philosopher:wght@400;700&display=swap',
-      customBodyFontFamily: '"Spectral", "Crimson Text", serif',
-      customHeadingFontFamily: '"Philosopher", "Cinzel", serif',
+      backgroundTone: 'blue',
+      accentGlow: 'strong',
+      fontMode: 'serif',
+      fontPresetId: 'lore-serif',
       uiDensity: 'comfortable',
       motionMode: 'full',
-      transparency: 0.74,
-      blur: 16,
-      borderRadius: 16,
-      panelPatternMode: 'dots',
-      panelPatternOpacity: 0.11,
-      panelPatternSize: 30,
-      cardPatternMode: 'none',
-      cardPatternOpacity: 0.08,
-      cardPatternSize: 24,
+      readingFontSize: 16,
+      readingLineHeight: 'loose',
+      readingColumnWidth: 760,
     },
   },
   'imperial-chronicle': {
@@ -281,22 +221,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['parchment-ivory', 'obsidian-gold'],
     compatiblePalettes: ['moonstone-silver', 'deep-amber', 'sable-rose'],
     defaults: {
-      surfaceMode: 'solid',
+      backgroundTone: 'warm',
+      accentGlow: 'soft',
       fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:wght@400;500;600&display=swap',
-      customBodyFontFamily: '"Source Serif 4", "Crimson Text", serif',
-      customHeadingFontFamily: '"Playfair Display", "Cinzel", serif',
+      fontPresetId: 'archive-pair',
       uiDensity: 'comfortable',
       motionMode: 'reduced',
-      transparency: 0.94,
-      blur: 0,
-      borderRadius: 10,
-      panelPatternMode: 'grid',
-      panelPatternOpacity: 0.08,
-      panelPatternSize: 26,
-      cardPatternMode: 'none',
-      cardPatternOpacity: 0.08,
-      cardPatternSize: 22,
+      readingFontSize: 17,
+      readingLineHeight: 'normal',
+      readingColumnWidth: 760,
     },
   },
   'industrial-brutal': {
@@ -307,22 +240,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['brass-smoke', 'ember-crimson'],
     compatiblePalettes: ['deep-amber', 'ashen-teal', 'storm-indigo'],
     defaults: {
-      surfaceMode: 'solid',
+      backgroundTone: 'graphite',
+      accentGlow: 'none',
       fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap',
-      customBodyFontFamily: '"IBM Plex Sans Condensed", "Inter", sans-serif',
-      customHeadingFontFamily: '"Space Grotesk", "Inter", sans-serif',
+      fontPresetId: 'clean-sans',
       uiDensity: 'compact',
       motionMode: 'reduced',
-      transparency: 0.96,
-      blur: 0,
-      borderRadius: 6,
-      panelPatternMode: 'diagonal',
-      panelPatternOpacity: 0.14,
-      panelPatternSize: 14,
-      cardPatternMode: 'grid',
-      cardPatternOpacity: 0.1,
-      cardPatternSize: 16,
+      readingFontSize: 14,
+      readingLineHeight: 'tight',
+      readingColumnWidth: 620,
     },
   },
   holographic: {
@@ -333,22 +259,15 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['midnight-cyan', 'neon-magenta'],
     compatiblePalettes: ['moonstone-silver', 'storm-indigo', 'royal-violet'],
     defaults: {
-      surfaceMode: 'glass',
+      backgroundTone: 'blue',
+      accentGlow: 'strong',
       fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Chakra+Petch:wght@400;500;600;700&display=swap',
-      customBodyFontFamily: '"Sora", "Inter", sans-serif',
-      customHeadingFontFamily: '"Chakra Petch", "Sora", sans-serif',
+      fontPresetId: 'technical-mono',
       uiDensity: 'comfortable',
       motionMode: 'full',
-      transparency: 0.68,
-      blur: 18,
-      borderRadius: 18,
-      panelPatternMode: 'grid',
-      panelPatternOpacity: 0.09,
-      panelPatternSize: 28,
-      cardPatternMode: 'dots',
-      cardPatternOpacity: 0.08,
-      cardPatternSize: 24,
+      readingFontSize: 15,
+      readingLineHeight: 'normal',
+      readingColumnWidth: 760,
     },
   },
   'scholar-manuscript': {
@@ -359,30 +278,21 @@ export const INTERFACE_STYLE_PROFILES: Record<InterfaceStyleId, InterfaceStylePr
     recommendedPalettes: ['parchment-ivory', 'deep-amber'],
     compatiblePalettes: ['moonstone-silver', 'obsidian-gold', 'forest-emerald'],
     defaults: {
-      surfaceMode: 'solid',
+      backgroundTone: 'warm',
+      accentGlow: 'none',
       fontMode: 'custom',
-      customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Merriweather:wght@400;700&display=swap',
-      customBodyFontFamily: '"Lora", "Crimson Text", serif',
-      customHeadingFontFamily: '"Merriweather", "Lora", serif',
+      fontPresetId: 'archive-pair',
       uiDensity: 'spacious',
       motionMode: 'reduced',
-      transparency: 0.93,
-      blur: 0,
-      borderRadius: 12,
-      panelPatternMode: 'none',
-      panelPatternOpacity: 0.06,
-      panelPatternSize: 24,
-      cardPatternMode: 'none',
-      cardPatternOpacity: 0.06,
-      cardPatternSize: 22,
+      readingFontSize: 18,
+      readingLineHeight: 'loose',
+      readingColumnWidth: 900,
     },
   },
 };
 
-export const getRecommendedPaletteForStyle = (styleId: InterfaceStyleId): string => {
-  const profile = INTERFACE_STYLE_PROFILES[styleId];
-  return profile.recommendedPalettes[0] || 'obsidian-gold';
-};
+export const getRecommendedPaletteForStyle = (styleId: InterfaceStyleId): string =>
+  INTERFACE_STYLE_PROFILES[styleId].recommendedPalettes[0] || 'obsidian-gold';
 
 export const PALETTE_STYLE_MATCH: Record<string, InterfaceStyleId> = {
   'obsidian-gold': 'dark-fantasy',
@@ -401,13 +311,12 @@ export const PALETTE_STYLE_MATCH: Record<string, InterfaceStyleId> = {
   'ashen-teal': 'noir-detective',
 };
 
-export const getStyleForPalette = (paletteId: string): InterfaceStyleId => {
-  return PALETTE_STYLE_MATCH[paletteId] || 'dark-fantasy';
-};
+export const getStyleForPalette = (paletteId: string): InterfaceStyleId =>
+  PALETTE_STYLE_MATCH[paletteId] || 'dark-fantasy';
 
 export const getPaletteCompatibility = (
   styleId: InterfaceStyleId,
-  paletteId: string
+  paletteId: string,
 ): {
   level: PaletteCompatibility;
   label: string;

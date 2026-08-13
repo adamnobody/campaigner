@@ -434,9 +434,9 @@ export const NoteEditorPage: React.FC = () => {
         sx={{
           p: 2,
           '& .MuiInput-input': {
-            fontFamily: isMarkdown ? theme.campaigner.typography.mono : theme.campaigner.typography.display,
-            fontSize: isMarkdown ? '0.9rem' : '1rem',
-            lineHeight: 1.8,
+            fontFamily: isMarkdown ? theme.campaigner.typography.mono : theme.campaigner.reading.fontFamily,
+            fontSize: `${isMarkdown ? Math.max(13, theme.campaigner.reading.fontSize - 1) : theme.campaigner.reading.fontSize}px`,
+            lineHeight: theme.campaigner.reading.lineHeight,
             color: 'text.primary',
           },
           minHeight: '100%',

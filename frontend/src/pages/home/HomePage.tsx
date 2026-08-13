@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -30,7 +30,6 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { shallow } from 'zustand/shallow';
-import { HomeBackground } from '@/pages/home/components/HomeBackground';
 import {
   CreateProjectDialog,
   type CreateProjectWizardValue,
@@ -82,18 +81,27 @@ function ProjectArchCard({
         position: 'relative',
         overflow: 'hidden',
         borderRadius: featured ? '999px 999px 12px 12px' : '999px 999px 12px 12px',
-        border: (theme) => `1px solid ${alpha(theme.palette.primary.main, featured ? 0.52 : 0.3)}`,
+        border: (theme) => {
+          const strength = theme.campaigner.glow.strength;
+          const opacity = Math.min(0.68, 0.18 + strength * (featured ? 1.45 : 0.9));
+          return `1px solid ${alpha(theme.palette.primary.main, opacity)}`;
+        },
         background: coverUrl
           ? `linear-gradient(180deg,rgba(9,11,15,.06),rgba(9,11,15,.28) 42%,rgba(9,11,15,.9)), url("${coverUrl}") center/cover`
-          : `linear-gradient(180deg,rgba(9,11,15,.05),rgba(9,11,15,.86)),
+          : (theme) => `linear-gradient(180deg,${alpha(theme.palette.background.default, 0.05)},${alpha(theme.palette.background.default, 0.86)}),
              repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 2px,transparent 2px 10px),
-             linear-gradient(160deg,rgba(201,169,97,.2),rgba(9,11,15,.95))`,
+             linear-gradient(160deg,${alpha(theme.palette.primary.main, 0.2)},${theme.palette.background.default})`,
         color: 'inherit',
         cursor: 'pointer',
         boxShadow: featured
           ? '0 34px 90px rgba(0,0,0,.62)'
           : '0 20px 50px rgba(0,0,0,.42)',
-        filter: (theme) => `drop-shadow(0 0 ${featured ? 16 : 11}px ${alpha(theme.palette.primary.main, featured ? 0.2 : 0.13)})`,
+        filter: (theme) => {
+          const strength = theme.campaigner.glow.strength;
+          return strength === 0
+            ? 'none'
+            : `drop-shadow(0 0 ${featured ? 16 : 11}px ${alpha(theme.palette.primary.main, strength * (featured ? 1.2 : 0.78))})`;
+        },
         transition: 'transform 180ms ease, border-color 180ms ease, filter 220ms ease',
         '&::before': {
           content: '""',
@@ -101,13 +109,23 @@ function ProjectArchCard({
           inset: 0,
           zIndex: 1,
           borderRadius: 'inherit',
-          boxShadow: (theme) => `inset 0 0 ${featured ? 22 : 16}px ${alpha(theme.palette.primary.main, featured ? 0.12 : 0.08)}`,
+          boxShadow: (theme) => {
+            const strength = theme.campaigner.glow.strength;
+            return strength === 0
+              ? 'none'
+              : `inset 0 0 ${featured ? 22 : 16}px ${alpha(theme.palette.primary.main, strength * (featured ? 0.72 : 0.48))}`;
+          },
           pointerEvents: 'none',
         },
         '&:hover': {
           transform: 'translateY(-3px)',
-          borderColor: (theme) => alpha(theme.palette.primary.main, 0.72),
-          filter: (theme) => `drop-shadow(0 0 ${featured ? 22 : 16}px ${alpha(theme.palette.primary.main, featured ? 0.28 : 0.2)})`,
+          borderColor: (theme) => alpha(theme.palette.primary.main, Math.min(0.82, 0.36 + theme.campaigner.glow.strength)),
+          filter: (theme) => {
+            const strength = theme.campaigner.glow.strength;
+            return strength === 0
+              ? 'none'
+              : `drop-shadow(0 0 ${featured ? 22 : 16}px ${alpha(theme.palette.primary.main, strength * (featured ? 1.45 : 1))})`;
+          },
         },
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 4 },
       }}
@@ -122,7 +140,8 @@ function ProjectArchCard({
             fontFamily: (theme) => theme.campaigner.typography.display,
             fontSize: featured ? 'clamp(72px, 6vw, 112px)' : 'clamp(48px, 4vw, 72px)',
             fontWeight: 600,
-            color: featured ? 'rgba(246,242,233,.2)' : 'rgba(201,169,97,.48)',
+            color: featured ? 'rgba(246,242,233,.2)' : 'primary.main',
+            opacity: featured ? 1 : 0.48,
           }}
         >
           {project.name.charAt(0).toUpperCase()}
@@ -189,21 +208,13 @@ export const HomePage: React.FC = () => {
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
   }), shallow);
-  const { homeBackgroundImage, homeBackgroundOpacity, motionMode } = usePreferencesStore((state) => ({
-    homeBackgroundImage: state.homeBackgroundImage,
-    homeBackgroundOpacity: state.homeBackgroundOpacity,
-    motionMode: state.motionMode,
-  }), shallow);
+  const motionMode = usePreferencesStore((state) => state.motionMode);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeProjectIndex, setActiveProjectIndex] = useState(0);
   const [contourPulse, setContourPulse] = useState<HomeContourPulse>({ id: 0, direction: 1 });
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isHoverCapable, setIsHoverCapable] = useState(false);
   const startOnboarding = useOnboardingStore((state) => state.startForProject);
-  const parallaxLayerRef = useRef<HTMLDivElement | null>(null);
-  const parallaxTargetRef = useRef({ x: 0, y: 0 });
-  const parallaxRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -214,52 +225,6 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     setActiveProjectIndex((index) => projects.length === 0 ? 0 : Math.min(index, projects.length - 1));
   }, [projects.length]);
-
-  useEffect(() => {
-    const media = window.matchMedia('(hover: hover) and (pointer: fine)');
-    const apply = () => {
-      setIsHoverCapable(media.matches);
-    };
-    apply();
-    media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
-  }, []);
-
-  const applyParallaxTransform = useCallback((x: number, y: number) => {
-    const layer = parallaxLayerRef.current;
-    if (!layer) return;
-    layer.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-  }, []);
-
-  const scheduleParallax = useCallback(() => {
-    if (parallaxRafRef.current !== null) return;
-    parallaxRafRef.current = window.requestAnimationFrame(() => {
-      parallaxRafRef.current = null;
-      applyParallaxTransform(parallaxTargetRef.current.x, parallaxTargetRef.current.y);
-    });
-  }, [applyParallaxTransform]);
-
-  const handleRootMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (!isHoverCapable) return;
-    const x = (event.clientX / window.innerWidth - 0.5) * 30;
-    const y = (event.clientY / window.innerHeight - 0.5) * 20;
-    parallaxTargetRef.current = { x, y };
-    scheduleParallax();
-  }, [isHoverCapable, scheduleParallax]);
-
-  const handleRootMouseLeave = useCallback(() => {
-    if (!isHoverCapable) return;
-    parallaxTargetRef.current = { x: 0, y: 0 };
-    scheduleParallax();
-  }, [isHoverCapable, scheduleParallax]);
-
-  useEffect(() => {
-    return () => {
-      if (parallaxRafRef.current !== null) {
-        cancelAnimationFrame(parallaxRafRef.current);
-      }
-    };
-  }, []);
 
   const handleCreateSubmit = async ({ name, description, coverFile }: CreateProjectWizardValue) => {
     const project = await createProject({
@@ -366,23 +331,18 @@ export const HomePage: React.FC = () => {
 
   return (
     <Box
-      onMouseMove={handleRootMouseMove}
-      onMouseLeave={handleRootMouseLeave}
       onKeyDown={(event) => {
         if (event.key === 'ArrowLeft') moveProject(-1);
         if (event.key === 'ArrowRight') moveProject(1);
       }}
       tabIndex={-1}
-      sx={{ minHeight: '100dvh', position: 'relative', overflow: 'hidden', backgroundColor: '#090b0f', display: 'flex', flexDirection: 'column' }}
+      sx={{ minHeight: '100dvh', position: 'relative', overflow: 'hidden', backgroundColor: 'background.default', display: 'flex', flexDirection: 'column' }}
     >
-      {homeBackgroundImage ? (
-        <HomeBackground homeBackgroundImage={homeBackgroundImage} homeBackgroundOpacity={homeBackgroundOpacity} parallaxLayerRef={parallaxLayerRef} />
-      ) : null}
       <HomeContourCanvas
         accentColor={theme.palette.primary.main}
+        baseColor={theme.palette.background.default}
         animate={motionMode === 'full'}
         pulse={contourPulse}
-        transparentBase={Boolean(homeBackgroundImage)}
         visible={!createDialogOpen}
       />
 
@@ -400,7 +360,7 @@ export const HomePage: React.FC = () => {
       <Box sx={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', px: { xs: 2, md: 0 }, pt: 1 }}>
         {projects.length === 0 ? (
           <Box sx={{ mx: 'auto', width: 'min(620px, 100%)', textAlign: 'center', py: 6 }}>
-            <Box sx={{ width: 240, height: 320, mx: 'auto', borderRadius: '120px 120px 14px 14px', border: '1px dashed rgba(201,169,97,.32)', background: 'repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 2px,transparent 2px 10px)', display: 'grid', placeItems: 'center' }}>
+            <Box sx={{ width: 240, height: 320, mx: 'auto', borderRadius: '120px 120px 14px 14px', border: (currentTheme) => `1px dashed ${alpha(currentTheme.palette.primary.main, 0.32)}`, background: 'repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 2px,transparent 2px 10px)', display: 'grid', placeItems: 'center' }}>
               <EmptyStateIllustration />
             </Box>
             <Typography variant="h3" sx={{ pt: 3 }}>{t('projects:home.empty.title')}</Typography>

@@ -9,36 +9,27 @@ import {
 
 export type ThemePreset = string;
 
-export type SurfaceMode = 'glass' | 'solid';
+export type BackgroundTone = 'ink' | 'graphite' | 'warm' | 'blue';
+export type AccentGlow = 'none' | 'soft' | 'strong';
 export type FontMode = 'serif' | 'sans' | 'custom';
 export type UiDensity = 'compact' | 'comfortable' | 'spacious';
 export type MotionMode = 'full' | 'reduced';
-export type PatternMode = 'none' | 'dots' | 'grid' | 'diagonal' | 'custom';
+export type ReadingLineHeight = 'tight' | 'normal' | 'loose';
+export type ReadingColumnWidth = 620 | 760 | 900;
 export type InterfaceStyle = InterfaceStyleId;
 
 export interface CustomThemeSnapshot {
   interfaceStyle: InterfaceStyle;
   themePreset: ThemePreset;
-  surfaceMode: SurfaceMode;
+  backgroundTone: BackgroundTone;
+  accentGlow: AccentGlow;
   fontMode: FontMode;
+  fontPresetId: string;
   uiDensity: UiDensity;
   motionMode: MotionMode;
-  transparency: number;
-  blur: number;
-  borderRadius: number;
-  homeBackgroundImage: string;
-  homeBackgroundOpacity: number;
-  customBodyFontFamily: string;
-  customHeadingFontFamily: string;
-  customFontCssUrl: string;
-  panelPatternMode: PatternMode;
-  panelPatternOpacity: number;
-  panelPatternSize: number;
-  panelPatternUrl: string;
-  cardPatternMode: PatternMode;
-  cardPatternOpacity: number;
-  cardPatternSize: number;
-  cardPatternUrl: string;
+  readingFontSize: number;
+  readingLineHeight: ReadingLineHeight;
+  readingColumnWidth: ReadingColumnWidth;
 }
 
 export interface SavedCustomTheme {
@@ -68,92 +59,62 @@ export interface CustomColorThemePreset {
 
 export interface PreferencesState {
   interfaceStyle: InterfaceStyle;
-  autoApplyRecommendedPalette: boolean;
   themePreset: ThemePreset;
-  surfaceMode: SurfaceMode;
+  backgroundTone: BackgroundTone;
+  accentGlow: AccentGlow;
   fontMode: FontMode;
+  fontPresetId: string;
   uiDensity: UiDensity;
   motionMode: MotionMode;
-  transparency: number;
-  blur: number;
-  borderRadius: number;
-
-  homeBackgroundImage: string;
-  homeBackgroundOpacity: number;
-  customBodyFontFamily: string;
-  customHeadingFontFamily: string;
-  customFontCssUrl: string;
-  panelPatternMode: PatternMode;
-  panelPatternOpacity: number;
-  panelPatternSize: number;
-  panelPatternUrl: string;
-  cardPatternMode: PatternMode;
-  cardPatternOpacity: number;
-  cardPatternSize: number;
-  cardPatternUrl: string;
+  readingFontSize: number;
+  readingLineHeight: ReadingLineHeight;
+  readingColumnWidth: ReadingColumnWidth;
   customThemes: SavedCustomTheme[];
   customColorThemes: CustomColorThemePreset[];
   selectedCustomThemeId: string | null;
 
+  setInterfaceStyle: (value: InterfaceStyle) => void;
   setThemePreset: (value: ThemePreset) => void;
-  setSurfaceMode: (value: SurfaceMode) => void;
+  setBackgroundTone: (value: BackgroundTone) => void;
+  setAccentGlow: (value: AccentGlow) => void;
   setFontMode: (value: FontMode) => void;
+  setFontPresetId: (value: string) => void;
   setUiDensity: (value: UiDensity) => void;
   setMotionMode: (value: MotionMode) => void;
-  setTransparency: (value: number) => void;
-  setBlur: (value: number) => void;
-  setBorderRadius: (value: number) => void;
-
-  setHomeBackgroundImage: (value: string) => void;
-  setHomeBackgroundOpacity: (value: number) => void;
-  clearHomeBackgroundImage: () => void;
-  setCustomBodyFontFamily: (value: string) => void;
-  setCustomHeadingFontFamily: (value: string) => void;
-  setCustomFontCssUrl: (value: string) => void;
-  setPanelPatternMode: (value: PatternMode) => void;
-  setPanelPatternOpacity: (value: number) => void;
-  setPanelPatternSize: (value: number) => void;
-  setPanelPatternUrl: (value: string) => void;
-  setCardPatternMode: (value: PatternMode) => void;
-  setCardPatternOpacity: (value: number) => void;
-  setCardPatternSize: (value: number) => void;
-  setCardPatternUrl: (value: string) => void;
-  setInterfaceStyle: (value: InterfaceStyle) => void;
-  setAutoApplyRecommendedPalette: (value: boolean) => void;
-  applyInterfaceStyle: (value: InterfaceStyle, options?: { useRecommendedPalette?: boolean }) => void;
+  setReadingFontSize: (value: number) => void;
+  setReadingLineHeight: (value: ReadingLineHeight) => void;
+  setReadingColumnWidth: (value: ReadingColumnWidth) => void;
+  applyInterfaceStyle: (value: InterfaceStyle) => void;
   saveCurrentAsCustomTheme: (name: string) => void;
   applyCustomTheme: (id: string) => void;
   deleteCustomTheme: (id: string) => void;
   addCustomColorTheme: (theme: CustomColorThemePreset) => void;
+  deleteCustomColorTheme: (id: ThemePreset) => void;
 
   resetAppearance: () => void;
 }
 
-const defaultPreferences = {
+type PersistedPreferences = CustomThemeSnapshot & Pick<
+  PreferencesState,
+  'customThemes' | 'customColorThemes' | 'selectedCustomThemeId'
+>;
+
+const DEFAULT_SNAPSHOT: CustomThemeSnapshot = {
   interfaceStyle: 'dark-fantasy' as InterfaceStyle,
-  autoApplyRecommendedPalette: true,
   themePreset: 'obsidian-gold' as ThemePreset,
-  surfaceMode: 'glass' as SurfaceMode,
-  fontMode: 'custom' as FontMode,
+  backgroundTone: 'ink',
+  accentGlow: 'soft',
+  fontMode: 'serif' as FontMode,
+  fontPresetId: 'lore-serif',
   uiDensity: 'comfortable' as UiDensity,
   motionMode: 'full' as MotionMode,
-  transparency: 0.72,
-  blur: 14,
-  borderRadius: 14,
+  readingFontSize: 16,
+  readingLineHeight: 'normal',
+  readingColumnWidth: 760,
+};
 
-  homeBackgroundImage: '',
-  homeBackgroundOpacity: 0.42,
-  customBodyFontFamily: '"Cormorant Garamond", "Crimson Text", serif',
-  customHeadingFontFamily: '"Cinzel", serif',
-  customFontCssUrl: 'https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap',
-  panelPatternMode: 'none' as PatternMode,
-  panelPatternOpacity: 0.12,
-  panelPatternSize: 28,
-  panelPatternUrl: '',
-  cardPatternMode: 'none' as PatternMode,
-  cardPatternOpacity: 0.1,
-  cardPatternSize: 22,
-  cardPatternUrl: '',
+const defaultPreferences: PersistedPreferences = {
+  ...DEFAULT_SNAPSHOT,
   customThemes: [] as SavedCustomTheme[],
   customColorThemes: [] as CustomColorThemePreset[],
   selectedCustomThemeId: null as string | null,
@@ -162,27 +123,176 @@ const defaultPreferences = {
 const pickSnapshot = (state: PreferencesState): CustomThemeSnapshot => ({
   interfaceStyle: state.interfaceStyle,
   themePreset: state.themePreset,
-  surfaceMode: state.surfaceMode,
+  backgroundTone: state.backgroundTone,
+  accentGlow: state.accentGlow,
   fontMode: state.fontMode,
+  fontPresetId: state.fontPresetId,
   uiDensity: state.uiDensity,
   motionMode: state.motionMode,
-  transparency: state.transparency,
-  blur: state.blur,
-  borderRadius: state.borderRadius,
-  homeBackgroundImage: state.homeBackgroundImage,
-  homeBackgroundOpacity: state.homeBackgroundOpacity,
-  customBodyFontFamily: state.customBodyFontFamily,
-  customHeadingFontFamily: state.customHeadingFontFamily,
-  customFontCssUrl: state.customFontCssUrl,
-  panelPatternMode: state.panelPatternMode,
-  panelPatternOpacity: state.panelPatternOpacity,
-  panelPatternSize: state.panelPatternSize,
-  panelPatternUrl: state.panelPatternUrl,
-  cardPatternMode: state.cardPatternMode,
-  cardPatternOpacity: state.cardPatternOpacity,
-  cardPatternSize: state.cardPatternSize,
-  cardPatternUrl: state.cardPatternUrl,
+  readingFontSize: state.readingFontSize,
+  readingLineHeight: state.readingLineHeight,
+  readingColumnWidth: state.readingColumnWidth,
 });
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const oneOf = <T extends string | number>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T => allowed.includes(value as T) ? value as T : fallback;
+
+const nonEmptyString = (value: unknown, fallback: string): string =>
+  typeof value === 'string' && value.trim() ? value : fallback;
+
+const normalizeReadingFontSize = (value: unknown, fallback: number): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.min(18, Math.max(14, value));
+};
+
+const isInterfaceStyle = (value: unknown): value is InterfaceStyle =>
+  typeof value === 'string' && value in INTERFACE_STYLE_PROFILES;
+
+export const normalizeCustomThemeSnapshot = (
+  value: unknown,
+  fallback: CustomThemeSnapshot = DEFAULT_SNAPSHOT
+): CustomThemeSnapshot => {
+  const source = isRecord(value) ? value : {};
+  return {
+    interfaceStyle: isInterfaceStyle(source.interfaceStyle)
+      ? source.interfaceStyle
+      : fallback.interfaceStyle,
+    themePreset: nonEmptyString(source.themePreset, fallback.themePreset),
+    backgroundTone: oneOf(
+      source.backgroundTone,
+      ['ink', 'graphite', 'warm', 'blue'] as const,
+      fallback.backgroundTone
+    ),
+    accentGlow: oneOf(
+      source.accentGlow,
+      ['none', 'soft', 'strong'] as const,
+      fallback.accentGlow
+    ),
+    fontMode: oneOf(
+      source.fontMode,
+      ['serif', 'sans', 'custom'] as const,
+      fallback.fontMode
+    ),
+    fontPresetId: nonEmptyString(source.fontPresetId, fallback.fontPresetId),
+    uiDensity: oneOf(
+      source.uiDensity,
+      ['compact', 'comfortable', 'spacious'] as const,
+      fallback.uiDensity
+    ),
+    motionMode: oneOf(
+      source.motionMode,
+      ['full', 'reduced'] as const,
+      fallback.motionMode
+    ),
+    readingFontSize: normalizeReadingFontSize(
+      source.readingFontSize,
+      fallback.readingFontSize
+    ),
+    readingLineHeight: oneOf(
+      source.readingLineHeight,
+      ['tight', 'normal', 'loose'] as const,
+      fallback.readingLineHeight
+    ),
+    readingColumnWidth: oneOf(
+      source.readingColumnWidth,
+      [620, 760, 900] as const,
+      fallback.readingColumnWidth
+    ),
+  };
+};
+
+const normalizeSavedCustomTheme = (value: unknown): SavedCustomTheme | null => {
+  if (!isRecord(value)) return null;
+  if (typeof value.id !== 'string' || !value.id) return null;
+  if (typeof value.name !== 'string' || !value.name.trim()) return null;
+
+  return {
+    id: value.id,
+    name: value.name.trim(),
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : '',
+    settings: normalizeCustomThemeSnapshot(value.settings),
+  };
+};
+
+const normalizeColorTheme = (value: unknown): CustomColorThemePreset | null => {
+  if (!isRecord(value)) return null;
+  const keys: Array<keyof CustomColorThemePreset> = [
+    'id',
+    'label',
+    'background',
+    'backgroundAccent',
+    'panelBaseRgb',
+    'borderRgb',
+    'textPrimary',
+    'textSecondary',
+    'muted',
+    'accentMain',
+    'accentSoft',
+    'accentStrong',
+    'success',
+    'warning',
+    'error',
+  ];
+  return keys.every((key) => typeof value[key] === 'string')
+    ? value as unknown as CustomColorThemePreset
+    : null;
+};
+
+export const migratePreferencesState = (
+  persistedState: unknown,
+  _version = 0
+): PersistedPreferences => {
+  const wrapped = isRecord(persistedState) && isRecord(persistedState.state)
+    ? persistedState.state
+    : persistedState;
+  const source = isRecord(wrapped) ? wrapped : {};
+  const snapshot = normalizeCustomThemeSnapshot(source);
+  const customThemes = Array.isArray(source.customThemes)
+    ? source.customThemes
+      .map(normalizeSavedCustomTheme)
+      .filter((theme): theme is SavedCustomTheme => theme !== null)
+    : [];
+  const customColorThemes = Array.isArray(source.customColorThemes)
+    ? source.customColorThemes
+      .map(normalizeColorTheme)
+      .filter((theme): theme is CustomColorThemePreset => theme !== null)
+    : [];
+  const selectedCustomThemeId = typeof source.selectedCustomThemeId === 'string'
+    && customThemes.some((theme) => theme.id === source.selectedCustomThemeId)
+    ? source.selectedCustomThemeId
+    : null;
+
+  return {
+    ...snapshot,
+    customThemes,
+    customColorThemes,
+    selectedCustomThemeId,
+  };
+};
+
+export const removeCustomColorTheme = (
+  state: PersistedPreferences,
+  id: ThemePreset
+): Pick<PersistedPreferences, 'themePreset' | 'customThemes' | 'customColorThemes' | 'selectedCustomThemeId'> => {
+  const activePaletteDeleted = state.themePreset === id;
+  return {
+    themePreset: activePaletteDeleted ? DEFAULT_SNAPSHOT.themePreset : state.themePreset,
+    customColorThemes: state.customColorThemes.filter((theme) => theme.id !== id),
+    customThemes: state.customThemes.map((theme) => theme.settings.themePreset === id
+      ? {
+        ...theme,
+        settings: { ...theme.settings, themePreset: DEFAULT_SNAPSHOT.themePreset },
+      }
+      : theme),
+    selectedCustomThemeId: activePaletteDeleted ? null : state.selectedCustomThemeId,
+  };
+};
 
 export const usePreferencesStore = create<PreferencesState>()(
   persist(
@@ -190,38 +300,30 @@ export const usePreferencesStore = create<PreferencesState>()(
       ...defaultPreferences,
 
       setInterfaceStyle: (value) => set({ interfaceStyle: value, selectedCustomThemeId: null }),
-      setAutoApplyRecommendedPalette: (value) => set({ autoApplyRecommendedPalette: value }),
       setThemePreset: (value) => set({ themePreset: value, selectedCustomThemeId: null }),
-      setSurfaceMode: (value) => set({ surfaceMode: value, selectedCustomThemeId: null }),
+      setBackgroundTone: (value) => set({ backgroundTone: value, selectedCustomThemeId: null }),
+      setAccentGlow: (value) => set({ accentGlow: value, selectedCustomThemeId: null }),
       setFontMode: (value) => set({ fontMode: value, selectedCustomThemeId: null }),
+      setFontPresetId: (value) => set({ fontPresetId: value, selectedCustomThemeId: null }),
       setUiDensity: (value) => set({ uiDensity: value, selectedCustomThemeId: null }),
       setMotionMode: (value) => set({ motionMode: value, selectedCustomThemeId: null }),
-      setTransparency: (value) => set({ transparency: value, selectedCustomThemeId: null }),
-      setBlur: (value) => set({ blur: value, selectedCustomThemeId: null }),
-      setBorderRadius: (value) => set({ borderRadius: value, selectedCustomThemeId: null }),
-
-      setHomeBackgroundImage: (value) => set({ homeBackgroundImage: value, selectedCustomThemeId: null }),
-      setHomeBackgroundOpacity: (value) => set({ homeBackgroundOpacity: value, selectedCustomThemeId: null }),
-      clearHomeBackgroundImage: () => set({ homeBackgroundImage: '', selectedCustomThemeId: null }),
-      setCustomBodyFontFamily: (value) => set({ customBodyFontFamily: value, selectedCustomThemeId: null }),
-      setCustomHeadingFontFamily: (value) => set({ customHeadingFontFamily: value, selectedCustomThemeId: null }),
-      setCustomFontCssUrl: (value) => set({ customFontCssUrl: value, selectedCustomThemeId: null }),
-      setPanelPatternMode: (value) => set({ panelPatternMode: value, selectedCustomThemeId: null }),
-      setPanelPatternOpacity: (value) => set({ panelPatternOpacity: value, selectedCustomThemeId: null }),
-      setPanelPatternSize: (value) => set({ panelPatternSize: value, selectedCustomThemeId: null }),
-      setPanelPatternUrl: (value) => set({ panelPatternUrl: value, selectedCustomThemeId: null }),
-      setCardPatternMode: (value) => set({ cardPatternMode: value, selectedCustomThemeId: null }),
-      setCardPatternOpacity: (value) => set({ cardPatternOpacity: value, selectedCustomThemeId: null }),
-      setCardPatternSize: (value) => set({ cardPatternSize: value, selectedCustomThemeId: null }),
-      setCardPatternUrl: (value) => set({ cardPatternUrl: value, selectedCustomThemeId: null }),
-      applyInterfaceStyle: (value, options) => {
+      setReadingFontSize: (value) => set((state) => ({
+        readingFontSize: normalizeReadingFontSize(value, state.readingFontSize),
+        selectedCustomThemeId: null,
+      })),
+      setReadingLineHeight: (value) => set({ readingLineHeight: value, selectedCustomThemeId: null }),
+      setReadingColumnWidth: (value) => set({ readingColumnWidth: value, selectedCustomThemeId: null }),
+      applyInterfaceStyle: (value) => {
         const profile = INTERFACE_STYLE_PROFILES[value];
         if (!profile) return;
-        const recommendedPalette = getRecommendedPaletteForStyle(value);
+        const profileDefaults = normalizeCustomThemeSnapshot(
+          profile.defaults,
+          pickSnapshot(get())
+        );
         set({
+          ...profileDefaults,
           interfaceStyle: value,
-          ...(options?.useRecommendedPalette ? { themePreset: recommendedPalette } : {}),
-          ...profile.defaults,
+          themePreset: getRecommendedPaletteForStyle(value),
           selectedCustomThemeId: null,
         });
       },
@@ -249,12 +351,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         const found = state.customThemes.find((t) => t.id === id);
         if (!found) return;
         set({
-          ...defaultPreferences,
-          autoApplyRecommendedPalette: state.autoApplyRecommendedPalette,
-          customThemes: state.customThemes,
-          customColorThemes: state.customColorThemes,
-          ...found.settings,
-          interfaceStyle: found.settings.interfaceStyle ?? defaultPreferences.interfaceStyle,
+          ...normalizeCustomThemeSnapshot(found.settings),
           selectedCustomThemeId: found.id,
         });
       },
@@ -268,6 +365,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         themePreset: theme.id,
         selectedCustomThemeId: null,
       })),
+      deleteCustomColorTheme: (id) => set((state) => removeCustomColorTheme(state, id)),
 
       resetAppearance: () => set({
         ...defaultPreferences,
@@ -279,30 +377,20 @@ export const usePreferencesStore = create<PreferencesState>()(
     {
       name: 'campaigner-preferences',
       storage: createJSONStorage(() => createDebouncedStateStorage(220)),
+      version: 2,
+      migrate: migratePreferencesState,
       partialize: (state) => ({
         interfaceStyle: state.interfaceStyle,
-        autoApplyRecommendedPalette: state.autoApplyRecommendedPalette,
         themePreset: state.themePreset,
-        surfaceMode: state.surfaceMode,
+        backgroundTone: state.backgroundTone,
+        accentGlow: state.accentGlow,
         fontMode: state.fontMode,
+        fontPresetId: state.fontPresetId,
         uiDensity: state.uiDensity,
         motionMode: state.motionMode,
-        transparency: state.transparency,
-        blur: state.blur,
-        borderRadius: state.borderRadius,
-        homeBackgroundImage: state.homeBackgroundImage,
-        homeBackgroundOpacity: state.homeBackgroundOpacity,
-        customBodyFontFamily: state.customBodyFontFamily,
-        customHeadingFontFamily: state.customHeadingFontFamily,
-        customFontCssUrl: state.customFontCssUrl,
-        panelPatternMode: state.panelPatternMode,
-        panelPatternOpacity: state.panelPatternOpacity,
-        panelPatternSize: state.panelPatternSize,
-        panelPatternUrl: state.panelPatternUrl,
-        cardPatternMode: state.cardPatternMode,
-        cardPatternOpacity: state.cardPatternOpacity,
-        cardPatternSize: state.cardPatternSize,
-        cardPatternUrl: state.cardPatternUrl,
+        readingFontSize: state.readingFontSize,
+        readingLineHeight: state.readingLineHeight,
+        readingColumnWidth: state.readingColumnWidth,
         customThemes: state.customThemes,
         customColorThemes: state.customColorThemes,
         selectedCustomThemeId: state.selectedCustomThemeId,

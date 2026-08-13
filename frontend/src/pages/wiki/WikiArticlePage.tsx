@@ -6,6 +6,8 @@ import {
   Typography,
   alpha,
   useTheme,
+  type SxProps,
+  type Theme,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,20 +38,21 @@ import {
 
 type WikiNoteRef = { id: number; title: string };
 
-const markdownStyles = {
+const markdownStyles: SxProps<Theme> = (theme) => ({
   color: 'text.secondary',
-  fontFamily: '"IBM Plex Sans", sans-serif',
-  fontSize: '0.9rem',
+  fontFamily: theme.campaigner.reading.fontFamily,
+  fontSize: `${theme.campaigner.reading.fontSize}px`,
+  lineHeight: theme.campaigner.reading.lineHeight,
   '& h1, & h2, & h3, & h4': {
     color: 'text.primary',
-    fontFamily: '"Cormorant Garamond", serif',
+    fontFamily: theme.campaigner.typography.display,
     scrollMarginTop: 24,
   },
   '& h1': { fontSize: '2rem', mt: 4, mb: 1.5 },
   '& h2': { fontSize: '1.55rem', mt: 4, mb: 1.25, fontWeight: 600 },
   '& h3': { fontSize: '1.3rem', mt: 3, mb: 1, fontWeight: 600 },
   '& h4': { fontSize: '1.1rem', mt: 2.5, mb: 0.75, fontWeight: 600 },
-  '& p': { my: 0, mb: 2, lineHeight: 1.85 },
+  '& p': { my: 0, mb: 2, lineHeight: 'inherit' },
   '& a': {
     color: 'primary.main',
     textDecorationColor: 'rgba(201,169,89,.35)',
@@ -64,7 +67,7 @@ const markdownStyles = {
     borderColor: 'primary.main',
     borderRadius: '0 10px 10px 0',
     backgroundColor: 'rgba(201,169,89,.05)',
-    fontFamily: '"Cormorant Garamond", serif',
+    fontFamily: theme.campaigner.reading.fontFamily,
     fontSize: '1.2rem',
   },
   '& blockquote p:last-child': { mb: 0 },
@@ -73,7 +76,7 @@ const markdownStyles = {
     py: 0.25,
     borderRadius: 1,
     backgroundColor: 'rgba(255,255,255,.06)',
-    fontFamily: '"IBM Plex Mono", monospace',
+    fontFamily: theme.campaigner.typography.mono,
     fontSize: '0.86em',
   },
   '& pre': {
@@ -87,7 +90,7 @@ const markdownStyles = {
   },
   '& pre code': { p: 0, backgroundColor: 'transparent' },
   '& ul, & ol': { mt: 0, mb: 2, pl: 3 },
-  '& li': { mb: 0.75, lineHeight: 1.75 },
+  '& li': { mb: 0.75, lineHeight: 'inherit' },
   '& hr': { my: 4, border: 0, borderTop: '1px solid', borderColor: 'divider' },
   '& table': {
     display: 'block',
@@ -99,7 +102,7 @@ const markdownStyles = {
   '& th, & td': { px: 2, py: 1, border: '1px solid', borderColor: 'divider' },
   '& th': { color: 'text.primary', backgroundColor: 'rgba(255,255,255,.035)' },
   '& img': { display: 'block', maxWidth: '100%', my: 3, borderRadius: 2 },
-};
+});
 
 function nodeText(node: React.ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -327,10 +330,13 @@ export const WikiArticlePage: React.FC = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 720px) 296px' },
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            lg: `minmax(0, ${theme.campaigner.reading.columnWidth}px) 296px`,
+          },
           gap: { xs: 4, lg: 6.5 },
           alignItems: 'start',
-          maxWidth: 1068,
+          maxWidth: theme.campaigner.reading.columnWidth + 348,
           mx: 'auto',
           pb: 6,
         }}
@@ -340,7 +346,7 @@ export const WikiArticlePage: React.FC = () => {
             sx={{
               pb: 1.75,
               color: 'primary.main',
-              fontFamily: '"IBM Plex Mono", monospace',
+              fontFamily: theme.campaigner.typography.mono,
               fontSize: '0.62rem',
               letterSpacing: '.18em',
               textTransform: 'uppercase',
@@ -353,7 +359,7 @@ export const WikiArticlePage: React.FC = () => {
             sx={{
               m: 0,
               color: 'text.primary',
-              fontFamily: '"Cormorant Garamond", serif',
+              fontFamily: theme.campaigner.typography.display,
               fontSize: { xs: '2.5rem', md: '3rem' },
               fontWeight: 600,
               lineHeight: 1.05,
@@ -364,7 +370,7 @@ export const WikiArticlePage: React.FC = () => {
           </Typography>
 
           {articleMarkdown.lead && (
-            <Box sx={{ pt: 2.25, '& p': { color: 'text.secondary', fontSize: '0.96rem', lineHeight: 1.8 } }}>
+            <Box sx={{ pt: 2.25, '& p': { color: 'text.secondary' } }}>
               <WikiMarkdown
                 content={articleMarkdown.lead}
                 projectId={projectNumber}
@@ -528,7 +534,7 @@ const RailHeading: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon,
     {icon}
     <Typography
       sx={{
-        fontFamily: '"IBM Plex Mono", monospace',
+        fontFamily: (theme) => theme.campaigner.typography.mono,
         fontSize: '0.6rem',
         letterSpacing: '.16em',
         textTransform: 'uppercase',

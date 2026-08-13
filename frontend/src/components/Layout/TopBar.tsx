@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AppBar, Toolbar, Typography, IconButton, Box,
   Breadcrumbs, Link as MuiLink, Button, Tooltip, FormControl, Select, MenuItem,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, alpha,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
@@ -267,7 +267,7 @@ export const TopBar: React.FC = () => {
                   if (branches.length === 0) return tNav('branches.nonePlaceholder');
                   return branches.find((branch) => branch.id === Number(selected))?.name ?? tNav('branches.nonePlaceholder');
                 }}
-                sx={{ height: 34, fontSize: 12.5, color: 'primary.main', backgroundColor: 'rgba(201,169,97,.06)' }}
+                sx={{ height: 34, fontSize: 12.5, color: 'primary.main', backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.06) }}
               >
                 {branches.map((branch) => <MenuItem key={branch.id} value={branch.id}>{branch.name}</MenuItem>)}
               </Select>
