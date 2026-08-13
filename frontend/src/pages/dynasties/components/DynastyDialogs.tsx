@@ -46,6 +46,7 @@ const DIALOG_PAPER_PROPS = {
   sx: (theme: Theme) => ({
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
+    borderRadius: 3,
   }),
 };
 
@@ -67,7 +68,7 @@ export const DynastyMemberDialog: React.FC<DynastyMemberDialogProps> = ({
   const { t } = useTranslation(['dynasties', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('dynasties:dialogs.member.title')}</DialogTitle>
+      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>{t('dynasties:dialogs.member.title')}</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('dynasties:dialogs.member.character')}</InputLabel>
@@ -125,7 +126,7 @@ export const DynastyFamilyLinkDialog: React.FC<DynastyFamilyLinkDialogProps> = (
   const { t } = useTranslation(['dynasties', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('dynasties:dialogs.familyLink.title')}</DialogTitle>
+      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>{t('dynasties:dialogs.familyLink.title')}</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('dynasties:dialogs.familyLink.from')}</InputLabel>
@@ -186,7 +187,7 @@ export const DynastyEventDialog: React.FC<DynastyEventDialogProps> = ({
   const { t } = useTranslation(['dynasties', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>
         {editingEvent ? t('dynasties:dialogs.event.titleEdit') : t('dynasties:dialogs.event.titleNew')}
       </DialogTitle>
       <DialogContent>

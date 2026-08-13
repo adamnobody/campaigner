@@ -182,7 +182,7 @@ export const CharacterTraitsTab: React.FC<CharacterTraitsTabProps> = ({ projectI
           isAttached={isAttached}
           isCustom={item.isCustom}
           onDelete={
-            item.isCustom ? undefined : () => handleDeleteTrait(item.id, item.displayLabel ?? item.name)
+            item.isCustom ? () => handleDeleteTrait(item.id, item.displayLabel ?? item.name) : undefined
           }
           onConfigureExclusions={onConfigureExclusions}
           isBlocked={isBlocked}

@@ -8,7 +8,8 @@ use crate::models::faction::Faction;
 use crate::models::project::Project;
 use crate::models::upload::{
     CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
-    FactionUploadImageInput, ProjectUploadMapImageInput, UploadFileInput, UploadSavedPath,
+    FactionUploadImageInput, ProjectUploadCoverInput, ProjectUploadMapImageInput, UploadFileInput,
+    UploadSavedPath,
 };
 use crate::uploads::service;
 use crate::uploads::web_path;
@@ -130,4 +131,17 @@ pub fn projects_upload_map_image_command(
         .lock()
         .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
     service::projects_upload_map_image(&app, &connection, input)
+}
+
+#[tauri::command(rename = "projects_upload_cover")]
+pub fn projects_upload_cover_command(
+    app: AppHandle,
+    state: State<'_, DatabaseState>,
+    input: ProjectUploadCoverInput,
+) -> Result<Project> {
+    let connection = state
+        .connection
+        .lock()
+        .map_err(|_| AppError::internal("DB_LOCK_ERROR", "Failed to lock database connection"))?;
+    service::projects_upload_cover(&app, &connection, input)
 }

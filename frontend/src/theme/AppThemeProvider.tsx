@@ -1,15 +1,20 @@
 import React, { useMemo } from 'react';
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { useLocation } from 'react-router-dom';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { shallow } from 'zustand/shallow';
 import { createAppTheme } from './createAppTheme';
+import { createCampaignerTheme } from './createCampaignerTheme';
 import { THEME_PRESETS } from './presets';
+import { campaignerFonts, getCampaignerSurface } from './designSystem';
 
 interface Props {
   children: React.ReactNode;
 }
 
 export const AppThemeProvider: React.FC<Props> = ({ children }) => {
+  const location = useLocation();
+  const isAppearanceRoute = location.pathname === '/appearance';
   const {
     themePreset,
     surfaceMode,
@@ -79,7 +84,7 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
       return acc;
     }, { ...THEME_PRESETS });
 
-    return createAppTheme({
+    const preferences = {
       themePreset,
       surfaceMode,
       fontMode,
@@ -98,8 +103,22 @@ export const AppThemeProvider: React.FC<Props> = ({ children }) => {
       cardPatternOpacity,
       cardPatternSize,
       cardPatternUrl,
-    }, { presets });
+    };
+
+    if (!isAppearanceRoute) {
+      return createCampaignerTheme(preferences, presets);
+    }
+
+    const legacy = createAppTheme(preferences, { presets });
+    return createTheme(legacy, {
+      campaigner: {
+        profile: 'appearance-legacy',
+        surface: getCampaignerSurface(legacy),
+        typography: campaignerFonts,
+      },
+    });
   }, [
+    isAppearanceRoute,
     themePreset,
     surfaceMode,
     fontMode,

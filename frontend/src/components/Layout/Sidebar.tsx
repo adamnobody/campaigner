@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Drawer,
   List,
@@ -8,6 +8,10 @@ import {
   Divider,
   Box,
   Typography,
+  Collapse,
+  IconButton,
+  Tooltip,
+  alpha,
 } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import PeopleIcon from '@mui/icons-material/People';
@@ -28,6 +32,16 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import CastleIcon from '@mui/icons-material/Castle';
 import HubIcon from '@mui/icons-material/Hub';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useFactionStore } from '@/store/useFactionStore';
+import { useNoteStore } from '@/store/useNoteStore';
+import { useTimelineStore } from '@/store/useTimelineStore';
+import { useMapStore } from '@/store/useMapStore';
+import { useDynastyStore } from '@/store/useDynastyStore';
+import { useDogmaStore } from '@/store/useDogmaStore';
 
 type ProjectRoutePath =
   | ''
@@ -97,9 +111,10 @@ function tourAttrForSidebarPath(path: ProjectRoutePath): string | undefined {
 
 export const Sidebar: React.FC = () => {
   const { t } = useTranslation('navigation');
-  const { sidebarOpen, sidebarWidth } = useUIStore((state) => ({
+  const { sidebarOpen, sidebarWidth, toggleSidebar } = useUIStore((state) => ({
     sidebarOpen: state.sidebarOpen,
     sidebarWidth: state.sidebarWidth,
+    toggleSidebar: state.toggleSidebar,
   }), shallow);
   const { projects, currentProject, fetchProject, fetchProjects } = useProjectStore((state) => ({
     projects: state.projects,
@@ -107,221 +122,218 @@ export const Sidebar: React.FC = () => {
     fetchProject: state.fetchProject,
     fetchProjects: state.fetchProjects,
   }), shallow);
+  const characters = useCharacterStore((state) => state.characters);
+  const factions = useFactionStore((state) => state.factions);
+  const notes = useNoteStore((state) => state.notes);
+  const events = useTimelineStore((state) => state.events);
+  const mapTree = useMapStore((state) => state.mapTree);
+  const dynasties = useDynastyStore((state) => state.dynasties);
+  const dogmas = useDogmaStore((state) => state.dogmas);
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams<{ projectId: string }>();
+  const [expanded, setExpanded] = useState<Set<ProjectRoutePath>>(new Set());
 
   const isProjectPage = !!projectId;
   const isAppearancePage = location.pathname === '/appearance';
+  const pid = projectId ? Number(projectId) : null;
+
+  const activePath = useMemo<ProjectRoutePath>(() => {
+    if (!projectId) return '';
+    const section = location.pathname.split('/')[3] ?? '';
+    return PROJECT_MENU_PATHS.includes(section as ProjectRoutePath)
+      ? section as ProjectRoutePath
+      : '';
+  }, [location.pathname, projectId]);
+
+  const childItems = useMemo<Record<ProjectRoutePath, Array<{ id: string; label: string; to: string }>>>(() => {
+    if (!pid) return { '': [], map: [], graph: [], characters: [], states: [], factions: [], notes: [], wiki: [], timeline: [], dogmas: [], dynasties: [] };
+    const mapEntity = <T extends { id: number }>(items: T[], label: (item: T) => string, to: (item: T) => string) =>
+      items.slice(0, 8).map((item) => ({ id: String(item.id), label: label(item), to: to(item) }));
+    return {
+      '': [],
+      map: mapEntity(mapTree, (item) => item.name, (item) => `/project/${pid}/map/${item.id}`),
+      graph: [],
+      characters: mapEntity(characters, (item) => item.name, (item) => `/project/${pid}/characters/${item.id}`),
+      states: mapEntity(factions.filter((item) => item.kind === 'state'), (item) => item.name, (item) => `/project/${pid}/states/${item.id}`),
+      factions: mapEntity(factions.filter((item) => item.kind !== 'state'), (item) => item.name, (item) => `/project/${pid}/factions/${item.id}`),
+      notes: mapEntity(notes.filter((item) => item.noteType !== 'wiki'), (item) => item.title, (item) => `/project/${pid}/notes/${item.id}`),
+      wiki: mapEntity(notes.filter((item) => item.noteType === 'wiki'), (item) => item.title, (item) => `/project/${pid}/wiki/${item.id}`),
+      timeline: mapEntity(events, (item) => item.title, () => `/project/${pid}/timeline`),
+      dogmas: mapEntity(dogmas, (item) => item.title, () => `/project/${pid}/dogmas`),
+      dynasties: mapEntity(dynasties, (item) => item.name, (item) => `/project/${pid}/dynasties/${item.id}`),
+    };
+  }, [characters, dogmas, dynasties, events, factions, mapTree, notes, pid]);
 
   const projectMenuItems = useMemo(
-    () =>
-      PROJECT_MENU_PATHS.map((path) => ({
-        path,
-        Icon: PROJECT_MENU_ICONS[path],
-      })),
-    []
+    () => PROJECT_MENU_PATHS.map((path) => ({ path, Icon: PROJECT_MENU_ICONS[path], children: childItems[path] })),
+    [childItems]
   );
 
   useEffect(() => {
-    if (projectId && (!currentProject || currentProject.id !== parseInt(projectId, 10))) {
-      fetchProject(parseInt(projectId, 10));
+    if (projectId && (!currentProject || currentProject.id !== Number(projectId))) {
+      void fetchProject(Number(projectId));
     }
   }, [projectId, currentProject, fetchProject]);
 
   useEffect(() => {
-    if (isAppearancePage && projects.length === 0) {
-      fetchProjects();
-    }
+    if (isAppearancePage && projects.length === 0) void fetchProjects();
   }, [isAppearancePage, projects.length, fetchProjects]);
 
+  useEffect(() => {
+    if (!activePath) return;
+    setExpanded((current) => current.has(activePath) ? current : new Set(current).add(activePath));
+  }, [activePath]);
+
+  const toggleExpanded = (path: ProjectRoutePath) => {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  const drawerSx = {
+    width: sidebarWidth,
+    flexShrink: 0,
+    transition: 'width 220ms cubic-bezier(.4,0,.2,1)',
+    '& .MuiDrawer-paper': {
+      width: sidebarWidth,
+      boxSizing: 'border-box',
+      overflowX: 'hidden',
+      backgroundColor: '#0c0e13',
+      borderRight: '1px solid rgba(255,255,255,.055)',
+      transition: 'width 220ms cubic-bezier(.4,0,.2,1)',
+    },
+  } as const;
+
+  if (isAppearancePage) {
+    return (
+      <Drawer variant="permanent" sx={drawerSx}>
+        <Box sx={{ p: 2, minHeight: 72, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <PaletteIcon color="primary" />
+          {sidebarOpen ? <Typography variant="h6">{t('sidebar.appearance')}</Typography> : null}
+        </Box>
+        <Divider />
+        <List>
+          <ListItemButton onClick={() => navigate('/')}>
+            <ListItemIcon><HomeIcon color="primary" /></ListItemIcon>
+            {sidebarOpen ? <ListItemText primary={t('sidebar.allCampaigns')} /> : null}
+          </ListItemButton>
+          {projects.map((project) => (
+            <ListItemButton key={project.id} onClick={() => navigate(`/project/${project.id}`)}>
+              <ListItemIcon><AccountTreeIcon /></ListItemIcon>
+              {sidebarOpen ? <ListItemText primary={project.name} primaryTypographyProps={{ noWrap: true }} /> : null}
+            </ListItemButton>
+          ))}
+        </List>
+      </Drawer>
+    );
+  }
+
   return (
-    <Drawer
-      variant="persistent"
-      anchor="left"
-      open={sidebarOpen}
-      sx={{
-        width: sidebarWidth,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: sidebarWidth,
-          boxSizing: 'border-box',
-          mt: '64px',
-        },
-      }}
-    >
-      <List>
-        <ListItemButton
-          selected={location.pathname === '/'}
-          onClick={() => navigate('/')}
-          sx={{
-            '&.Mui-selected': {
-              backgroundColor: 'rgba(201, 169, 89, 0.1)',
-            },
-          }}
-        >
-          <ListItemIcon>
-            <HomeIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText primary={t('sidebar.allCampaigns')} />
-        </ListItemButton>
-
-        <ListItemButton
-          selected={isAppearancePage}
-          onClick={() => navigate('/appearance')}
-          sx={{
-            '&.Mui-selected': {
-              backgroundColor: 'rgba(201, 169, 89, 0.1)',
-              borderRight: '3px solid',
-              borderRightColor: 'primary.main',
-            },
-          }}
-        >
-          <ListItemIcon sx={{ color: isAppearancePage ? 'primary.main' : 'text.secondary' }}>
-            <PaletteIcon />
-          </ListItemIcon>
-          <ListItemText primary={t('sidebar.appearance')} />
-        </ListItemButton>
-      </List>
-
-      <Divider />
-
-      {isAppearancePage && (
-        <>
-          <Box sx={{ p: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              {t('sidebar.appearanceProjectsHint')}
+    <Drawer variant="permanent" sx={drawerSx}>
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', px: sidebarOpen ? 2.25 : 1.25, py: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minHeight: 38, px: 1.25, mb: 2.5 }}>
+          <CastleIcon sx={{ color: 'primary.main', fontSize: 21, flexShrink: 0 }} />
+          {sidebarOpen ? (
+            <Typography sx={{ flex: 1, fontFamily: (theme) => theme.campaigner.typography.display, fontWeight: 600, fontSize: 21, color: '#ece7dd' }}>
+              Campaigner
             </Typography>
-          </Box>
+          ) : null}
+          <Tooltip title={sidebarOpen ? t('topbar.collapseSidebar') : t('topbar.expandSidebar')}>
+            <IconButton size="small" onClick={toggleSidebar} aria-label={sidebarOpen ? t('topbar.collapseSidebar') : t('topbar.expandSidebar')}>
+              {sidebarOpen ? <KeyboardDoubleArrowLeftIcon fontSize="small" /> : <KeyboardDoubleArrowRightIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        </Box>
 
-          <List>
-            {projects.map((project) => {
-              const isActiveProject = location.pathname.startsWith(`/project/${project.id}/`);
-              return (
-                <ListItemButton
-                  key={project.id}
-                  selected={isActiveProject}
-                  onClick={() => navigate(`/project/${project.id}`)}
-                  sx={{
-                    '&.Mui-selected': {
-                      backgroundColor: 'rgba(201, 169, 89, 0.1)',
-                      borderRight: '3px solid',
-                      borderRightColor: 'primary.main',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: isActiveProject ? 'primary.main' : 'text.secondary' }}>
-                    <AccountTreeIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={project.name}
-                    primaryTypographyProps={{ noWrap: true }}
-                  />
-                </ListItemButton>
-              );
-            })}
-          </List>
-
-          {projects.length === 0 && (
-            <Box sx={{ p: 2, pt: 0 }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('sidebar.projectsEmpty')}
-              </Typography>
-            </Box>
-          )}
-
-          <Divider />
-        </>
-      )}
-
-      {isProjectPage && currentProject ? (
-        <>
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" color="primary" noWrap>
+        {sidebarOpen && currentProject ? (
+          <Box sx={{ px: 1.25, pb: 2.25 }}>
+            <Typography variant="overline" sx={{ color: 'rgba(232,228,220,.3)' }}>{t('sidebar.projectLabel')}</Typography>
+            <Typography sx={{ fontFamily: (theme) => theme.campaigner.typography.display, fontSize: 19, fontWeight: 600, color: '#e8e4dc', pt: 0.75 }} noWrap>
               {currentProject.name}
             </Typography>
-            {currentProject.description && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                noWrap
-                sx={{ mt: 0.5 }}
-              >
-                {currentProject.description}
-              </Typography>
-            )}
+            {currentProject.description ? (
+              <Typography sx={{ color: 'rgba(232,228,220,.35)', fontSize: 11.5, pt: 0.5 }} noWrap>{currentProject.description}</Typography>
+            ) : null}
           </Box>
+        ) : null}
 
-          <Divider />
-
-          <List>
-            {projectMenuItems.map((item) => {
-              const fullPath = item.path ? `/project/${projectId}/${item.path}` : `/project/${projectId}`;
-              const isActive = item.path === ''
-                ? location.pathname === fullPath || location.pathname === `${fullPath}/`
-                : location.pathname.startsWith(fullPath);
-              const Icon = item.Icon;
-              const dataTour = tourAttrForSidebarPath(item.path);
-
-              return (
-                <ListItemButton
-                  key={item.path}
-                  data-tour={dataTour}
-                  selected={isActive}
-                  onClick={() => navigate(fullPath)}
-                  sx={{
-                    '&.Mui-selected': {
-                      backgroundColor: 'rgba(201, 169, 89, 0.1)',
-                      borderRight: '3px solid',
-                      borderRightColor: 'primary.main',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary' }}>
-                    <Icon />
-                  </ListItemIcon>
-                  <ListItemText primary={t(item.path ? `menu.${item.path}` : 'menu.overview')} />
-                </ListItemButton>
-              );
-            })}
-          </List>
-
-          <Divider />
-
-          <List>
-            <ListItemButton
-              data-tour="sidebar-settings"
-              selected={location.pathname === `/project/${projectId}/settings`}
-              onClick={() => navigate(`/project/${projectId}/settings`)}
-              sx={{
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(201, 169, 89, 0.1)',
-                  borderRight: '3px solid',
-                  borderRightColor: 'primary.main',
-                },
-              }}
-            >
-              <ListItemIcon
+        <List disablePadding sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+          {isProjectPage && currentProject ? projectMenuItems.map(({ path, Icon, children }) => {
+            const fullPath = path ? `/project/${projectId}/${path}` : `/project/${projectId}`;
+            const active = path === activePath;
+            const canExpand = children.length > 0;
+            const isExpanded = expanded.has(path) && sidebarOpen;
+            const row = (
+              <ListItemButton
+                data-tour={tourAttrForSidebarPath(path)}
+                selected={active}
+                onClick={() => navigate(fullPath)}
                 sx={{
-                  color:
-                    location.pathname === `/project/${projectId}/settings`
-                      ? 'primary.main'
-                      : 'text.secondary',
+                  height: 42,
+                  px: 1.25,
+                  borderRadius: '9px',
+                  gap: 1.25,
+                  mb: 0.25,
+                  '&.Mui-selected': { backgroundColor: alpha('#c9a961', 0.1) },
+                  '&.Mui-selected:hover': { backgroundColor: alpha('#c9a961', 0.14) },
                 }}
               >
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary={t('sidebar.projectSettings')} />
+                <ListItemIcon sx={{ minWidth: 0, color: active ? 'primary.main' : 'rgba(232,228,220,.42)' }}><Icon sx={{ fontSize: 19 }} /></ListItemIcon>
+                {sidebarOpen ? <ListItemText primary={t(path ? `menu.${path}` : 'menu.overview')} primaryTypographyProps={{ noWrap: true, fontSize: 13.5, color: active ? '#f0ece3' : 'rgba(232,228,220,.72)' }} /> : null}
+                {sidebarOpen && canExpand ? (
+                  <IconButton
+                    size="small"
+                    onClick={(event) => { event.stopPropagation(); toggleExpanded(path); }}
+                    aria-label={isExpanded ? t('sidebar.collapseSection') : t('sidebar.expandSection')}
+                    sx={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 180ms ease' }}
+                  >
+                    <ChevronRightIcon sx={{ fontSize: 17 }} />
+                  </IconButton>
+                ) : null}
+              </ListItemButton>
+            );
+            return (
+              <React.Fragment key={path}>
+                {sidebarOpen ? row : <Tooltip title={t(path ? `menu.${path}` : 'menu.overview')} placement="right">{row}</Tooltip>}
+                {canExpand ? (
+                  <Collapse in={isExpanded} timeout={180} unmountOnExit>
+                    <List disablePadding sx={{ pb: 1, pl: 4.25 }}>
+                      {children.map((child) => (
+                        <ListItemButton key={`${path}-${child.id}`} onClick={() => navigate(child.to)} sx={{ minHeight: 32, borderRadius: '7px', px: 1.5, gap: 1 }}>
+                          <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: location.pathname === child.to ? 'primary.main' : 'rgba(232,228,220,.28)', flexShrink: 0 }} />
+                          <ListItemText primary={child.label} primaryTypographyProps={{ noWrap: true, fontSize: 12.5, color: 'rgba(232,228,220,.62)' }} />
+                        </ListItemButton>
+                      ))}
+                    </List>
+                  </Collapse>
+                ) : null}
+              </React.Fragment>
+            );
+          }) : (
+            <ListItemButton onClick={() => navigate('/')} sx={{ borderRadius: '9px' }}>
+              <ListItemIcon sx={{ minWidth: 36 }}><HomeIcon color="primary" /></ListItemIcon>
+              {sidebarOpen ? <ListItemText primary={t('sidebar.allCampaigns')} /> : null}
             </ListItemButton>
-          </List>
-        </>
-      ) : (
-        <Box sx={{ p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            {t('sidebar.selectCampaign')}
-          </Typography>
+          )}
+        </List>
+
+        <Box sx={{ pt: 1.25, mt: 1, borderTop: '1px solid rgba(255,255,255,.055)' }}>
+          {isProjectPage ? (
+            <ListItemButton data-tour="sidebar-settings" selected={location.pathname === `/project/${projectId}/settings`} onClick={() => navigate(`/project/${projectId}/settings`)} sx={{ height: 40, borderRadius: '9px', px: 1.25 }}>
+              <ListItemIcon sx={{ minWidth: sidebarOpen ? 38 : 0 }}><SettingsIcon sx={{ fontSize: 19 }} /></ListItemIcon>
+              {sidebarOpen ? <ListItemText primary={t('sidebar.projectSettings')} primaryTypographyProps={{ fontSize: 13.5 }} /> : null}
+            </ListItemButton>
+          ) : null}
+          <ListItemButton onClick={() => navigate('/')} sx={{ height: 40, borderRadius: '9px', px: 1.25 }}>
+            <ListItemIcon sx={{ minWidth: sidebarOpen ? 38 : 0 }}><HomeIcon sx={{ fontSize: 19 }} /></ListItemIcon>
+            {sidebarOpen ? <ListItemText primary={t('sidebar.allCampaigns')} primaryTypographyProps={{ fontSize: 13.5 }} /> : null}
+          </ListItemButton>
         </Box>
-      )}
+      </Box>
     </Drawer>
   );
-};
+};;

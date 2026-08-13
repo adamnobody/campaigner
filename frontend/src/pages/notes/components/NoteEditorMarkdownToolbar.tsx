@@ -34,7 +34,18 @@ export const NoteEditorMarkdownToolbar: React.FC<Props> = ({
   const theme = useTheme();
   const { t } = useTranslation(['notes', 'common']);
   return (
-    <Box sx={{ display: 'flex', gap: 0.5, p: 1, borderBottom: `1px solid ${theme.palette.divider}`, flexWrap: 'wrap', alignItems: 'center' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        gap: 0.4,
+        px: 1.25,
+        py: 0.75,
+        borderBottom: `1px solid ${theme.campaigner.surface.border}`,
+        backgroundColor: alpha(theme.palette.common.white, 0.018),
+        flexWrap: 'wrap',
+        alignItems: 'center',
+      }}
+    >
       <Tooltip title={t('notes:toolbar.undo')}>
         <span>
           <IconButton size="small" onClick={onUndo} disabled={!canUndo}

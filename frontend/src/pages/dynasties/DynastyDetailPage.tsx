@@ -5,6 +5,7 @@ import {
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText,
   Grid, Tooltip, alpha, useTheme,
+  Tabs, Tab,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -30,8 +31,6 @@ import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
 import { DynastyMemberDialog, DynastyFamilyLinkDialog, DynastyEventDialog } from '@/pages/dynasties/components/DynastyDialogs';
-import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
-import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
@@ -388,25 +387,110 @@ export const DynastyDetailPage: React.FC = () => {
   }
 
   const dynastyColor = form.color || theme.palette.primary.main;
+  const detailTitle = isNew ? t('dynasties:detail.newTitle') : form.name || t('dynasties:detail.fallbackName');
 
   return (
-    <Box>
+    <Box
+      sx={{
+        maxWidth: 1240,
+        mx: 'auto',
+        '& .MuiInputBase-root': { borderRadius: 2 },
+        '& .MuiListItem-root': { minHeight: 58 },
+      }}
+    >
       <Box display="flex" alignItems="center" mb={2}>
         <IconButton onClick={() => navigate(routes.dynasties(pid))} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
         <Typography variant="body2" color="text.secondary">{t('dynasties:detail.backToList')}</Typography>
       </Box>
 
-      <EntityHeroLayout
-        avatarNode={
-          <Box sx={{ position: 'relative', display: 'inline-block' }}>
+      <Box
+        sx={{
+          position: 'relative',
+          minHeight: { xs: 260, md: 300 },
+          border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
+          borderRadius: '18px 18px 0 0',
+          overflow: 'hidden',
+          background: `radial-gradient(circle at 82% 20%, ${alpha(dynastyColor, 0.22)}, transparent 42%), ${alpha(
+            theme.palette.background.paper,
+            0.45
+          )}`,
+        }}
+      >
+        <Box
+          sx={{
+            minHeight: { xs: 260, md: 300 },
+            p: { xs: 3, md: 4 },
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 3,
+          }}
+        >
+          <Box sx={{ minWidth: 0, maxWidth: 760 }}>
+            <Typography
+              sx={{
+                mb: 1.5,
+                fontFamily: '"IBM Plex Mono", monospace',
+                fontSize: '0.67rem',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: 'primary.main',
+              }}
+            >
+              {t('dynasties:list.title')} · {isNew ? t('dynasties:detail.draft') : t(`dynasties:statuses.${form.status}`)}
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: '"Cormorant Garamond", serif',
+                fontWeight: 600,
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                lineHeight: 0.98,
+                color: 'text.primary',
+                textWrap: 'balance',
+              }}
+            >
+              {detailTitle}
+            </Typography>
+            <Typography
+              sx={{
+                mt: 1.5,
+                maxWidth: 650,
+                fontFamily: '"Cormorant Garamond", serif',
+                fontSize: '1.15rem',
+                fontStyle: form.motto ? 'italic' : 'normal',
+                color: 'text.secondary',
+                lineHeight: 1.55,
+              }}
+            >
+              {form.motto ? `«${form.motto}»` : isNew ? t('dynasties:detail.createHint') : t('dynasties:list.subtitle')}
+            </Typography>
+            <Box display="flex" gap={1} mt={3} flexWrap="wrap">
+              {!isNew && (
+                <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">
+                  {t('common:delete')}
+                </Button>
+              )}
+              <DndButton
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                loading={saving}
+                disabled={!form.name.trim()}
+              >
+                {isNew ? t('common:create') : t('common:save')}
+              </DndButton>
+            </Box>
+          </Box>
+
+          <Box sx={{ position: 'relative', display: { xs: 'none', sm: 'inline-block' }, flexShrink: 0 }}>
             <AssetAvatar
               assetPath={currentDynasty?.imagePath}
               sx={{
-                width: 140, height: 140,
+                width: 156, height: 156,
                 borderRadius: 3,
                 bgcolor: alpha(dynastyColor, 0.1),
-                border: `3px solid ${alpha(dynastyColor, 0.4)}`,
-                boxShadow: `0 0 30px ${alpha(dynastyColor, 0.2)}`,
+                border: `1px solid ${alpha(dynastyColor, 0.55)}`,
+                boxShadow: `0 20px 50px ${alpha(theme.palette.common.black, 0.4)}`,
                 color: dynastyColor,
                 fontSize: '4rem',
               }}
@@ -432,35 +516,69 @@ export const DynastyDetailPage: React.FC = () => {
               </Tooltip>
             )}
           </Box>
-        }
-        title={isNew ? t('dynasties:detail.newTitle') : form.name || t('dynasties:detail.fallbackName')}
-        subtitle={form.motto ? `«${form.motto}»` : undefined}
-        actionButtons={
-          <>
-            {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">{t('common:delete')}</Button>}
-            <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
-              {isNew ? t('common:create') : t('common:save')}
-            </DndButton>
-          </>
-        }
-      />
+        </Box>
+      </Box>
 
-      <EntityTabs
-        value={activeTab}
-        onChange={(_, v) => setActiveTab(v)}
-        tabs={[
-          { value: 'overview', label: t('dynasties:detail.tabs.overview'), icon: <EditIcon fontSize="small" /> },
-          { value: 'family', label: t('dynasties:detail.tabs.family'), icon: <AccountTreeIcon fontSize="small" /> },
-          { value: 'events', label: t('dynasties:detail.tabs.events'), icon: <EventIcon fontSize="small" /> },
-        ]}
-      />
+      <Box
+        sx={{
+          mb: 3.5,
+          px: { xs: 1, md: 2.5 },
+          border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
+          borderTop: 0,
+          borderRadius: '0 0 14px 14px',
+          bgcolor: alpha(theme.palette.background.paper, 0.32),
+        }}
+      >
+        <Tabs
+          value={activeTab}
+          onChange={(_, value) => setActiveTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            minHeight: 52,
+            '& .MuiTabs-indicator': { height: 2, bgcolor: 'primary.main' },
+            '& .MuiTab-root': {
+              minHeight: 52,
+              px: 2,
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              textTransform: 'none',
+              color: 'text.secondary',
+            },
+            '& .Mui-selected': { color: 'text.primary' },
+          }}
+        >
+          <Tab value="overview" label={t('dynasties:detail.tabs.overview')} />
+          <Tab value="family" label={t('dynasties:detail.tabs.family')} />
+          <Tab value="events" label={t('dynasties:detail.tabs.events')} />
+        </Tabs>
+      </Box>
 
       {activeTab === 'overview' && (
-        <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* LEFT SIDEBAR */}
-          <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
-            <GlassCard sx={{ p: 3, position: 'sticky', top: 80 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>{t('dynasties:detail.summary.title')}</Typography>
+        <Box display="flex" gap={{ xs: 3, md: 5 }} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+          <Box sx={{ width: { xs: '100%', md: 296 }, flexShrink: 0, order: { xs: 1, md: 2 } }}>
+            <GlassCard
+              sx={{
+                p: 2.5,
+                position: 'sticky',
+                top: 80,
+                borderRadius: 3,
+                bgcolor: alpha(theme.palette.background.paper, 0.3),
+                border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+              }}
+            >
+              <Typography
+                sx={{
+                  mb: 2,
+                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontSize: '0.67rem',
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  color: 'text.secondary',
+                }}
+              >
+                {t('dynasties:detail.summary.title')}
+              </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
@@ -513,8 +631,7 @@ export const DynastyDetailPage: React.FC = () => {
             </GlassCard>
           </Box>
 
-          {/* MAIN CONTENT */}
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0, order: { xs: 2, md: 1 } }}>
             {/* Basic info */}
             <Section title={t('dynasties:detail.sections.basics')} icon={<EditIcon />} defaultOpen={true}>
               <Grid container spacing={2}>
@@ -610,7 +727,7 @@ export const DynastyDetailPage: React.FC = () => {
       )}
 
       {activeTab === 'family' && (
-        <Box>
+        <Box sx={{ maxWidth: 1080, mx: 'auto' }}>
           {/* Family Tree Visualization */}
           {!isNew && currentMembers.length >= 2 && currentFamilyLinks.length > 0 && (
             <Section title={t('dynasties:detail.sections.tree')} icon={<AccountTreeIcon />} defaultOpen={true}>
@@ -771,7 +888,7 @@ export const DynastyDetailPage: React.FC = () => {
       )}
 
       {activeTab === 'events' && (
-        <Box>
+        <Box sx={{ maxWidth: 960, mx: 'auto' }}>
           {/* Dynasty Events / Timeline */}
           {!isNew && (
             <Section title={t('dynasties:detail.sections.events')} icon={<EventIcon />} badge={currentEvents.length} defaultOpen={true}

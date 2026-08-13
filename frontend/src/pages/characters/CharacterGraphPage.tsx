@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Button, Paper, IconButton, Chip, useTheme, alpha,
+  Box, Typography, Button, IconButton, Chip, useTheme, alpha,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -10,8 +10,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useBranchStore } from '@/store/useBranchStore';
-import { DndButton } from '@/components/ui/DndButton';
-import { GlassCard } from '@/components/ui/GlassCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import {
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
 import {
   type GNode,
   type GEdge,
@@ -31,7 +35,7 @@ export const CharacterGraphPage: React.FC = () => {
   const theme = useTheme();
 
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
-  const { characters, relationships, fetchCharacters, fetchRelationships } = useCharacterStore();
+  const { characters, relationships, error, fetchCharacters, fetchRelationships } = useCharacterStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -303,12 +307,12 @@ export const CharacterGraphPage: React.FC = () => {
         const mx = (s.x + t.x) / 2;
         const my = (s.y + t.y) / 2;
 
-        ctx.font = '9px system-ui,sans-serif';
+        ctx.font = `9px ${theme.typography.fontFamily}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         const tw = ctx.measureText(label).width + 10;
-        ctx.fillStyle = 'rgba(10,10,20,0.8)';
+        ctx.fillStyle = alpha(theme.palette.background.default, 0.88);
         ctx.beginPath();
         ctx.roundRect(mx - tw / 2, my - 9, tw, 18, 4);
         ctx.fill();
@@ -328,7 +332,9 @@ export const CharacterGraphPage: React.FC = () => {
         if (hovered || selected) {
           ctx.beginPath();
           ctx.arc(n.x, n.y, nr + 8, 0, Math.PI * 2);
-          ctx.fillStyle = selected ? 'rgba(130,130,255,0.15)' : 'rgba(130,130,255,0.08)';
+          ctx.fillStyle = selected
+            ? alpha(theme.palette.primary.main, 0.16)
+            : alpha(theme.palette.primary.main, 0.08);
           ctx.fill();
         }
 
@@ -336,29 +342,33 @@ export const CharacterGraphPage: React.FC = () => {
         ctx.arc(n.x, n.y, nr, 0, Math.PI * 2);
 
         const g = ctx.createRadialGradient(n.x - nr * 0.3, n.y - nr * 0.3, 0, n.x, n.y, nr);
-        g.addColorStop(0, 'rgba(70,70,140,0.95)');
-        g.addColorStop(1, 'rgba(30,30,65,0.98)');
+        g.addColorStop(0, alpha(theme.palette.primary.main, 0.5));
+        g.addColorStop(1, alpha(theme.palette.background.paper, 0.98));
         ctx.fillStyle = g;
         ctx.fill();
 
-        ctx.strokeStyle = selected ? '#fff' : hovered ? 'rgba(130,130,255,0.9)' : 'rgba(130,130,255,0.45)';
+        ctx.strokeStyle = selected
+          ? theme.palette.text.primary
+          : hovered
+            ? alpha(theme.palette.primary.main, 0.9)
+            : alpha(theme.palette.primary.main, 0.42);
         ctx.lineWidth = selected ? 2.5 : 1.5;
         ctx.stroke();
 
-        ctx.font = 'bold 15px system-ui,sans-serif';
-        ctx.fillStyle = '#fff';
+        ctx.font = `600 15px ${theme.typography.fontFamily}`;
+        ctx.fillStyle = theme.palette.text.primary;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(n.name.charAt(0).toUpperCase(), n.x, n.y);
 
-        ctx.font = '11px system-ui,sans-serif';
-        ctx.fillStyle = '#fff';
+        ctx.font = `11px ${theme.typography.fontFamily}`;
+        ctx.fillStyle = theme.palette.text.primary;
         ctx.textBaseline = 'top';
         ctx.fillText(n.name, n.x, n.y + nr + 6);
 
         if (n.title) {
-          ctx.font = 'italic 9px system-ui,sans-serif';
-          ctx.fillStyle = 'rgba(201,169,89,0.75)';
+          ctx.font = `italic 9px ${theme.typography.fontFamily}`;
+          ctx.fillStyle = alpha(theme.palette.primary.main, 0.78);
           ctx.fillText(n.title, n.x, n.y + nr + 20);
         }
       }
@@ -372,7 +382,7 @@ export const CharacterGraphPage: React.FC = () => {
       running = false;
       cancelAnimationFrame(rafRef.current);
     };
-  }, [loading, relLabels]);
+  }, [loading, relLabels, theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -473,7 +483,7 @@ export const CharacterGraphPage: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>{t('graph.loading')}</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('graph.loading')}</Typography>
       </Box>
     );
   }
@@ -481,63 +491,64 @@ export const CharacterGraphPage: React.FC = () => {
   const usedTypes = [...new Set(edgesRef.current.map((e) => e.type))];
 
   return (
-    <Box sx={{ height: 'calc(100vh - 64px - 48px)', display: 'flex', flexDirection: 'column' }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <DndButton
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            size="small"
-            onClick={() => navigate(routes.characters(pid))}
-            sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}
-          >
-            {t('common:back')}
-          </DndButton>
+    <CampaignerPage
+      maxWidth="none"
+      sx={{
+        height: 'calc(100vh - 66px)',
+        display: 'flex',
+        flexDirection: 'column',
+        px: { xs: 2, md: 5 },
+        pb: 3,
+      }}
+    >
+      <Button
+        variant="text"
+        size="small"
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate(routes.characters(pid))}
+        sx={{ mt: 1.5, alignSelf: 'flex-start' }}
+      >
+        {t('common:back')}
+      </Button>
 
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
-            {t('graph.title')}
-          </Typography>
-        </Box>
+      <CampaignerPageHeader
+        eyebrow={t('graph.eyebrow')}
+        title={t('graph.title')}
+        description={t('graph.hint')}
+        actions={
+          <CampaignerSurface sx={{ display: 'flex', alignItems: 'center', p: 0.5 }}>
+            <IconButton size="small" aria-label={t('graph.zoomOut')} onClick={() => zoomBtn(-0.2)}>
+              <ZoomOutIcon fontSize="small" />
+            </IconButton>
+            <Typography sx={{ color: 'text.secondary', fontSize: '0.76rem', lineHeight: '30px', px: 1, minWidth: 48, textAlign: 'center' }}>
+              {zoomDisplay}%
+            </Typography>
+            <IconButton size="small" aria-label={t('graph.zoomIn')} onClick={() => zoomBtn(0.2)}>
+              <ZoomInIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" aria-label={t('graph.fit')} onClick={fitCamera}>
+              <CenterFocusStrongIcon fontSize="small" />
+            </IconButton>
+          </CampaignerSurface>
+        }
+      />
 
-        <Box display="flex" gap={0.5} sx={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 1, p: 0.5 }}>
-          <IconButton size="small" onClick={() => zoomBtn(-0.2)} sx={{ color: '#fff' }}>
-            <ZoomOutIcon fontSize="small" />
-          </IconButton>
-          <Typography sx={{ color: '#fff', fontSize: '0.8rem', lineHeight: '30px', px: 1, minWidth: 45, textAlign: 'center' }}>
-            {zoomDisplay}%
-          </Typography>
-          <IconButton size="small" onClick={() => zoomBtn(0.2)} sx={{ color: '#fff' }}>
-            <ZoomInIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" onClick={fitCamera} sx={{ color: '#fff' }}>
-            <CenterFocusStrongIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      </Box>
-
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mb: 1, display: 'block' }}>
-        {t('graph.hint')}
-      </Typography>
-
-      {nodeCount === 0 ? (
-        <GlassCard
-          sx={{
-            p: 6,
-            textAlign: 'center',
-            flexGrow: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-          }}
-        >
-          <Typography sx={{ color: 'text.secondary', mb: 2 }}>
-            {t('graph.empty')}
-          </Typography>
-          <Button variant="outlined" onClick={() => navigate(routes.characters(pid))}>
-            {t('graph.backToList')}
-          </Button>
-        </GlassCard>
+      {error && nodeCount === 0 ? (
+        <EmptyState
+          icon={<CenterFocusStrongIcon />}
+          title={t('graph.errorTitle')}
+          description={error}
+          actionLabel={t('graph.backToList')}
+          onAction={() => navigate(routes.characters(pid))}
+        />
+      ) : nodeCount === 0 ? (
+        <EmptyState
+          icon={<CenterFocusStrongIcon />}
+          title={t('graph.empty')}
+          description={t('graph.emptyDescription')}
+          actionLabel={t('graph.backToList')}
+          onAction={() => navigate(routes.characters(pid))}
+        />
       ) : (
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
           <Box
@@ -545,9 +556,11 @@ export const CharacterGraphPage: React.FC = () => {
             sx={{
               position: 'absolute',
               inset: 0,
-              borderRadius: 2,
-              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: '14px',
+              border: `1px solid ${theme.campaigner.surface.border}`,
               backgroundColor: theme.palette.background.default,
+              backgroundImage: `radial-gradient(${alpha(theme.palette.common.white, 0.055)} 1px, transparent 1px)`,
+              backgroundSize: '22px 22px',
               overflow: 'hidden',
             }}
           >
@@ -566,7 +579,7 @@ export const CharacterGraphPage: React.FC = () => {
           </Box>
 
           {selectedNode && (
-            <GlassCard
+            <CampaignerSurface
               sx={{
                 position: 'absolute',
                 bottom: 16,
@@ -576,9 +589,12 @@ export const CharacterGraphPage: React.FC = () => {
                 zIndex: 20,
               }}
             >
-              <Typography sx={{ fontWeight: 700, color: 'text.primary' }}>{selectedNode.name}</Typography>
+              <Typography variant="overline" sx={{ color: 'primary.main', display: 'block', pb: 0.5 }}>
+                {t('graph.selected')}
+              </Typography>
+              <Typography variant="h5" sx={{ fontSize: '1.3rem' }}>{selectedNode.name}</Typography>
               {selectedNode.title && (
-                <Typography variant="caption" sx={{ color: alpha(theme.palette.warning.main, 0.8), fontStyle: 'italic', display: 'block' }}>
+                <Typography variant="caption" sx={{ color: alpha(theme.palette.primary.main, 0.8), display: 'block' }}>
                   {selectedNode.title}
                 </Typography>
               )}
@@ -587,12 +603,7 @@ export const CharacterGraphPage: React.FC = () => {
                   size="small"
                   variant="outlined"
                   onClick={() => navigate(routes.characterDetail(pid, selectedNode.id))}
-                  sx={{
-                    borderColor: alpha(theme.palette.primary.main, 0.3),
-                    color: theme.palette.primary.main,
-                    textTransform: 'none',
-                    fontSize: '0.75rem',
-                  }}
+                  sx={{ fontSize: '0.75rem' }}
                 >
                   {t('graph.open')}
                 </Button>
@@ -602,16 +613,16 @@ export const CharacterGraphPage: React.FC = () => {
                     selectedIdRef.current = null;
                     setSelectedNode(null);
                   }}
-                  sx={{ color: 'text.secondary', textTransform: 'none', fontSize: '0.75rem' }}
+                  sx={{ fontSize: '0.75rem' }}
                 >
                   {t('graph.closePanel')}
                 </Button>
               </Box>
-            </GlassCard>
+            </CampaignerSurface>
           )}
 
           {usedTypes.length > 0 && (
-            <GlassCard
+            <CampaignerSurface
               sx={{
                 position: 'absolute',
                 top: 12,
@@ -619,7 +630,7 @@ export const CharacterGraphPage: React.FC = () => {
                 p: 1.5,
               }}
             >
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+              <Typography variant="overline" sx={{ color: 'text.secondary', display: 'block', mb: 0.75 }}>
                 {t('graph.legendTitle')}
               </Typography>
               {usedTypes.map((relType) => (
@@ -630,7 +641,7 @@ export const CharacterGraphPage: React.FC = () => {
                   </Typography>
                 </Box>
               ))}
-            </GlassCard>
+            </CampaignerSurface>
           )}
 
           <Box sx={{ position: 'absolute', bottom: 12, right: 12, display: 'flex', gap: 1 }}>
@@ -649,6 +660,6 @@ export const CharacterGraphPage: React.FC = () => {
           </Box>
         </Box>
       )}
-    </Box>
+    </CampaignerPage>
   );
 };

@@ -39,6 +39,21 @@
     "moreLinks": "+{{count}} ещё",
     "linkPrefix": "→ "
   },
+  "article": {
+    "entityName": "статья вики",
+    "eyebrow": "Вики · статья",
+    "edit": "Править",
+    "articleTab": "Статья",
+    "contents": "Содержание",
+    "links": "Связи",
+    "tags": "Теги",
+    "timestamps": "Даты статьи",
+    "created": "Создано {{date}}",
+    "updated": "Изменено {{date}}",
+    "empty": "В этой статье пока нет содержимого.",
+    "loadError": "Не удалось загрузить статью вики",
+    "backToWiki": "Вернуться к вики"
+  },
   "dialogs": {
     "create": {
       "title": "Новая статья",

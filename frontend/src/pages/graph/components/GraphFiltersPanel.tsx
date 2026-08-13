@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import type { Theme } from '@mui/material/styles';
 import {
   GRAPH_EDGE_KINDS,
   GRAPH_NODE_TYPES,
@@ -45,7 +46,11 @@ type Props = {
 };
 
 const graphControlSx = { textTransform: 'none' as const, fontWeight: 500 };
-const filterSectionSummarySx = { px: 1.5, minHeight: 40 };
+const filterSectionSummarySx = {
+  px: 1.25,
+  minHeight: 42,
+  borderTop: (theme: Theme) => `1px solid ${theme.campaigner.surface.border}`,
+};
 const filterSectionDetailsSx = { px: 1.5, pt: 0, pb: 1.5 };
 const filterOptionSx = { m: 0 };
 
@@ -79,7 +84,7 @@ export const GraphFiltersPanel: React.FC<Props> = ({
         overflow: 'hidden',
       }}
     >
-      <Typography sx={{ fontWeight: 700, mb: 1, flexShrink: 0 }}>{t('graph:filters.title')}</Typography>
+      <Typography variant="h6" sx={{ mb: 1.25, flexShrink: 0 }}>{t('graph:filters.title')}</Typography>
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.5 }}>
         <Accordion defaultExpanded disableGutters elevation={0} sx={{ bgcolor: 'transparent', '&:before': { display: 'none' } }}>
           <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={filterSectionSummarySx}>

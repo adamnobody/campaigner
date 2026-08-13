@@ -63,3 +63,12 @@ pub struct ProjectUploadMapImageInput {
     pub file_name: String,
     pub mime: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectUploadCoverInput {
+    pub project_id: i32,
+    pub file_bytes: Vec<u8>,
+    pub file_name: String,
+    pub mime: String,
+}

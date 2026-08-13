@@ -193,9 +193,8 @@ export const MapBackgroundCropDialog: React.FC<Props> = ({
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
     >
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif', color: 'text.primary' }}>
+      <DialogTitle>
         {t('map:sceneContainerDialog.cropTitle')}
       </DialogTitle>
       <DialogContent>

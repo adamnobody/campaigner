@@ -5,7 +5,7 @@ import {
   DialogTitle, DialogContent, DialogActions,
   Select, MenuItem, FormControl, InputLabel, Autocomplete,
   List, ListItem, ListItemText, ListItemAvatar,
-  Grid, alpha, useTheme,
+  Collapse, Tabs, Tab, alpha, useTheme,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -18,7 +18,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import GroupsIcon from '@mui/icons-material/Groups';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import FaceIcon from '@mui/icons-material/Face';
-import PsychologyIcon from '@mui/icons-material/Psychology';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CharacterTraitsTab } from '@/pages/characters/components/CharacterTraitsTab';
@@ -31,12 +31,14 @@ import { useTagStore } from '@/store/useTagStore';
 import { shallow } from 'zustand/shallow';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
-import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSection';
-import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
-import { EntityTabs } from '@/components/ui/EntityTabs';
-import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
+import {
+  CampaignerFieldRow,
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
 import { routes } from '@/utils/routes';
 import { isNotFoundError } from '@/utils/error';
 import {
@@ -92,6 +94,57 @@ const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) =
     <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
       <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{label}</Typography>
       <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{value}</Typography>
+    </Box>
+  );
+};
+
+const ArticleSection: React.FC<{
+  title: string;
+  icon: React.ReactNode;
+  defaultOpen?: boolean;
+  badge?: number;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, icon, defaultOpen = true, badge, action, children }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Box sx={{ mb: 3.75 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
+        <Box
+          component="button"
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          sx={{
+            minWidth: 0,
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.25,
+            p: 0,
+            border: 0,
+            color: 'text.primary',
+            background: 'none',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <Box sx={{ display: 'flex', color: 'primary.main', '& svg': { fontSize: 18 } }}>{icon}</Box>
+          <Typography variant="h5" sx={{ flex: 1, fontSize: '1.45rem' }}>{title}</Typography>
+          {badge ? <Chip label={badge} size="small" /> : null}
+          <ExpandMoreIcon
+            sx={{
+              color: 'text.secondary',
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 160ms ease',
+            }}
+          />
+        </Box>
+        {action && open ? <Box>{action}</Box> : null}
+      </Box>
+      <Collapse in={open}>
+        {children}
+      </Collapse>
     </Box>
   );
 };
@@ -338,27 +391,28 @@ export const CharacterDetailPage: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(routes.characters(pid))} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
-        <Typography variant="body2" color="text.secondary">{t('detail.backToList')}</Typography>
-      </Box>
+    <CampaignerPage maxWidth={1180}>
+      <Button
+        variant="text"
+        size="small"
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate(routes.characters(pid))}
+        sx={{ mt: 2 }}
+      >
+        {t('detail.backToList')}
+      </Button>
 
-      <EntityHeroLayout
-        avatarNode={
-          currentCharacter?.imagePath ? (
-            <AssetAvatar assetPath={currentCharacter.imagePath} sx={{ width: 140, height: 140, borderRadius: 3 }} variant="rounded" />
-          ) : (
-            <Avatar sx={{ width: 140, height: 140, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }} variant="rounded">
-              <PersonIcon sx={{ fontSize: 64 }} />
-            </Avatar>
-          )
-        }
+      <CampaignerPageHeader
+        eyebrow={isNew ? t('detail.eyebrowDraft') : t('detail.eyebrowCharacter')}
         title={isNew ? t('detail.newCharacter') : (form.name || t('detail.fallbackName'))}
-        subtitle={form.title ? `— ${form.title}` : undefined}
-        actionButtons={
+        description={form.title || (isNew ? t('detail.createDescription') : form.bio)}
+        actions={
           <>
-            {!isNew && <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">{t('common:delete')}</Button>}
+            {!isNew ? (
+              <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">
+                {t('common:delete')}
+              </Button>
+            ) : null}
             <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
               {isNew ? t('common:create') : t('common:save')}
             </DndButton>
@@ -366,190 +420,348 @@ export const CharacterDetailPage: React.FC = () => {
         }
       />
 
-      <EntityTabs
+      <Tabs
         value={activeTab}
-        onChange={(_, v) => setActiveTab(v)}
-        tabs={[
-          { value: 'overview', label: t('detail.tabs.overview'), icon: <EditIcon fontSize="small" /> },
-          { value: 'traits', label: t('detail.tabs.traits'), icon: <PsychologyIcon fontSize="small" /> },
-          { value: 'relations', label: t('detail.tabs.relations'), icon: <GroupsIcon fontSize="small" /> },
-        ]}
-      />
+        onChange={(_, value) => setActiveTab(value)}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ mb: 4 }}
+      >
+        <Tab value="overview" label={t('detail.tabs.overview')} />
+        <Tab value="traits" label={t('detail.tabs.traits')} />
+        <Tab value="relations" label={t('detail.tabs.relations')} />
+      </Tabs>
 
-      {activeTab === 'overview' && (
-        <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* LEFT SIDEBAR */}
-          <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
-            <GlassCard sx={{ p: 3, position: 'sticky', top: 80 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>{t('detail.summary.title')}</Typography>
-              
-              {!isNew && (
-                <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small"
-                  sx={{ borderColor: alpha(theme.palette.divider, 0.5), mb: 3, fontSize: '0.75rem' }}>
-                  {t('detail.summary.uploadPhoto')}
-                  <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml,image/webp" onChange={handleImageUpload} />
-                </Button>
-              )}
+      {activeTab === 'overview' ? (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 720px) 296px' },
+            gap: { xs: 4, lg: 6.5 },
+            alignItems: 'start',
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <ArticleSection title={t('detail.sections.basics')} icon={<EditIcon />}>
+              <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                <CampaignerFieldRow label={t('detail.fields.name')}>
+                  <TextField
+                    fullWidth
+                    required
+                    variant="standard"
+                    value={form.name}
+                    onChange={(event) => handleChange('name', event.target.value)}
+                    placeholder={t('detail.placeholders.name')}
+                    inputProps={{ 'aria-label': t('detail.fields.name') }}
+                  />
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('detail.fields.title')}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.title}
+                    onChange={(event) => handleChange('title', event.target.value)}
+                    placeholder={t('detail.placeholders.titleExample')}
+                    inputProps={{ 'aria-label': t('detail.fields.title') }}
+                  />
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('detail.fields.bio')} sx={{ alignItems: 'start' }}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.bio}
+                    onChange={(event) => handleChange('bio', event.target.value)}
+                    multiline
+                    minRows={2}
+                    placeholder={t('detail.placeholders.bio')}
+                    inputProps={{ 'aria-label': t('detail.fields.bio') }}
+                  />
+                </CampaignerFieldRow>
+              </CampaignerSurface>
+            </ArticleSection>
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                {form.title && <InfoRow label={t('detail.summary.titleLabel')} value={form.title} />}
-                {form.bio && (
-                  <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{t('detail.summary.descriptionLabel')}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.primary', fontSize: '0.85rem' }}>
-                      {form.bio.length > 120 ? form.bio.slice(0, 120) + '…' : form.bio}
-                    </Typography>
-                  </Box>
-                )}
-                {previewTagsStr.trim() && (
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>{t('detail.summary.tagsLabel')}</Typography>
-                    <Box display="flex" gap={0.5} flexWrap="wrap">
-                      {previewTagsStr.split(',').map((t, i) => { const s = t.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 24, fontSize: '0.75rem' }} /> : null; })}
-                    </Box>
-                  </Box>
-                )}
-              </Box>
-            </GlassCard>
-          </Box>
-
-          {/* MAIN CONTENT */}
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            {/* Basic Info */}
-            <Section title={t('detail.sections.basics')} icon={<EditIcon />} defaultOpen={true}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField fullWidth label={t('detail.fields.name')} value={form.name} onChange={e => handleChange('name', e.target.value)} />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField fullWidth label={t('detail.fields.title')} value={form.title} onChange={e => handleChange('title', e.target.value)} placeholder={t('detail.placeholders.titleExample')} />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField fullWidth label={t('detail.fields.bio')} value={form.bio} onChange={e => handleChange('bio', e.target.value)} multiline rows={3} placeholder={t('detail.placeholders.bio')} />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>{t('detail.fields.state')}</InputLabel>
-                    <Select
-                      value={form.stateId}
-                      label={t('detail.fields.state')}
-                      onChange={e => setForm(prev => ({ ...prev, stateId: e.target.value }))}
-                    >
-                      <MenuItem value="">{t('detail.stateNotSpecified')}</MenuItem>
-                      {stateOptions.map((item) => (
-                        <MenuItem key={item.id} value={String(item.id)}>{item.name}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
+            <ArticleSection title={t('detail.sections.world')} icon={<GroupsIcon />}>
+              <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                <CampaignerFieldRow label={t('detail.fields.state')}>
+                  <Select
+                    fullWidth
+                    variant="standard"
+                    value={form.stateId}
+                    onChange={(event) => setForm((prev) => ({ ...prev, stateId: event.target.value }))}
+                    inputProps={{ 'aria-label': t('detail.fields.state') }}
+                  >
+                    <MenuItem value="">{t('detail.stateNotSpecified')}</MenuItem>
+                    {stateOptions.map((item) => (
+                      <MenuItem key={item.id} value={String(item.id)}>{item.name}</MenuItem>
+                    ))}
+                  </Select>
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('detail.fields.factions')}>
                   <Autocomplete
                     multiple
                     options={factionOptions}
                     getOptionLabel={(option) => option.name}
                     value={factionOptions.filter((option) => form.factionIds.includes(option.id))}
-                    onChange={(_, value) => setForm(prev => ({ ...prev, factionIds: value.map((item) => item.id) }))}
-                    renderInput={(params) => <TextField {...params} label={t('detail.fields.factions')} placeholder={t('detail.placeholders.factions')} />}
+                    onChange={(_, value) => setForm((prev) => ({ ...prev, factionIds: value.map((item) => item.id) }))}
+                    renderInput={(params) => (
+                      <TextField {...params} variant="standard" placeholder={t('detail.placeholders.factions')} />
+                    )}
                     disableCloseOnSelect
                   />
-                </Grid>
-                <Grid item xs={12}>
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('detail.summary.tagsLabel')}>
                   <TagAutocompleteField
                     options={allTagNames}
                     value={form.tagsStr}
                     pendingInput={tagsInput}
-                    onValueChange={v => handleChange('tagsStr', v)}
+                    onValueChange={(value) => handleChange('tagsStr', value)}
                     onPendingInputChange={setTagsInput}
                     label={t('detail.summary.tagsLabel')}
                     placeholder={t('detail.placeholders.tags')}
                     noOptionsText={t('detail.placeholders.tagNewOption')}
                   />
-                </Grid>
-              </Grid>
-            </Section>
+                </CampaignerFieldRow>
+              </CampaignerSurface>
+            </ArticleSection>
 
-            {/* Appearance */}
-            <Section title={t('detail.sections.appearance')} icon={<FaceIcon />} defaultOpen={!isNew && !!form.appearance}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField fullWidth label={t('detail.fields.appearance')} value={form.appearance} onChange={e => handleChange('appearance', e.target.value)} multiline rows={5} placeholder={t('detail.placeholders.appearance')} />
-                </Grid>
-              </Grid>
-            </Section>
+            <ArticleSection title={t('detail.sections.appearance')} icon={<FaceIcon />} defaultOpen={isNew || !!form.appearance}>
+              <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                <CampaignerFieldRow label={t('detail.fields.appearance')} sx={{ alignItems: 'start' }}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.appearance}
+                    onChange={(event) => handleChange('appearance', event.target.value)}
+                    multiline
+                    minRows={4}
+                    placeholder={t('detail.placeholders.appearance')}
+                    inputProps={{ 'aria-label': t('detail.fields.appearance') }}
+                  />
+                </CampaignerFieldRow>
+              </CampaignerSurface>
+            </ArticleSection>
 
-            {/* Backstory & Notes */}
-            <Section title={t('detail.sections.historyNotes')} icon={<AutoStoriesIcon />} defaultOpen={!isNew && (!!form.backstory || !!form.notes)}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField fullWidth label={t('detail.fields.backstory')} value={form.backstory} onChange={e => handleChange('backstory', e.target.value)} multiline rows={7} placeholder={t('detail.placeholders.backstory')} />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField fullWidth label={t('detail.fields.notes')} value={form.notes} onChange={e => handleChange('notes', e.target.value)} multiline rows={4} placeholder={t('detail.placeholders.notes')} />
-                </Grid>
-              </Grid>
-            </Section>
+            <ArticleSection title={t('detail.sections.historyNotes')} icon={<AutoStoriesIcon />} defaultOpen={isNew || !!form.backstory || !!form.notes}>
+              <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                <CampaignerFieldRow label={t('detail.fields.backstory')} sx={{ alignItems: 'start' }}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.backstory}
+                    onChange={(event) => handleChange('backstory', event.target.value)}
+                    multiline
+                    minRows={5}
+                    placeholder={t('detail.placeholders.backstory')}
+                    inputProps={{ 'aria-label': t('detail.fields.backstory') }}
+                  />
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('detail.fields.notes')} sx={{ alignItems: 'start' }}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.notes}
+                    onChange={(event) => handleChange('notes', event.target.value)}
+                    multiline
+                    minRows={3}
+                    placeholder={t('detail.placeholders.notes')}
+                    inputProps={{ 'aria-label': t('detail.fields.notes') }}
+                  />
+                </CampaignerFieldRow>
+              </CampaignerSurface>
+            </ArticleSection>
+          </Box>
+
+          <Box sx={{ position: { lg: 'sticky' }, top: { lg: 82 }, minWidth: 0 }}>
+            <CampaignerSurface
+              sx={{
+                height: 300,
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderStyle: currentCharacter?.imagePath ? 'solid' : 'dashed',
+                position: 'relative',
+              }}
+            >
+              {currentCharacter?.imagePath ? (
+                <AssetAvatar
+                  assetPath={currentCharacter.imagePath}
+                  sx={{ width: '100%', height: '100%', borderRadius: 0 }}
+                  variant="rounded"
+                />
+              ) : (
+                <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                  <PersonIcon sx={{ fontSize: 42, opacity: 0.45 }} />
+                  <Typography sx={{ fontSize: '0.75rem', pt: 1 }}>{t('detail.summary.portrait')}</Typography>
+                </Box>
+              )}
+            </CampaignerSurface>
+
+            {!isNew ? (
+              <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small" sx={{ mt: 1.25 }}>
+                {t('detail.summary.uploadPhoto')}
+                <input type="file" hidden accept="image/jpeg,image/png,image/svg+xml,image/webp" onChange={handleImageUpload} />
+              </Button>
+            ) : null}
+
+            <Typography variant="overline" sx={{ color: 'text.secondary', display: 'block', pt: 3.25, pb: 1.5 }}>
+              {t('detail.summary.title')}
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 1.25 }}>
+              {form.title ? <InfoRow label={t('detail.summary.titleLabel')} value={form.title} /> : null}
+              <InfoRow
+                label={t('detail.fields.state')}
+                value={stateOptions.find((item) => String(item.id) === form.stateId)?.name || t('detail.stateNotSpecified')}
+              />
+              <InfoRow
+                label={t('detail.fields.factions')}
+                value={form.factionIds.length ? t('detail.summary.factionCount', { count: form.factionIds.length }) : t('detail.stateNotSpecified')}
+              />
+              {!isNew ? (
+                <InfoRow label={t('detail.sections.relationships')} value={String(allRelsForDisplay.length)} />
+              ) : null}
+            </Box>
+
+            {previewTagsStr.trim() ? (
+              <Box sx={{ pt: 2 }}>
+                <Typography variant="overline" sx={{ color: 'text.secondary', display: 'block', pb: 1 }}>
+                  {t('detail.summary.tagsLabel')}
+                </Typography>
+                <Box display="flex" gap={0.75} flexWrap="wrap">
+                  {previewTagsStr.split(',').map((value, index) => {
+                    const label = value.trim();
+                    return label ? <Chip key={`${label}-${index}`} label={label} size="small" /> : null;
+                  })}
+                </Box>
+              </Box>
+            ) : null}
           </Box>
         </Box>
-      )}
+      ) : null}
 
-      {activeTab === 'traits' && (
-        <CharacterTraitsTab projectId={pid} characterId={isNew ? null : cid} />
-      )}
+      {activeTab === 'traits' ? (
+        <CampaignerSurface sx={{ p: { xs: 2, md: 3 } }}>
+          <CharacterTraitsTab projectId={pid} characterId={isNew ? null : cid} />
+        </CampaignerSurface>
+      ) : null}
 
-      {activeTab === 'relations' && (
-        <Box>
-          {/* Relationships */}
-          {!isNew && (
-            <Section title={t('detail.sections.relationships')} icon={<GroupsIcon />} badge={allRelsForDisplay.length} defaultOpen={true}
-              action={<DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => setRelDialogOpen(true)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>{t('common:add')}</DndButton>}>
+      {activeTab === 'relations' ? (
+        <Box sx={{ maxWidth: 820 }}>
+          {isNew ? (
+            <EmptyState
+              icon={<GroupsIcon />}
+              title={t('detail.relationships.notSavedTitle')}
+              description={t('detail.relationships.notSavedDescription')}
+            />
+          ) : (
+            <ArticleSection
+              title={t('detail.sections.relationships')}
+              icon={<GroupsIcon />}
+              badge={allRelsForDisplay.length}
+              action={
+                <DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={() => setRelDialogOpen(true)}>
+                  {t('common:add')}
+                </DndButton>
+              }
+            >
               {allRelsForDisplay.length === 0 ? (
-                <EmptyState icon={<GroupsIcon />} title={t('detail.relationships.emptyTitle')} description={t('detail.relationships.emptyDescription')} actionLabel={t('detail.relationships.addLink')} onAction={() => setRelDialogOpen(true)} />
+                <EmptyState
+                  icon={<GroupsIcon />}
+                  title={t('detail.relationships.emptyTitle')}
+                  description={t('detail.relationships.emptyDescription')}
+                  actionLabel={t('detail.relationships.addLink')}
+                  onAction={() => setRelDialogOpen(true)}
+                />
               ) : (
-                <List disablePadding>
-                  {allRelsForDisplay.map((rel: any) => {
-                    const relColor = getRelationshipColor(rel.relationshipType, theme);
-                    return (
-                      <ListItem key={rel.id}
-                        secondaryAction={
-                          <IconButton size="small" onClick={e => { e.stopPropagation(); handleDeleteRelationship(rel.id); }}>
-                            <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
-                          </IconButton>
-                        }
-                        onClick={() => navigate(routes.characterDetail(pid, rel.otherId))}
-                        sx={{
-                          backgroundColor: alpha(relColor, 0.08),
-                          borderRadius: 1.5, mb: 1, cursor: 'pointer',
-                          border: `1px solid ${alpha(relColor, 0.3)}`,
-                          '&:hover': { backgroundColor: alpha(relColor, 0.15) },
-                        }}>
-                        <ListItemAvatar>
-                          <Avatar sx={{ bgcolor: alpha(relColor, 0.2), color: relColor, width: 40, height: 40 }}><PersonIcon fontSize="small" /></Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Box display="flex" alignItems="center" gap={1}>
-                              <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>{rel.isOutgoing ? '→' : '←'}</Typography>
-                              <Chip label={getRelationshipLabel(rel.relationshipType)} size="small"
-                                sx={{ backgroundColor: alpha(relColor, 0.2), color: relColor, fontSize: '0.7rem', fontWeight: 600 }} />
-                              <Typography sx={{ color: 'text.primary', fontWeight: 600 }}>{rel.otherName}</Typography>
-                            </Box>
+                <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                  <List disablePadding>
+                    {allRelsForDisplay.map((rel: any, index) => {
+                      const relColor = getRelationshipColor(rel.relationshipType, theme);
+                      return (
+                        <ListItem
+                          key={rel.id}
+                          secondaryAction={
+                            <IconButton
+                              size="small"
+                              aria-label={t('detail.relationships.remove')}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleDeleteRelationship(rel.id);
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" sx={{ color: theme.palette.error.main }} />
+                            </IconButton>
                           }
-                          secondary={rel.description ? <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>{rel.description}</Typography> : null}
-                        />
-                      </ListItem>
-                    );
-                  })}
-                </List>
+                          onClick={() => navigate(routes.characterDetail(pid, rel.otherId))}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            cursor: 'pointer',
+                            borderTop: index ? `1px solid ${theme.campaigner.surface.border}` : 0,
+                            '&:hover': { backgroundColor: alpha(relColor, 0.06) },
+                          }}
+                        >
+                          <ListItemAvatar>
+                            <Avatar
+                              sx={{
+                                bgcolor: alpha(relColor, 0.12),
+                                color: relColor,
+                                border: `1px solid ${alpha(relColor, 0.25)}`,
+                                width: 40,
+                                height: 40,
+                              }}
+                            >
+                              <PersonIcon fontSize="small" />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                                <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>
+                                  {rel.isOutgoing ? '→' : '←'}
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontSize: '1.05rem' }}>{rel.otherName}</Typography>
+                                <Chip
+                                  label={getRelationshipLabel(rel.relationshipType)}
+                                  size="small"
+                                  sx={{
+                                    ml: { sm: 'auto' },
+                                    backgroundColor: alpha(relColor, 0.08),
+                                    color: relColor,
+                                    borderColor: alpha(relColor, 0.22),
+                                    fontSize: '0.68rem',
+                                  }}
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              rel.description ? (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+                                  {rel.description}
+                                </Typography>
+                              ) : null
+                            }
+                          />
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </CampaignerSurface>
               )}
-            </Section>
+            </ArticleSection>
           )}
         </Box>
-      )}
+      ) : null}
 
       {/* Relationship Dialog */}
       <Dialog open={relDialogOpen} onClose={() => setRelDialogOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('detail.relationships.dialogTitle')}</DialogTitle>
+        <DialogTitle>
+          <Typography variant="overline" sx={{ color: 'primary.main', display: 'block', pb: 0.75 }}>
+            {t('detail.relationships.dialogEyebrow')}
+          </Typography>
+          {t('detail.relationships.dialogTitle')}
+        </DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
             <InputLabel>{t('detail.relationships.withWhom')}</InputLabel>
@@ -586,6 +798,6 @@ export const CharacterDetailPage: React.FC = () => {
         entityName={t('detail.fallbackName').toLowerCase()}
         onClose={closeMissingBranchEntity}
       />
-    </Box>
+    </CampaignerPage>
   );
 };

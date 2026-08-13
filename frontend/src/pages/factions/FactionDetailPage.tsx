@@ -9,6 +9,8 @@ import {
   alpha, useTheme,
   Autocomplete,
   Link,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -43,8 +45,6 @@ import { CustomMetricsEditor } from '@/pages/factions/components/CustomMetricsEd
 import { FactionCompareDialog } from '@/pages/factions/components/FactionCompareDialog';
 import { FactionPoliticalScalesSection } from '@/pages/factions/components/FactionPoliticalScalesSection';
 import { AssetAvatar } from '@/components/ui/AssetAvatar';
-import { EntityHeroLayout } from '@/components/ui/EntityHeroLayout';
-import { EntityTabs } from '@/components/ui/EntityTabs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
@@ -74,6 +74,7 @@ import type {
 import { shallow } from 'zustand/shallow';
 import { routes } from '@/utils/routes';
 import { isNotFoundError } from '@/utils/error';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 
 // ==================== Types ====================
 
@@ -248,6 +249,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   /** Поля формы и тело PUT по маршруту, не по `currentFaction.kind` (иначе теряются state-only поля). */
   const resolvedEntityType: 'state' | 'faction' = normalizedEntityType;
   const isStateEntity = resolvedEntityType === 'state';
+  const resolvedBannerUrl = useAssetUrl(currentFaction?.bannerPath);
   const closeMissingBranchEntity = useCallback(() => {
     setBranchMissingDialogOpen(false);
     setCurrentFaction(null);
@@ -785,72 +787,221 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       </Box>
     );
   }
+  const detailTitle = isNew
+    ? isStateEntity
+      ? t('factions:detail.newTitleState')
+      : t('factions:detail.newTitleFaction')
+    : form.name || (isStateEntity ? t('factions:detail.fallbackNameState') : t('factions:detail.fallbackNameFaction'));
+
   return (
-    <Box>
+    <Box
+      sx={{
+        maxWidth: 1240,
+        mx: 'auto',
+        '& .MuiInputBase-root': { borderRadius: 2 },
+        '& .MuiListItem-root': { minHeight: 58 },
+      }}
+    >
       <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(routes.factionList(pid, normalizedEntityType))} sx={{ mr: 1 }}><ArrowBackIcon /></IconButton>
+        <IconButton onClick={() => navigate(routes.factionList(pid, normalizedEntityType))} sx={{ mr: 1 }}>
+          <ArrowBackIcon />
+        </IconButton>
         <Typography variant="body2" color="text.secondary">
           {isStateEntity ? t('factions:detail.backToListState') : t('factions:detail.backToListFaction')}
         </Typography>
       </Box>
 
-      <EntityHeroLayout
-        bannerUrl={currentFaction?.bannerPath}
-        avatarNode={
-          currentFaction?.imagePath ? (
-            <AssetAvatar assetPath={currentFaction.imagePath} sx={{ width: 120, height: 120, borderRadius: 3 }} variant="rounded" />
-          ) : (
-            <Avatar sx={{ width: 120, height: 120, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, fontSize: '3rem' }} variant="rounded">
-              {(
-                (form.type
-                  ? (resolvedEntityType === 'state' ? STATE_TYPE_ICONS[form.type] : FACTION_TYPE_ICONS[form.type])
-                  : null) ||
-                FACTION_KIND_ICONS[resolvedEntityType]
-              ) || '🏴'}
-            </Avatar>
-          )
-        }
-        title={
-          isNew
-            ? isStateEntity
-              ? t('factions:detail.newTitleState')
-              : t('factions:detail.newTitleFaction')
-            : form.name ||
-              (isStateEntity ? t('factions:detail.fallbackNameState') : t('factions:detail.fallbackNameFaction'))
-        }
-        subtitle={form.motto ? `«${form.motto}»` : undefined}
-        actionButtons={
-          <>
-            {!isNew && (
-              <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">
-                {t('common:delete')}
-              </Button>
-            )}
-            <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!form.name.trim()}>
-              {isNew ? t('common:create') : t('common:save')}
-            </DndButton>
-          </>
-        }
-      />
+      <Box
+        sx={{
+          position: 'relative',
+          minHeight: { xs: 260, md: 300 },
+          mb: 0,
+          border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
+          borderRadius: '18px 18px 0 0',
+          overflow: 'hidden',
+          background: resolvedBannerUrl
+            ? `linear-gradient(90deg, ${alpha(theme.palette.background.default, 0.97)} 0%, ${alpha(
+                theme.palette.background.default,
+                0.76
+              )} 62%, ${alpha(theme.palette.background.default, 0.24)}), url("${resolvedBannerUrl}") center/cover`
+            : `radial-gradient(circle at 82% 20%, ${alpha(form.color || theme.palette.primary.main, 0.2)}, transparent 42%), ${alpha(
+                theme.palette.background.paper,
+                0.45
+              )}`,
+        }}
+      >
+        <Box
+          sx={{
+            minHeight: { xs: 260, md: 300 },
+            p: { xs: 3, md: 4 },
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 3,
+          }}
+        >
+          <Box sx={{ minWidth: 0, maxWidth: 760 }}>
+            <Typography
+              sx={{
+                mb: 1.5,
+                fontFamily: '"IBM Plex Mono", monospace',
+                fontSize: '0.67rem',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: 'primary.main',
+              }}
+            >
+              {t(`factions:entityKinds.${resolvedEntityType}`)} ·{' '}
+              {isNew ? t('factions:detail.draft') : t(`factions:factionStatuses.${form.status}`)}
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: '"Cormorant Garamond", serif',
+                fontWeight: 600,
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
+                lineHeight: 0.98,
+                color: 'text.primary',
+                textWrap: 'balance',
+              }}
+            >
+              {detailTitle}
+            </Typography>
+            <Typography
+              sx={{
+                mt: 1.5,
+                maxWidth: 650,
+                fontFamily: '"Cormorant Garamond", serif',
+                fontSize: '1.15rem',
+                fontStyle: form.motto ? 'italic' : 'normal',
+                color: 'text.secondary',
+                lineHeight: 1.55,
+              }}
+            >
+              {form.motto
+                ? `«${form.motto}»`
+                : isNew
+                  ? t(isStateEntity ? 'factions:detail.createHintState' : 'factions:detail.createHintFaction')
+                  : t(`factions:entityKinds.${resolvedEntityType}`)}
+            </Typography>
+            <Box display="flex" gap={1} mt={3} flexWrap="wrap">
+              {!isNew && (
+                <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">
+                  {t('common:delete')}
+                </Button>
+              )}
+              <DndButton
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                loading={saving}
+                disabled={!form.name.trim()}
+              >
+                {isNew ? t('common:create') : t('common:save')}
+              </DndButton>
+            </Box>
+          </Box>
 
-      <EntityTabs
-        value={activeTab}
-        onChange={(_, v) => setActiveTab(v)}
-        tabs={[
-          { value: 'overview', label: t('factions:detail.tabs.overview'), icon: <EditIcon fontSize="small" /> },
-          { value: 'structure', label: t('factions:detail.tabs.structure'), icon: <PeopleIcon fontSize="small" /> },
-          { value: 'ambitions', label: t('factions:detail.tabs.ambitions'), icon: <TrackChangesIcon fontSize="small" /> },
-          { value: 'politics', label: t('factions:detail.tabs.politics'), icon: <TrackChangesIcon fontSize="small" /> },
-          { value: 'metrics', label: t('factions:detail.tabs.metrics'), icon: <StarIcon fontSize="small" /> },
-        ]}
-      />
+          <Box sx={{ display: { xs: 'none', sm: 'block' }, flexShrink: 0 }}>
+            {currentFaction?.imagePath ? (
+              <AssetAvatar
+                assetPath={currentFaction.imagePath}
+                sx={{
+                  width: 156,
+                  height: 156,
+                  borderRadius: 3,
+                  border: `1px solid ${alpha(form.color || theme.palette.primary.main, 0.55)}`,
+                  boxShadow: `0 20px 50px ${alpha(theme.palette.common.black, 0.4)}`,
+                }}
+                variant="rounded"
+              />
+            ) : (
+              <Avatar
+                sx={{
+                  width: 156,
+                  height: 156,
+                  borderRadius: 3,
+                  bgcolor: alpha(form.color || theme.palette.primary.main, 0.12),
+                  border: `1px dashed ${alpha(theme.palette.text.secondary, 0.35)}`,
+                  color: form.color || theme.palette.primary.main,
+                  fontSize: '3.4rem',
+                }}
+                variant="rounded"
+              >
+                {(
+                  (form.type
+                    ? resolvedEntityType === 'state'
+                      ? STATE_TYPE_ICONS[form.type]
+                      : FACTION_TYPE_ICONS[form.type]
+                    : null) || FACTION_KIND_ICONS[resolvedEntityType]
+                ) || '🏴'}
+              </Avatar>
+            )}
+          </Box>
+        </Box>
+      </Box>
+
+      <Box
+        sx={{
+          mb: 3.5,
+          px: { xs: 1, md: 2.5 },
+          border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
+          borderTop: 0,
+          borderRadius: '0 0 14px 14px',
+          bgcolor: alpha(theme.palette.background.paper, 0.32),
+        }}
+      >
+        <Tabs
+          value={activeTab}
+          onChange={(_, value) => setActiveTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            minHeight: 52,
+            '& .MuiTabs-indicator': { height: 2, bgcolor: 'primary.main' },
+            '& .MuiTab-root': {
+              minHeight: 52,
+              px: 2,
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              textTransform: 'none',
+              color: 'text.secondary',
+            },
+            '& .Mui-selected': { color: 'text.primary' },
+          }}
+        >
+          <Tab value="overview" label={t('factions:detail.tabs.overview')} />
+          <Tab value="structure" label={t('factions:detail.tabs.structure')} />
+          <Tab value="ambitions" label={t('factions:detail.tabs.ambitions')} />
+          <Tab value="politics" label={t('factions:detail.tabs.politics')} />
+          <Tab value="metrics" label={t('factions:detail.tabs.metrics')} />
+        </Tabs>
+      </Box>
 
       {activeTab === 'overview' && (
-        <Box display="flex" gap={3} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* LEFT SIDEBAR */}
-          <Box sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0 }}>
-            <GlassCard sx={{ p: 3, position: 'sticky', top: 80 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>{t('factions:detail.summary.title')}</Typography>
+        <Box display="flex" gap={{ xs: 3, md: 5 }} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
+          <Box sx={{ width: { xs: '100%', md: 296 }, flexShrink: 0, order: { xs: 1, md: 2 } }}>
+            <GlassCard
+              sx={{
+                p: 2.5,
+                position: 'sticky',
+                top: 80,
+                borderRadius: 3,
+                bgcolor: alpha(theme.palette.background.paper, 0.3),
+                border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+              }}
+            >
+              <Typography
+                sx={{
+                  mb: 2,
+                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontSize: '0.67rem',
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  color: 'text.secondary',
+                }}
+              >
+                {t('factions:detail.summary.title')}
+              </Typography>
               
               {!isNew && (
                 <Box display="flex" gap={1} mb={3}>
@@ -924,8 +1075,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
             </GlassCard>
           </Box>
 
-          {/* MAIN CONTENT */}
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0, order: { xs: 2, md: 1 } }}>
             <Section title={t('factions:detail.sections.basics')} icon={<EditIcon />} defaultOpen={true}>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}><TextField fullWidth label={t('factions:detail.fields.name')} value={form.name} onChange={e => handleChange('name', e.target.value)} /></Grid>
@@ -1167,7 +1317,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       )}
 
       {activeTab === 'structure' && (
-        <Box>
+        <Box sx={{ maxWidth: 980, mx: 'auto' }}>
           {/* SECTION: Ranks */}
           {!isNew && (
             <Section title={t('factions:detail.sections.ranks')} icon={<StarIcon />} badge={currentRanks.length} defaultOpen={true}
@@ -1268,11 +1418,13 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       )}
 
       {activeTab === 'ambitions' && (
-        <FactionAmbitionsTab projectId={pid} factionId={isNew ? null : fid} />
+        <Box sx={{ maxWidth: 1120, mx: 'auto' }}>
+          <FactionAmbitionsTab projectId={pid} factionId={isNew ? null : fid} />
+        </Box>
       )}
 
       {activeTab === 'politics' && (
-        <Box>
+        <Box sx={{ maxWidth: 1040, mx: 'auto' }}>
           {!isNew && (
             <FactionPoliticalScalesSection projectId={pid} factionId={fid} entityType={resolvedEntityType} />
           )}
@@ -1525,7 +1677,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       )}
 
       {activeTab === 'metrics' && (
-        <Box>
+        <Box sx={{ maxWidth: 1040, mx: 'auto' }}>
           {!isNew && (
             <Section title={t('factions:detail.tabs.metrics')} icon={<StarIcon />} defaultOpen={true}
               action={
@@ -1534,10 +1686,24 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                 </DndButton>
               }
             >
-              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t('factions:metrics.baseSection')}</Typography>
+              <Typography variant="body2" sx={{ mb: 3, maxWidth: 720, color: 'text.secondary', lineHeight: 1.7 }}>
+                {t('factions:metrics.readabilityHint')}
+              </Typography>
+              <Typography
+                sx={{
+                  mb: 1.5,
+                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontSize: '0.67rem',
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'primary.main',
+                }}
+              >
+                {t('factions:metrics.baseSection')}
+              </Typography>
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 {metricMetaTranslated.map((metric) => (
-                  <Grid item xs={12} sm={6} md={4} key={metric.key}>
+                  <Grid item xs={12} sm={6} lg={4} key={metric.key}>
                     <MetricInput
                       label={metric.label}
                       unit={metric.unit}
@@ -1552,7 +1718,19 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                 ))}
               </Grid>
 
-              <Typography variant="subtitle2" sx={{ mb: 1.5 }}>{t('factions:metrics.customSection')}</Typography>
+              <Typography
+                sx={{
+                  mt: 4,
+                  mb: 1.5,
+                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontSize: '0.67rem',
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'primary.main',
+                }}
+              >
+                {t('factions:metrics.customSection')}
+              </Typography>
               <CustomMetricsEditor metrics={customMetrics} onChange={setCustomMetrics} />
             </Section>
           )}

@@ -9,6 +9,9 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
+  Typography,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import BlockIcon from '@mui/icons-material/Block';
 import { DndButton } from './DndButton';
@@ -40,6 +43,7 @@ export const EditExclusionsDialog: React.FC<EditExclusionsDialogProps> = ({
   onSave,
 }) => {
   const { t } = useTranslation('common');
+  const theme = useTheme();
   const [localIds, setLocalIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -74,7 +78,28 @@ export const EditExclusionsDialog: React.FC<EditExclusionsDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={submitting ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+        <Box
+          sx={{
+            width: 34,
+            height: 34,
+            borderRadius: '10px',
+            display: 'grid',
+            placeItems: 'center',
+            color: 'error.light',
+            backgroundColor: alpha(theme.palette.error.main, 0.1),
+            border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+          }}
+        >
+          <BlockIcon fontSize="small" />
+        </Box>
+        <Box>
+          {title}
+          <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 0.25 }}>
+            {label}
+          </Typography>
+        </Box>
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 1 }}>
           <Autocomplete
@@ -87,11 +112,15 @@ export const EditExclusionsDialog: React.FC<EditExclusionsDialogProps> = ({
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
                 <Chip
-                  icon={<BlockIcon sx={{ fontSize: 16 }} />}
+                  icon={<BlockIcon sx={{ fontSize: 16, color: `${theme.palette.error.main} !important` }} />}
                   label={option.name}
                   size="small"
                   {...getTagProps({ index })}
                   key={option.id}
+                  sx={{
+                    backgroundColor: alpha(theme.palette.error.main, 0.07),
+                    borderColor: alpha(theme.palette.error.main, 0.18),
+                  }}
                 />
               ))
             }

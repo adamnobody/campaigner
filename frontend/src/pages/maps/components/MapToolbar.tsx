@@ -296,7 +296,7 @@ export function MapToolbar({
           </Box>
 
           {!isMapScene(sceneType) && (
-            <Button variant="outlined" startIcon={<CloudUploadIcon />} size="small" onClick={onAddImage}>
+            <Button data-tour="map-upload" variant="outlined" startIcon={<CloudUploadIcon />} size="small" onClick={onAddImage}>
               {t('map:canvas.toolbar.addImage')}
             </Button>
           )}

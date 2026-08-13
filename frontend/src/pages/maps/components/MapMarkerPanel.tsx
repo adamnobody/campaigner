@@ -47,8 +47,8 @@ export const MapMarkerPanel: React.FC<Props> = ({
   const { t } = useTranslation(['map', 'common']);
 
   return (
-    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.paper, 0.95), backdropFilter: 'blur(20px)' }}>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
+    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.default, 0.94), backdropFilter: 'blur(20px)', borderColor: theme.campaigner.surface.border }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
         <Box sx={{
           width: 40, height: 40, borderRadius: '50%',
           backgroundColor: form.color,
@@ -59,7 +59,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
           {form.icon ? (MARKER_ICONS[form.icon] || '📍') : '📍'}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography variant="h6" sx={{ color: 'text.primary', fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {form.title}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -87,7 +87,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
             <Box
               onClick={() => onNavigateToNote(linkedNote.id)}
               sx={{
-                mt: 1, p: 1.5, borderRadius: 1,
+                mt: 1, p: 1.5, borderRadius: '10px',
                 backgroundColor: alpha(theme.palette.primary.main, 0.08),
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1,
@@ -145,7 +145,7 @@ export const MapMarkerPanel: React.FC<Props> = ({
         </Box>
       </Box>
 
-      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, display: 'flex', gap: 1 }}>
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.campaigner.surface.border}`, display: 'flex', gap: 1, backgroundColor: theme.campaigner.surface.subtle }}>
         <Button fullWidth variant="outlined" startIcon={<EditIcon />} size="small"
           onClick={() => onEditMarker(selectedMarker)}
           sx={{ borderColor: theme.palette.divider, color: 'text.secondary' }}>

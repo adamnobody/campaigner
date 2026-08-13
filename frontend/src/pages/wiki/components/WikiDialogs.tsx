@@ -39,7 +39,7 @@ export const WikiCreateArticleDialog: React.FC<CreateProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      PaperProps={{ sx: { backgroundColor: 'background.default', border: '1px solid rgba(255,255,255,0.1)' } }}
     >
       <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('wiki:dialogs.create.title')}</DialogTitle>
       <DialogContent>
@@ -107,7 +107,7 @@ export const WikiTagsDialog: React.FC<TagsProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      PaperProps={{ sx: { backgroundColor: 'background.default', border: '1px solid rgba(255,255,255,0.1)' } }}
     >
       <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
         {t('wiki:dialogs.tags.title', {
@@ -170,7 +170,7 @@ export const WikiLinkArticlesDialog: React.FC<LinkProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      PaperProps={{ sx: { backgroundColor: 'background.default', border: '1px solid rgba(255,255,255,0.1)' } }}
     >
       <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('wiki:dialogs.link.title')}</DialogTitle>
       <DialogContent>

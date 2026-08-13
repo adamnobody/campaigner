@@ -10,7 +10,9 @@
   "fields": {
     "projectName": "Project name",
     "description": "Description",
-    "status": "Status"
+    "status": "Status",
+    "cover": "Project cover",
+    "coverHint": "Used in the world library"
   },
   "status": {
     "active": "Active",
@@ -19,6 +21,10 @@
   "export": {
     "description": "Download a full copy of the project as JSON. It includes characters, notes, map markers, timeline, tags, and links. You can import the file back from the home page.",
     "button": "Export to JSON"
+  },
+  "cover": {
+    "add": "Add cover",
+    "replace": "Replace cover"
   },
   "dangerZone": {
     "hint": "Deleting a project is permanent. We recommend exporting a backup first.",
@@ -29,6 +35,8 @@
     "saveError": "Could not save settings",
     "exported": "Project exported",
     "exportError": "Export failed",
+    "coverUpdated": "Project cover updated",
+    "coverError": "Could not update project cover",
     "deleted": "Project deleted",
     "deleteError": "Could not delete project"
   },

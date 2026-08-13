@@ -330,9 +330,11 @@ export const MapTextPanel: React.FC<Props> = ({
 
       ...sxPanelRoot(theme),
 
-      backgroundColor: alpha(theme.palette.background.paper, 0.95),
+      backgroundColor: alpha(theme.palette.background.default, 0.94),
 
       backdropFilter: 'blur(20px)',
+
+      borderColor: theme.campaigner.surface.border,
 
       overflow: 'hidden',
 
@@ -340,7 +342,7 @@ export const MapTextPanel: React.FC<Props> = ({
 
     >
 
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
 
         <Box sx={{
 
@@ -372,7 +374,7 @@ export const MapTextPanel: React.FC<Props> = ({
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
 
-          <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1.05rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography variant="h6" sx={{ color: 'text.primary', fontSize: '1.05rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
 
             {isCurveText ? t('map:textPanel.titleCurve') : t('map:textPanel.titleText')}
 
@@ -680,7 +682,7 @@ export const MapTextPanel: React.FC<Props> = ({
 
 
 
-      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, minWidth: 0 }}>
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.campaigner.surface.border}`, backgroundColor: theme.campaigner.surface.subtle, minWidth: 0 }}>
 
         <Button
 

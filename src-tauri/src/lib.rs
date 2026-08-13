@@ -178,7 +178,8 @@ pub fn run() {
             commands::uploads::factions_upload_image_command,
             commands::uploads::factions_upload_banner_command,
             commands::uploads::dynasties_upload_image_command,
-            commands::uploads::projects_upload_map_image_command
+            commands::uploads::projects_upload_map_image_command,
+            commands::uploads::projects_upload_cover_command
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");

@@ -4,24 +4,22 @@ import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
-  Container,
-  Grid,
   Button,
+  ButtonBase,
   Stack,
   Skeleton,
   alpha,
   useTheme,
   Chip,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
 } from '@mui/material';
-import { shallow } from 'zustand/shallow';
 import { motion, useReducedMotion } from 'framer-motion';
 
-import { GlassCard } from '@/components/ui/GlassCard';
+import {
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
+import { AnimatedContourWaves } from '@/components/ui/AnimatedContourWaves';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useFactionStore } from '@/store/useFactionStore';
@@ -32,7 +30,6 @@ import { useDynastyStore } from '@/store/useDynastyStore';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useBranchStore } from '@/store/useBranchStore';
-import { useUIStore } from '@/store/useUIStore';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
@@ -45,9 +42,8 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import GavelIcon from '@mui/icons-material/Gavel';
 import CallSplitIcon from '@mui/icons-material/CallSplit';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import HubIcon from '@mui/icons-material/Hub';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 type RevealProps = {
   children: React.ReactNode;
@@ -56,137 +52,6 @@ type RevealProps = {
   animationKey: string;
   style?: React.CSSProperties;
 };
-
-type OverviewAnimatedBackgroundProps = {
-  shouldAnimate: boolean;
-  accentColor: string;
-};
-
-function OverviewAnimatedBackground({ shouldAnimate, accentColor }: OverviewAnimatedBackgroundProps) {
-  const theme = useTheme();
-  const sidebarWidth = useUIStore((state) => state.sidebarWidth);
-
-  const contourLayerA = useMemo(() => {
-    const paths = Array.from({ length: 26 }).map((_, i) => {
-      const offset = i * 50 - 100;
-      const y1 = 50 + offset;
-      const y2 = 300 + offset + Math.sin(i) * 60;
-      const y3 = 150 + offset + Math.cos(i) * 40;
-      const y4 = 400 + offset + Math.sin(i * 1.5) * 80;
-      const y5 = 200 + offset + Math.cos(i * 1.2) * 50;
-      const y6 = 350 + offset;
-      return `<path d='M -400 ${y1} C 200 ${y2}, 600 ${y3}, 1000 ${y3} S 1800 ${y4}, 2400 ${y5} T 3200 ${y6}' />`;
-    }).join('');
-
-    const svg = `
-      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2400 1200' preserveAspectRatio='xMidYMid slice'>
-        <g fill='none' stroke='${alpha(accentColor, 0.25)}' stroke-width='1.5'>
-          ${paths}
-        </g>
-      </svg>
-    `;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  }, [accentColor]);
-
-  const contourLayerB = useMemo(() => {
-    const paths = Array.from({ length: 22 }).map((_, i) => {
-      const offset = i * 70 - 150;
-      const y1 = 20 + offset;
-      const y2 = 250 + offset - Math.cos(i) * 50;
-      const y3 = 180 + offset - Math.sin(i) * 30;
-      const y4 = 350 + offset - Math.cos(i * 1.5) * 70;
-      const y5 = 150 + offset - Math.sin(i * 1.2) * 40;
-      const y6 = 280 + offset;
-      return `<path d='M -400 ${y1} C 300 ${y2}, 700 ${y3}, 1100 ${y3} S 1700 ${y4}, 2300 ${y5} T 3200 ${y6}' />`;
-    }).join('');
-
-    const svg = `
-      <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2400 1200' preserveAspectRatio='xMidYMid slice'>
-        <g fill='none' stroke='${alpha(accentColor, 0.15)}' stroke-width='2'>
-          ${paths}
-        </g>
-      </svg>
-    `;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  }, [accentColor]);
-
-  return (
-    <Box
-      aria-hidden
-      sx={{
-        position: 'fixed',
-        top: '64px',
-        left: sidebarWidth,
-        right: 0,
-        bottom: 0,
-        overflow: 'hidden',
-        pointerEvents: 'none',
-        zIndex: 0,
-        '@keyframes topoDriftA': {
-          '0%': { transform: 'translate3d(-2%, -2%, 0) scale(1.05)' },
-          '50%': { transform: 'translate3d(2%, 2%, 0) scale(1.05)' },
-          '100%': { transform: 'translate3d(-2%, -2%, 0) scale(1.05)' },
-        },
-        '@keyframes topoDriftB': {
-          '0%': { transform: 'translate3d(2%, 1%, 0) scale(1.08)' },
-          '50%': { transform: 'translate3d(-2%, -1%, 0) scale(1.08)' },
-          '100%': { transform: 'translate3d(2%, 1%, 0) scale(1.08)' },
-        },
-        '@keyframes topoBreath': {
-          '0%': { opacity: 0.5 },
-          '50%': { opacity: 0.85 },
-          '100%': { opacity: 0.5 },
-        },
-      }}
-    >
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: '-10%',
-          backgroundImage: contourLayerA,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          opacity: 0.75,
-          maskImage: 'radial-gradient(ellipse at 50% 50%, #000 50%, transparent 95%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, #000 50%, transparent 95%)',
-          animation: shouldAnimate ? 'topoDriftA 15s ease-in-out infinite, topoBreath 11s ease-in-out infinite' : 'none',
-        }}
-      />
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: '-10%',
-          backgroundImage: contourLayerB,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          opacity: 0.65,
-          maskImage: 'radial-gradient(ellipse at 50% 50%, #000 40%, transparent 90%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at 50% 50%, #000 40%, transparent 90%)',
-          animation: shouldAnimate ? 'topoDriftB 20s ease-in-out infinite, topoBreath 14s ease-in-out infinite' : 'none',
-        }}
-      />
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: `radial-gradient(ellipse at 50% 30%, ${alpha(accentColor, 0.12)} 0%, transparent 70%)`,
-        }}
-      />
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: `linear-gradient(180deg, transparent 0%, transparent 70%, ${theme.palette.background.default} 100%)`,
-        }}
-      />
-    </Box>
-  );
-}
 
 function Reveal({
   children,
@@ -253,7 +118,6 @@ export const ProjectDashboardPage: React.FC = () => {
   const { t, i18n } = useTranslation(['navigation', 'common']);
   const theme = useTheme();
 
-  // Stores
   const currentProject = useProjectStore((s) => s.currentProject);
   const charStore = useCharacterStore();
   const factionStore = useFactionStore();
@@ -310,29 +174,21 @@ export const ProjectDashboardPage: React.FC = () => {
   const { motionMode } = preferences;
   const prefersReducedMotion = useReducedMotion();
   const shouldAnimate = motionMode === 'full' && !prefersReducedMotion;
-  const themePaletteWithAccent = theme.palette as typeof theme.palette & {
-    accent?: { main?: string };
-    brand?: { main?: string };
-  };
-  const customAccent = preferences.customColorThemes.find((preset) => preset.id === preferences.themePreset)?.accentMain;
-  const overviewAccentColor =
-    customAccent ??
-    themePaletteWithAccent.accent?.main ??
-    themePaletteWithAccent.brand?.main ??
-    theme.palette.primary.main;
-
-  // Language mapping
   const isRu = i18n.language.startsWith('ru');
-  const i18nText = {
+  const copy = {
     overview: isRu ? 'Обзор' : 'Overview',
-    projectCenter: isRu ? 'Центр проекта' : 'Project Center',
     recentChanges: isRu ? 'Последние изменения' : 'Recent changes',
     quickActions: isRu ? 'Быстрые действия' : 'Quick actions',
     currentBranch: isRu ? 'Текущая ветка' : 'Current branch',
     timeline: isRu ? 'Таймлайн' : 'Timeline',
     suggestions: isRu ? 'Что можно улучшить' : 'Suggestions',
-    welcome: isRu ? 'Добро пожаловать в новый проект' : 'Welcome to your new project',
-    startBuilding: isRu ? 'Начните собирать мир: создайте заметку, персонажа, фракцию, событие или холст.' : 'Start building your world: create a note, character, faction, event or canvas.',
+    welcome: isRu ? 'Здесь начинается ваш мир' : 'Your world starts here',
+    startBuilding: isRu
+      ? 'Задайте первую опорную точку — остальная история постепенно выстроится вокруг неё.'
+      : 'Set the first anchor point and let the rest of the story grow around it.',
+    dashboardDescription: isRu
+      ? 'Мир в цифрах и последние правки. Отсюда удобно возвращаться туда, где вы остановились.'
+      : 'Your world in numbers and its latest edits. Pick up exactly where you left off.',
     altWorld: isRu ? 'Вы смотрите альтернативную версию мира.' : 'You are viewing an alternate version of the world.',
     mainWorld: isRu ? 'Это каноническая версия мира.' : 'This is the canonical version of the world.',
     createNote: isRu ? 'Создать заметку' : 'Create note',
@@ -340,15 +196,21 @@ export const ProjectDashboardPage: React.FC = () => {
     createFaction: isRu ? 'Создать фракцию' : 'Create faction',
     addEvent: isRu ? 'Добавить событие' : 'Add event',
     createMap: isRu ? 'Создать холст' : 'Create canvas',
-    openGraph: isRu ? 'Открыть графы' : 'Open graphs',
-    emptyList: isRu ? 'Список пуст' : 'No items',
+    addDogma: isRu ? 'Добавить догму' : 'Add dogma',
+    openWiki: isRu ? 'Открыть вики' : 'Open wiki',
+    openGraph: isRu ? 'Открыть граф' : 'Open graph',
+    emptyList: isRu ? 'Пока ничего нет' : 'Nothing here yet',
     viewAll: isRu ? 'Смотреть все' : 'View all',
     firstSteps: isRu ? 'Первые шаги' : 'First steps',
-    errorLoad: isRu ? 'Не удалось загрузить центр проекта.' : 'Could not load Project Center.',
+    firstStepsHint: isRu
+      ? 'Начните с любой сущности. Порядок не важен.'
+      : 'Start with any entity. There is no required order.',
+    errorLoad: isRu ? 'Не удалось загрузить обзор проекта.' : 'Could not load the project overview.',
   };
 
   const isEmptyProject = useMemo(() => {
-    const isMapsEmpty = mapStore.mapTree.length === 0 || 
+    const isMapsEmpty =
+      mapStore.mapTree.length === 0 ||
       (mapStore.mapTree.length === 1 && mapStore.mapTree[0].name === 'World' && !mapStore.mapTree[0].imagePath);
 
     return (
@@ -374,26 +236,26 @@ export const ProjectDashboardPage: React.FC = () => {
   const recentActivity = useMemo(() => {
     const items: Array<{ id: number; title: string; type: string; updatedAt: Date; link: string }> = [];
 
-    charStore.characters.forEach((c) =>
-      items.push({ id: c.id, title: c.name, type: isRu ? 'Персонаж' : 'Character', updatedAt: new Date(c.updatedAt), link: `/project/${pid}/characters/${c.id}` })
+    charStore.characters.forEach((character) =>
+      items.push({ id: character.id, title: character.name, type: isRu ? 'Персонаж' : 'Character', updatedAt: new Date(character.updatedAt), link: `/project/${pid}/characters/${character.id}` }),
     );
-    factionStore.factions.forEach((f) =>
-      items.push({ id: f.id, title: f.name, type: isRu ? 'Фракция' : 'Faction', updatedAt: new Date(f.updatedAt), link: `/project/${pid}/factions/${f.id}` })
+    factionStore.factions.forEach((faction) =>
+      items.push({ id: faction.id, title: faction.name, type: isRu ? 'Фракция' : 'Faction', updatedAt: new Date(faction.updatedAt), link: `/project/${pid}/factions/${faction.id}` }),
     );
-    noteStore.notes.forEach((n) =>
-      items.push({ id: n.id, title: n.title, type: isRu ? 'Заметка' : 'Note', updatedAt: new Date(n.updatedAt), link: `/project/${pid}/notes/${n.id}` })
+    noteStore.notes.forEach((note) =>
+      items.push({ id: note.id, title: note.title, type: isRu ? 'Заметка' : 'Note', updatedAt: new Date(note.updatedAt), link: `/project/${pid}/notes/${note.id}` }),
     );
-    timelineStore.events.forEach((e) =>
-      items.push({ id: e.id, title: e.title, type: isRu ? 'Событие' : 'Event', updatedAt: new Date(e.updatedAt), link: `/project/${pid}/timeline` })
+    timelineStore.events.forEach((event) =>
+      items.push({ id: event.id, title: event.title, type: isRu ? 'Событие' : 'Event', updatedAt: new Date(event.updatedAt), link: `/project/${pid}/timeline` }),
     );
-    mapStore.mapTree.forEach((m) =>
-      items.push({ id: m.id, title: m.name, type: isRu ? 'Холст' : 'Canvas', updatedAt: new Date(m.updatedAt), link: `/project/${pid}/map/${m.id}` })
+    mapStore.mapTree.forEach((canvas) =>
+      items.push({ id: canvas.id, title: canvas.name, type: isRu ? 'Холст' : 'Canvas', updatedAt: new Date(canvas.updatedAt), link: `/project/${pid}/map/${canvas.id}` }),
     );
-    dynastyStore.dynasties.forEach((d) =>
-      items.push({ id: d.id, title: d.name, type: isRu ? 'Династия' : 'Dynasty', updatedAt: new Date(d.updatedAt), link: `/project/${pid}/dynasties/${d.id}` })
+    dynastyStore.dynasties.forEach((dynasty) =>
+      items.push({ id: dynasty.id, title: dynasty.name, type: isRu ? 'Династия' : 'Dynasty', updatedAt: new Date(dynasty.updatedAt), link: `/project/${pid}/dynasties/${dynasty.id}` }),
     );
-    dogmaStore.dogmas.forEach((d) =>
-      items.push({ id: d.id, title: d.title, type: isRu ? 'Догма' : 'Dogma', updatedAt: new Date(d.updatedAt), link: `/project/${pid}/dogmas` })
+    dogmaStore.dogmas.forEach((dogma) =>
+      items.push({ id: dogma.id, title: dogma.title, type: isRu ? 'Догма' : 'Dogma', updatedAt: new Date(dogma.updatedAt), link: `/project/${pid}/dogmas` }),
     );
 
     return items.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 6);
@@ -409,9 +271,10 @@ export const ProjectDashboardPage: React.FC = () => {
     isRu,
   ]);
 
-  const activeBranch = useMemo(() => {
-    return branchStore.branches.find((b) => b.id === branchStore.activeBranchId);
-  }, [branchStore.branches, branchStore.activeBranchId]);
+  const activeBranch = useMemo(
+    () => branchStore.branches.find((branch) => branch.id === branchStore.activeBranchId),
+    [branchStore.branches, branchStore.activeBranchId],
+  );
 
   const suggestions = useMemo(() => {
     const list: string[] = [];
@@ -425,345 +288,328 @@ export const ProjectDashboardPage: React.FC = () => {
   }, [noteStore.total, charStore.total, factionStore.total, timelineStore.events.length, mapStore.mapTree.length, dogmaStore.total, isRu]);
 
   const animationKey = `${projectId}-${isEmptyProject ? 'empty' : 'dashboard'}`;
-
-  useEffect(() => {
-    console.debug('[ProjectDashboard animation]', {
-      projectId,
-      isEmptyProject,
-      motionMode,
-      prefersReducedMotion,
-      shouldAnimate,
-      animationKey,
-    });
-  }, [
-    projectId,
-    isEmptyProject,
-    motionMode,
-    prefersReducedMotion,
-    shouldAnimate,
-    animationKey,
-  ]);
+  const firstStepActions = [
+    { icon: DescriptionIcon, label: copy.createNote, to: `/project/${pid}/notes` },
+    { icon: PeopleIcon, label: copy.createChar, to: `/project/${pid}/characters/new` },
+    { icon: GroupsIcon, label: copy.createFaction, to: `/project/${pid}/factions/new` },
+    { icon: TimelineIcon, label: copy.addEvent, to: `/project/${pid}/timeline` },
+    { icon: MapIcon, label: copy.createMap, to: `/project/${pid}/map` },
+    { icon: GavelIcon, label: copy.addDogma, to: `/project/${pid}/dogmas` },
+    { icon: MenuBookIcon, label: copy.openWiki, to: `/project/${pid}/wiki` },
+  ];
+  const statCards = [
+    { label: t('menu.characters'), count: charStore.total, to: `/project/${pid}/characters` },
+    { label: t('menu.factions'), count: factionStore.total, to: `/project/${pid}/factions` },
+    { label: t('menu.notes'), count: noteStore.total, to: `/project/${pid}/notes` },
+    { label: t('menu.timeline'), count: timelineStore.events.length, to: `/project/${pid}/timeline` },
+    { label: t('menu.map'), count: mapStore.mapTree.length, to: `/project/${pid}/map` },
+    { label: t('menu.dynasties'), count: dynastyStore.total, to: `/project/${pid}/dynasties` },
+    { label: t('menu.dogmas'), count: dogmaStore.total, to: `/project/${pid}/dogmas` },
+  ];
 
   if (!currentProject && !isBootstrapping) {
     return (
-      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
-        <Typography color="error">{i18nText.errorLoad}</Typography>
-      </Container>
+      <CampaignerPage maxWidth={760} sx={{ py: 8, textAlign: 'center' }}>
+        <Typography color="error">{copy.errorLoad}</Typography>
+      </CampaignerPage>
     );
   }
 
   if (isBootstrapping) {
     return (
-      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 } }}>
-        <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 3, mb: 4 }} />
-        <Grid container spacing={3}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Grid item xs={6} sm={4} md={2} key={i}>
-              <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 3 }} />
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
+      <CampaignerPage maxWidth={1120} sx={{ pt: { xs: 2, md: 4 } }}>
+        <Skeleton width={120} height={20} />
+        <Skeleton width="55%" height={66} sx={{ mt: 1 }} />
+        <Skeleton width="70%" height={28} />
+        <Skeleton variant="rectangular" height={112} sx={{ borderRadius: 0, mt: 4 }} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 300px' }, gap: 6, mt: 5 }}>
+          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={240} sx={{ borderRadius: 2 }} />
+        </Box>
+      </CampaignerPage>
     );
   }
+
+  const headerActions = (
+    <>
+      {activeBranch ? (
+        <Chip
+          icon={<CallSplitIcon />}
+          label={activeBranch.name}
+          variant="outlined"
+          sx={{ color: activeBranch.isMain ? 'primary.main' : 'warning.main' }}
+        />
+      ) : null}
+      <Button variant="outlined" startIcon={<HubIcon />} component={RouterLink} to={`/project/${pid}/graph`}>
+        {copy.openGraph}
+      </Button>
+      <Button variant="contained" startIcon={<AddIcon />} component={RouterLink} to={`/project/${pid}/notes`}>
+        {copy.createNote}
+      </Button>
+    </>
+  );
 
   if (isEmptyProject) {
     return (
-      <Box key={animationKey} sx={{ position: 'relative', isolation: 'isolate' }}>
-        <OverviewAnimatedBackground shouldAnimate={shouldAnimate} accentColor={overviewAccentColor} />
-        <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 }, position: 'relative', zIndex: 1 }}>
-            <Reveal shouldAnimate={shouldAnimate} delay={0} animationKey={`${animationKey}-empty-hero`}>
-              <Box sx={{ textAlign: 'center', mb: 8 }}>
-                <Typography variant="h3" fontWeight={700} gutterBottom>
-                  {i18nText.welcome}
-                </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-                  {i18nText.startBuilding}
+      <Box sx={{ position: 'relative', isolation: 'isolate', minHeight: '100%' }}>
+      <AnimatedContourWaves accentColor={theme.palette.primary.main} animate={shouldAnimate} />
+      <CampaignerPage maxWidth={1120} sx={{ pt: { xs: 1, md: 2 }, position: 'relative', zIndex: 1 }}>
+        <Reveal shouldAnimate={shouldAnimate} animationKey={`${animationKey}-header`}>
+          <CampaignerPageHeader
+            eyebrow={`${copy.overview}${activeBranch ? ` · ${activeBranch.name}` : ''}`}
+            title={copy.welcome}
+            description={copy.startBuilding}
+            actions={headerActions}
+          />
+        </Reveal>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: { xs: 4, md: 6 }, pt: { xs: 2, md: 4 } }}>
+          <Reveal shouldAnimate={shouldAnimate} delay={0.08} animationKey={`${animationKey}-steps`}>
+            <CampaignerSurface sx={{ overflow: 'hidden', backgroundColor: 'transparent' }}>
+              <Box sx={{ px: { xs: 2.25, md: 3 }, py: 2.25, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
+                <Typography variant="h5">{copy.firstSteps}</Typography>
+                <Typography sx={{ color: 'text.secondary', fontSize: 12.5, pt: 0.75 }}>{copy.firstStepsHint}</Typography>
+              </Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
+                {firstStepActions.map((action, index) => (
+                  <ButtonBase
+                    key={action.to}
+                    component={RouterLink}
+                    to={action.to}
+                    sx={{
+                      minHeight: 76,
+                      justifyContent: 'flex-start',
+                      gap: 1.5,
+                      px: { xs: 2.25, md: 3 },
+                      color: 'text.primary',
+                      borderBottom: `1px solid ${theme.campaigner.surface.border}`,
+                      borderRight: { sm: index % 2 === 0 ? `1px solid ${theme.campaigner.surface.border}` : 'none' },
+                      textAlign: 'left',
+                      transition: shouldAnimate ? 'background-color 160ms ease' : 'none',
+                      '&:hover': { backgroundColor: alpha(theme.palette.common.white, 0.035) },
+                    }}
+                  >
+                    <action.icon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                    <Typography sx={{ flex: 1, fontSize: 13.5 }}>{action.label}</Typography>
+                    <ArrowForwardIcon sx={{ color: 'text.disabled', fontSize: 17 }} />
+                  </ButtonBase>
+                ))}
+              </Box>
+            </CampaignerSurface>
+          </Reveal>
+
+          <Stack spacing={3.5}>
+            <Reveal shouldAnimate={shouldAnimate} delay={0.14} animationKey={`${animationKey}-branch`}>
+              <Box>
+                <Typography variant="overline" color="text.secondary">{copy.currentBranch}</Typography>
+                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ pt: 1.5 }}>
+                  <AccountTreeIcon sx={{ color: 'primary.main', fontSize: 19 }} />
+                  <Typography sx={{ fontSize: 14 }}>{activeBranch?.name ?? copy.emptyList}</Typography>
+                </Stack>
+                {activeBranch ? (
+                  <Typography sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.7, pt: 1 }}>
+                    {activeBranch.isMain ? copy.mainWorld : copy.altWorld}
+                  </Typography>
+                ) : null}
+              </Box>
+            </Reveal>
+            <Reveal shouldAnimate={shouldAnimate} delay={0.18} animationKey={`${animationKey}-empty-hint`}>
+              <Box sx={{ borderTop: `1px solid ${theme.campaigner.surface.border}`, pt: 2.75 }}>
+                <Typography variant="overline" color="text.secondary">{copy.suggestions}</Typography>
+                <Typography sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.75, pt: 1.5 }}>
+                  {isRu
+                    ? 'Заметка хорошо подходит для замысла, персонаж — для голоса мира, а холст — для места действия.'
+                    : 'A note captures the premise, a character gives the world a voice, and a canvas establishes the setting.'}
                 </Typography>
               </Box>
             </Reveal>
-
-            <Grid container spacing={4} justifyContent="center">
-              {[
-                { icon: DescriptionIcon, title: i18nText.createNote, to: `/project/${pid}/notes` },
-                { icon: PeopleIcon, title: i18nText.createChar, to: `/project/${pid}/characters/new` },
-                { icon: GroupsIcon, title: i18nText.createFaction, to: `/project/${pid}/factions/new` },
-                { icon: TimelineIcon, title: i18nText.addEvent, to: `/project/${pid}/timeline` },
-                { icon: MapIcon, title: i18nText.createMap, to: `/project/${pid}/map` },
-              ].map((action, i) => (
-                <Grid item xs={12} sm={6} md={4} key={i}>
-                  <Reveal
-                    shouldAnimate={shouldAnimate}
-                    delay={0.1 + i * 0.06}
-                    animationKey={`${animationKey}-empty-card-${i}`}
-                    style={{ height: '100%' }}
-                  >
-                    <GlassCard interactive onClick={() => navigate(action.to)} sx={{ p: 4, textAlign: 'center', height: '100%' }}>
-                      <Box
-                        sx={{
-                          display: 'inline-flex',
-                          p: 2,
-                          borderRadius: '50%',
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          mb: 2,
-                        }}
-                      >
-                        <action.icon fontSize="large" />
-                      </Box>
-                      <Typography variant="h6">{action.title}</Typography>
-                    </GlassCard>
-                  </Reveal>
-                </Grid>
-              ))}
-            </Grid>
-        </Container>
+          </Stack>
+        </Box>
+      </CampaignerPage>
       </Box>
     );
   }
 
-  const statCards = [
-    { icon: PeopleIcon, label: t('menu.characters'), count: charStore.total, to: `/project/${pid}/characters` },
-    { icon: GroupsIcon, label: t('menu.factions'), count: factionStore.total, to: `/project/${pid}/factions` },
-    { icon: DescriptionIcon, label: t('menu.notes'), count: noteStore.total, to: `/project/${pid}/notes` },
-    { icon: TimelineIcon, label: t('menu.timeline'), count: timelineStore.events.length, to: `/project/${pid}/timeline` },
-    { icon: MapIcon, label: t('menu.map'), count: mapStore.mapTree.length, to: `/project/${pid}/map` },
-    { icon: AccountTreeIcon, label: t('menu.dynasties'), count: dynastyStore.total, to: `/project/${pid}/dynasties` },
-    { icon: GavelIcon, label: t('menu.dogmas'), count: dogmaStore.total, to: `/project/${pid}/dogmas` },
-  ];
-
   return (
-    <Box key={animationKey} sx={{ position: 'relative', isolation: 'isolate' }}>
-      <OverviewAnimatedBackground shouldAnimate={shouldAnimate} accentColor={overviewAccentColor} />
-      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
-      <Box>
-        {/* HERO */}
-        <Reveal shouldAnimate={shouldAnimate} delay={0} animationKey={`${animationKey}-hero`}>
-          <Box
-            sx={{
-              position: 'relative',
-              borderRadius: 4,
-              overflow: 'hidden',
-              mb: 4,
-              bgcolor: 'background.paper',
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            }}
-          >
-            <Box
+    <Box sx={{ position: 'relative', isolation: 'isolate', minHeight: '100%' }}>
+    <AnimatedContourWaves accentColor={theme.palette.primary.main} animate={shouldAnimate} />
+    <CampaignerPage maxWidth={1120} sx={{ pt: { xs: 1, md: 2 }, position: 'relative', zIndex: 1 }}>
+      <Reveal shouldAnimate={shouldAnimate} animationKey={`${animationKey}-header`}>
+        <CampaignerPageHeader
+          eyebrow={`${copy.overview}${activeBranch ? ` · ${activeBranch.name}` : ''}`}
+          title={currentProject?.name}
+          description={currentProject?.description || copy.dashboardDescription}
+          actions={headerActions}
+        />
+      </Reveal>
+
+      <Reveal shouldAnimate={shouldAnimate} delay={0.06} animationKey={`${animationKey}-stats`}>
+        <CampaignerSurface
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))', lg: 'repeat(7, minmax(0, 1fr))' },
+            borderLeft: 0,
+            borderRight: 0,
+            borderRadius: 0,
+            backgroundColor: 'transparent',
+            overflow: 'hidden',
+          }}
+        >
+          {statCards.map((stat, index) => (
+            <ButtonBase
+              key={stat.to}
+              onClick={() => navigate(stat.to)}
               sx={{
-                position: 'absolute',
-                inset: 0,
-                background: `linear-gradient(120deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, transparent 100%)`,
-                zIndex: 0,
+                minWidth: 0,
+                minHeight: 104,
+                flexDirection: 'column',
+                gap: 1,
+                px: 1,
+                borderLeft: index === 0 ? 'none' : { lg: `1px solid ${theme.campaigner.surface.border}` },
+                borderRight: { xs: index % 2 === 0 ? `1px solid ${theme.campaigner.surface.border}` : 'none', sm: index % 4 !== 3 ? `1px solid ${theme.campaigner.surface.border}` : 'none', lg: 'none' },
+                borderBottom: { xs: index < 6 ? `1px solid ${theme.campaigner.surface.border}` : 'none', lg: 'none' },
+                transition: shouldAnimate ? 'background-color 160ms ease' : 'none',
+                '&:hover': { backgroundColor: alpha(theme.palette.common.white, 0.028) },
               }}
-            />
-            <Box sx={{ p: { xs: 3, md: 6 }, position: 'relative', zIndex: 1 }}>
-              <Grid container spacing={4} alignItems="center">
-                <Grid item xs={12} md={8}>
-                  <Typography variant="h3" fontWeight={700} gutterBottom>
-                    {currentProject?.name}
-                  </Typography>
-                  {currentProject?.description && (
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                      {currentProject.description}
-                    </Typography>
-                  )}
-                  {activeBranch && (
-                    <Chip
-                      icon={<CallSplitIcon />}
-                      label={activeBranch.name}
-                      color={activeBranch.isMain ? 'default' : 'warning'}
-                      variant="outlined"
-                      sx={{ mt: 1 }}
-                    />
-                  )}
-                </Grid>
-                <Grid item xs={12} md={4} sx={{ textAlign: { md: 'right' } }}>
-                  <Stack direction="row" spacing={2} justifyContent={{ xs: 'flex-start', md: 'flex-end' }} flexWrap="wrap" useFlexGap>
-                    <Button variant="contained" startIcon={<AddIcon />} component={RouterLink} to={`/project/${pid}/notes`} sx={{ mb: 1 }}>
-                      {i18nText.createNote}
-                    </Button>
-                    <Button variant="outlined" startIcon={<HubIcon />} component={RouterLink} to={`/project/${pid}/graph`} sx={{ mb: 1 }}>
-                      {i18nText.openGraph}
-                    </Button>
-                  </Stack>
-                </Grid>
-              </Grid>
-            </Box>
-          </Box>
-        </Reveal>
-
-        {/* STATS GRID */}
-        <Grid container spacing={2} sx={{ mb: 4 }}>
-          {statCards.map((stat, i) => (
-            <Grid item xs={6} sm={4} md={3} lg key={i}>
-              <Reveal
-                shouldAnimate={shouldAnimate}
-                delay={0.1 + i * 0.04}
-                animationKey={`${animationKey}-stats-card-${i}`}
-                style={{ height: '100%' }}
-              >
-                <GlassCard interactive onClick={() => navigate(stat.to)} sx={{ p: 2, height: '100%', display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ p: 1, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', display: 'flex' }}>
-                    <stat.icon />
-                  </Box>
-                  <Box>
-                    <Typography variant="h4" fontWeight={700} lineHeight={1}>
-                      {stat.count}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {stat.label}
-                    </Typography>
-                  </Box>
-                </GlassCard>
-              </Reveal>
-            </Grid>
+            >
+              <Typography variant="h4" sx={{ color: index === 0 ? 'primary.main' : 'text.primary', lineHeight: 1 }}>
+                {stat.count}
+              </Typography>
+              <Typography variant="overline" sx={{ color: 'text.secondary', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {stat.label}
+              </Typography>
+            </ButtonBase>
           ))}
-        </Grid>
+        </CampaignerSurface>
+      </Reveal>
 
-        <Grid container spacing={4}>
-          {/* LEFT COL */}
-          <Grid item xs={12} md={8}>
-            <Stack spacing={4}>
-              {/* RECENT ACTIVITY */}
-              <Reveal shouldAnimate={shouldAnimate} delay={0.2} animationKey={`${animationKey}-recent-activity`}>
-                <GlassCard sx={{ p: 0 }}>
-                  <Box sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AccessTimeIcon color="action" />
-                    <Typography variant="h6">{i18nText.recentChanges}</Typography>
-                  </Box>
-                  <List disablePadding>
-                    {recentActivity.length === 0 ? (
-                      <ListItem>
-                        <ListItemText primary={i18nText.emptyList} sx={{ color: 'text.secondary' }} />
-                      </ListItem>
-                    ) : (
-                      recentActivity.map((item, i) => (
-                        <ListItem
-                          key={`${item.type}-${item.id}-${i}`}
-                          button
-                          component={RouterLink}
-                          to={item.link}
-                          sx={{ borderBottom: i < recentActivity.length - 1 ? `1px solid ${theme.palette.divider}` : 'none' }}
-                        >
-                          <ListItemText
-                            primary={item.title}
-                            secondary={`${item.type} • ${item.updatedAt.toLocaleDateString()}`}
-                            primaryTypographyProps={{ fontWeight: 500 }}
-                          />
-                          <ArrowForwardIcon fontSize="small" color="action" />
-                        </ListItem>
-                      ))
-                    )}
-                  </List>
-                </GlassCard>
-              </Reveal>
-
-              {/* TIMELINE PREVIEW */}
-              <Reveal shouldAnimate={shouldAnimate} delay={0.25} animationKey={`${animationKey}-timeline`}>
-                <GlassCard sx={{ p: 0 }}>
-                  <Box sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <TimelineIcon color="action" />
-                      <Typography variant="h6">{i18nText.timeline}</Typography>
-                    </Box>
-                    <Button component={RouterLink} to={`/project/${pid}/timeline`} size="small">
-                      {i18nText.viewAll}
-                    </Button>
-                  </Box>
-                  <List disablePadding>
-                    {timelineStore.events.slice(0, 3).map((ev, i) => (
-                      <ListItem key={ev.id} sx={{ borderBottom: i < 2 ? `1px solid ${theme.palette.divider}` : 'none' }}>
-                        <ListItemText
-                          primary={ev.title}
-                          secondary={ev.eventDate || ev.era || ''}
-                        />
-                      </ListItem>
-                    ))}
-                    {timelineStore.events.length === 0 && (
-                      <ListItem>
-                        <ListItemText primary={i18nText.emptyList} sx={{ color: 'text.secondary' }} />
-                      </ListItem>
-                    )}
-                  </List>
-                </GlassCard>
-              </Reveal>
-            </Stack>
-          </Grid>
-
-          {/* RIGHT COL */}
-          <Grid item xs={12} md={4}>
-            <Stack spacing={4}>
-              {/* CURRENT BRANCH */}
-              <Reveal shouldAnimate={shouldAnimate} delay={0.2} animationKey={`${animationKey}-current-branch`}>
-                <GlassCard sx={{ p: 3 }}>
-                  <Typography variant="h6" gutterBottom display="flex" alignItems="center" gap={1}>
-                    <CallSplitIcon color="action" />
-                    {i18nText.currentBranch}
-                  </Typography>
-                  {activeBranch ? (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        {activeBranch.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        {activeBranch.isMain ? i18nText.mainWorld : i18nText.altWorld}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 300px' }, gap: { xs: 5, md: 6 }, alignItems: 'start', pt: { xs: 4, md: 5 } }}>
+        <Stack spacing={4.5}>
+          <Reveal shouldAnimate={shouldAnimate} delay={0.12} animationKey={`${animationKey}-recent`}>
+            <Box component="section">
+              <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2, pb: 1.75, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
+                <Typography variant="h5">{copy.recentChanges}</Typography>
+              </Box>
+              {recentActivity.length === 0 ? (
+                <Typography sx={{ py: 2.25, color: 'text.secondary', fontSize: 13 }}>{copy.emptyList}</Typography>
+              ) : (
+                recentActivity.map((item) => (
+                  <ButtonBase
+                    key={`${item.type}-${item.id}`}
+                    component={RouterLink}
+                    to={item.link}
+                    sx={{
+                      width: '100%',
+                      justifyContent: 'flex-start',
+                      gap: 2,
+                      px: 0.5,
+                      py: 1.75,
+                      textAlign: 'left',
+                      borderBottom: `1px solid ${theme.campaigner.surface.border}`,
+                      transition: shouldAnimate ? 'background-color 160ms ease' : 'none',
+                      '&:hover': { backgroundColor: alpha(theme.palette.common.white, 0.022) },
+                    }}
+                  >
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography noWrap sx={{ fontSize: 14 }}>{item.title}</Typography>
+                      <Typography sx={{ color: 'text.secondary', fontSize: 11.5, pt: 0.5 }}>
+                        {item.type} · {item.updatedAt.toLocaleDateString()}
                       </Typography>
                     </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {i18nText.emptyList}
-                    </Typography>
-                  )}
-                </GlassCard>
-              </Reveal>
-
-              {/* SUGGESTIONS */}
-              {suggestions.length > 0 && (
-                <Reveal shouldAnimate={shouldAnimate} delay={0.25} animationKey={`${animationKey}-suggestions`}>
-                  <GlassCard sx={{ p: 3, bgcolor: alpha(theme.palette.info.main, 0.05) }}>
-                    <Typography variant="h6" gutterBottom display="flex" alignItems="center" gap={1} color="info.main">
-                      <LightbulbIcon />
-                      {i18nText.suggestions}
-                    </Typography>
-                    <List disablePadding sx={{ mt: 1 }}>
-                      {suggestions.map((sug, i) => (
-                        <ListItem key={i} disableGutters sx={{ alignItems: 'flex-start', py: 1 }}>
-                          <ListItemIcon sx={{ minWidth: 28, mt: 0.5 }}>
-                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'info.main' }} />
-                          </ListItemIcon>
-                          <ListItemText primary={sug} primaryTypographyProps={{ variant: 'body2' }} />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </GlassCard>
-                </Reveal>
+                    <ArrowForwardIcon sx={{ color: 'text.disabled', fontSize: 18 }} />
+                  </ButtonBase>
+                ))
               )}
+            </Box>
+          </Reveal>
 
-              {/* QUICK ACTIONS (if needed) */}
-              <Reveal shouldAnimate={shouldAnimate} delay={0.3} animationKey={`${animationKey}-quick-actions`}>
-                <GlassCard sx={{ p: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    {i18nText.quickActions}
-                  </Typography>
-                  <Stack spacing={1} sx={{ mt: 2 }}>
-                    <Button variant="text" component={RouterLink} to={`/project/${pid}/characters/new`} startIcon={<PeopleIcon />} sx={{ justifyContent: 'flex-start' }}>
-                      {i18nText.createChar}
-                    </Button>
-                    <Button variant="text" component={RouterLink} to={`/project/${pid}/factions/new`} startIcon={<GroupsIcon />} sx={{ justifyContent: 'flex-start' }}>
-                      {i18nText.createFaction}
-                    </Button>
-                    <Button variant="text" component={RouterLink} to={`/project/${pid}/map`} startIcon={<MapIcon />} sx={{ justifyContent: 'flex-start' }}>
-                      {i18nText.createMap}
-                    </Button>
+          <Reveal shouldAnimate={shouldAnimate} delay={0.16} animationKey={`${animationKey}-timeline`}>
+            <Box component="section">
+              <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 2, pb: 1.75, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
+                <Typography variant="h5">{copy.timeline}</Typography>
+                <Button component={RouterLink} to={`/project/${pid}/timeline`} size="small">{copy.viewAll}</Button>
+              </Box>
+              {timelineStore.events.length === 0 ? (
+                <Typography sx={{ py: 2.25, color: 'text.secondary', fontSize: 13 }}>{copy.emptyList}</Typography>
+              ) : (
+                timelineStore.events.slice(0, 3).map((event, index) => (
+                  <Box key={event.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '78px 1px minmax(0, 1fr)', sm: '104px 1px minmax(0, 1fr)' }, gap: 2, pt: 2.25 }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary', textAlign: 'right', pt: 0.25 }}>
+                      {event.eventDate || event.era || '—'}
+                    </Typography>
+                    <Box sx={{ position: 'relative', bgcolor: theme.campaigner.surface.border }}>
+                      <Box sx={{ position: 'absolute', top: 5, left: -3, width: 7, height: 7, borderRadius: '50%', bgcolor: index === 0 ? 'primary.main' : 'text.disabled' }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0, pb: 2.25 }}>
+                      <Typography sx={{ fontSize: 14 }}>{event.title}</Typography>
+                      {event.era ? <Typography sx={{ color: 'text.secondary', fontSize: 11.5, pt: 0.5 }}>{event.era}</Typography> : null}
+                    </Box>
+                  </Box>
+                ))
+              )}
+            </Box>
+          </Reveal>
+        </Stack>
+
+        <Stack spacing={3.5}>
+          <Reveal shouldAnimate={shouldAnimate} delay={0.12} animationKey={`${animationKey}-branch`}>
+            <Box component="section">
+              <Typography variant="overline" color="text.secondary">{copy.currentBranch}</Typography>
+              {activeBranch ? (
+                <>
+                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ pt: 1.5 }}>
+                    <AccountTreeIcon sx={{ color: 'primary.main', fontSize: 19 }} />
+                    <Typography sx={{ fontSize: 14 }}>{activeBranch.name}</Typography>
                   </Stack>
-                </GlassCard>
-              </Reveal>
-            </Stack>
-          </Grid>
-        </Grid>
+                  <Typography sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.7, pt: 1 }}>
+                    {activeBranch.isMain ? copy.mainWorld : copy.altWorld}
+                  </Typography>
+                </>
+              ) : (
+                <Typography sx={{ color: 'text.secondary', fontSize: 12.5, pt: 1.5 }}>{copy.emptyList}</Typography>
+              )}
+            </Box>
+          </Reveal>
+
+          {suggestions.length > 0 ? (
+            <Reveal shouldAnimate={shouldAnimate} delay={0.16} animationKey={`${animationKey}-suggestions`}>
+              <Box component="section" sx={{ borderTop: `1px solid ${theme.campaigner.surface.border}`, pt: 2.75 }}>
+                <Typography variant="overline" color="text.secondary">{copy.suggestions}</Typography>
+                <Stack spacing={1.5} sx={{ pt: 1.75 }}>
+                  {suggestions.map((suggestion) => (
+                    <Box key={suggestion} sx={{ display: 'flex', gap: 1.25 }}>
+                      <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'primary.main', flex: 'none', mt: 0.9 }} />
+                      <Typography sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.65 }}>{suggestion}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            </Reveal>
+          ) : null}
+
+          <Reveal shouldAnimate={shouldAnimate} delay={0.2} animationKey={`${animationKey}-actions`}>
+            <Box component="section" sx={{ borderTop: `1px solid ${theme.campaigner.surface.border}`, pt: 2.75 }}>
+              <Typography variant="overline" color="text.secondary">{copy.quickActions}</Typography>
+              <Stack spacing={0.25} sx={{ pt: 1.25 }}>
+                {firstStepActions.map((action) => (
+                  <Button
+                    key={action.to}
+                    variant="text"
+                    component={RouterLink}
+                    to={action.to}
+                    startIcon={<action.icon />}
+                    endIcon={<AddIcon />}
+                    sx={{ justifyContent: 'flex-start', color: 'text.secondary', px: 1, '& .MuiButton-endIcon': { ml: 'auto' } }}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
+          </Reveal>
+        </Stack>
       </Box>
-      </Container>
+    </CampaignerPage>
     </Box>
   );
 };

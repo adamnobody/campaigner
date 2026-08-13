@@ -29,6 +29,8 @@ pub struct ExportProjectMeta {
     pub status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub map_image_base64: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cover_image_base64: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

@@ -23,6 +23,7 @@ import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { CampaignerPage, CampaignerPageHeader, CampaignerSurface } from '@/components/ui/CampaignerPrimitives';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -166,24 +167,20 @@ export const NotesPage: React.FC = () => {
   if (loading && notes.length === 0) return <LoadingScreen />;
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            {t('notes:list.title')}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {t('notes:list.subtitle')}
-          </Typography>
-        </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-          {t('notes:list.newNote')}
-        </DndButton>
-      </Box>
+    <CampaignerPage>
+      <CampaignerPageHeader
+        title={t('notes:list.title')}
+        description={t('notes:list.subtitle')}
+        actions={(
+          <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
+            {t('notes:list.newNote')}
+          </DndButton>
+        )}
+      />
 
       {/* Filters */}
       {(total > 0 || hasFilters) && (
-        <GlassCard sx={{ p: 2, mb: 3 }}>
+        <CampaignerSurface sx={{ p: { xs: 1.5, md: 2 }, mb: 3 }}>
           <TextField
             fullWidth
             placeholder={t('notes:list.searchPlaceholder')}
@@ -202,7 +199,7 @@ export const NotesPage: React.FC = () => {
             <Tab label={t('notes:list.tabWiki')} />
             <Tab label={t('notes:list.tabMarkers')} />
           </Tabs>
-        </GlassCard>
+        </CampaignerSurface>
       )}
 
       {/* Content */}
@@ -233,18 +230,31 @@ export const NotesPage: React.FC = () => {
                 onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
                 sx={{
                   height: '100%',
-                  p: 2.5,
+                  p: 0,
                   display: 'flex',
                   flexDirection: 'column',
+                  overflow: 'hidden',
+                  borderColor: alpha(theme.palette.common.white, 0.075),
                   '&:hover': {
                     '& .card-actions': { opacity: 1 },
+                    '& .note-accent': { opacity: 1 },
                   },
                 }}
               >
+                <Box
+                  className="note-accent"
+                  sx={{
+                    height: 2,
+                    opacity: note.isPinned ? 1 : 0.35,
+                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, transparent 72%)`,
+                    transition: 'opacity 160ms ease',
+                  }}
+                />
+                <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                   <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flex: 1 }}>
                     {note.isPinned && <PushPinIcon fontSize="small" color="primary" />}
-                    <Typography variant="h6" noWrap sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: 'text.primary' }}>
+                    <Typography variant="h6" noWrap sx={{ color: 'text.primary' }}>
                       {note.title}
                     </Typography>
                   </Box>
@@ -279,7 +289,7 @@ export const NotesPage: React.FC = () => {
                       background: `linear-gradient(transparent, ${theme.palette.background.paper})`,
                       pointerEvents: 'none',
                     },
-                    '& h1, & h2, & h3': { fontFamily: '"Cinzel", serif', color: 'text.primary', fontSize: '1rem', fontWeight: 700, my: 0.5 },
+                    '& h1, & h2, & h3': { fontFamily: theme.campaigner.typography.display, color: 'text.primary', fontSize: '1rem', fontWeight: 600, my: 0.5 },
                     '& p': { fontSize: '0.85rem', color: 'text.secondary', my: 0.3, lineHeight: 1.5 },
                     '& ul, & ol': { pl: 2.5, my: 0.3 },
                     '& li': { fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.5 },
@@ -334,6 +344,7 @@ export const NotesPage: React.FC = () => {
                     {new Date(note.updatedAt).toLocaleDateString(i18n.language)}
                   </Typography>
                 </Box>
+                </Box>
               </GlassCard>
             </Grid>
           ))}
@@ -343,7 +354,7 @@ export const NotesPage: React.FC = () => {
       {/* ============ Create Dialog ============ */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('notes:dialogs.createTitle')}</DialogTitle>
+        <DialogTitle>{t('notes:dialogs.createTitle')}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus fullWidth label={t('notes:dialogs.createFieldTitle')} value={newTitle}
@@ -383,7 +394,7 @@ export const NotesPage: React.FC = () => {
       {/* ============ Edit Tags Dialog ============ */}
       <Dialog open={tagsDialogOpen} onClose={() => setTagsDialogOpen(false)} maxWidth="sm" fullWidth
         PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+        <DialogTitle>
           {tagsEditNote ? t('notes:dialogs.tagsDialogTitle', { title: tagsEditNote.title }) : ''}
         </DialogTitle>
         <DialogContent>
@@ -406,6 +417,6 @@ export const NotesPage: React.FC = () => {
           </DndButton>
         </DialogActions>
       </Dialog>
-    </Box>
+    </CampaignerPage>
   );
 };

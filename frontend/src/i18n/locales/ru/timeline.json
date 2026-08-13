@@ -1,6 +1,8 @@
 {
   "page": {
     "title": "Хронология",
+    "eyebrow": "История мира",
+    "subtitle": "События в порядке вашего календаря. Эпохи — это группы: их можно свернуть, чтобы оставить в фокусе текущее время.",
     "addEvent": "Добавить событие"
   },
   "empty": {
@@ -11,7 +13,10 @@
   "filters": {
     "searchPlaceholder": "Поиск событий…",
     "allEras": "Все эпохи",
-    "countShown": "{{filtered}} из {{total}}"
+    "countShown": "{{filtered}} из {{total}}",
+    "emptyTitle": "События не найдены",
+    "emptyDescription": "Измените запрос или выберите другую эпоху.",
+    "reset": "Сбросить фильтры"
   },
   "eventCard": {
     "noteFallback": "Заметка #{{id}}",
@@ -62,5 +67,10 @@
   "confirm": {
     "deleteTitle": "Удалить событие",
     "deleteMessage": "Удалить «{{title}}»?"
+  },
+  "states": {
+    "loading": "Загружаем хронологию…",
+    "error": "Не удалось загрузить хронологию.",
+    "retry": "Повторить"
   }
 }

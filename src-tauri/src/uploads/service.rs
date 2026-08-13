@@ -8,7 +8,8 @@ use crate::models::faction::{Faction, GetFactionInput};
 use crate::models::project::{GetProjectInput, Project};
 use crate::models::upload::{
     CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
-    FactionUploadImageInput, ProjectUploadMapImageInput, UploadFileInput, UploadSavedPath,
+    FactionUploadImageInput, ProjectUploadCoverInput, ProjectUploadMapImageInput, UploadFileInput,
+    UploadSavedPath,
 };
 use crate::paths::UploadSubdir;
 use crate::repositories::{characters, dynasties, factions, projects};
@@ -225,4 +226,57 @@ pub fn projects_upload_map_image<R: Runtime>(
             id: input.project_id,
         },
     )
+}
+
+fn validate_project_cover(input: &ProjectUploadCoverInput) -> Result<()> {
+    validate_size(input.file_bytes.len(), MAX_IMAGE_SIZE)?;
+    validate_upload(
+        &input.file_name,
+        &input.mime,
+        UploadProfile::Default,
+        MAX_IMAGE_SIZE,
+    )
+}
+
+pub fn projects_upload_cover<R: Runtime>(
+    app: &AppHandle<R>,
+    connection: &Connection,
+    input: ProjectUploadCoverInput,
+) -> Result<Project> {
+    validate_project_cover(&input)?;
+
+    let filename = generate_filename("project-cover", &input.file_name);
+    let cover_image_path = write_file(
+        app,
+        UploadSubdir::ProjectCovers,
+        &filename,
+        &input.file_bytes,
+    )?;
+    projects::update_project_cover_image_path(connection, input.project_id, &cover_image_path)?;
+    projects::get_project(
+        connection,
+        &GetProjectInput {
+            id: input.project_id,
+        },
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cover_input(file_name: &str, mime: &str) -> ProjectUploadCoverInput {
+        ProjectUploadCoverInput {
+            project_id: 1,
+            file_bytes: vec![1],
+            file_name: file_name.to_string(),
+            mime: mime.to_string(),
+        }
+    }
+
+    #[test]
+    fn project_cover_validation_accepts_images_and_rejects_other_files() {
+        assert!(validate_project_cover(&cover_input("cover.webp", "image/webp")).is_ok());
+        assert!(validate_project_cover(&cover_input("cover.pdf", "application/pdf")).is_err());
+    }
 }

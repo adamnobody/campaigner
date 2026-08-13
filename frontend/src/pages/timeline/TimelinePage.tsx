@@ -4,7 +4,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Chip, Select, MenuItem, FormControl,
   InputAdornment, Collapse, Tooltip,
-  Autocomplete, useTheme, alpha,
+  Autocomplete, useTheme, alpha, CircularProgress, Alert, ButtonBase,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -18,6 +18,8 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
+import CloseIcon from '@mui/icons-material/Close';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTimelineStore } from '@/store/useTimelineStore';
@@ -26,8 +28,12 @@ import { useBranchStore } from '@/store/useBranchStore';
 import { useTagStore } from '@/store/useTagStore';
 import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
+import {
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { TimelineEvent } from '@campaigner/shared';
@@ -64,8 +70,8 @@ export const TimelinePage: React.FC = () => {
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
   const {
-    events, loading, fetchEvents, createEvent, updateEvent,
-    deleteEvent, reorderEvents, setTags,
+    events, loading, error, fetchEvents, createEvent, updateEvent,
+    deleteEvent, reorderEvents, setTags, clearError,
   } = useTimelineStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
   const theme = useTheme();
@@ -155,9 +161,10 @@ export const TimelinePage: React.FC = () => {
     setEra(''); setEraColor(''); setTagsStr(''); setTagsInput(''); setLinkedNoteId(null); setEditingEvent(null);
   };
 
-  const handleOpenCreate = () => { resetForm(); setDialogOpen(true); };
+  const handleOpenCreate = () => { clearError(); resetForm(); setDialogOpen(true); };
 
   const handleOpenEdit = (event: TimelineEvent) => {
+    clearError();
     setEditingEvent(event);
     setTitle(event.title);
     setDescription(event.description || '');
@@ -284,52 +291,116 @@ export const TimelinePage: React.FC = () => {
     try { await reorderEvents(pid, ids); } catch { showSnackbar(t('timeline:snackbar.reorderError'), 'error'); }
   };
 
+  const retryLoad = () => {
+    clearError();
+    fetchEvents(pid);
+  };
+  const dialogRowSx = {
+    display: 'grid',
+    gridTemplateColumns: { xs: '1fr', sm: '140px minmax(0, 1fr)' },
+    gap: { xs: 0.75, sm: 2.5 },
+    alignItems: 'center',
+    minHeight: 54,
+    px: 2.25,
+    py: 1.25,
+    backgroundColor: alpha(theme.palette.common.white, 0.025),
+    '& + &': { borderTop: `1px solid ${theme.campaigner.surface.border}` },
+  };
+  const dialogFieldSx = {
+    '& .MuiInputBase-root': { fontSize: '0.82rem' },
+    '& .MuiInputBase-input': { py: 0.5 },
+  };
+
   if (loading && events.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>{t('common:loading')}</Typography>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={28} />
+          <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 1.5 }}>
+            {t('timeline:states.loading')}
+          </Typography>
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: '#fff' }}>
-          {t('timeline:page.title')}
-        </Typography>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
-          {t('timeline:page.addEvent')}
-        </DndButton>
-      </Box>
+    <CampaignerPage maxWidth={900}>
+      <CampaignerPageHeader
+        eyebrow={t('timeline:page.eyebrow')}
+        title={t('timeline:page.title')}
+        description={t('timeline:page.subtitle')}
+        actions={(
+          <DndButton variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
+            {t('timeline:page.addEvent')}
+          </DndButton>
+        )}
+      />
 
-      {events.length === 0 ? (
-        <EmptyState
-          icon={<TimelineIcon sx={{ fontSize: 64 }} />}
-          title={t('timeline:empty.title')}
-          description={t('timeline:empty.description')}
-          actionLabel={t('timeline:empty.action')}
-          onAction={handleOpenCreate}
-        />
-      ) : (
+      {error ? (
+        <Alert
+          severity="error"
+          variant="outlined"
+          action={(
+            <Button color="inherit" size="small" startIcon={<RefreshIcon />} onClick={retryLoad}>
+              {t('timeline:states.retry')}
+            </Button>
+          )}
+          sx={{ mb: 3, borderRadius: '12px' }}
+        >
+          {t('timeline:states.error')}
+        </Alert>
+      ) : null}
+
+      {events.length === 0 && !error ? (
+        <Box
+          sx={{
+            py: { xs: 6, md: 7.5 },
+            px: 4,
+            textAlign: 'center',
+            borderRadius: '16px',
+            border: `1px dashed ${alpha(theme.palette.text.primary, 0.13)}`,
+            backgroundColor: alpha(theme.palette.common.white, 0.012),
+          }}
+        >
+          <TimelineIcon sx={{ color: 'text.disabled', fontSize: 30 }} />
+          <Typography sx={{
+            fontFamily: theme.campaigner.typography.display,
+            fontWeight: 600,
+            fontSize: '1.5rem',
+            mt: 1.25,
+          }}>
+            {t('timeline:empty.title')}
+          </Typography>
+          <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', lineHeight: 1.7, mt: 1, mx: 'auto', maxWidth: 440 }}>
+            {t('timeline:empty.description')}
+          </Typography>
+          <DndButton variant="outlined" startIcon={<AddIcon />} onClick={handleOpenCreate} sx={{ mt: 2.5 }}>
+            {t('timeline:empty.action')}
+          </DndButton>
+        </Box>
+      ) : events.length > 0 ? (
         <>
-          {/* Filters */}
-          <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
+          <CampaignerSurface
+            sx={{
+              p: 1.25,
+              mb: 4,
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
             <TextField
               placeholder={t('timeline:filters.searchPlaceholder')}
               value={search} onChange={e => setSearch(e.target.value)}
               sx={{
-                flexGrow: 1, maxWidth: 400,
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
-                },
+                flexGrow: 1, minWidth: 220, maxWidth: 400,
               }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)' }} />
+                    <SearchIcon sx={{ color: 'text.disabled' }} />
                   </InputAdornment>
                 ),
               }}
@@ -338,12 +409,7 @@ export const TimelinePage: React.FC = () => {
 
             {allEras.length > 0 && (
               <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Select value={filterEra} onChange={e => setFilterEra(e.target.value)} displayEmpty
-                  sx={{
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                    color: '#fff',
-                  }}>
+                <Select value={filterEra} onChange={e => setFilterEra(e.target.value)} displayEmpty>
                   <MenuItem value="">{t('timeline:filters.allEras')}</MenuItem>
                   {allEras.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </Select>
@@ -351,24 +417,39 @@ export const TimelinePage: React.FC = () => {
             )}
 
             {(search || filterEra) && (
-              <Button variant="outlined" onClick={() => { setSearch(''); setFilterEra(''); }}
-                size="small" sx={{ borderColor: 'rgba(130,130,255,0.4)', color: 'rgba(130,130,255,0.9)', textTransform: 'none' }}>
+              <Button variant="text" onClick={() => { setSearch(''); setFilterEra(''); }} size="small">
                 {t('common:reset')}
               </Button>
             )}
 
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+            <Typography sx={{
+              color: 'text.disabled',
+              ml: 'auto',
+              px: 1,
+              fontFamily: theme.campaigner.typography.mono,
+              fontSize: '0.65rem',
+            }}>
               {t('timeline:filters.countShown', { filtered: filtered.length, total: events.length })}
             </Typography>
-          </Box>
+          </CampaignerSurface>
+
+          {filtered.length === 0 ? (
+            <Box sx={{ py: 7, textAlign: 'center' }}>
+              <SearchIcon sx={{ color: 'text.disabled', fontSize: 30 }} />
+              <Typography sx={{ fontFamily: theme.campaigner.typography.display, fontSize: '1.5rem', mt: 1.5 }}>
+                {t('timeline:filters.emptyTitle')}
+              </Typography>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', mt: 1 }}>
+                {t('timeline:filters.emptyDescription')}
+              </Typography>
+              <Button variant="outlined" onClick={() => { setSearch(''); setFilterEra(''); }} sx={{ mt: 2.5 }}>
+                {t('timeline:filters.reset')}
+              </Button>
+            </Box>
+          ) : null}
 
           {/* Timeline */}
-          <Box sx={{ position: 'relative', pl: 4 }}>
-            {/* Vertical line */}
-            <Box sx={{
-              position: 'absolute', left: 15, top: 0, bottom: 0, width: 2,
-              background: `linear-gradient(to bottom, ${alpha(theme.palette.primary.main, 0.4)}, ${alpha(theme.palette.primary.main, 0.1)})`,
-            }} />
+          <Box sx={{ display: filtered.length === 0 ? 'none' : 'block' }}>
 
             {groupedEras.map((group, gi) => {
               const eraColorResolved = displayColorForEraGroup(group, gi);
@@ -376,33 +457,39 @@ export const TimelinePage: React.FC = () => {
               const collapsed = collapsedEras.has(eraKey);
 
               return (
-                <Box key={eraKey} sx={{ mb: 3 }}>
-                  {/* Era header */}
+                <Box key={eraKey} sx={{ mb: 4 }}>
                   {group.name && (
-                    <Box onClick={() => toggleEra(eraKey)}
+                    <ButtonBase
+                      onClick={() => toggleEra(eraKey)}
                       sx={{
-                        display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer',
-                        ml: -4, mb: 1.5, position: 'relative',
-                      }}>
-                      <Box sx={{
-                        width: 32, height: 32, borderRadius: '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: eraColorResolved, flexShrink: 0, zIndex: 1,
-                        border: `3px solid ${theme.palette.background.default}`,
-                      }}>
-                        {collapsed
-                          ? <ExpandMoreIcon sx={{ fontSize: 18, color: '#fff' }} />
-                          : <ExpandLessIcon sx={{ fontSize: 18, color: '#fff' }} />}
-                      </Box>
+                        width: '100%',
+                        display: 'flex', alignItems: 'center', gap: 1.25,
+                        mb: 0.5, pb: 1,
+                        borderBottom: `1px solid ${theme.campaigner.surface.border}`,
+                        justifyContent: 'flex-start',
+                      }}
+                    >
+                      {collapsed
+                        ? <ExpandMoreIcon sx={{ fontSize: 19, color: 'text.disabled' }} />
+                        : <ExpandLessIcon sx={{ fontSize: 19, color: 'text.disabled' }} />}
                       <Typography sx={{
-                        fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.2rem',
+                        fontFamily: theme.campaigner.typography.display,
+                        fontWeight: 600,
+                        fontSize: '1.5rem',
                         color: eraColorResolved,
                       }}>
                         {group.name}
                       </Typography>
                       <Chip label={`${group.events.length}`} size="small"
-                        sx={{ height: 20, fontSize: '0.7rem', backgroundColor: alpha(theme.palette.common.white, 0.06), color: 'text.secondary' }} />
-                    </Box>
+                        sx={{
+                          height: 20,
+                          fontSize: '0.62rem',
+                          fontFamily: theme.campaigner.typography.mono,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${theme.campaigner.surface.border}`,
+                          color: 'text.disabled',
+                        }} />
+                    </ButtonBase>
                   )}
 
                   <Collapse in={!collapsed}>
@@ -419,51 +506,75 @@ export const TimelinePage: React.FC = () => {
                           onDragEnd={() => { setDragId(null); setDragOverId(null); }}
                           onDrop={() => handleDrop(event.id)}
                           sx={{
-                            position: 'relative', mb: 1.5, ml: -4,
-                            display: 'flex', alignItems: 'flex-start', gap: 0,
+                            position: 'relative',
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '20px minmax(0, 1fr)', sm: '110px 20px minmax(0, 1fr)' },
+                            gap: { xs: 1.25, sm: 2 },
                             opacity: dragId === event.id ? 0.4 : 1,
-                            transition: 'opacity 0.15s',
+                            transition: 'opacity 0.15s, background-color 0.15s',
+                            borderRadius: '10px',
+                            backgroundColor: isDropTarget ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
+                            '&:hover .event-actions, &:focus-within .event-actions': { opacity: 1 },
                           }}>
-                          {/* Dot */}
+                          <Typography sx={{
+                            display: { xs: 'none', sm: 'block' },
+                            textAlign: 'right',
+                            pt: 2.6,
+                            fontFamily: theme.campaigner.typography.mono,
+                            fontSize: '0.68rem',
+                            letterSpacing: '.08em',
+                            textTransform: 'uppercase',
+                            color: 'text.disabled',
+                          }}>
+                            {event.eventDate}
+                          </Typography>
+
                           <Box sx={{
-                            width: 32, minHeight: 32, display: 'flex', alignItems: 'flex-start',
-                            justifyContent: 'center', pt: '12px', flexShrink: 0, zIndex: 1,
+                            width: 1,
+                            minHeight: '100%',
+                            justifySelf: 'center',
+                            position: 'relative',
+                            backgroundColor: theme.campaigner.surface.border,
                           }}>
                             <Box sx={{
-                              width: 12, height: 12, borderRadius: '50%',
+                              position: 'absolute',
+                              top: 27,
+                              left: -3,
+                              width: 7, height: 7, borderRadius: '50%',
                               backgroundColor: group.name ? eraColorResolved : alpha(theme.palette.primary.main, 0.5),
-                              border: `2px solid ${theme.palette.background.default}`,
                               transition: 'transform 0.15s',
                               transform: isDropTarget ? 'scale(1.8)' : 'scale(1)',
                             }} />
                           </Box>
 
-                          {/* Card */}
                           <GlassCard interactive={true} sx={{
-                            flexGrow: 1, p: 2, ml: 1,
-                            backgroundColor: isDropTarget ? alpha(theme.palette.primary.main, 0.08) : undefined,
-                            borderColor: isDropTarget ? alpha(theme.palette.primary.main, 0.4) : undefined,
-                            '&:hover': {
-                              '& .event-actions': { opacity: 1 },
-                            },
+                            p: '18px 0 22px',
+                            border: 0,
+                            borderRadius: 0,
+                            backgroundColor: 'transparent',
+                            boxShadow: 'none',
                           }}>
                             <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                               <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                                 <Box display="flex" alignItems="center" gap={1.5} mb={0.5} flexWrap="wrap">
                                   <Typography sx={{
+                                    display: { xs: 'block', sm: 'none' },
                                     color: group.name ? eraColorResolved : alpha(theme.palette.primary.main, 0.8),
-                                    fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap',
+                                    fontFamily: theme.campaigner.typography.mono,
+                                    fontWeight: 400, fontSize: '0.68rem', whiteSpace: 'nowrap',
+                                    letterSpacing: '.08em',
+                                    textTransform: 'uppercase',
                                   }}>
                                     {event.eventDate}
                                   </Typography>
-                                  <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1rem' }}>
+                                  <Typography sx={{ fontWeight: 400, color: 'text.primary', fontSize: '0.94rem' }}>
                                     {event.title}
                                   </Typography>
                                 </Box>
 
                                 {event.description && (
                                   <Typography variant="body2" sx={{
-                                    color: 'text.secondary', fontSize: '0.85rem', mt: 0.5,
+                                    color: 'text.secondary', fontSize: '0.8rem', lineHeight: 1.7, mt: 0.75,
                                     overflow: 'hidden', textOverflow: 'ellipsis',
                                     display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
                                   }}>
@@ -481,7 +592,7 @@ export const TimelinePage: React.FC = () => {
                                         navigate(`/project/${pid}/notes/${event.linkedNoteId}`);
                                       }}
                                       sx={{
-                                        fontSize: '0.8rem', color: alpha(theme.palette.warning.main, 0.8),
+                                        fontSize: '0.76rem', color: alpha(theme.palette.warning.main, 0.8),
                                         cursor: 'pointer', textDecoration: 'underline',
                                         textDecorationColor: alpha(theme.palette.warning.main, 0.3),
                                         '&:hover': {
@@ -507,9 +618,11 @@ export const TimelinePage: React.FC = () => {
                                   <Box display="flex" gap={0.5} mt={1} flexWrap="wrap">
                                     {event.tags.map((tag) => (
                                       <Chip key={tag.id ?? tag.name} label={tag.name} size="small" sx={{
-                                        height: 20, fontSize: '0.65rem', fontWeight: 600,
-                                        backgroundColor: tag.color || alpha(theme.palette.primary.main, 0.2),
-                                        color: theme.palette.text.primary, borderRadius: 1,
+                                        height: 23, fontSize: '0.68rem', fontWeight: 400,
+                                        backgroundColor: tag.color ? alpha(tag.color, 0.1) : alpha(theme.palette.common.white, 0.025),
+                                        color: tag.color || theme.palette.text.secondary,
+                                        border: `1px solid ${tag.color ? alpha(tag.color, 0.22) : theme.campaigner.surface.border}`,
+                                        borderRadius: '20px',
                                       }} />
                                     ))}
                                   </Box>
@@ -518,7 +631,7 @@ export const TimelinePage: React.FC = () => {
 
                               {/* Actions */}
                               <Box className="event-actions" display="flex" alignItems="center" gap={0}
-                                sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0, ml: 1 }}>
+                                sx={{ opacity: { xs: 1, md: 0 }, transition: 'opacity 0.15s', flexShrink: 0, ml: 1 }}>
                                 <Tooltip title={t('timeline:eventCard.moveUp')}>
                                   <IconButton size="small" onClick={() => moveEvent(event.id, 'up')}
                                     disabled={globalIdx === 0}
@@ -566,57 +679,175 @@ export const TimelinePage: React.FC = () => {
             })}
           </Box>
         </>
-      )}
+      ) : null}
 
-      {/* Event Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-        <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
-          {editingEvent ? t('timeline:dialog.editTitle') : t('timeline:dialog.createTitle')}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            border: `1px solid ${theme.campaigner.surface.border}`,
+            backgroundColor: theme.palette.background.paper,
+            backgroundImage: 'none',
+            boxShadow: '0 34px 90px rgba(0,0,0,.7)',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 3.5,
+            py: 2.5,
+            borderBottom: `1px solid ${theme.campaigner.surface.border}`,
+            fontFamily: theme.campaigner.typography.display,
+            fontSize: '1.65rem',
+            fontWeight: 600,
+          }}
+        >
+          <span>{editingEvent ? t('timeline:dialog.editTitle') : t('timeline:dialog.createTitle')}</span>
+          <IconButton onClick={() => setDialogOpen(false)} size="small" aria-label={t('common:cancel')}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          <TextField autoFocus fullWidth label={t('timeline:dialog.titleLabel')} value={title}
-            onChange={e => setTitle(e.target.value)} margin="normal"
-            placeholder={t('timeline:dialog.titlePlaceholder')} />
-
-          <TextField fullWidth label={t('timeline:dialog.dateLabel')} value={eventDate}
-            onChange={e => setEventDate(e.target.value)} margin="normal"
-            placeholder={t('timeline:dialog.datePlaceholder')}
-            helperText={t('timeline:dialog.dateHelper')} />
-
-          <Autocomplete
-            freeSolo
-            options={allEras}
-            value={era}
-            onChange={(_, val) => {
-              const name = val ?? '';
-              setEra(name);
-              if (name.trim()) {
-                const fromEvent = events.find(
-                  (e) => (e.era || '') === name && e.eraColor && String(e.eraColor).trim(),
-                );
-                if (fromEvent?.eraColor) setEraColor(String(fromEvent.eraColor).trim());
-              } else {
-                setEraColor('');
-              }
-            }}
-            onInputChange={(_, val) => setEra(val || '')}
-            renderInput={(params) => (
-              <TextField {...params} label={t('timeline:dialog.eraLabel')} margin="normal"
-                placeholder={t('timeline:dialog.eraPlaceholder')}
-                helperText={t('timeline:dialog.eraHelper')} />
-            )}
-            noOptionsText={t('timeline:dialog.eraNoOptions')}
-            clearText={t('timeline:dialog.autocompleteClear')}
+        <DialogContent sx={{ px: 3.5, pt: '24px !important', pb: 0 }}>
+          <Box
             sx={{
-              '& .MuiAutocomplete-clearIndicator': { color: 'rgba(255,255,255,0.3)' },
-              '& .MuiAutocomplete-popupIndicator': { color: 'rgba(255,255,255,0.3)' },
+              overflow: 'hidden',
+              borderRadius: '12px',
+              border: `1px solid ${theme.campaigner.surface.border}`,
             }}
-          />
+          >
+            <Box sx={dialogRowSx}>
+              <Typography sx={{ fontSize: '0.81rem' }}>{t('timeline:dialog.titleLabel')}</Typography>
+              <TextField
+                autoFocus
+                fullWidth
+                variant="standard"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder={t('timeline:dialog.titlePlaceholder')}
+                InputProps={{ disableUnderline: true }}
+                sx={dialogFieldSx}
+              />
+            </Box>
+            <Box sx={dialogRowSx}>
+              <Box>
+                <Typography sx={{ fontSize: '0.81rem' }}>{t('timeline:dialog.dateLabel')}</Typography>
+                <Typography sx={{ color: 'text.disabled', fontSize: '0.68rem', mt: 0.25 }}>
+                  {t('timeline:dialog.dateHelper')}
+                </Typography>
+              </Box>
+              <TextField
+                fullWidth
+                variant="standard"
+                value={eventDate}
+                onChange={e => setEventDate(e.target.value)}
+                placeholder={t('timeline:dialog.datePlaceholder')}
+                InputProps={{ disableUnderline: true }}
+                sx={dialogFieldSx}
+              />
+            </Box>
+            <Box sx={dialogRowSx}>
+              <Typography sx={{ fontSize: '0.81rem' }}>{t('timeline:dialog.eraLabel')}</Typography>
+              <Autocomplete
+                freeSolo
+                options={allEras}
+                value={era}
+                onChange={(_, val) => {
+                  const name = val ?? '';
+                  setEra(name);
+                  if (name.trim()) {
+                    const fromEvent = events.find(
+                      (e) => (e.era || '') === name && e.eraColor && String(e.eraColor).trim(),
+                    );
+                    if (fromEvent?.eraColor) setEraColor(String(fromEvent.eraColor).trim());
+                  } else {
+                    setEraColor('');
+                  }
+                }}
+                onInputChange={(_, val) => setEra(val || '')}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="standard"
+                    placeholder={t('timeline:dialog.eraPlaceholder')}
+                    InputProps={{ ...params.InputProps, disableUnderline: true }}
+                    sx={dialogFieldSx}
+                  />
+                )}
+                noOptionsText={t('timeline:dialog.eraNoOptions')}
+                clearText={t('timeline:dialog.autocompleteClear')}
+              />
+            </Box>
+            <Box sx={dialogRowSx}>
+              <Typography sx={{ fontSize: '0.81rem' }}>{t('timeline:dialog.linkNoteLabel')}</Typography>
+              <Autocomplete
+                options={allNotes}
+                getOptionLabel={(opt) => opt.title}
+                value={allNotes.find(n => n.id === linkedNoteId) || null}
+                onChange={(_, val) => setLinkedNoteId(val ? val.id : null)}
+                isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="standard"
+                    placeholder={t('timeline:dialog.linkNotePlaceholder')}
+                    InputProps={{
+                      ...params.InputProps,
+                      disableUnderline: true,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <DescriptionIcon sx={{ color: 'primary.main', opacity: 0.5, fontSize: 17 }} />
+                          </InputAdornment>
+                          {params.InputProps.startAdornment}
+                        </>
+                      ),
+                    }}
+                    sx={dialogFieldSx}
+                  />
+                )}
+                renderOption={(props, opt) => (
+                  <li {...props} key={opt.id}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <DescriptionIcon sx={{ fontSize: 16, color: 'primary.main', opacity: 0.6 }} />
+                      <Typography variant="body2">{opt.title}</Typography>
+                    </Box>
+                  </li>
+                )}
+                noOptionsText={t('timeline:dialog.noteNoOptions')}
+                clearText={t('timeline:dialog.autocompleteClear')}
+              />
+            </Box>
+            <Box sx={{ ...dialogRowSx, alignItems: 'start' }}>
+              <Typography sx={{ fontSize: '0.81rem', pt: 1 }}>{t('timeline:tagField.label')}</Typography>
+              <TagAutocompleteField
+                options={allTagNames}
+                value={tagsStr}
+                pendingInput={tagsInput}
+                label=""
+                placeholder={t('timeline:tagField.placeholder')}
+                onValueChange={setTagsStr}
+                onPendingInputChange={setTagsInput}
+              />
+            </Box>
+          </Box>
 
-          {era.trim() !== '' && (
-            <Box sx={{ mt: 0.5 }}>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)', mb: 1 }}>
+          {era.trim() !== '' ? (
+            <Box sx={{ mt: 2.5 }}>
+              <Typography sx={{
+                color: 'text.disabled',
+                fontFamily: theme.campaigner.typography.mono,
+                fontSize: '0.62rem',
+                letterSpacing: '.12em',
+                textTransform: 'uppercase',
+                mb: 1.25,
+              }}>
                 {t('timeline:dialog.eraColorLabel')}
               </Typography>
               <Box display="flex" flexWrap="wrap" alignItems="center" gap={1}>
@@ -630,12 +861,11 @@ export const TimelinePage: React.FC = () => {
                     sx={{
                       width: 28,
                       height: 28,
-                      borderRadius: 1,
+                      borderRadius: '7px',
                       bgcolor: hex,
-                      border:
-                        eraColor === hex
-                          ? '2px solid rgba(255,255,255,0.9)'
-                          : '1px solid rgba(255,255,255,0.25)',
+                      border: eraColor === hex
+                        ? `2px solid ${theme.palette.text.primary}`
+                        : `1px solid ${theme.campaigner.surface.border}`,
                       cursor: 'pointer',
                       p: 0,
                     }}
@@ -646,91 +876,54 @@ export const TimelinePage: React.FC = () => {
                   value={/^#[0-9A-Fa-f]{6}$/i.test(eraColor) ? eraColor : FALLBACK_ERA_HEX}
                   onChange={(e) => setEraColor(e.target.value)}
                   size="small"
-                  sx={{
-                    width: 72,
-                    '& input': { height: 32, p: 0, cursor: 'pointer' },
-                  }}
+                  sx={{ width: 62, '& input': { height: 28, p: 0, cursor: 'pointer' } }}
                   inputProps={{ 'aria-label': t('timeline:dialog.eraColorPickerAria') }}
                 />
               </Box>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', display: 'block', mt: 0.75 }}>
+              <Typography sx={{ color: 'text.disabled', fontSize: '0.68rem', mt: 0.75 }}>
                 {t('timeline:dialog.eraColorHelper')}
               </Typography>
             </Box>
-          )}
+          ) : null}
 
-          <TextField fullWidth label={t('timeline:dialog.descriptionLabel')} value={description}
-            onChange={e => setDescription(e.target.value)} margin="normal"
-            multiline rows={4} placeholder={t('timeline:dialog.descriptionPlaceholder')} />
-
-          {/* Linked Note */}
-          <Autocomplete
-            options={allNotes}
-            getOptionLabel={(opt) => opt.title}
-            value={allNotes.find(n => n.id === linkedNoteId) || null}
-            onChange={(_, val) => setLinkedNoteId(val ? val.id : null)}
-            isOptionEqualToValue={(opt, val) => opt.id === val.id}
-            renderInput={(params) => (
-              <TextField {...params} label={t('timeline:dialog.linkNoteLabel')} margin="normal"
-                placeholder={t('timeline:dialog.linkNotePlaceholder')}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <DescriptionIcon sx={{ color: 'rgba(201,169,89,0.5)', fontSize: 18 }} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-            renderOption={(props, opt) => (
-              <li {...props} key={opt.id}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <DescriptionIcon sx={{ fontSize: 16, color: 'rgba(201,169,89,0.6)' }} />
-                  <Typography variant="body2">{opt.title}</Typography>
-                </Box>
-              </li>
-            )}
-            noOptionsText={t('timeline:dialog.noteNoOptions')}
-            clearText={t('timeline:dialog.autocompleteClear')}
-            sx={{
-              '& .MuiAutocomplete-clearIndicator': { color: 'rgba(255,255,255,0.3)' },
-              '& .MuiAutocomplete-popupIndicator': { color: 'rgba(255,255,255,0.3)' },
-            }}
-          />
-
-          {linkedNoteId && (
-            <Box display="flex" alignItems="center" gap={1} mt={0.5} ml={1}>
-              <DescriptionIcon sx={{ fontSize: 14, color: 'rgba(78,205,196,0.7)' }} />
-              <Typography variant="caption" sx={{ color: 'rgba(78,205,196,0.7)' }}>
+          {linkedNoteId ? (
+            <Box display="flex" alignItems="center" gap={1} mt={2}>
+              <DescriptionIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+              <Typography variant="caption" sx={{ color: 'primary.main' }}>
                 {t('timeline:dialog.linkedPrefix')}{' '}
                 {notesMap.get(linkedNoteId) || `#${linkedNoteId}`}
               </Typography>
             </Box>
-          )}
+          ) : null}
 
-          <TagAutocompleteField
-            options={allTagNames}
-            value={tagsStr}
-            pendingInput={tagsInput}
-            label={t('timeline:tagField.label')}
-            placeholder={t('timeline:tagField.placeholder')}
-            helperText={t('timeline:tagField.helperText')}
-            margin="normal"
-            onValueChange={setTagsStr}
-            onPendingInputChange={setTagsInput}
+          <TextField
+            fullWidth
+            label={t('timeline:dialog.descriptionLabel')}
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            multiline
+            rows={4}
+            placeholder={t('timeline:dialog.descriptionPlaceholder')}
+            sx={{ mt: 2.5 }}
           />
+          <Typography sx={{ color: 'text.disabled', fontSize: '0.68rem', mt: 1 }}>
+            {t('timeline:tagField.helperText')}
+          </Typography>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions
+          sx={{
+            px: 3.5,
+            py: 2.25,
+            mt: 2,
+            borderTop: `1px solid ${theme.campaigner.surface.border}`,
+          }}
+        >
           <Button onClick={() => setDialogOpen(false)} color="inherit">{t('common:cancel')}</Button>
           <DndButton variant="contained" onClick={handleSave} disabled={!title.trim() || !eventDate.trim()}>
             {editingEvent ? t('common:save') : t('common:create')}
           </DndButton>
         </DialogActions>
       </Dialog>
-    </Box>
+    </CampaignerPage>
   );
 };

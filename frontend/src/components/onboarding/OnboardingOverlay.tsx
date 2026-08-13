@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Backdrop, Box, Button, Paper, Typography } from '@mui/material';
+import { Backdrop, Box, Button, Paper, Typography, alpha, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { onboardingSteps } from './onboardingSteps';
@@ -10,6 +10,7 @@ export const OnboardingOverlay: React.FC = () => {
   const { t } = useTranslation(['onboarding', 'common']);
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
   const {
     isActive,
     activeProjectId,
@@ -67,7 +68,11 @@ export const OnboardingOverlay: React.FC = () => {
     <Backdrop
       open
       transitionDuration={transitionMs}
-      sx={{ zIndex: (theme) => theme.zIndex.modal + 10, backgroundColor: 'rgba(0,0,0,0.65)' }}
+      sx={{
+        zIndex: (currentTheme) => currentTheme.zIndex.modal + 10,
+        backgroundColor: alpha(theme.palette.background.default, 0.78),
+        backdropFilter: 'blur(3px)',
+      }}
     >
       {targetRect && (
         <Box
@@ -77,19 +82,23 @@ export const OnboardingOverlay: React.FC = () => {
             top: targetRect.top - 6,
             width: targetRect.width + 12,
             height: targetRect.height + 12,
-            borderRadius: 1.5,
-            border: '2px solid rgba(255,255,255,0.9)',
+            borderRadius: '12px',
+            border: `1px solid ${theme.palette.primary.main}`,
             pointerEvents: 'none',
             transition: reducedMotion ? 'none' : `all ${transitionMs}ms cubic-bezier(0.22, 1, 0.36, 1)`,
-            boxShadow: reducedMotion ? 'none' : '0 0 0 9999px rgba(0,0,0,0.08), 0 0 24px rgba(255,255,255,0.22)',
+            boxShadow: reducedMotion ? 'none' : `0 0 0 9999px ${alpha(theme.palette.background.default, 0.12)}, 0 0 28px ${alpha(theme.palette.primary.main, 0.24)}`,
           }}
         />
       )}
       <Paper
         sx={{
-          p: 2.5,
+          p: 3,
           width: 380,
           maxWidth: '90vw',
+          borderRadius: '18px',
+          backgroundColor: alpha(theme.palette.background.default, 0.96),
+          border: `1px solid ${theme.campaigner.surface.border}`,
+          boxShadow: '0 34px 90px rgba(0,0,0,0.58)',
           transition: reducedMotion ? 'none' : `transform ${transitionMs}ms ease, opacity ${transitionMs}ms ease`,
           transform: reducedMotion ? 'none' : 'translateY(0)',
         }}
@@ -97,7 +106,17 @@ export const OnboardingOverlay: React.FC = () => {
         <Typography variant="overline" color="text.secondary">
           {t('onboarding:overlay.title', stepProgress)}
         </Typography>
-        <Typography variant="h6" sx={{ mt: 0.5 }}>
+        <Box sx={{ height: 2, mt: 1, mb: 2, borderRadius: 1, bgcolor: theme.campaigner.surface.raised, overflow: 'hidden' }}>
+          <Box
+            sx={{
+              width: `${(stepProgress.current / stepProgress.total) * 100}%`,
+              height: '100%',
+              bgcolor: 'primary.main',
+              transition: reducedMotion ? 'none' : `width ${transitionMs}ms ease`,
+            }}
+          />
+        </Box>
+        <Typography variant="h5">
           {t(`onboarding:steps.${step.id}.title`)}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.2 }}>

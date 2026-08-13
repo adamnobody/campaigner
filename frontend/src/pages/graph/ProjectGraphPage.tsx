@@ -103,10 +103,10 @@ const panelPaperSx = (theme: Theme) => ({
   flexDirection: 'column' as const,
   minHeight: 0,
   overflow: 'hidden',
-  borderRadius: 2,
-  border: `1px solid ${theme.palette.divider}`,
-  bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.35 : 0.85),
-  backdropFilter: 'blur(10px)',
+  borderRadius: '14px',
+  border: `1px solid ${theme.campaigner.surface.border}`,
+  bgcolor: alpha(theme.palette.background.default, 0.9),
+  backdropFilter: 'blur(18px)',
 });
 
 export const ProjectGraphPage: React.FC = () => {
@@ -1017,11 +1017,10 @@ export const ProjectGraphPage: React.FC = () => {
       }}
     >
       <Typography
+        variant="h4"
         sx={{
-          fontFamily: '"Cinzel", serif',
-          fontSize: { xs: '1.25rem', sm: '1.45rem' },
-          fontWeight: 700,
-          mb: 1,
+          fontSize: { xs: '1.45rem', sm: '1.8rem' },
+          mb: 1.25,
           flexShrink: 0,
         }}
       >

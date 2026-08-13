@@ -1,4 +1,4 @@
-import { Divider, ListItemText, Menu, MenuItem } from '@mui/material';
+import { Divider, ListItemText, Menu, MenuItem, alpha, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { CanvasObject } from '@/api/canvas';
 import { isMapScene } from '../canvas/canvasTools';
@@ -44,7 +44,15 @@ export function MapCanvasContextMenu({
   onSendToBack,
 }: Props) {
   const { t } = useTranslation(['map']);
+  const theme = useTheme();
   const hasSelection = Boolean(menu?.targetObject);
+  const itemSx = {
+    minHeight: 36,
+    mx: 0.5,
+    px: 1.25,
+    borderRadius: '7px',
+    '& .MuiListItemText-primary': { fontSize: '0.78rem' },
+  } as const;
 
   return (
     <Menu
@@ -52,23 +60,35 @@ export function MapCanvasContextMenu({
       onClose={onClose}
       anchorReference="anchorPosition"
       anchorPosition={menu ? { top: menu.mouseY, left: menu.mouseX } : undefined}
+      slotProps={{
+        paper: {
+          sx: {
+            minWidth: 210,
+            p: 0.5,
+            borderRadius: '12px',
+            border: `1px solid ${theme.campaigner.surface.border}`,
+            backgroundColor: alpha(theme.palette.background.default, 0.96),
+            backdropFilter: 'blur(18px)',
+          },
+        },
+      }}
     >
       {!hasSelection && (
         <>
-          <MenuItem onClick={() => { onAddMarker(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onAddMarker(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.addMarker')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onAddText(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onAddText(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.addText')}</ListItemText>
           </MenuItem>
           {!isMapScene(sceneType) && (
-            <MenuItem onClick={() => { onAddImage(); onClose(); }}>
+            <MenuItem sx={itemSx} onClick={() => { onAddImage(); onClose(); }}>
               <ListItemText>{t('map:canvas.context.addImage')}</ListItemText>
             </MenuItem>
           )}
           <Divider />
           {SHAPE_MENU_VARIANTS.map((variant) => (
-            <MenuItem key={variant} onClick={() => { onAddShape(variant); onClose(); }}>
+            <MenuItem sx={itemSx} key={variant} onClick={() => { onAddShape(variant); onClose(); }}>
               <ListItemText>{t(`map:shapePanel.variants.${variant}`)}</ListItemText>
             </MenuItem>
           ))}
@@ -76,20 +96,23 @@ export function MapCanvasContextMenu({
       )}
       {hasSelection && (
         <>
-          <MenuItem onClick={() => { onEditSelected(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onEditSelected(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.edit')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onDuplicateSelected(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onDuplicateSelected(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.duplicate')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onBringToFront(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onBringToFront(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.bringToFront')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onSendToBack(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onSendToBack(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.sendToBack')}</ListItemText>
           </MenuItem>
           <Divider />
-          <MenuItem onClick={() => { onDeleteSelected(); onClose(); }}>
+          <MenuItem
+            sx={{ ...itemSx, color: 'error.main', '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.08) } }}
+            onClick={() => { onDeleteSelected(); onClose(); }}
+          >
             <ListItemText>{t('map:canvas.context.delete')}</ListItemText>
           </MenuItem>
         </>

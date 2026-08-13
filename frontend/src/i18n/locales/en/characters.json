@@ -1,11 +1,17 @@
 {
   "page": {
+    "eyebrow": "World cast",
     "title": "Characters",
     "subtitle": "The cast of your story",
+    "cardEyebrow": "Character",
     "relationshipGraph": "Relationship graph",
     "searchPlaceholder": "Search by name...",
     "allTags": "All tags",
     "count": "{{filtered}} of {{total}}",
+    "error": {
+      "title": "Characters could not be loaded",
+      "retry": "Try again"
+    },
     "empty": {
       "noCharacters": {
         "title": "No characters found",
@@ -21,6 +27,9 @@
   },
   "detail": {
     "backToList": "Back to character list",
+    "eyebrowDraft": "Characters · Draft",
+    "eyebrowCharacter": "Character dossier",
+    "createDescription": "Only the name is required. You can complete the dossier after the session.",
     "newCharacter": "New character",
     "fallbackName": "Character",
     "loading": "Loading...",
@@ -31,13 +40,16 @@
     },
     "summary": {
       "title": "Summary",
+      "portrait": "Character portrait",
       "uploadPhoto": "Upload photo",
       "titleLabel": "Title",
       "descriptionLabel": "Description",
-      "tagsLabel": "Tags"
+      "tagsLabel": "Tags",
+      "factionCount": "{{count}} affiliations"
     },
     "sections": {
       "basics": "Basics",
+      "world": "Place in the world",
       "appearance": "Appearance",
       "historyNotes": "History & notes",
       "relationships": "Relationships"
@@ -54,6 +66,7 @@
       "relationshipDescription": "Relationship notes"
     },
     "placeholders": {
+      "name": "What is this character called?",
       "titleExample": "e.g. King in the North",
       "bio": "Who is this character...",
       "factions": "Select factions",
@@ -67,8 +80,12 @@
     "stateNotSpecified": "Not specified",
     "relationships": {
       "addLink": "Add link",
+      "notSavedTitle": "Save the character first",
+      "notSavedDescription": "Relationships can be added after the character is created.",
       "emptyTitle": "No relationships",
       "emptyDescription": "Add links to other characters",
+      "remove": "Remove relationship",
+      "dialogEyebrow": "Character connection",
       "dialogTitle": "Add link",
       "withWhom": "With whom",
       "type": "Relationship type",
@@ -81,15 +98,22 @@
   },
   "graph": {
     "loading": "Loading graph...",
+    "eyebrow": "Character network",
     "title": "Relationship graph",
     "hint": "Drag a node to move · Double-click to open · Drag background to pan · Wheel to zoom",
     "empty": "No characters to display",
+    "emptyDescription": "Create characters to see their connections here.",
+    "errorTitle": "The graph could not be loaded",
     "backToList": "Back to list",
     "legendTitle": "Links",
     "characterCount": "{{count}} characters",
     "edgeCount": "{{count}} links",
     "open": "Open",
-    "closePanel": "Close"
+    "closePanel": "Close",
+    "selected": "Selected character",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "fit": "Fit graph"
   },
   "relationshipTypes": {
     "ally": "Ally",
@@ -126,6 +150,7 @@
     "tooltipConfigureExclusions": "Configure exclusions",
     "detach": "Detach",
     "attach": "Attach",
+    "createDialogEyebrow": "Custom catalog entry",
     "createDialogTitle": "New trait",
     "fieldName": "Name",
     "fieldDescription": "Description",

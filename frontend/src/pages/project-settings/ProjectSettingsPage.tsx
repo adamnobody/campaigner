@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Box, Typography, TextField, Button,
   FormControl, InputLabel, Select, MenuItem,
-  useTheme, alpha,
+  CircularProgress, useTheme, alpha,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import SettingsIcon from '@mui/icons-material/Settings';
 import WarningIcon from '@mui/icons-material/Warning';
+import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '@/store/useProjectStore';
@@ -19,6 +20,13 @@ import { DndButton } from '@/components/ui/DndButton';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import {
+  CampaignerFieldRow,
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 
 export const ProjectSettingsPage: React.FC = () => {
   const { t } = useTranslation(['projectSettings', 'common']);
@@ -34,6 +42,9 @@ export const ProjectSettingsPage: React.FC = () => {
   const [status, setStatus] = useState<string>('active');
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const coverUrl = useAssetUrl(currentProject?.coverImagePath);
 
   useEffect(() => {
     fetchProject(pid);
@@ -80,6 +91,28 @@ export const ProjectSettingsPage: React.FC = () => {
     }
   };
 
+  const handleCoverChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setUploadingCover(true);
+    try {
+      await projectsApi.uploadCover(pid, file);
+      await fetchProject(pid);
+      showSnackbar(
+        t('projectSettings:snackbar.coverUpdated', { defaultValue: 'Project cover updated' }),
+        'success',
+      );
+    } catch {
+      showSnackbar(
+        t('projectSettings:snackbar.coverError', { defaultValue: 'Could not update project cover' }),
+        'error',
+      );
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   const handleDelete = () => {
     const projectName = currentProject?.name ?? '';
     showConfirmDialog(
@@ -102,37 +135,96 @@ export const ProjectSettingsPage: React.FC = () => {
   const statusLabel = t('projectSettings:fields.status');
 
   return (
-    <Box maxWidth={700}>
-      <Typography
-        variant="h4"
-        sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, color: 'text.primary', mb: 3 }}
-      >
-        {t('projectSettings:page.title')}
-      </Typography>
+    <CampaignerPage maxWidth={900}>
+      <CampaignerPageHeader
+        title={t('projectSettings:page.title')}
+        description={currentProject.name}
+      />
 
       {/* General */}
-      <GlassCard sx={{ p: 3, mb: 3 }}>
+      <CampaignerSurface sx={{ overflow: 'hidden', mb: 3 }}>
+        <Box sx={{ px: 2.25, pt: 2.25 }}>
         <SectionHeader
           icon={<SettingsIcon sx={{ fontSize: '1.2rem' }} />}
           title={t('projectSettings:sections.general')}
         />
+        </Box>
+        <CampaignerFieldRow
+          label={t('projectSettings:fields.cover', { defaultValue: 'Project cover' })}
+          hint={t('projectSettings:fields.coverHint', { defaultValue: 'Used on the project shelf' })}
+        >
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '180px minmax(0, 1fr)' },
+              gap: 1.5,
+              alignItems: 'center',
+            }}
+          >
+            <Box
+              sx={{
+                height: 96,
+                borderRadius: '10px',
+                border: `1px solid ${theme.campaigner.surface.border}`,
+                backgroundColor: theme.campaigner.surface.raised,
+                backgroundImage: coverUrl ? `url("${coverUrl}")` : 'none',
+                backgroundPosition: 'center',
+                backgroundSize: 'cover',
+                display: 'grid',
+                placeItems: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              {!coverUrl && <AddPhotoAlternateOutlinedIcon sx={{ color: 'text.disabled' }} />}
+              {uploadingCover && (
+                <Box sx={{ inset: 0, width: '100%', height: '100%', display: 'grid', placeItems: 'center', bgcolor: alpha(theme.palette.background.default, 0.72) }}>
+                  <CircularProgress size={24} />
+                </Box>
+              )}
+            </Box>
+            <Box>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+                onChange={handleCoverChange}
+              />
+              <Button
+                variant="outlined"
+                startIcon={<AddPhotoAlternateOutlinedIcon />}
+                onClick={() => coverInputRef.current?.click()}
+                disabled={uploadingCover}
+              >
+                {coverUrl
+                  ? t('projectSettings:cover.replace', { defaultValue: 'Replace cover' })
+                  : t('projectSettings:cover.add', { defaultValue: 'Add cover' })}
+              </Button>
+            </Box>
+          </Box>
+        </CampaignerFieldRow>
+        <CampaignerFieldRow label={t('projectSettings:fields.projectName')}>
         <TextField
           fullWidth
-          label={t('projectSettings:fields.projectName')}
+          aria-label={t('projectSettings:fields.projectName')}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          margin="normal"
+          size="small"
         />
+        </CampaignerFieldRow>
+        <CampaignerFieldRow label={t('projectSettings:fields.description')}>
         <TextField
           fullWidth
-          label={t('projectSettings:fields.description')}
+          aria-label={t('projectSettings:fields.description')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          margin="normal"
           multiline
           rows={3}
+          size="small"
         />
-        <FormControl fullWidth margin="normal">
+        </CampaignerFieldRow>
+        <CampaignerFieldRow label={statusLabel}>
+        <FormControl fullWidth size="small">
           <InputLabel>{statusLabel}</InputLabel>
           <Select value={status} label={statusLabel} onChange={(e) => setStatus(e.target.value)}>
             {PROJECT_STATUSES.map((s) => (
@@ -142,8 +234,9 @@ export const ProjectSettingsPage: React.FC = () => {
             ))}
           </Select>
         </FormControl>
+        </CampaignerFieldRow>
 
-        <Box display="flex" justifyContent="flex-end" mt={2}>
+        <Box display="flex" justifyContent="flex-end" sx={{ px: 2.25, py: 2 }}>
           <DndButton
             variant="contained"
             startIcon={<SaveIcon />}
@@ -153,7 +246,7 @@ export const ProjectSettingsPage: React.FC = () => {
             {t('common:save')}
           </DndButton>
         </Box>
-      </GlassCard>
+      </CampaignerSurface>
 
       {/* Export */}
       <GlassCard sx={{ p: 3, mb: 3 }}>
@@ -190,7 +283,7 @@ export const ProjectSettingsPage: React.FC = () => {
           }}>
             <WarningIcon sx={{ fontSize: '1.2rem' }} />
           </Box>
-          <Typography variant="h6" sx={{ fontFamily: '"Cinzel", serif', fontWeight: 600, color: theme.palette.error.main }}>
+          <Typography variant="h6" sx={{ color: theme.palette.error.main }}>
             {t('projectSettings:sections.dangerZone')}
           </Typography>
         </Box>
@@ -207,6 +300,6 @@ export const ProjectSettingsPage: React.FC = () => {
           {t('projectSettings:dangerZone.deleteProject')}
         </Button>
       </GlassCard>
-    </Box>
+    </CampaignerPage>
   );
 };

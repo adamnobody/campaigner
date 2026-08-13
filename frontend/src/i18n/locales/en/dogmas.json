@@ -1,7 +1,8 @@
 {
   "page": {
+    "eyebrow": "World rules",
     "title": "World dogmas",
-    "subtitle": "Fundamental laws and rules that shape your setting"
+    "subtitle": "The fundamental laws behind everything else: magic, death, gods, and prohibitions. One dogma, one statement."
   },
   "list": {
     "addDogma": "Add dogma",
@@ -56,7 +57,8 @@
   },
   "visibility": {
     "public": "Known to inhabitants",
-    "secret": "Hidden from inhabitants"
+    "secret": "Hidden from inhabitants",
+    "playerHint": "Visible to players"
   },
   "listItem": {
     "impactPrefix": "Impact:",
@@ -80,5 +82,10 @@
     "label": "Tags",
     "placeholder": "Select or type...",
     "helperText": "You can pick existing tags or add new ones"
+  },
+  "states": {
+    "loading": "Loading world dogmas…",
+    "error": "Could not load dogmas.",
+    "retry": "Try again"
   }
 }

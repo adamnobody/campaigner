@@ -18,13 +18,19 @@
     "appearanceProjectsHint": "Quick jump to projects",
     "projectsEmpty": "No projects found",
     "selectCampaign": "Pick a campaign to start working with your world",
-    "projectSettings": "Project settings"
+    "projectSettings": "Project settings",
+    "projectLabel": "Project",
+    "expandSection": "Expand section",
+    "collapseSection": "Collapse section"
   },
   "topbar": {
     "searchTooltip": "Search (Ctrl+K)",
     "searchPlaceholder": "Search…",
     "createBranchTooltip": "Create what-if branch",
-    "openSearchHotkeyDesc": "Open search"
+    "openSearchHotkeyDesc": "Open search",
+    "toggleSidebarTooltip": "Collapse or expand sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar"
   },
   "breadcrumbs": {
     "home": "Home",

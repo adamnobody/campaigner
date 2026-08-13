@@ -18,13 +18,19 @@
     "appearanceProjectsHint": "Быстрый переход к проектам",
     "projectsEmpty": "Проекты не найдены",
     "selectCampaign": "Выберите кампанию, чтобы начать работу с миром",
-    "projectSettings": "Настройки проекта"
+    "projectSettings": "Настройки проекта",
+    "projectLabel": "Проект",
+    "expandSection": "Раскрыть раздел",
+    "collapseSection": "Свернуть раздел"
   },
   "topbar": {
     "searchTooltip": "Поиск (Ctrl+K)",
     "searchPlaceholder": "Поиск...",
     "createBranchTooltip": "Создать ветку what-if",
-    "openSearchHotkeyDesc": "Открыть поиск"
+    "openSearchHotkeyDesc": "Открыть поиск",
+    "toggleSidebarTooltip": "Свернуть или раскрыть боковую панель",
+    "collapseSidebar": "Свернуть боковую панель",
+    "expandSidebar": "Раскрыть боковую панель"
   },
   "breadcrumbs": {
     "home": "Главная",

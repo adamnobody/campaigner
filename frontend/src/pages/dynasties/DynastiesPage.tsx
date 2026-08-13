@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box, Typography, TextField, IconButton,
   Button, Chip, Select, MenuItem, FormControl,
-  InputAdornment, Tooltip, Avatar, useTheme, alpha,
+  InputAdornment, Tooltip, useTheme, alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -92,25 +92,68 @@ export const DynastiesPage: React.FC = () => {
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+    <Box sx={{ maxWidth: 1240, mx: 'auto' }}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        gap={2}
+        mb={4}
+        sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.55)}`, pb: 3 }}
+      >
         <Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
+          <Typography
+            sx={{
+              mb: 1,
+              fontFamily: '"IBM Plex Mono", monospace',
+              fontSize: '0.68rem',
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'primary.main',
+            }}
+          >
+            {t('dynasties:list.eyebrow', { count: total })}
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: '"Cormorant Garamond", serif',
+              fontWeight: 600,
+              fontSize: { xs: '2.3rem', md: '3rem' },
+              lineHeight: 0.95,
+              color: 'text.primary',
+            }}
+          >
             {t('dynasties:list.title')}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.25, maxWidth: 620, lineHeight: 1.7 }}>
             {t('dynasties:list.subtitle')}
           </Typography>
         </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(routes.dynastyDetail(pid, 'new'))}>
+        <DndButton
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate(routes.dynastyDetail(pid, 'new'))}
+          sx={{ minHeight: 42, px: 2.5, borderRadius: 2 }}
+        >
           {t('dynasties:list.create')}
         </DndButton>
       </Box>
 
-      {/* Filters */}
       {(dynasties.length > 0 || hasFilters) && (
-        <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box
+          sx={{
+            p: 1.25,
+            mb: 3,
+            display: 'flex',
+            gap: 1.25,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
+            borderRadius: 2.5,
+            bgcolor: alpha(theme.palette.background.paper, 0.28),
+          }}
+        >
           <TextField
             placeholder={t('dynasties:list.searchPlaceholder')}
             value={search} onChange={e => setSearch(e.target.value)}
@@ -146,10 +189,9 @@ export const DynastiesPage: React.FC = () => {
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
             {t('dynasties:list.count', { shown: dynasties.length, total })}
           </Typography>
-        </GlassCard>
+        </Box>
       )}
 
-      {/* Content */}
       {dynasties.length === 0 && !loading ? (
         hasFilters ? (
           <EmptyState
@@ -171,8 +213,8 @@ export const DynastiesPage: React.FC = () => {
       ) : (
         <Box sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-          gap: 2.5,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
+          gap: 2.25,
         }}>
           {dynasties.map((dynasty) => {
             const statusColor = STATUS_COLORS[dynasty.status] || theme.palette.primary.main;
@@ -185,8 +227,17 @@ export const DynastiesPage: React.FC = () => {
                 onClick={() => navigate(routes.dynastyDetail(pid, dynasty.id))}
                 sx={{
                   p: 0,
+                  minHeight: 260,
+                  overflow: 'hidden',
+                  borderRadius: 3,
+                  border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                  background: `radial-gradient(circle at 50% 0%, ${alpha(dynastyColor, 0.13)}, transparent 48%), ${alpha(
+                    theme.palette.background.paper,
+                    0.35
+                  )}`,
                   '&:hover': {
                     '& .dynasty-actions': { opacity: 1 },
+                    '& .dynasty-crest': { transform: 'translateY(-3px) scale(1.04)' },
                   },
                 }}
               >
@@ -198,7 +249,6 @@ export const DynastiesPage: React.FC = () => {
                     : `linear-gradient(90deg, ${statusColor}, transparent)`,
                 }} />
 
-                {/* Centered crest + name */}
                 <Box sx={{ pt: 3, pb: 2, textAlign: 'center', position: 'relative' }}>
                   {/* Actions top-right */}
                   <Box className="dynasty-actions" sx={{
@@ -222,14 +272,17 @@ export const DynastiesPage: React.FC = () => {
 
                   {/* Crest */}
                   <AssetAvatar
+                    className="dynasty-crest"
                     assetPath={dynasty.imagePath}
                     sx={{
-                      width: 72, height: 72, mx: 'auto', mb: 1.5,
+                      width: 82, height: 82, mx: 'auto', mb: 1.75,
                       borderRadius: '50%',
                       bgcolor: alpha(dynastyColor, 0.1),
                       border: `2px solid ${alpha(dynastyColor, 0.3)}`,
+                      boxShadow: `0 12px 32px ${alpha(dynastyColor, 0.12)}`,
                       color: dynastyColor,
                       fontSize: '2rem',
+                      transition: 'transform 180ms ease',
                     }}
                   >
                     👑
@@ -237,8 +290,8 @@ export const DynastiesPage: React.FC = () => {
 
                   {/* Name */}
                   <Typography sx={{
-                    fontFamily: '"Cinzel", serif', fontWeight: 700,
-                    fontSize: '1.15rem', color: 'text.primary',
+                    fontFamily: '"Cormorant Garamond", serif', fontWeight: 600,
+                    fontSize: '1.55rem', lineHeight: 1.1, color: 'text.primary',
                     px: 2,
                   }}>
                     {dynasty.name}
@@ -248,14 +301,14 @@ export const DynastiesPage: React.FC = () => {
                   {dynasty.motto && (
                     <Typography sx={{
                       color: theme.palette.primary.main, fontStyle: 'italic',
-                      fontSize: '0.8rem', mt: 0.5, px: 2,
+                      fontFamily: '"Cormorant Garamond", serif',
+                      fontSize: '1rem', mt: 0.65, px: 2,
                     }}>
                       «{dynasty.motto}»
                     </Typography>
                   )}
                 </Box>
 
-                {/* Info row */}
                 <Box sx={{
                   display: 'flex', justifyContent: 'center', gap: 1,
                   px: 2, pb: 2, flexWrap: 'wrap',
@@ -293,11 +346,11 @@ export const DynastiesPage: React.FC = () => {
                   )}
                 </Box>
 
-                {/* Description preview */}
                 {dynasty.description && (
-                  <Box sx={{ px: 2, pb: 2 }}>
+                  <Box sx={{ px: 2.5, pb: 2 }}>
                     <Typography variant="body2" sx={{
-                      color: 'text.secondary', fontSize: '0.8rem',
+                      color: 'text.secondary', fontSize: '0.8rem', lineHeight: 1.65,
+                      pt: 1.5, borderTop: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
                       overflow: 'hidden', textOverflow: 'ellipsis',
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                       textAlign: 'center',

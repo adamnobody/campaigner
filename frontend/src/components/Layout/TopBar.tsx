@@ -187,192 +187,128 @@ export const TopBar: React.FC = () => {
 
   return (
     <>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar sx={{ gap: 1 }}>
-          <IconButton color="inherit" edge="start" onClick={toggleSidebar} sx={{ mr: 1 }}>
-            <MenuIcon />
-          </IconButton>
-
-          <Typography
-            variant="h6"
-            sx={{ fontFamily: 'inherit', color: 'primary.main', cursor: 'pointer', mr: 2, flexShrink: 0 }}
-            onClick={() => navigate('/')}
+      <Box
+        component="header"
+        sx={{
+          height: 66,
+          flex: '0 0 66px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          px: { xs: 2, md: 5 },
+          borderBottom: '1px solid rgba(255,255,255,.045)',
+          backgroundColor: 'background.default',
+          minWidth: 0,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: 1 }}>
+          <Tooltip title={tNav('topbar.toggleSidebarTooltip')}>
+            <IconButton size="small" onClick={toggleSidebar} sx={{ display: { xs: 'inline-flex', md: 'none' } }}>
+              <MenuIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Breadcrumbs
+            separator={<Typography sx={{ color: 'rgba(232,228,220,.2)', fontSize: 12 }}>/</Typography>}
+            sx={{ minWidth: 0, color: 'text.secondary', '& .MuiBreadcrumbs-ol': { flexWrap: 'nowrap' } }}
           >
-            ⚔️ {tCommon('appName')}
-          </Typography>
-
-          <Breadcrumbs sx={{ flexGrow: 1, color: 'text.secondary', minWidth: 0 }}>
             <MuiLink
               component="button"
-              underline="hover"
+              underline="none"
               color="inherit"
               onClick={() => navigate('/')}
-              sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, fontSize: 12.5, whiteSpace: 'nowrap' }}
             >
-              <HomeIcon fontSize="small" />
+              <HomeIcon sx={{ fontSize: 15 }} />
               {tNav('breadcrumbs.home')}
             </MuiLink>
-
-            {currentProject && pathParts.length > 1 && (
+            {currentProject && pathParts.length > 1 ? (
               <MuiLink
                 component="button"
-                underline="hover"
+                underline="none"
                 color="inherit"
                 onClick={() => navigate(`/project/${currentProject.id}`)}
-                sx={{
-                  maxWidth: { xs: 120, sm: 260 },
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-block',
-                }}
+                sx={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5 }}
               >
                 {currentProject.name}
               </MuiLink>
-            )}
-
-            {breadcrumbItems.map((item, i) =>
-              item.path ? (
-                <MuiLink
-                  key={`${item.path}-${i}`}
-                  component="button"
-                  underline="hover"
-                  color="inherit"
-                  onClick={() => navigate(item.path!)}
-                >
-                  {item.label}
-                </MuiLink>
-              ) : (
-                <Typography
-                  key={i}
-                  color="text.primary"
-                  sx={{
-                    maxWidth: 200,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item.label}
-                </Typography>
-              )
-            )}
+            ) : null}
+            {breadcrumbItems.map((item, index) => item.path ? (
+              <MuiLink
+                key={`${item.path}-${index}`}
+                component="button"
+                underline="none"
+                color="inherit"
+                onClick={() => navigate(item.path!)}
+                sx={{ fontSize: 12.5, whiteSpace: 'nowrap' }}
+              >
+                {item.label}
+              </MuiLink>
+            ) : (
+              <Typography key={`${item.label}-${index}`} sx={{ color: 'text.primary', fontSize: 12.5, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.label}
+              </Typography>
+            ))}
           </Breadcrumbs>
+        </Box>
 
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: { xs: 0.25, sm: 0.75 },
-              flexShrink: 0,
-            }}
-          >
-            {currentProject && (
-              <FormControl data-tour="branch-selector" size="small" sx={{ minWidth: { xs: 100, sm: 130 }, maxWidth: 160 }}>
-                <Select
-                  value={activeBranchId ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setActiveBranchId(value === '' ? null : Number(value), currentProject.id);
-                  }}
-                  displayEmpty
-                  renderValue={(selected) => {
-                    if (branchesLoading) return tNav('branches.loading');
-                    if (branches.length === 0) return tNav('branches.nonePlaceholder');
-                    const selectedBranch = branches.find((branch) => branch.id === Number(selected));
-                    return selectedBranch?.name ?? tNav('branches.nonePlaceholder');
-                  }}
-                  sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.8rem' }}
-                >
-                  {branches.map((branch) => (
-                    <MenuItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-            {currentProject && (
-              <Tooltip title={tNav('topbar.createBranchTooltip')}>
-                <span>
-                  <IconButton
-                    data-tour="branch-create"
-                    size="small"
-                    onClick={handleOpenCreateBranch}
-                    disabled={branchesLoading}
-                    sx={{
-                      color: 'rgba(255,255,255,0.75)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: 1,
-                      '&:hover': {
-                        borderColor: 'rgba(255,255,255,0.35)',
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                      },
-                    }}
-                  >
-                    <AddIcon fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            )}
-
-            {currentProject && (
-              <Tooltip title={tNav('topbar.searchTooltip')}>
-                <Button
-                  data-tour="topbar-search"
-                  onClick={() => setSearchOpen(true)}
-                  size="small"
-                  sx={{
-                    color: 'rgba(255,255,255,0.5)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: 1.5,
-                    px: { xs: 1, sm: 2 },
-                    py: 0.5,
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    gap: 1,
-                    minWidth: 0,
-                    '&:hover': {
-                      borderColor: 'rgba(255,255,255,0.25)',
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                    },
-                  }}
-                >
-                  <SearchIcon fontSize="small" sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />
-                  <Typography
-                    component="span"
-                    sx={{
-                      maxWidth: { xs: 64, sm: 'none' },
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {tNav('topbar.searchPlaceholder')}
-                  </Typography>
-                  <Typography
-                    component="span"
-                    sx={{
-                      fontSize: '0.6rem',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: 0.5,
-                      px: 0.6,
-                      py: 0.1,
-                      ml: { xs: 0, sm: 1 },
-                      color: 'rgba(255,255,255,0.3)',
-                      display: { xs: 'none', md: 'inline' },
-                    }}
-                  >
-                    Ctrl+K
-                  </Typography>
-                </Button>
-              </Tooltip>
-            )}
-
-            <LanguageSwitcher sx={languageSwitcherToolbarSx} />
-          </Box>
-        </Toolbar>
-      </AppBar>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+          {currentProject ? (
+            <FormControl data-tour="branch-selector" size="small" sx={{ minWidth: { xs: 110, md: 150 } }}>
+              <Select
+                value={activeBranchId ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setActiveBranchId(value === '' ? null : Number(value), currentProject.id);
+                }}
+                displayEmpty
+                renderValue={(selected) => {
+                  if (branchesLoading) return tNav('branches.loading');
+                  if (branches.length === 0) return tNav('branches.nonePlaceholder');
+                  return branches.find((branch) => branch.id === Number(selected))?.name ?? tNav('branches.nonePlaceholder');
+                }}
+                sx={{ height: 34, fontSize: 12.5, color: 'primary.main', backgroundColor: 'rgba(201,169,97,.06)' }}
+              >
+                {branches.map((branch) => <MenuItem key={branch.id} value={branch.id}>{branch.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+          ) : null}
+          {currentProject ? (
+            <Tooltip title={tNav('topbar.createBranchTooltip')}>
+              <span>
+                <IconButton data-tour="branch-create" size="small" onClick={handleOpenCreateBranch} disabled={branchesLoading} sx={{ border: '1px solid rgba(255,255,255,.08)' }}>
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : null}
+          {currentProject ? (
+            <Button
+              data-tour="topbar-search"
+              onClick={() => setSearchOpen(true)}
+              size="small"
+              startIcon={<SearchIcon sx={{ fontSize: 16 }} />}
+              sx={{
+                height: 34,
+                minWidth: { xs: 34, sm: 150 },
+                justifyContent: 'flex-start',
+                border: '1px solid rgba(255,255,255,.08)',
+                backgroundColor: 'rgba(255,255,255,.02)',
+                color: 'rgba(232,228,220,.42)',
+                px: { xs: 1, sm: 1.5 },
+              }}
+            >
+              <Typography component="span" sx={{ display: { xs: 'none', sm: 'inline' }, fontSize: 12.5, flex: 1, textAlign: 'left' }}>
+                {tNav('topbar.searchPlaceholder')}
+              </Typography>
+              <Typography component="span" sx={{ display: { xs: 'none', md: 'inline' }, fontFamily: (theme) => theme.campaigner.typography.mono, fontSize: 9.5, color: 'rgba(232,228,220,.25)' }}>
+                Ctrl K
+              </Typography>
+            </Button>
+          ) : null}
+          <LanguageSwitcher sx={{ minWidth: 104, '& .MuiOutlinedInput-root': { height: 34, fontSize: 12 } }} />
+        </Box>
+      </Box>
 
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
       <Dialog open={createBranchOpen} onClose={handleCloseCreateBranch} fullWidth maxWidth="xs">
@@ -385,10 +321,10 @@ export const TopBar: React.FC = () => {
             margin="dense"
             label={tNav('branches.nameLabel')}
             value={branchNameDraft}
-            onChange={(e) => setBranchNameDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !createBranchLoading) {
-                e.preventDefault();
+            onChange={(event) => setBranchNameDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !createBranchLoading) {
+                event.preventDefault();
                 void handleCreateBranch();
               }
             }}
@@ -396,13 +332,7 @@ export const TopBar: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseCreateBranch} disabled={createBranchLoading}>{tCommon('cancel')}</Button>
-          <Button
-            variant="contained"
-            onClick={() => void handleCreateBranch()}
-            disabled={createBranchLoading || branchNameDraft.trim().length === 0}
-          >
-            {tCommon('create')}
-          </Button>
+          <Button variant="contained" onClick={() => void handleCreateBranch()} disabled={createBranchLoading || !branchNameDraft.trim()}>{tCommon('create')}</Button>
         </DialogActions>
       </Dialog>
     </>

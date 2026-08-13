@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, TextField, InputAdornment,
   Chip, Avatar, Select, MenuItem, FormControl, Button,
-  IconButton, useTheme, alpha,
+  IconButton, Tooltip, useTheme, alpha,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
@@ -18,8 +18,12 @@ import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { GlassCard } from '@/components/ui/GlassCard';
 import { AssetAvatar } from '@/components/ui/AssetAvatar';
+import {
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
 import { routes } from '@/utils/routes';
 
 export const CharactersPage: React.FC = () => {
@@ -32,6 +36,7 @@ export const CharactersPage: React.FC = () => {
   const {
     characters,
     loading,
+    error,
     fetchCharacters,
     deleteCharacter,
   } = useCharacterStore();
@@ -84,7 +89,7 @@ export const CharactersPage: React.FC = () => {
     setSelectedTag('');
   };
 
-  if (loading && characters.length === 0) {
+  if (loading && characters.length === 0 && !error) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
         <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
@@ -93,17 +98,13 @@ export const CharactersPage: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            {t('characters:page.title')}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {t('characters:page.subtitle')}
-          </Typography>
-        </Box>
-        <Box display="flex" gap={1}>
+    <CampaignerPage>
+      <CampaignerPageHeader
+        eyebrow={t('characters:page.eyebrow')}
+        title={t('characters:page.title')}
+        description={t('characters:page.subtitle')}
+        actions={
+          <>
           <DndButton
             variant="outlined"
             startIcon={<AccountTreeIcon />}
@@ -119,11 +120,21 @@ export const CharactersPage: React.FC = () => {
           >
             {t('common:add')}
           </DndButton>
-        </Box>
-      </Box>
+          </>
+        }
+      />
 
-      {characters.length > 0 && (
-        <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+      {(characters.length > 0 || search || selectedTag) && (
+        <CampaignerSurface
+          sx={{
+            p: 1.5,
+            mb: 3,
+            display: 'flex',
+            gap: 1.5,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <TextField
             placeholder={t('characters:page.searchPlaceholder')}
             value={search}
@@ -142,7 +153,7 @@ export const CharactersPage: React.FC = () => {
             size="small"
           />
 
-          <FormControl size="small" sx={{ minWidth: 160 }}>
+          <FormControl size="small" sx={{ minWidth: 170 }}>
             <Select
               value={selectedTag}
               onChange={(e) => setSelectedTag(e.target.value)}
@@ -171,10 +182,18 @@ export const CharactersPage: React.FC = () => {
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
             {t('characters:page.count', { filtered: filtered.length, total: characters.length })}
           </Typography>
-        </GlassCard>
+        </CampaignerSurface>
       )}
 
-      {characters.length === 0 ? (
+      {error && characters.length === 0 ? (
+        <EmptyState
+          icon={<PersonIcon sx={{ fontSize: 48 }} />}
+          title={t('characters:page.error.title')}
+          description={error}
+          actionLabel={t('characters:page.error.retry')}
+          onAction={() => fetchCharacters(pid, { search: debouncedSearch || undefined, limit: 200 })}
+        />
+      ) : characters.length === 0 ? (
         <EmptyState
           icon={<PersonIcon sx={{ fontSize: 64 }} />}
           title={t('characters:page.empty.noCharacters.title')}
@@ -193,43 +212,148 @@ export const CharactersPage: React.FC = () => {
       ) : (
         <Box
           sx={{
-            columnCount: { xs: 1, sm: 2, md: 3 },
-            columnGap: '16px',
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+            gap: 2,
           }}
         >
           {filtered.map((ch: any) => (
-            <Box
+            <CampaignerSurface
               key={ch.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(routes.characterDetail(pid, ch.id))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  navigate(routes.characterDetail(pid, ch.id));
+                }
+              }}
               sx={{
-                breakInside: 'avoid',
-                mb: 2,
-                display: 'inline-block',
-                width: '100%',
+                minHeight: 144,
+                display: 'grid',
+                gridTemplateColumns: '88px minmax(0, 1fr)',
+                gap: 2,
+                p: 1.5,
+                position: 'relative',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                transition: 'border-color 160ms ease, background-color 160ms ease, transform 160ms ease',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: '0 auto 0 0',
+                  width: 2,
+                  backgroundColor: 'primary.main',
+                  opacity: 0,
+                  transition: 'opacity 160ms ease',
+                },
+                '&:hover, &:focus-visible': {
+                  borderColor: alpha(theme.palette.primary.main, 0.32),
+                  backgroundColor: alpha(theme.palette.primary.main, 0.035),
+                  transform: 'translateY(-2px)',
+                  outline: 'none',
+                  '&::before': { opacity: 1 },
+                  '& .delete-btn': { opacity: 1 },
+                },
               }}
             >
-              <GlassCard
-                interactive
-                onClick={() => navigate(routes.characterDetail(pid, ch.id))}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 2,
-                  p: 2,
-                  width: '100%',
-                  '&:hover': {
-                    '& .delete-btn': { opacity: 1 },
-                  },
-                }}
-              >
+              <Box sx={{ width: 88, height: 112, borderRadius: 2, overflow: 'hidden' }}>
+                {ch.imagePath ? (
+                  <AssetAvatar
+                    assetPath={ch.imagePath}
+                    sx={{ width: '100%', height: '100%', borderRadius: 2 }}
+                    variant="rounded"
+                  />
+                ) : (
+                  <Avatar
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
+                      color: alpha(theme.palette.primary.main, 0.72),
+                      border: `1px dashed ${alpha(theme.palette.primary.main, 0.22)}`,
+                    }}
+                    variant="rounded"
+                  >
+                    <PersonIcon sx={{ fontSize: 34 }} />
+                  </Avatar>
+                )}
+              </Box>
+
+              <Box sx={{ minWidth: 0, py: 0.25, pr: 3 }}>
+                <Typography variant="overline" sx={{ color: 'primary.main', display: 'block', lineHeight: 1.4 }}>
+                  {t('characters:page.cardEyebrow')}
+                </Typography>
+                <Typography variant="h5" sx={{ fontSize: '1.35rem', lineHeight: 1.15 }} noWrap>
+                  {ch.name}
+                </Typography>
+
+                {ch.title ? (
+                  <Typography
+                    sx={{ color: 'primary.main', fontSize: '0.76rem', pt: 0.5 }}
+                    noWrap
+                  >
+                    {ch.title}
+                  </Typography>
+                ) : null}
+
+                {ch.bio ? (
+                  <Typography
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: '0.78rem',
+                      lineHeight: 1.55,
+                      mt: 0.75,
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                    }}
+                  >
+                    {ch.bio}
+                  </Typography>
+                ) : null}
+
+                {ch.tags?.length > 0 ? (
+                  <Box display="flex" gap={0.5} mt={1} flexWrap="wrap">
+                    {ch.tags.slice(0, 2).map((tag: any) => (
+                      <Chip
+                        key={tag.id}
+                        label={tag.name}
+                        size="small"
+                        sx={{
+                          height: 22,
+                          fontSize: '0.66rem',
+                          backgroundColor: tag.color ? alpha(tag.color, 0.12) : alpha(theme.palette.primary.main, 0.08),
+                          color: tag.color || theme.palette.primary.main,
+                          borderColor: tag.color ? alpha(tag.color, 0.25) : alpha(theme.palette.primary.main, 0.2),
+                        }}
+                      />
+                    ))}
+                    {ch.tags.length > 2 ? (
+                      <Chip
+                        label={`+${ch.tags.length - 2}`}
+                        size="small"
+                        sx={{ height: 22, fontSize: '0.66rem', color: 'text.secondary' }}
+                      />
+                    ) : null}
+                  </Box>
+                ) : null}
+              </Box>
+
+              <Tooltip title={t('common:delete')}>
                 <IconButton
                   className="delete-btn"
                   size="small"
+                  aria-label={t('common:delete')}
                   onClick={(e) => handleDelete(ch, e)}
                   sx={{
                     position: 'absolute',
                     top: 8,
                     right: 8,
-                    opacity: 0,
+                    opacity: { xs: 1, md: 0 },
                     transition: 'opacity 0.2s',
                     color: theme.palette.error.main,
                     '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) },
@@ -237,104 +361,11 @@ export const CharactersPage: React.FC = () => {
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>
-
-                {ch.imagePath ? (
-                  <AssetAvatar
-                    assetPath={ch.imagePath}
-                    sx={{ width: 52, height: 52, borderRadius: 1.5 }}
-                    variant="rounded"
-                  />
-                ) : (
-                  <Avatar
-                    sx={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 1.5,
-                      bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      color: theme.palette.primary.main,
-                    }}
-                    variant="rounded"
-                  >
-                    <PersonIcon />
-                  </Avatar>
-                )}
-
-                <Box sx={{ minWidth: 0, flexGrow: 1, pr: 3 }}>
-                  <Typography sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.3 }} noWrap>
-                    {ch.name}
-                  </Typography>
-
-                  {ch.title && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: theme.palette.primary.main,
-                        display: 'block',
-                        lineHeight: 1.3,
-                        fontStyle: 'italic',
-                      }}
-                      noWrap
-                    >
-                      {ch.title}
-                    </Typography>
-                  )}
-
-                  {ch.bio && (
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: 'text.secondary',
-                        fontSize: '0.8rem',
-                        mt: 0.5,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}
-                    >
-                      {ch.bio}
-                    </Typography>
-                  )}
-
-                  {ch.tags?.length > 0 && (
-                    <Box display="flex" gap={0.5} mt={1} flexWrap="wrap">
-                      {ch.tags.slice(0, 3).map((tag: any) => (
-                        <Chip
-                          key={tag.id}
-                          label={tag.name}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.65rem',
-                            fontWeight: 600,
-                            backgroundColor: tag.color ? alpha(tag.color, 0.2) : alpha(theme.palette.primary.main, 0.15),
-                            color: tag.color || theme.palette.primary.main,
-                            borderRadius: 1,
-                          }}
-                        />
-                      ))}
-                      {ch.tags.length > 3 && (
-                        <Chip
-                          label={`+${ch.tags.length - 3}`}
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '0.65rem',
-                            backgroundColor: alpha(theme.palette.text.secondary, 0.1),
-                            color: 'text.secondary',
-                            borderRadius: 1,
-                          }}
-                        />
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              </GlassCard>
-            </Box>
+              </Tooltip>
+            </CampaignerSurface>
           ))}
         </Box>
       )}
-    </Box>
+    </CampaignerPage>
   );
 };

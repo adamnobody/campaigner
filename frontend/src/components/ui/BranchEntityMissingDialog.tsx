@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, alpha, useTheme } from '@mui/material';
+import AltRouteOutlinedIcon from '@mui/icons-material/AltRouteOutlined';
 import { useTranslation } from 'react-i18next';
 
 type BranchEntityMissingDialogProps = {
@@ -14,10 +15,27 @@ export const BranchEntityMissingDialog: React.FC<BranchEntityMissingDialogProps>
   onClose,
 }) => {
   const { t } = useTranslation('common');
+  const theme = useTheme();
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t('branchMissing.title')}</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: '10px',
+            display: 'grid',
+            placeItems: 'center',
+            color: 'warning.main',
+            backgroundColor: alpha(theme.palette.warning.main, 0.1),
+            border: `1px solid ${alpha(theme.palette.warning.main, 0.22)}`,
+          }}
+        >
+          <AltRouteOutlinedIcon fontSize="small" />
+        </Box>
+        {t('branchMissing.title')}
+      </DialogTitle>
       <DialogContent>
         <DialogContentText>
           {t('branchMissing.message', { entity: entityName })}

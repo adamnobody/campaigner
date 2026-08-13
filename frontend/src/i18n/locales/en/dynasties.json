@@ -1,6 +1,7 @@
 {
   "list": {
     "title": "Dynasties",
+    "eyebrow": "Houses · {{count}}",
     "subtitle": "Bloodlines and ruling houses of your world",
     "create": "Create dynasty",
     "searchPlaceholder": "Search dynasties...",
@@ -42,6 +43,8 @@
     "newTitle": "New dynasty",
     "fallbackName": "Dynasty",
     "uploadCoatTooltip": "Upload coat of arms",
+    "draft": "Draft",
+    "createHint": "Only the name is required. Founder, head, heir, and family links can be added later.",
     "tabs": {
       "overview": "Overview",
       "family": "Family & tree",

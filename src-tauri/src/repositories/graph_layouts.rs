@@ -224,6 +224,7 @@ mod tests {
                   description TEXT DEFAULT '',
                   status TEXT DEFAULT 'active',
                   map_image_path TEXT DEFAULT '',
+                  cover_image_path TEXT,
                   created_at TEXT DEFAULT (datetime('now')),
                   updated_at TEXT DEFAULT (datetime('now'))
                 );

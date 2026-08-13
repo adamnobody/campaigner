@@ -2009,6 +2009,7 @@ mod tests {
                 description: None,
                 status: None,
                 main_branch_name: None,
+                cover_image_path: None,
             },
         )
         .expect("project");
@@ -2217,6 +2218,7 @@ mod tests {
                 description: None,
                 status: None,
                 main_branch_name: None,
+                cover_image_path: None,
             },
         )
         .expect("project");
@@ -2491,6 +2493,7 @@ mod tests {
                 description: None,
                 status: None,
                 main_branch_name: None,
+                cover_image_path: None,
             },
         )
         .expect("project");

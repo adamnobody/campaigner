@@ -101,8 +101,8 @@ export const MapShapePanel: React.FC<Props> = ({
   };
 
   return (
-    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.paper, 0.95), backdropFilter: 'blur(20px)' }}>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
+    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.default, 0.94), backdropFilter: 'blur(20px)', borderColor: theme.campaigner.surface.border }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
         <Box sx={{
           width: 40,
           height: 40,
@@ -118,7 +118,7 @@ export const MapShapePanel: React.FC<Props> = ({
           {VARIANT_ICONS[form.variant]}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography variant="h6" sx={{ fontSize: '1.05rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {t('map:shapePanel.title')}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -329,7 +329,7 @@ export const MapShapePanel: React.FC<Props> = ({
         </Stack>
       </Box>
 
-      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.campaigner.surface.border}`, backgroundColor: theme.campaigner.surface.subtle }}>
         <Button
           color="error"
           variant="outlined"

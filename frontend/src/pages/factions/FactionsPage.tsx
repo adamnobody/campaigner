@@ -11,7 +11,6 @@ import {
   FormControl,
   InputAdornment,
   Tooltip,
-  Avatar,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -188,25 +187,68 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   }
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+    <Box sx={{ maxWidth: 1240, mx: 'auto' }}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        gap={2}
+        mb={4}
+        sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.55)}`, pb: 3 }}
+      >
         <Box>
           <Typography
-            sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}
+            sx={{
+              mb: 1,
+              fontFamily: '"IBM Plex Mono", monospace',
+              fontSize: '0.68rem',
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'primary.main',
+            }}
+          >
+            {t(`factions:entityKinds.${entityType}`)} · {totalUnfiltered}
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: '"Cormorant Garamond", serif',
+              fontWeight: 600,
+              fontSize: { xs: '2.3rem', md: '3rem' },
+              lineHeight: 0.95,
+              color: 'text.primary',
+            }}
           >
             {listTitle}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.25, maxWidth: 620, lineHeight: 1.7 }}>
             {isStatePage ? t('factions:list.subtitleStates') : t('factions:list.subtitleFactions')}
           </Typography>
         </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(routes.factionDetail(pid, entityType, 'new'))}>
+        <DndButton
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate(routes.factionDetail(pid, entityType, 'new'))}
+          sx={{ minHeight: 42, px: 2.5, borderRadius: 2 }}
+        >
           {createLabel}
         </DndButton>
       </Box>
 
       {(totalUnfiltered > 0 || hasFilters) && (
-        <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box
+          sx={{
+            p: 1.25,
+            mb: 3,
+            display: 'flex',
+            gap: 1.25,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
+            borderRadius: 2.5,
+            bgcolor: alpha(theme.palette.background.paper, 0.28),
+          }}
+        >
           <TextField
             placeholder={isStatePage ? t('factions:list.searchStates') : t('factions:list.searchFactions')}
             value={search}
@@ -247,7 +289,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
             {t('factions:list.count', { shown: factions.length, total })}
           </Typography>
-        </GlassCard>
+        </Box>
       )}
 
       {factions.length === 0 && !loading ? (
@@ -278,10 +320,9 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
               gridTemplateColumns: {
                 xs: '1fr',
                 sm: 'repeat(2, 1fr)',
-                lg: 'repeat(3, 1fr)',
+                xl: 'repeat(3, 1fr)',
               },
-              gap: 2,
-              pl: 1,
+              gap: 2.25,
             }}
           >
             {factions.map((entity) => {
@@ -295,32 +336,44 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                   onClick={() => navigate(routes.factionDetail(pid, entity.kind, entity.id))}
                   sx={{
                     p: 0,
+                    minHeight: 220,
+                    overflow: 'hidden',
+                    borderRadius: 3,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                    background: `linear-gradient(145deg, ${alpha(entityColor, 0.08)}, ${alpha(
+                      theme.palette.background.paper,
+                      0.4
+                    )} 48%)`,
                     '&:hover': {
                       '& .entity-actions': { opacity: 1 },
+                      '& .entity-avatar': { transform: 'translateY(-2px) scale(1.03)' },
                     },
                   }}
                 >
                   <Box
                     sx={{
-                      height: 4,
+                      height: 5,
                       background: entity.color
                         ? `linear-gradient(90deg, ${entity.color}, ${entity.secondaryColor || entity.color})`
                         : `linear-gradient(90deg, ${statusColor}, transparent)`,
                     }}
                   />
 
-                  <Box sx={{ p: 2.5 }}>
+                  <Box sx={{ p: 2.75 }}>
                     <Box display="flex" gap={2} alignItems="flex-start">
                       <AssetAvatar
+                        className="entity-avatar"
                         assetPath={entity.imagePath}
                         sx={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: 2,
+                          width: 64,
+                          height: 64,
+                          borderRadius: 2.5,
                           bgcolor: alpha(entityColor, 0.1),
                           color: entityColor,
-                          fontSize: '1.8rem',
+                          border: `1px solid ${alpha(entityColor, 0.35)}`,
+                          fontSize: '2rem',
                           flexShrink: 0,
+                          transition: 'transform 180ms ease',
                         }}
                         variant="rounded"
                       >
@@ -332,9 +385,11 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                       <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                         <Typography
                           sx={{
-                            fontWeight: 700,
+                            fontFamily: '"Cormorant Garamond", serif',
+                            fontWeight: 600,
                             color: 'text.primary',
-                            fontSize: '1.05rem',
+                            fontSize: '1.45rem',
+                            lineHeight: 1.1,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -348,8 +403,8 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                             variant="body2"
                             sx={{
                               color: 'text.secondary',
-                              fontSize: '0.8rem',
-                              mt: 0.25,
+                              fontSize: '0.77rem',
+                              mt: 0.5,
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -359,13 +414,13 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                           </Typography>
                         )}
 
-                        <Box display="flex" gap={0.5} mt={1} flexWrap="wrap" alignItems="center">
+                        <Box display="flex" gap={0.75} mt={1.25} flexWrap="wrap" alignItems="center">
                           <Chip
                             label={`${FACTION_STATUS_ICONS[entity.status] || ''} ${t(`factions:factionStatuses.${entity.status}`)}`.trim()}
                             size="small"
                             sx={{
-                              height: 20,
-                              fontSize: '0.65rem',
+                              height: 22,
+                              fontSize: '0.68rem',
                               fontWeight: 600,
                               backgroundColor: alpha(statusColor, 0.15),
                               color: statusColor,
@@ -438,8 +493,11 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                         variant="body2"
                         sx={{
                           color: 'text.secondary',
-                          fontSize: '0.8rem',
-                          mt: 1.5,
+                          fontSize: '0.82rem',
+                          lineHeight: 1.65,
+                          mt: 2,
+                          pt: 1.5,
+                          borderTop: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           display: '-webkit-box',

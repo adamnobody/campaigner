@@ -12,19 +12,21 @@ import PersonIcon from '@mui/icons-material/Person';
 import type { DynastyMember, DynastyFamilyLink } from '@campaigner/shared';
 import { useNavigate, useParams } from 'react-router-dom';
 import { routes } from '@/utils/routes';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
 import 'reactflow/dist/style.css';
 
 const MemberNode: React.FC<{ data: any }> = ({ data }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
+  const resolvedImagePath = useAssetUrl(data.imagePath);
 
   return (
     <Box
       onClick={(e) => { e.stopPropagation(); navigate(routes.characterDetail(projectId!, data.characterId)); }}
       sx={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        p: 1.5, minWidth: 120,
+        p: 1.5, minWidth: 140,
         backgroundColor: data.isMainLine
           ? alpha(theme.palette.primary.main, 0.12)
           : alpha(theme.palette.common.white, 0.06),
@@ -33,7 +35,7 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
             ? alpha(theme.palette.grey[500], 0.3)
             : alpha(theme.palette.primary.main, 0.3)
         }`,
-        borderRadius: '12px', cursor: 'pointer',
+        borderRadius: '14px', cursor: 'pointer',
         transition: 'all 0.15s',
         '&:hover': {
           backgroundColor: alpha(theme.palette.primary.main, 0.2),
@@ -48,9 +50,9 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
       <Handle type="target" position={Position.Left} id="left" style={{ background: 'transparent', border: 'none', width: 1, height: 1 }} />
 
       <Avatar
-        src={data.imagePath || undefined}
+        src={resolvedImagePath || undefined}
         sx={{
-          width: 44, height: 44, mb: 0.75,
+          width: 48, height: 48, mb: 0.9,
           bgcolor: alpha(theme.palette.primary.main, 0.15),
           border: `2px solid ${
             data.isDead
@@ -64,15 +66,16 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
       </Avatar>
 
       <Typography sx={{
-        fontWeight: 700, fontSize: '0.75rem', color: 'text.primary',
-        textAlign: 'center', maxWidth: 100,
+        fontFamily: '"Cormorant Garamond", serif',
+        fontWeight: 600, fontSize: '0.98rem', color: 'text.primary',
+        textAlign: 'center', maxWidth: 124,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
         {data.name}
       </Typography>
 
       {data.role && (
-        <Typography sx={{ fontSize: '0.55rem', color: alpha(theme.palette.primary.main, 0.7), textAlign: 'center', mt: 0.25 }}>
+        <Typography sx={{ fontSize: '0.67rem', color: alpha(theme.palette.primary.main, 0.8), textAlign: 'center', mt: 0.25 }}>
           {data.role}
         </Typography>
       )}
@@ -99,9 +102,9 @@ interface EdgePalette {
   edgeLabelBg: string;
 }
 
-const NODE_WIDTH = 140;
-const NODE_HEIGHT = 100;
-const SPOUSE_OFFSET_X = 180;
+const NODE_WIDTH = 160;
+const NODE_HEIGHT = 112;
+const SPOUSE_OFFSET_X = 200;
 
 function buildNodeData(m: DynastyMember) {
   return {
@@ -327,8 +330,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       height: treeHeight,
       borderRadius: 2,
       overflow: 'hidden',
-      backgroundColor: alpha(theme.palette.common.black, 0.25),
-      border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+      background: `radial-gradient(circle at 50% 15%, ${alpha(dynastyColor || theme.palette.primary.main, 0.08)}, transparent 46%), ${alpha(theme.palette.common.black, 0.22)}`,
+      border: `1px solid ${alpha(dynastyColor || theme.palette.primary.main, 0.24)}`,
       position: 'relative',
       '& .react-flow__renderer': { backgroundColor: 'transparent' },
       '& .react-flow__edge-path': { strokeLinecap: 'round' },

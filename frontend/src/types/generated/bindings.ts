@@ -112,6 +112,7 @@ export const commands = {
 	factionsUploadBanner: (input: FactionUploadBannerInput) => __TAURI_INVOKE<Faction>("factions_upload_banner", { input }),
 	dynastiesUploadImage: (input: DynastyUploadImageInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_upload_image", { input }),
 	projectsUploadMapImage: (input: ProjectUploadMapImageInput) => __TAURI_INVOKE<Project>("projects_upload_map_image", { input }),
+	projectsUploadCover: (input: ProjectUploadCoverInput) => __TAURI_INVOKE<Project>("projects_upload_cover", { input }),
 	charactersList: (input: CharactersListInput) => __TAURI_INVOKE<CharactersListResult>("characters_list", { input }),
 	charactersGet: (input: GetCharacterInput) => __TAURI_INVOKE<Character>("characters_get", { input }),
 	charactersCreate: (input: CreateCharacterInput) => __TAURI_INVOKE<Character>("characters_create", { input }),
@@ -689,6 +690,7 @@ export type CreateProjectInput = {
 	description: string | null,
 	status: string | null,
 	mainBranchName: string | null,
+	coverImagePath: string | null,
 };
 
 export type CreateRelationshipInput = {
@@ -1438,6 +1440,7 @@ export type ExportProjectMeta_Deserialize = {
 	description: string | null,
 	status: string | null,
 	mapImageBase64: string | null,
+	coverImageBase64?: string | null,
 };
 
 export type ExportProjectMeta_Serialize = {
@@ -1445,6 +1448,7 @@ export type ExportProjectMeta_Serialize = {
 	description?: string | null,
 	status?: string | null,
 	mapImageBase64?: string | null,
+	coverImageBase64?: string | null,
 };
 
 export type ExportRelationshipRow = ExportRelationshipRow_Serialize | ExportRelationshipRow_Deserialize;
@@ -2088,8 +2092,16 @@ export type Project = {
 	description: string,
 	status: string,
 	mapImagePath: string | null,
+	coverImagePath: string | null,
 	createdAt: string,
 	updatedAt: string,
+};
+
+export type ProjectUploadCoverInput = {
+	projectId: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
 };
 
 export type ProjectUploadMapImageInput = {
@@ -2547,6 +2559,7 @@ export type UpdateProjectInput = {
 	description: string | null,
 	status: string | null,
 	mapImagePath: string | null,
+	coverImagePath: string | null,
 };
 
 export type UpdateRelationshipInput = {

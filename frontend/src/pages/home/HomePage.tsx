@@ -9,6 +9,7 @@ import {
   Fade,
   Divider,
   Stack,
+  Tooltip,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
@@ -16,6 +17,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import PaletteIcon from '@mui/icons-material/Palette';
 import SchoolIcon from '@mui/icons-material/School';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import BoltIcon from '@mui/icons-material/Bolt';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '@/store/useProjectStore';
@@ -27,28 +31,148 @@ import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
 import { shallow } from 'zustand/shallow';
 import { HomeBackground } from '@/pages/home/components/HomeBackground';
-import { CreateProjectDialog } from '@/pages/home/components/CreateProjectDialog';
+import {
+  CreateProjectDialog,
+  type CreateProjectWizardValue,
+} from '@/pages/home/components/CreateProjectDialog';
 import { EmptyStateIllustration } from '@/pages/home/components/HomePrimitives';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { isSupportedLanguage } from '@/i18n/language';
+import { useAssetUrl } from '@/hooks/useAssetUrl';
+import type { Project } from '@campaigner/shared';
+import { getProjectCarouselIndices } from './homeCarousel';
+import {
+  HomeContourCanvas,
+  type HomeContourPulse,
+} from './components/HomeContourCanvas';
 
-const HOME_PANEL_POSITION_STORAGE_KEY = 'campaigner.homePanelPosition.v1';
-const DEFAULT_PANEL_OFFSET = { x: 0, y: 0 };
+function ProjectArchCard({
+  project,
+  featured,
+  archIndex,
+  onOpen,
+  onDelete,
+}: {
+  project: Project;
+  featured?: boolean;
+  archIndex: number;
+  onOpen: () => void;
+  onDelete: (event: React.MouseEvent) => void;
+}) {
+  const { t } = useTranslation('projects');
+  const coverUrl = useAssetUrl(project.coverImagePath);
+  const updated = new Date(project.updatedAt);
+  const validUpdated = Number.isNaN(updated.getTime()) ? '' : updated.toLocaleDateString();
 
-const readStoredPanelOffset = () => {
-  if (typeof window === 'undefined') return DEFAULT_PANEL_OFFSET;
-  try {
-    const raw = window.localStorage.getItem(HOME_PANEL_POSITION_STORAGE_KEY);
-    if (!raw) return DEFAULT_PANEL_OFFSET;
-    const parsed = JSON.parse(raw) as { x?: unknown; y?: unknown };
-    if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return DEFAULT_PANEL_OFFSET;
-    if (!Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) return DEFAULT_PANEL_OFFSET;
-    return { x: parsed.x, y: parsed.y };
-  } catch {
-    return DEFAULT_PANEL_OFFSET;
-  }
-};
+  return (
+    <Box
+      component="button"
+      data-home-arch={archIndex}
+      type="button"
+      onClick={onOpen}
+      sx={{
+        width: 'auto',
+        height: featured
+          ? { xs: 'min(58vh, 500px)', md: 'clamp(300px, 62vh, 760px)' }
+          : 'clamp(224px, 46vh, 566px)',
+        aspectRatio: '.615',
+        flex: '0 0 auto',
+        p: 0,
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: featured ? '999px 999px 12px 12px' : '999px 999px 12px 12px',
+        border: (theme) => `1px solid ${alpha(theme.palette.primary.main, featured ? 0.52 : 0.3)}`,
+        background: coverUrl
+          ? `linear-gradient(180deg,rgba(9,11,15,.06),rgba(9,11,15,.28) 42%,rgba(9,11,15,.9)), url("${coverUrl}") center/cover`
+          : `linear-gradient(180deg,rgba(9,11,15,.05),rgba(9,11,15,.86)),
+             repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 2px,transparent 2px 10px),
+             linear-gradient(160deg,rgba(201,169,97,.2),rgba(9,11,15,.95))`,
+        color: 'inherit',
+        cursor: 'pointer',
+        boxShadow: featured
+          ? '0 34px 90px rgba(0,0,0,.62)'
+          : '0 20px 50px rgba(0,0,0,.42)',
+        filter: (theme) => `drop-shadow(0 0 ${featured ? 16 : 11}px ${alpha(theme.palette.primary.main, featured ? 0.2 : 0.13)})`,
+        transition: 'transform 180ms ease, border-color 180ms ease, filter 220ms ease',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          borderRadius: 'inherit',
+          boxShadow: (theme) => `inset 0 0 ${featured ? 22 : 16}px ${alpha(theme.palette.primary.main, featured ? 0.12 : 0.08)}`,
+          pointerEvents: 'none',
+        },
+        '&:hover': {
+          transform: 'translateY(-3px)',
+          borderColor: (theme) => alpha(theme.palette.primary.main, 0.72),
+          filter: (theme) => `drop-shadow(0 0 ${featured ? 22 : 16}px ${alpha(theme.palette.primary.main, featured ? 0.28 : 0.2)})`,
+        },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 4 },
+      }}
+    >
+      {!coverUrl ? (
+        <Typography
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            top: featured ? '29%' : '27%',
+            insetInline: 0,
+            fontFamily: (theme) => theme.campaigner.typography.display,
+            fontSize: featured ? 'clamp(72px, 6vw, 112px)' : 'clamp(48px, 4vw, 72px)',
+            fontWeight: 600,
+            color: featured ? 'rgba(246,242,233,.2)' : 'rgba(201,169,97,.48)',
+          }}
+        >
+          {project.name.charAt(0).toUpperCase()}
+        </Typography>
+      ) : null}
+      <IconButton
+        onClick={(event) => { event.stopPropagation(); onDelete(event); }}
+        aria-label={t('deleteConfirm.title')}
+        sx={{
+          position: 'absolute',
+          top: '15%',
+          right: '10%',
+          width: featured ? 40 : 36,
+          height: featured ? 40 : 36,
+          borderRadius: '50%',
+          color: 'rgba(232,228,220,.58)',
+          bgcolor: 'rgba(14,17,22,.72)',
+          border: '1px solid rgba(255,255,255,.1)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 2,
+          '&:hover': {
+            color: 'error.main',
+            bgcolor: 'rgba(14,17,22,.9)',
+            borderColor: 'rgba(255,122,122,.35)',
+          },
+        }}
+      >
+        <DeleteIcon sx={{ fontSize: featured ? 19 : 17 }} />
+      </IconButton>
+      <Box sx={{ position: 'absolute', inset: 'auto 0 0', px: featured ? { xs: 2.5, xl: 4 } : { xs: 2, xl: 3 }, pb: featured ? { xs: 2.5, xl: 4 } : { xs: 2, xl: 3 }, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: featured ? { xs: 1, xl: 1.5 } : { xs: 0.75, xl: 1.1 } }}>
+        <Chip
+          icon={project.status === 'active' ? <BoltIcon /> : undefined}
+          label={project.status === 'active' ? t('home.projectCard.statusActive') : project.status}
+          size="small"
+          sx={{
+            color: project.status === 'active' ? '#8fbf9f' : 'text.secondary',
+            borderColor: project.status === 'active' ? 'rgba(143,191,159,.32)' : 'rgba(255,255,255,.1)',
+            backgroundColor: project.status === 'active' ? 'rgba(143,191,159,.12)' : 'rgba(255,255,255,.04)',
+          }}
+        />
+        <Typography sx={{ fontFamily: (theme) => theme.campaigner.typography.display, fontWeight: 600, fontSize: featured ? { xs: 25, xl: 29 } : { xs: 19, xl: 22 }, lineHeight: 1.24, color: '#f4f0e7', textAlign: 'center' }}>
+          {project.name}
+        </Typography>
+        <Typography sx={{ fontFamily: (theme) => theme.campaigner.typography.mono, fontSize: 'clamp(10px, .7vw, 12px)', color: 'rgba(232,228,220,.38)' }}>
+          {validUpdated}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
 
 export const HomePage: React.FC = () => {
   const theme = useTheme();
@@ -65,27 +189,21 @@ export const HomePage: React.FC = () => {
     showSnackbar: state.showSnackbar,
     showConfirmDialog: state.showConfirmDialog,
   }), shallow);
-  const { homeBackgroundImage, homeBackgroundOpacity } = usePreferencesStore((state) => ({
+  const { homeBackgroundImage, homeBackgroundOpacity, motionMode } = usePreferencesStore((state) => ({
     homeBackgroundImage: state.homeBackgroundImage,
     homeBackgroundOpacity: state.homeBackgroundOpacity,
+    motionMode: state.motionMode,
   }), shallow);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [activeProjectIndex, setActiveProjectIndex] = useState(0);
+  const [contourPulse, setContourPulse] = useState<HomeContourPulse>({ id: 0, direction: 1 });
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isContainerHovered, setIsContainerHovered] = useState(true);
   const [isHoverCapable, setIsHoverCapable] = useState(false);
-  const [panelOffset, setPanelOffset] = useState(readStoredPanelOffset);
   const startOnboarding = useOnboardingStore((state) => state.startForProject);
   const parallaxLayerRef = useRef<HTMLDivElement | null>(null);
   const parallaxTargetRef = useRef({ x: 0, y: 0 });
   const parallaxRafRef = useRef<number | null>(null);
-  const dragStateRef = useRef({
-    active: false,
-    startX: 0,
-    startY: 0,
-    originX: 0,
-    originY: 0,
-  });
 
   useEffect(() => {
     fetchProjects();
@@ -94,11 +212,13 @@ export const HomePage: React.FC = () => {
   }, [fetchProjects]);
 
   useEffect(() => {
+    setActiveProjectIndex((index) => projects.length === 0 ? 0 : Math.min(index, projects.length - 1));
+  }, [projects.length]);
+
+  useEffect(() => {
     const media = window.matchMedia('(hover: hover) and (pointer: fine)');
     const apply = () => {
-      const capable = media.matches;
-      setIsHoverCapable(capable);
-      setIsContainerHovered(true);
+      setIsHoverCapable(media.matches);
     };
     apply();
     media.addEventListener('change', apply);
@@ -141,52 +261,20 @@ export const HomePage: React.FC = () => {
     };
   }, []);
 
-  const handlePanelDragMove = useCallback((event: PointerEvent) => {
-    if (!dragStateRef.current.active) return;
-    const deltaX = event.clientX - dragStateRef.current.startX;
-    const deltaY = event.clientY - dragStateRef.current.startY;
-    setPanelOffset({
-      x: dragStateRef.current.originX + deltaX,
-      y: dragStateRef.current.originY + deltaY,
-    });
-  }, []);
-
-  const stopPanelDrag = useCallback(() => {
-    dragStateRef.current.active = false;
-    window.removeEventListener('pointermove', handlePanelDragMove);
-    window.removeEventListener('pointerup', stopPanelDrag);
-  }, [handlePanelDragMove]);
-
-  const handlePanelDragStart = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    dragStateRef.current = {
-      active: true,
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: panelOffset.x,
-      originY: panelOffset.y,
-    };
-    window.addEventListener('pointermove', handlePanelDragMove);
-    window.addEventListener('pointerup', stopPanelDrag);
-  }, [handlePanelDragMove, panelOffset.x, panelOffset.y, stopPanelDrag]);
-
-  useEffect(() => {
-    return () => {
-      stopPanelDrag();
-    };
-  }, [stopPanelDrag]);
-
-  useEffect(() => {
-    window.localStorage.setItem(HOME_PANEL_POSITION_STORAGE_KEY, JSON.stringify(panelOffset));
-  }, [panelOffset]);
-
-  const handleCreateSubmit = async (name: string, description: string) => {
+  const handleCreateSubmit = async ({ name, description, coverFile }: CreateProjectWizardValue) => {
     const project = await createProject({
       name,
       description,
       mainBranchName: t('projects:defaultMainBranchName'),
     });
+    if (coverFile) {
+      try {
+        await projectsApi.uploadCover(project.id, coverFile);
+        await fetchProjects();
+      } catch {
+        showSnackbar(t('projects:snackbar.coverUploadFailed'), 'warning');
+      }
+    }
     setCreateDialogOpen(false);
     showSnackbar(t('projects:snackbar.created'), 'success');
     navigate(`/project/${project.id}`);
@@ -263,446 +351,121 @@ export const HomePage: React.FC = () => {
     return <LoadingScreen message={t('projects:home.loadingCampaigns')} />;
   }
 
+  const carousel = getProjectCarouselIndices(projects.length, activeProjectIndex);
+  const centerProject = carousel.center === null ? undefined : projects[carousel.center];
+  const leftProject = carousel.left === null ? undefined : projects[carousel.left];
+  const rightProject = carousel.right === null ? undefined : projects[carousel.right];
+  const moveProject = (delta: number) => {
+    if (projects.length < 2) return;
+    setContourPulse((current) => ({
+      id: current.id + 1,
+      direction: delta < 0 ? -1 : 1,
+    }));
+    setActiveProjectIndex((index) => (index + delta + projects.length) % projects.length);
+  };
+
   return (
     <Box
       onMouseMove={handleRootMouseMove}
       onMouseLeave={handleRootMouseLeave}
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        overflow: 'hidden',
-        background: theme.palette.background.default,
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowLeft') moveProject(-1);
+        if (event.key === 'ArrowRight') moveProject(1);
       }}
+      tabIndex={-1}
+      sx={{ minHeight: '100dvh', position: 'relative', overflow: 'hidden', backgroundColor: '#090b0f', display: 'flex', flexDirection: 'column' }}
     >
-      {/* Atmospheric Background */}
-      <HomeBackground
-        homeBackgroundImage={homeBackgroundImage}
-        homeBackgroundOpacity={homeBackgroundOpacity}
-        parallaxLayerRef={parallaxLayerRef}
+      {homeBackgroundImage ? (
+        <HomeBackground homeBackgroundImage={homeBackgroundImage} homeBackgroundOpacity={homeBackgroundOpacity} parallaxLayerRef={parallaxLayerRef} />
+      ) : null}
+      <HomeContourCanvas
+        accentColor={theme.palette.primary.main}
+        animate={motionMode === 'full'}
+        pulse={contourPulse}
+        transparentBase={Boolean(homeBackgroundImage)}
+        visible={!createDialogOpen}
       />
 
-      {/* Main Content */}
-      <Box
-        sx={{
-          position: 'relative',
-          zIndex: 1,
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Header Block (Top-Left) */}
-        <Box
-          sx={{
-            px: { xs: 3, md: 6 },
-            pt: { xs: 4, md: 6 },
-            pb: { xs: 2, md: 3 },
-            opacity: isLoaded ? 1 : 0,
-            transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
-            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: { xs: 'stretch', sm: 'flex-start' },
-            justifyContent: 'space-between',
-            gap: 2,
-          }}
-        >
-          <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
-            <Typography variant="h3" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
-              Campaigner
-            </Typography>
-            <Box
-              sx={{
-                mt: 1.5,
-                mb: 2,
-                width: 200,
-                height: 3,
-                borderRadius: 2,
-                background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.main, 0.25)} 100%)`,
-                backgroundSize: '220% 100%',
-                animation: 'campaignerLineShimmer 4.8s ease-in-out infinite',
-                '@keyframes campaignerLineShimmer': {
-                  '0%': { backgroundPosition: '0% 50%' },
-                  '50%': { backgroundPosition: '100% 50%' },
-                  '100%': { backgroundPosition: '0% 50%' },
-                },
-              }}
-            />
-            <Typography sx={{ color: 'text.secondary', maxWidth: 560, lineHeight: 1.6 }}>
-              {t('projects:home.subtitle')}
-            </Typography>
-          </Box>
-          <LanguageSwitcher sx={{ flexShrink: 0, alignSelf: { xs: 'flex-end', sm: 'flex-start' }, mt: { sm: 0.25 } }} />
+      <Box sx={{ position: 'relative', zIndex: 1, px: { xs: 2.5, md: 4.25 }, pt: { xs: 2.5, md: 4.25 }, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'start', gap: 2 }}>
+        <Box />
+        <Box sx={{ textAlign: 'center', opacity: isLoaded ? 1 : 0, transform: isLoaded ? 'none' : 'translateY(-10px)', transition: 'opacity 500ms ease, transform 500ms ease' }}>
+          <Typography sx={{ fontFamily: (currentTheme) => currentTheme.campaigner.typography.display, fontSize: 25, fontWeight: 600, letterSpacing: '.3em', color: '#f0ece3' }}>CAMPAIGNER</Typography>
+          <Typography sx={{ pt: 0.7, fontFamily: (currentTheme) => currentTheme.campaigner.typography.display, fontStyle: 'italic', fontWeight: 500, fontSize: 14, color: 'rgba(232,228,220,.45)' }}>
+            {t('projects:home.libraryCount', { count: projects.length })}
+          </Typography>
         </Box>
-
-        {/* Central Unified Container */}
-        <Box
-          sx={{
-            flexGrow: 1,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: { xs: 'flex-start', md: 'center' },
-            px: { xs: 3, md: 4 },
-            pb: { xs: 4, md: 6 },
-          }}
-        >
-          <Container maxWidth={false} sx={{ maxWidth: 900, px: 0 }}>
-            <Box
-              onMouseEnter={() => {
-                if (isHoverCapable) setIsContainerHovered(true);
-              }}
-              onMouseLeave={() => {
-                if (isHoverCapable) setIsContainerHovered(false);
-              }}
-              sx={{
-                transform: `translate3d(${panelOffset.x}px, ${panelOffset.y}px, 0)`,
-                willChange: 'transform',
-              }}
-            >
-              <GlassCard
-                sx={{
-                  p: { xs: 2.5, md: 3 },
-                  opacity: isLoaded ? 1 : 0,
-                  transform: isLoaded ? 'translateY(0)' : 'translateY(20px)',
-                  transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${0.2}s`,
-                  ...(isHoverCapable && {
-                    opacity: isContainerHovered ? 1 : 0.35,
-                    backdropFilter: isContainerHovered ? 'blur(10px)' : 'blur(6px)',
-                    transition: `all 0.8s cubic-bezier(0.4, 0, 0.2, 1) ${0.2}s, opacity 300ms ease, backdrop-filter 300ms ease`,
-                  }),
-                }}
-              >
-              <Box
-                onPointerDown={handlePanelDragStart}
-                sx={{
-                  mb: 2,
-                  mx: { xs: -1, md: -1.5 },
-                  mt: { xs: -1, md: -1.5 },
-                  px: 1.5,
-                  py: 1,
-                  borderRadius: 1.5,
-                  cursor: 'grab',
-                  touchAction: 'none',
-                  userSelect: 'none',
-                  '&:active': {
-                    cursor: 'grabbing',
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 72,
-                    height: 4,
-                    mx: 'auto',
-                    borderRadius: 999,
-                    backgroundColor: alpha(theme.palette.text.primary, 0.26),
-                  }}
-                />
-              </Box>
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
-                <DndButton
-                  variant="outlined"
-                  startIcon={<PaletteIcon />}
-                  onClick={() => navigate('/appearance')}
-                  sx={{ fontWeight: 600 }}
-                >
-                  {t('projects:home.actions.appearance')}
-                </DndButton>
-
-                <DndButton
-                  variant="outlined"
-                  startIcon={<FileUploadIcon />}
-                  onClick={handleImportClick}
-                  sx={{ fontWeight: 600 }}
-                >
-                  {t('projects:home.actions.import')}
-                </DndButton>
-
-                <DndButton
-                  variant="outlined"
-                  startIcon={<SchoolIcon />}
-                  onClick={handleCreateTutorialProject}
-                  sx={{ fontWeight: 600 }}
-                >
-                  {t('projects:home.actions.tutorial')}
-                </DndButton>
-
-                <DndButton
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setCreateDialogOpen(true)}
-                  sx={{
-                    ml: 'auto',
-                    fontWeight: 700,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                    boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.4)}`,
-                  }}
-                >
-                  {t('projects:home.actions.create')}
-                </DndButton>
-              </Stack>
-
-              <Divider sx={{ mb: 2 }} />
-
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-                {t('projects:home.projectsHeading', { count: projects.length })}
-              </Typography>
-
-              {projects.length > 0 ? (
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr',
-                    gap: 2,
-                    maxHeight: {
-                      xs: 'min(62vh, 520px)',
-                      md: 'min(60vh, 560px)',
-                    },
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    pr: 0.5,
-                  }}
-                >
-                  {projects.map((project, index) => (
-                    <GlassCard
-                      key={project.id}
-                      interactive={true}
-                      onClick={() => navigate(`/project/${project.id}`)}
-                      sx={{
-                        opacity: isLoaded ? 1 : 0,
-                        transform: isLoaded ? 'translateY(0)' : 'translateY(30px)',
-                        transition: `all 0.6s cubic-bezier(0.4, 0, 0.2, 1) ${0.35 + index * 0.08}s`,
-                        p: 4,
-                        boxShadow: `0 14px 32px ${alpha(theme.palette.common.black, 0.2)}`,
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0 }}>
-                        <Box sx={{ minWidth: 0, flexGrow: 1, pr: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                            <Avatar
-                              sx={{
-                                width: 42,
-                                height: 42,
-                                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                                fontFamily: theme.typography.h6.fontFamily,
-                                fontWeight: 800,
-                                fontSize: '1.1rem',
-                                boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-                              }}
-                            >
-                              {project.name.charAt(0).toUpperCase()}
-                            </Avatar>
-
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography
-                                sx={{
-                                  fontFamily: theme.typography.h6.fontFamily,
-                                  fontWeight: 700,
-                                  fontSize: '1.2rem',
-                                  color: 'text.primary',
-                                  letterSpacing: '0.02em',
-                                  transition: 'color 0.3s ease',
-                                  '.MuiPaper-root:hover &': {
-                                    color: theme.palette.primary.main,
-                                  },
-                                }}
-                                noWrap
-                              >
-                                {project.name}
-                              </Typography>
-                            </Box>
-                          </Box>
-
-                          <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-                            <Chip
-                              label={
-                                project.status === 'active'
-                                  ? t('projects:home.projectCard.statusActive')
-                                  : String(project.status)
-                              }
-                              size="small"
-                              sx={{
-                                backgroundColor: alpha(theme.palette.success.main, 0.12),
-                                color: theme.palette.success.main,
-                                fontSize: '0.72rem',
-                                height: 24,
-                                fontWeight: 700,
-                                border: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
-                                letterSpacing: '0.03em',
-                              }}
-                            />
-
-                            {project.description && (
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: 'text.secondary',
-                                  fontSize: '0.82rem',
-                                  lineHeight: 1.4,
-                                  maxWidth: 400,
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 1,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                {project.description}
-                              </Typography>
-                            )}
-                          </Box>
-                        </Box>
-
-                        <IconButton
-                          size="small"
-                          onClick={(e) => handleDelete(project.id, project.name, e)}
-                          sx={{
-                            color: alpha(theme.palette.text.primary, 0.25),
-                            flexShrink: 0,
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              color: theme.palette.error.main,
-                              backgroundColor: alpha(theme.palette.error.main, 0.1),
-                              transform: 'scale(1.1) rotate(90deg)',
-                            },
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </GlassCard>
-                  ))}
-                </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 5, px: 2 }}>
-                  <EmptyStateIllustration />
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontFamily: theme.typography.h5.fontFamily,
-                      fontWeight: 700,
-                      color: 'text.primary',
-                      mb: 1,
-                      letterSpacing: '0.02em',
-                    }}
-                  >
-                    {t('projects:home.empty.title')}
-                  </Typography>
-
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: 'text.secondary',
-                      mb: 3,
-                      maxWidth: 420,
-                      mx: 'auto',
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {t('projects:home.empty.description')}
-                  </Typography>
-                </Box>
-              )}
-              </GlassCard>
-            </Box>
-          </Container>
-        </Box>
-
-        {/* Footer */}
-        <Fade in={isLoaded} timeout={1000}>
-          <Box
-            sx={{
-              width: '100%',
-              borderTop: `1px solid ${alpha(theme.palette.divider, 0.24)}`,
-              backgroundColor: alpha(theme.palette.background.paper, 0.6),
-              backdropFilter: 'blur(12px)',
-              mt: 4,
-            }}
-          >
-            <Container
-              maxWidth={false}
-              sx={{
-                width: '100%',
-                maxWidth: 1000,
-                mx: 'auto',
-                px: { xs: 4, md: 6 },
-                py: 3,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: { xs: 'flex-start', sm: 'center' },
-                gap: 2,
-                flexWrap: 'wrap',
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    bgcolor: 'primary.main',
-                    fontFamily: theme.typography.h6.fontFamily,
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  C
-                </Avatar>
-                <Box>
-                  <Typography
-                    sx={{
-                      fontFamily: theme.typography.h6.fontFamily,
-                      fontWeight: 700,
-                      color: 'text.primary',
-                      fontSize: '1rem',
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    Campaigner
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: alpha(theme.palette.text.secondary, 0.97), fontSize: '0.86rem', lineHeight: 1.5 }}
-                  >
-                    {t('projects:home.footer.tagline')}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: alpha(theme.palette.text.secondary, 0.92),
-                    fontSize: '0.86rem',
-                    letterSpacing: '0.015em',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  © {new Date().getFullYear()} · {t('projects:home.footer.madeFor')}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: alpha(theme.palette.text.secondary, 0.95),
-                    fontSize: '0.86rem',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Github: @adamnobody
-                </Typography>
-              </Box>
-            </Container>
-          </Box>
-        </Fade>
+        <LanguageSwitcher sx={{ justifySelf: 'end', minWidth: { xs: 104, xl: 128 } }} />
       </Box>
 
-      {/* Create Project Dialog */}
-      <CreateProjectDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSubmit={handleCreateSubmit}
-      />
+      <Box sx={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', px: { xs: 2, md: 0 }, pt: 1 }}>
+        {projects.length === 0 ? (
+          <Box sx={{ mx: 'auto', width: 'min(620px, 100%)', textAlign: 'center', py: 6 }}>
+            <Box sx={{ width: 240, height: 320, mx: 'auto', borderRadius: '120px 120px 14px 14px', border: '1px dashed rgba(201,169,97,.32)', background: 'repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 2px,transparent 2px 10px)', display: 'grid', placeItems: 'center' }}>
+              <EmptyStateIllustration />
+            </Box>
+            <Typography variant="h3" sx={{ pt: 3 }}>{t('projects:home.empty.title')}</Typography>
+            <Typography sx={{ color: 'text.secondary', maxWidth: 460, mx: 'auto', pt: 1.25 }}>{t('projects:home.empty.description')}</Typography>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              position: 'relative',
+              flex: 1,
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 0,
+              opacity: isLoaded ? 1 : 0,
+              transform: isLoaded ? 'none' : 'translateY(18px)',
+              transition: 'opacity 520ms ease 100ms, transform 520ms ease 100ms',
+            }}
+          >
+            <IconButton onClick={() => moveProject(-1)} disabled={projects.length < 2} aria-label={t('projects:home.previousProject')} sx={{ position: 'absolute', top: '50%', left: { md: 20, xl: 28 }, transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,.1)', bgcolor: 'rgba(14,17,22,.6)', display: { xs: 'none', md: 'inline-flex' }, zIndex: 2 }}><ChevronLeftIcon /></IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 'clamp(14px, 2.4vw, 30px)' }}>
+            {leftProject ? <Box sx={{ display: { xs: 'none', lg: 'block' } }}><ProjectArchCard archIndex={0} project={leftProject} onOpen={() => navigate(`/project/${leftProject.id}`)} onDelete={(event) => handleDelete(leftProject.id, leftProject.name, event)} /></Box> : null}
+            {centerProject ? <ProjectArchCard archIndex={1} featured project={centerProject} onOpen={() => navigate(`/project/${centerProject.id}`)} onDelete={(event) => handleDelete(centerProject.id, centerProject.name, event)} /> : null}
+            {rightProject ? <Box sx={{ display: { xs: 'none', lg: 'block' } }}><ProjectArchCard archIndex={2} project={rightProject} onOpen={() => navigate(`/project/${rightProject.id}`)} onDelete={(event) => handleDelete(rightProject.id, rightProject.name, event)} /></Box> : null}
+            </Box>
+            <IconButton onClick={() => moveProject(1)} disabled={projects.length < 2} aria-label={t('projects:home.nextProject')} sx={{ position: 'absolute', top: '50%', right: { md: 20, xl: 28 }, transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,.1)', bgcolor: 'rgba(14,17,22,.6)', display: { xs: 'none', md: 'inline-flex' }, zIndex: 2 }}><ChevronRightIcon /></IconButton>
+          </Box>
+        )}
+
+        <Box
+          sx={{
+            mx: 'auto',
+            mt: '18px',
+            pt: 0,
+            pb: { xs: 2.5, xl: 3.5 },
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '14px',
+            position: 'relative',
+            zIndex: 2,
+          }}
+        >
+          {projects.length > 1 ? (
+            <Typography sx={{ minHeight: 18, display: 'flex', alignItems: 'center', fontFamily: (currentTheme) => currentTheme.campaigner.typography.display, fontStyle: 'italic', color: 'rgba(232,228,220,.4)', fontSize: 13, lineHeight: 1 }}>
+              {t('projects:home.position', { current: activeProjectIndex + 1, count: projects.length })}
+            </Typography>
+          ) : null}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, xl: 1.25 }, p: { xs: 0.75, xl: 1 }, borderRadius: { xs: '13px', xl: '16px' }, border: '1px solid rgba(255,255,255,.07)', backgroundColor: 'rgba(14,17,22,.76)', backdropFilter: 'blur(12px)' }}>
+            <Tooltip title={t('projects:home.actions.appearance')}><IconButton onClick={() => navigate('/appearance')} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><PaletteIcon /></IconButton></Tooltip>
+            <Tooltip title={t('projects:home.actions.import')}><IconButton onClick={handleImportClick} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><FileUploadIcon /></IconButton></Tooltip>
+            <Tooltip title={t('projects:home.actions.tutorial')}><IconButton onClick={handleCreateTutorialProject} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><SchoolIcon /></IconButton></Tooltip>
+            <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateDialogOpen(true)} sx={{ height: { xs: 46, xl: 52 }, px: { xs: 3, xl: 4 }, fontSize: { xl: 14 } }}>
+              {t('projects:home.actions.createWorld')}
+            </DndButton>
+          </Box>
+        </Box>
+      </Box>
+
+      <Box sx={{ position: 'relative', zIndex: 1, px: 4, pb: 2.5, display: 'flex', justifyContent: 'space-between', color: 'rgba(232,228,220,.22)', fontSize: 10.5 }}>
+        <span>© {new Date().getFullYear()} Campaigner</span><span>Github: @adamnobody</span>
+      </Box>
+
+      <CreateProjectDialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} onSubmit={handleCreateSubmit} />
     </Box>
   );
 };

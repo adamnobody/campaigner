@@ -45,7 +45,15 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
   const impColor = DYNASTY_EVENT_IMPORTANCE_COLORS[event.importance] || theme.palette.success.main;
 
   return (
-    <Box ref={setNodeRef} style={style} sx={{ position: 'relative', mb: 2.5, '&:hover .evt-actions': { opacity: 1 } }}>
+    <Box
+      ref={setNodeRef}
+      style={style}
+      sx={{
+        position: 'relative',
+        mb: 2.5,
+        '&:hover .evt-actions, &:focus-within .evt-actions': { opacity: 1 },
+      }}
+    >
       {/* Timeline dot */}
       <Box sx={{
         position: 'absolute', left: -21, top: 8,
@@ -59,7 +67,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
         p: 0, overflow: 'hidden',
         backgroundColor: `${impColor}08`,
         border: `1px solid ${impColor}20`,
-        borderRadius: 2,
+        borderRadius: 2.5,
         boxShadow: isDragging ? `0 8px 30px ${alpha(theme.palette.common.black, 0.4)}` : 'none',
         transition: 'box-shadow 0.2s',
       }}>
@@ -81,11 +89,19 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
           </Box>
 
           {/* Content */}
-          <Box sx={{ p: 2, flexGrow: 1, minWidth: 0 }}>
+          <Box sx={{ p: { xs: 1.75, md: 2.25 }, flexGrow: 1, minWidth: 0 }}>
             <Box display="flex" justifyContent="space-between" alignItems="flex-start">
               <Box sx={{ minWidth: 0 }}>
                 <Box display="flex" alignItems="center" gap={1} mb={0.5} flexWrap="wrap">
-                  <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.95rem' }}>
+                  <Typography
+                    sx={{
+                      fontFamily: '"Cormorant Garamond", serif',
+                      fontWeight: 600,
+                      color: 'text.primary',
+                      fontSize: '1.25rem',
+                      lineHeight: 1.15,
+                    }}
+                  >
                     {event.title}
                   </Typography>
                   <Chip
@@ -98,11 +114,11 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
                     }}
                   />
                 </Box>
-                <Typography sx={{ color: alpha(theme.palette.primary.main, 0.7), fontSize: '0.8rem' }}>
+                <Typography sx={{ color: alpha(theme.palette.primary.main, 0.82), fontSize: '0.76rem', fontFamily: '"IBM Plex Mono", monospace' }}>
                   📅 {event.eventDate}
                 </Typography>
                 {event.description && (
-                  <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.8), fontSize: '0.85rem', mt: 0.5 }}>
+                  <Typography sx={{ color: alpha(theme.palette.text.secondary, 0.92), fontSize: '0.9rem', lineHeight: 1.65, mt: 0.8 }}>
                     {event.description}
                   </Typography>
                 )}

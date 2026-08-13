@@ -202,9 +202,24 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-      <DialogTitle>{t('factions:compare.title')}</DialogTitle>
-      <DialogContent sx={{ display: 'grid', gap: 2 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="lg"
+      PaperProps={{ sx: { borderRadius: 3, minHeight: '72vh', border: `1px solid ${theme.palette.divider}` } }}
+    >
+      <DialogTitle
+        sx={{
+          pt: 3,
+          fontFamily: '"Cormorant Garamond", serif',
+          fontSize: '2rem',
+          fontWeight: 600,
+        }}
+      >
+        {t('factions:compare.title')}
+      </DialogTitle>
+      <DialogContent sx={{ display: 'grid', gap: 2.5 }}>
         <TextField
           select
           label={t('factions:compare.entitiesLabel')}
@@ -222,11 +237,11 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
           ))}
         </TextField>
 
-        <Box>
+        <Box sx={{ p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
             {t('factions:compare.baseMetrics')}
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5 }}>
             {baseMetricsT.map((metric) => (
               <FormControlLabel
                 key={metric.key}
@@ -249,11 +264,11 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
         </Box>
 
         {availableCustomMetrics.length ? (
-          <Box>
+          <Box sx={{ p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               {t('factions:compare.customMetrics')}
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5 }}>
               {availableCustomMetrics.map((name) => {
                 const key = `custom:${name}`;
                 return (
@@ -289,10 +304,13 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
 
         {result ? (
           chartType === 'bar' ? (
-            <Box sx={{ display: 'grid', gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
               {translatedResultMetrics.map((metric) => (
-                <Box key={metric.key} sx={{ height: 240 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                <Box
+                  key={metric.key}
+                  sx={{ height: 280, p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}
+                >
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
                     {metric.label}
                   </Typography>
                   <ResponsiveContainer width="100%" height="100%">

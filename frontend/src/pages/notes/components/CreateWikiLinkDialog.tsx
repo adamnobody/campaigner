@@ -48,7 +48,7 @@ export const CreateWikiLinkDialog: React.FC<CreateWikiLinkDialogProps> = ({
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}
+      PaperProps={{ sx: { backgroundColor: 'background.default', border: '1px solid rgba(255,255,255,0.1)' } }}
     >
       <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('notes:wikiDialogs.createTitle')}</DialogTitle>
       <DialogContent>

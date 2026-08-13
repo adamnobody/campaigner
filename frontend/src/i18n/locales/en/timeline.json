@@ -1,6 +1,8 @@
 {
   "page": {
     "title": "Timeline",
+    "eyebrow": "World history",
+    "subtitle": "Events in your calendar’s order. Eras are groups you can collapse to keep the current age in focus.",
     "addEvent": "Add event"
   },
   "empty": {
@@ -11,7 +13,10 @@
   "filters": {
     "searchPlaceholder": "Search events…",
     "allEras": "All eras",
-    "countShown": "{{filtered}} of {{total}}"
+    "countShown": "{{filtered}} of {{total}}",
+    "emptyTitle": "No matching events",
+    "emptyDescription": "Try another search or choose a different era.",
+    "reset": "Reset filters"
   },
   "eventCard": {
     "noteFallback": "Note #{{id}}",
@@ -62,5 +67,10 @@
   "confirm": {
     "deleteTitle": "Delete event",
     "deleteMessage": "Delete \"{{title}}\"?"
+  },
+  "states": {
+    "loading": "Loading timeline…",
+    "error": "Could not load the timeline.",
+    "retry": "Try again"
   }
 }

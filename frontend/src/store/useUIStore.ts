@@ -37,7 +37,7 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: true,
-  sidebarWidth: 280,
+  sidebarWidth: 296,
 
   searchOpen: false,
 
@@ -54,8 +54,11 @@ export const useUIStore = create<UIState>((set) => ({
     onConfirm: null,
   },
 
-  toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  toggleSidebar: () => set(state => {
+    const sidebarOpen = !state.sidebarOpen;
+    return { sidebarOpen, sidebarWidth: sidebarOpen ? 296 : 88 };
+  }),
+  setSidebarOpen: (open) => set({ sidebarOpen: open, sidebarWidth: open ? 296 : 88 }),
   setSearchOpen: (open) => set({ searchOpen: open }),
   toggleSearch: () => set(state => ({ searchOpen: !state.searchOpen })),
 

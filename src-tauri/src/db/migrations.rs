@@ -80,6 +80,11 @@ const MIGRATIONS: &[Migration] = &[
         "canvas_scene_type",
         include_str!("../../migrations/018_canvas_scene_type.sql"),
     ),
+    (
+        19,
+        "project_cover",
+        include_str!("../../migrations/019_project_cover.sql"),
+    ),
 ];
 
 pub fn run_migrations(connection: &Connection) -> Result<()> {
@@ -123,4 +128,30 @@ fn is_migration_applied(connection: &Connection, version: i64) -> Result<bool> {
         connection.prepare("SELECT 1 FROM schema_migrations WHERE version = ?1 LIMIT 1")?;
     let mut rows = statement.query(params![version])?;
     Ok(rows.next()?.is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn project_cover_migration_adds_nullable_column() {
+        let connection = Connection::open_in_memory().expect("in-memory database");
+        run_migrations(&connection).expect("migrations");
+
+        connection
+            .execute(
+                "INSERT INTO projects (name, cover_image_path) VALUES (?1, ?2)",
+                params!["With cover", "/uploads/project-covers/cover.png"],
+            )
+            .expect("cover column should exist");
+        connection
+            .execute(
+                "INSERT INTO projects (name) VALUES (?1)",
+                params!["No cover"],
+            )
+            .expect("cover column should be nullable");
+
+        assert!(is_migration_applied(&connection, 19).expect("migration status"));
+    }
 }

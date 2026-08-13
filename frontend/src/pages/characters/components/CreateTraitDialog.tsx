@@ -23,6 +23,7 @@ import { uploadsApi } from '@/api/uploads';
 import { LIMITS } from '@campaigner/shared';
 import { useAssetUrl } from '@/hooks/useAssetUrl';
 import { localizedPredefinedTraitTexts } from '@/i18n/catalog/displayBuiltinTexts';
+import { CampaignerSurface } from '@/components/ui/CampaignerPrimitives';
 
 interface CreateTraitDialogProps {
   open: boolean;
@@ -150,8 +151,13 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
 
   return (
     <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>{t('traits.createDialogTitle')}</DialogTitle>
-      <DialogContent>
+      <DialogTitle>
+        <Typography variant="overline" sx={{ color: 'primary.main', display: 'block', pb: 0.75 }}>
+          {t('traits.createDialogEyebrow')}
+        </Typography>
+        {t('traits.createDialogTitle')}
+      </DialogTitle>
+      <DialogContent sx={{ display: 'grid', gap: 2, pt: 1 }}>
         <TextField
           autoFocus
           fullWidth
@@ -159,7 +165,6 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
           label={t('traits.fieldName')}
           value={name}
           onChange={(e) => setName(e.target.value.slice(0, 50))}
-          margin="normal"
           inputProps={{ maxLength: 50 }}
         />
         <TextField
@@ -170,10 +175,9 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
           label={t('traits.fieldDescription')}
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 200))}
-          margin="normal"
           inputProps={{ maxLength: 200 }}
         />
-        <Box sx={{ mt: 2 }}>
+        <Box>
           <Autocomplete
             multiple
             options={availableTraitOptions}
@@ -198,25 +202,35 @@ export const CreateTraitDialog: React.FC<CreateTraitDialogProps> = ({ open, onCl
           />
         </Box>
 
-        <Box sx={{ mt: 2 }}>
+        <CampaignerSurface
+          sx={{
+            p: 2,
+            borderStyle: 'dashed',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            flexWrap: 'wrap',
+          }}
+        >
           <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} disabled={submitting}>
             {t('traits.uploadImage')}
             <input type="file" hidden accept={ACCEPT_HINT} onChange={handleFileChange} />
           </Button>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            {t('traits.imageFormatsHint', { maxMb })}
-          </Typography>
-          {!file && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {t('traits.noImageHint')}
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {t('traits.imageFormatsHint', { maxMb })}
             </Typography>
-          )}
-        </Box>
+            {!file ? (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.75rem' }}>
+                {t('traits.noImageHint')}
+              </Typography>
+            ) : null}
+          </Box>
+        </CampaignerSurface>
 
         {previewUrl && (
           <Box
             sx={{
-              mt: 2,
               width: 120,
               height: 120,
               borderRadius: 1.5,

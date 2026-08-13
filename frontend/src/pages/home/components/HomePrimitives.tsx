@@ -18,10 +18,9 @@ export const EmptyStateIllustration: React.FC = () => (
   <Box
     sx={{
       position: 'relative',
-      width: 280,
-      height: 220,
-      mx: 'auto',
-      mb: 3,
+      width: '100%',
+      height: '100%',
+      m: 0,
     }}
   >
     {/* Central Book */}

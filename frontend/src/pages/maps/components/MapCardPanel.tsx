@@ -75,8 +75,8 @@ export const MapCardPanel: React.FC<Props> = ({
   const accent = isSceneContainer ? '#5ecfff' : '#c8a86a';
 
   return (
-    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.paper, 0.95), backdropFilter: 'blur(20px)' }}>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
+    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.default, 0.94), backdropFilter: 'blur(20px)', borderColor: theme.campaigner.surface.border }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
         <Box sx={{
           width: 40,
           height: 40,
@@ -92,7 +92,7 @@ export const MapCardPanel: React.FC<Props> = ({
           {isSceneContainer ? <MapIcon fontSize="small" /> : <ImageIcon fontSize="small" />}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography variant="h6" sx={{ fontSize: '1.05rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {panelTitle}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -128,7 +128,7 @@ export const MapCardPanel: React.FC<Props> = ({
         )}
       </Box>
 
-      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.campaigner.surface.border}`, backgroundColor: theme.campaigner.surface.subtle }}>
         <Button
           color="error"
           variant="outlined"

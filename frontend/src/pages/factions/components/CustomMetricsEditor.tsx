@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, IconButton, TextField, Typography } from '@mui/material';
+import { Box, Button, IconButton, TextField, Typography, alpha, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ interface CustomMetricsEditorProps {
 
 export const CustomMetricsEditor: React.FC<CustomMetricsEditorProps> = ({ metrics, onChange }) => {
   const { t } = useTranslation(['factions', 'common']);
+  const theme = useTheme();
   const updateRow = (index: number, key: 'name' | 'value' | 'unit', value: string | number) => {
     onChange(
       metrics.map((metric, i) =>
@@ -33,7 +34,18 @@ export const CustomMetricsEditor: React.FC<CustomMetricsEditorProps> = ({ metric
         </Typography>
       ) : null}
       {metrics.map((metric, index) => (
-        <Box key={`${metric.name}-${index}`} sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 1 }}>
+        <Box
+          key={`${metric.name}-${index}`}
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr auto', sm: '2fr 1fr 1fr auto' },
+            gap: 1,
+            p: 1.5,
+            border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.background.paper, 0.28),
+          }}
+        >
           <TextField
             label={t('factions:customMetrics.name')}
             value={metric.name}
@@ -50,13 +62,19 @@ export const CustomMetricsEditor: React.FC<CustomMetricsEditorProps> = ({ metric
             value={metric.unit ?? ''}
             onChange={(event) => updateRow(index, 'unit', event.target.value)}
           />
-          <IconButton onClick={() => onChange(metrics.filter((_, i) => i !== index))} sx={{ mt: 1 }}>
+          <IconButton
+            aria-label={t('common:delete')}
+            onClick={() => onChange(metrics.filter((_, i) => i !== index))}
+            sx={{ alignSelf: 'center', color: 'error.main' }}
+          >
             <DeleteIcon />
           </IconButton>
         </Box>
       ))}
       <Box>
-        <IconButton
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
           onClick={() =>
             onChange([
               ...metrics,
@@ -64,8 +82,8 @@ export const CustomMetricsEditor: React.FC<CustomMetricsEditorProps> = ({ metric
             ])
           }
         >
-          <AddIcon />
-        </IconButton>
+          {t('factions:customMetrics.add')}
+        </Button>
       </Box>
     </Box>
   );

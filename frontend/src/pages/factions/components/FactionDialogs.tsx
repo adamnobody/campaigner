@@ -44,6 +44,7 @@ const DIALOG_PAPER_PROPS = {
   sx: (theme: Theme) => ({
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
+    borderRadius: 3,
   }),
 };
 
@@ -64,7 +65,7 @@ export const FactionRankDialog: React.FC<FactionRankDialogProps> = ({
   const { t } = useTranslation(['factions', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>
         {editingRank ? t('factions:dialogs.rank.titleEdit') : t('factions:dialogs.rank.titleNew')}
       </DialogTitle>
       <DialogContent>
@@ -105,7 +106,7 @@ export const FactionMemberDialog: React.FC<FactionMemberDialogProps> = ({
   const { t } = useTranslation(['factions', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('factions:dialogs.member.title')}</DialogTitle>
+      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>{t('factions:dialogs.member.title')}</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('factions:dialogs.member.character')}</InputLabel>
@@ -155,7 +156,7 @@ export const FactionRelationDialog: React.FC<FactionRelationDialogProps> = ({
   const { t } = useTranslation(['factions', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>{t('factions:dialogs.relation.title')}</DialogTitle>
+      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>{t('factions:dialogs.relation.title')}</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('factions:dialogs.relation.entity')}</InputLabel>

@@ -20,19 +20,19 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const theme = useTheme();
 
   return (
-    <GlassCard sx={{ mb: 3, p: 0 }}>
+    <GlassCard sx={{ mb: 3, p: 0, borderRadius: '12px' }}>
       <Box
         onClick={() => setOpen(!open)}
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          px: 3,
-          py: 2,
+          px: 2.5,
+          py: 1.6,
           cursor: 'pointer',
-          backgroundColor: alpha(theme.palette.background.paper, 0.4),
-          borderBottom: open ? `1px solid ${alpha(theme.palette.divider, 0.5)}` : 'none',
-          '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.08) },
+          backgroundColor: alpha(theme.palette.common.white, 0.018),
+          borderBottom: open ? '1px solid rgba(255,255,255,.06)' : 'none',
+          '&:hover': { backgroundColor: alpha(theme.palette.common.white, 0.035) },
           transition: 'background 0.2s',
         }}
       >
@@ -44,14 +44,15 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
               justifyContent: 'center',
               width: 32,
               height: 32,
-              borderRadius: 1.5,
-              bgcolor: alpha(theme.palette.primary.main, 0.15),
+              borderRadius: '8px',
+              bgcolor: alpha(theme.palette.primary.main, 0.09),
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
               color: theme.palette.primary.main,
             }}
           >
             {icon}
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.05rem', color: theme.palette.text.primary }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.05rem', color: theme.palette.text.primary }}>
             {title}
           </Typography>
           {badge !== undefined && badge > 0 && (

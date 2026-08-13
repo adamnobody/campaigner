@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,200,0,0" rel="stylesheet">
+<style>
+body{margin:0;background:#08090c;font-family:'IBM Plex Sans',system-ui,sans-serif}
+.ms{font-family:'Material Symbols Outlined';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased}
+a{color:#c9a961}a:hover{color:#e0c98a}
+@keyframes bgv-in{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#08090c;padding:48px 56px 80px;box-sizing:border-box">
+
+<div style="display:flex;align-items:baseline;gap:14px;margin:0 0 8px">
+<div style="font:600 26px 'Cormorant Garamond',serif;color:#e8e4dc;letter-spacing:.5px">Фоновые анимации главного меню</div>
+<div style="font:400 12px 'IBM Plex Mono',monospace;color:rgba(232,228,220,.35)">8 вариантов · клик по карточке — полный экран</div>
+</div>
+<div style="font:300 13px/1.7 'IBM Plex Sans';color:rgba(232,228,220,.45);max-width:720px;margin:0 0 32px">Все восемь построены на одной палитре и работают медленно, чтобы не спорить с арками. Скорость и насыщенность можно поменять в твиках справа.</div>
+
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 30px;max-width:1520px">
+<sc-for list="{{ variants }}" as="v" hint-placeholder-count="8">
+<div>
+<div onClick="{{ v.open }}" style="position:relative;height:392px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);cursor:pointer;background:#0a0b0e" style-hover="border-color:rgba(201,169,97,.42)">
+<canvas data-anim="{{ v.key }}" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
+
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:26px 0 22px;box-sizing:border-box;pointer-events:none">
+<div style="font:600 13px 'Cormorant Garamond',serif;letter-spacing:6px;color:rgba(232,228,220,.82)">CAMPAIGNER</div>
+<div style="font:italic 400 8.5px 'Cormorant Garamond',serif;letter-spacing:.6px;color:rgba(232,228,220,.34);margin-top:4px">Триптих миров · 8 проектов в библиотеке</div>
+
+<div style="flex:1;display:flex;align-items:flex-end;justify-content:center;gap:16px;padding-bottom:6px">
+<div style="width:86px;height:138px;border-radius:999px 999px 8px 8px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(9,11,15,.15),rgba(9,11,15,.9)), url('uploads/fantasy-nature-river-mountains.jpeg') center/cover"></div>
+<div style="width:112px;height:186px;border-radius:999px 999px 8px 8px;border:1px solid rgba(201,169,97,.3);background:linear-gradient(180deg,rgba(9,11,15,.08),rgba(9,11,15,.88)), url('uploads/5.jpg') center/cover;box-shadow:0 24px 60px rgba(0,0,0,.6)"></div>
+<div style="width:86px;height:138px;border-radius:999px 999px 8px 8px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(9,11,15,.15),rgba(9,11,15,.9)), url('uploads/pierdole.jpg') center/cover"></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:6px;padding:5px;border-radius:9px;border:1px solid rgba(255,255,255,.08);background:rgba(14,17,22,.72)">
+<div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px"><span class="ms" style="font-size:12px;color:rgba(232,228,220,.45)">palette</span></div>
+<div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px"><span class="ms" style="font-size:12px;color:rgba(232,228,220,.45)">upload</span></div>
+<div style="height:22px;display:flex;align-items:center;gap:5px;padding:0 11px;border-radius:6px;background:linear-gradient(180deg,#e0c98a,#c9a961)"><span class="ms" style="font-size:11px;color:#17140d">add</span><span style="font:500 8.5px 'IBM Plex Sans';color:#17140d">Освятить новый мир</span></div>
+</div>
+</div>
+
+<div style="position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:8px">
+<div style="font:500 10px 'IBM Plex Mono',monospace;color:#0a0b0e;background:rgba(201,169,97,.9);padding:3px 7px;border-radius:5px">{{ v.id }}</div>
+</div>
+</div>
+
+<div style="display:flex;align-items:baseline;gap:10px;margin:13px 2px 0">
+<div style="font:500 14px 'IBM Plex Sans';color:#e8e4dc">{{ v.name }}</div>
+<div style="font:400 10.5px 'IBM Plex Mono',monospace;color:rgba(232,228,220,.3)">{{ v.tag }}</div>
+</div>
+<div style="font:300 12px/1.65 'IBM Plex Sans';color:rgba(232,228,220,.45);margin:5px 2px 0;max-width:600px">{{ v.desc }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<sc-if value="{{ fullOn }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:60;background:#0a0b0e;animation:bgv-in .25s ease">
+<canvas data-anim="{{ fullKey }}" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
+
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:44px 0 40px;box-sizing:border-box;pointer-events:none">
+<div style="font:600 26px 'Cormorant Garamond',serif;letter-spacing:13px;color:rgba(232,228,220,.9)">CAMPAIGNER</div>
+<div style="font:italic 400 13px 'Cormorant Garamond',serif;letter-spacing:.8px;color:rgba(232,228,220,.36);margin-top:9px">Триптих миров · 8 проектов в библиотеке</div>
+
+<div style="flex:1;display:flex;align-items:flex-end;justify-content:center;gap:34px;padding-bottom:16px">
+<div style="width:210px;height:340px;border-radius:999px 999px 12px 12px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(9,11,15,.15),rgba(9,11,15,.9)), url('uploads/fantasy-nature-river-mountains.jpeg') center/cover"></div>
+<div style="width:280px;height:452px;border-radius:999px 999px 12px 12px;border:1px solid rgba(201,169,97,.32);background:linear-gradient(180deg,rgba(9,11,15,.08),rgba(9,11,15,.88)), url('uploads/5.jpg') center/cover;box-shadow:0 50px 120px rgba(0,0,0,.65)"></div>
+<div style="width:210px;height:340px;border-radius:999px 999px 12px 12px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(9,11,15,.15),rgba(9,11,15,.9)), url('uploads/pierdole.jpg') center/cover"></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:10px;padding:9px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(14,17,22,.72)">
+<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px"><span class="ms" style="font-size:18px;color:rgba(232,228,220,.45)">palette</span></div>
+<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px"><span class="ms" style="font-size:18px;color:rgba(232,228,220,.45)">upload</span></div>
+<div style="height:40px;display:flex;align-items:center;gap:9px;padding:0 20px;border-radius:10px;background:linear-gradient(180deg,#e0c98a,#c9a961)"><span class="ms" style="font-size:17px;color:#17140d">add</span><span style="font:500 13px 'IBM Plex Sans';color:#17140d">Освятить новый мир</span></div>
+</div>
+</div>
+
+<div style="position:absolute;top:22px;left:26px;display:flex;align-items:center;gap:10px">
+<div style="font:500 11px 'IBM Plex Mono',monospace;color:#0a0b0e;background:rgba(201,169,97,.9);padding:4px 8px;border-radius:5px">{{ fullId }}</div>
+<div style="font:500 13px 'IBM Plex Sans';color:rgba(232,228,220,.75)">{{ fullName }}</div>
+</div>
+
+<div onClick="{{ closeFull }}" style="position:absolute;top:20px;right:24px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(14,17,22,.7);cursor:pointer" style-hover="border-color:rgba(201,169,97,.5)"><span class="ms" style="font-size:19px;color:rgba(232,228,220,.6)">close</span></div>
+
+<div onClick="{{ prevFull }}" style="position:absolute;top:50%;left:24px;margin-top:-19px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(14,17,22,.7);cursor:pointer" style-hover="border-color:rgba(201,169,97,.5)"><span class="ms" style="font-size:19px;color:rgba(232,228,220,.6)">chevron_left</span></div>
+<div onClick="{{ nextFull }}" style="position:absolute;top:50%;right:24px;margin-top:-19px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(14,17,22,.7);cursor:pointer" style-hover="border-color:rgba(201,169,97,.5)"><span class="ms" style="font-size:19px;color:rgba(232,228,220,.6)">chevron_right</span></div>
+</div>
+</sc-if>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#c9a961&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#c9a961&quot;,&quot;#8fa9c9&quot;,&quot;#b98a6a&quot;,&quot;#7fa88f&quot;]},&quot;speed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.2,&quot;max&quot;:2.5,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;},&quot;amount&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.2,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { full: null };
+
+  list = [
+    { id: '1a', key: 'dust', name: 'Пыль в луче', tag: 'частицы', desc: 'Мелкие золотые пылинки медленно плывут вверх и мерцают. Самый нейтральный вариант — читается как воздух в комнате, а не как эффект.' },
+    { id: '1b', key: 'stars', name: 'Созвездия', tag: 'сетка связей', desc: 'Редкие точки дрейфуют и соединяются нитями, когда сближаются. Отсылка к карте связей внутри приложения.' },
+    { id: '1c', key: 'aurora', name: 'Дыхание света', tag: 'градиентные пятна', desc: 'Два-три размытых пятна тёплого света очень медленно ходят за арками. Ничего не мельтешит, меняется только освещение сцены.' },
+    { id: '1d', key: 'ink', name: 'Чернильные круги', tag: 'расходящиеся волны', desc: 'Раз в несколько секунд в случайной точке расходится тонкое кольцо и растворяется. Похоже на каплю чернил в воде.' },
+    { id: '1e', key: 'embers', name: 'Искры', tag: 'восходящие частицы', desc: 'Тёплые угольки поднимаются снизу и гаснут к середине экрана. Даёт больше жизни, чем пыль, но требует сдержанной плотности.' },
+    { id: '1f', key: 'ash', name: 'Пепел', tag: 'падающие хлопья', desc: 'Медленный снег из серо-тёплых хлопьев с боковым сносом. Спокойнее искр, хорошо сочетается с тёмными обложками.' },
+    { id: '1g', key: 'contour', name: 'Изолинии', tag: 'линии карты', desc: 'Аккуратная версия того, что было: меньше линий, они гаснут к краям и медленно перетекают, как рельеф на карте.' },
+    { id: '1h', key: 'veil', name: 'Зерно и вдох', tag: 'текстура', desc: 'Плёночное зерно поверх фона и очень медленная пульсация центрального свечения. Почти не заметно, но экран перестаёт быть мёртвым.' }
+  ];
+
+  cfg() {
+    const hex = (this.props.accent || '#c9a961').replace('#', '');
+    const n = parseInt(hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex, 16);
+    return {
+      r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255,
+      speed: this.props.speed ?? 1,
+      amount: this.props.amount ?? 1
+    };
+  }
+
+  componentDidMount() {
+    this.reg = new Map();
+    this.t0 = performance.now();
+    this.frame = 0;
+    this.tick = (now) => {
+      if (this.frame % 20 === 0) this.scan();
+      this.frame++;
+      const t = (now - this.t0) / 1000;
+      const c = this.cfg();
+      this.reg.forEach((st, cv) => {
+        if (!cv.isConnected) return;
+        const ctx = st.ctx, w = st.w, h = st.h;
+        this.draw[st.key](ctx, w, h, t * c.speed, st, c);
+      });
+      this.raf = requestAnimationFrame(this.tick);
+    };
+    this.scan();
+    this.raf = requestAnimationFrame(this.tick);
+    this.onKey = (e) => {
+      if (!this.state.full) return;
+      if (e.key === 'Escape') this.setState({ full: null });
+      if (e.key === 'ArrowRight') this.step(1)();
+      if (e.key === 'ArrowLeft') this.step(-1)();
+    };
+    window.addEventListener('keydown', this.onKey);
+  }
+  componentDidUpdate() { this.scan(); }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); window.removeEventListener('keydown', this.onKey); }
+
+  scan() {
+    const seen = new Set();
+    document.querySelectorAll('canvas[data-anim]').forEach(cv => {
+      seen.add(cv);
+      const key = cv.getAttribute('data-anim');
+      if (!this.draw[key]) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = cv.clientWidth, h = cv.clientHeight;
+      if (!w || !h) return;
+      let st = this.reg.get(cv);
+      if (!st || st.key !== key || st.w !== w || st.h !== h) {
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+        const ctx = cv.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        st = { key, ctx, w, h, dpr };
+        this.init[key] && this.init[key](st);
+        this.reg.set(cv, st);
+      }
+    });
+    this.reg.forEach((st, cv) => { if (!seen.has(cv) || !cv.isConnected) this.reg.delete(cv); });
+  }
+
+  base(ctx, w, h, c, glow) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#0a0b0e';
+    ctx.fillRect(0, 0, w, h);
+    const g = ctx.createRadialGradient(w / 2, h * 0.52, 0, w / 2, h * 0.52, Math.max(w, h) * 0.72);
+    g.addColorStop(0, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (0.055 * (glow ?? 1) * c.amount).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(10,11,14,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  rnd(st, n, fn) { const a = []; for (let i = 0; i < n; i++) a.push(fn(i)); return a; }
+
+  init = {
+    dust: (st) => {
+      const n = Math.round(st.w * st.h / 5200);
+      st.p = this.rnd(st, n, () => ({ x: Math.random() * st.w, y: Math.random() * st.h, r: 0.4 + Math.random() * 1.6, vy: 3 + Math.random() * 7, vx: (Math.random() - 0.5) * 4, ph: Math.random() * 6.28 }));
+    },
+    stars: (st) => {
+      const n = Math.max(26, Math.min(90, Math.round(st.w * st.h / 11000)));
+      st.p = this.rnd(st, n, () => ({ x: Math.random() * st.w, y: Math.random() * st.h, vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.5) * 5, r: 0.6 + Math.random() * 1.1 }));
+      st.link = Math.min(st.w, st.h) * 0.28;
+    },
+    aurora: (st) => {
+      st.p = this.rnd(st, 3, i => ({ ax: 0.2 + i * 0.28, ay: 0.3 + (i % 2) * 0.3, s1: 0.05 + i * 0.02, s2: 0.037 + i * 0.015, ph: i * 2.1, rad: (0.42 + i * 0.1) }));
+    },
+    ink: (st) => { st.rings = []; st.next = 0.4; },
+    embers: (st) => {
+      const n = Math.round(st.w * st.h / 12000);
+      st.p = this.rnd(st, n, () => ({ x: Math.random() * st.w, y: st.h + Math.random() * st.h, vy: 10 + Math.random() * 22, sw: 6 + Math.random() * 14, ph: Math.random() * 6.28, r: 0.6 + Math.random() * 1.5, life: Math.random() }));
+    },
+    ash: (st) => {
+      const n = Math.round(st.w * st.h / 7000);
+      st.p = this.rnd(st, n, () => ({ x: Math.random() * st.w, y: Math.random() * st.h, vy: 6 + Math.random() * 14, sw: 5 + Math.random() * 16, ph: Math.random() * 6.28, r: 0.5 + Math.random() * 1.7, a: 0.1 + Math.random() * 0.35 }));
+    },
+    contour: (st) => {
+      st.lines = this.rnd(st, 16, i => ({ y: (i + 0.5) / 16, a1: 6 + Math.random() * 16, a2: 4 + Math.random() * 10, f1: 0.9 + Math.random() * 1.4, f2: 2.1 + Math.random() * 2.2, s: 0.05 + Math.random() * 0.12, ph: Math.random() * 6.28 }));
+    },
+    veil: (st) => {
+      const s = 128, c = document.createElement('canvas');
+      c.width = s; c.height = s;
+      const x = c.getContext('2d'), d = x.createImageData(s, s);
+      for (let i = 0; i < s * s; i++) {
+        const v = Math.random() * 255;
+        d.data[i * 4] = 255; d.data[i * 4 + 1] = 245; d.data[i * 4 + 2] = 225;
+        d.data[i * 4 + 3] = v < 200 ? 0 : (v - 200) * 0.55;
+      }
+      x.putImageData(d, 0, 0);
+      st.tile = c;
+    }
+  };
+
+  draw = {
+    dust: (ctx, w, h, t, st, c) => {
+      this.base(ctx, w, h, c, 0.9);
+      ctx.globalCompositeOperation = 'lighter';
+      st.p.forEach(p => {
+        const y = ((p.y - p.vy * t) % (h + 40) + h + 40) % (h + 40) - 20;
+        const x = ((p.x + p.vx * t) % (w + 40) + w + 40) % (w + 40) - 20;
+        const a = (0.18 + 0.42 * (0.5 + 0.5 * Math.sin(t * 0.9 + p.ph))) * c.amount;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, p.r * 4);
+        g.addColorStop(0, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a.toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, p.r * 4, 0, 6.2832); ctx.fill();
+      });
+      ctx.globalCompositeOperation = 'source-over';
+    },
+    stars: (ctx, w, h, t, st, c) => {
+      this.base(ctx, w, h, c, 0.7);
+      const P = st.p.map(p => ({
+        x: ((p.x + p.vx * t) % w + w) % w,
+        y: ((p.y + p.vy * t) % h + h) % h, r: p.r
+      }));
+      ctx.lineWidth = 0.6;
+      for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+        const dx = P[i].x - P[j].x, dy = P[i].y - P[j].y, d = Math.hypot(dx, dy);
+        if (d < st.link) {
+          ctx.strokeStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (0.13 * (1 - d / st.link) * c.amount).toFixed(3) + ')';
+          ctx.beginPath(); ctx.moveTo(P[i].x, P[i].y); ctx.lineTo(P[j].x, P[j].y); ctx.stroke();
+        }
+      }
+      P.forEach(p => {
+        ctx.fillStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (0.5 * c.amount).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+      });
+    },
+    aurora: (ctx, w, h, t, st, c) => {
+      this.base(ctx, w, h, c, 0.35);
+      ctx.globalCompositeOperation = 'lighter';
+      st.p.forEach((p, i) => {
+        const x = w * (p.ax + 0.22 * Math.sin(t * p.s1 + p.ph));
+        const y = h * (p.ay + 0.18 * Math.cos(t * p.s2 + p.ph * 1.7));
+        const rad = Math.max(w, h) * p.rad;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+        const tint = i === 1 ? [Math.round(c.r * 0.5), Math.round(c.g * 0.72), Math.round(c.b * 0.95)] : [c.r, c.g, c.b];
+        g.addColorStop(0, 'rgba(' + tint[0] + ',' + tint[1] + ',' + tint[2] + ',' + (0.09 * c.amount).toFixed(3) + ')');
+        g.addColorStop(0.55, 'rgba(' + tint[0] + ',' + tint[1] + ',' + tint[2] + ',' + (0.03 * c.amount).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      });
+      ctx.globalCompositeOperation = 'source-over';
+    },
+    ink: (ctx, w, h, t, st, c) => {
+      this.base(ctx, w, h, c, 0.8);
+      if (t > st.next) { st.next = t + 1.4 + Math.random() * 1.8; st.rings.push({ x: Math.random() * w, y: h * (0.15 + Math.random() * 0.7), t0: t, max: Math.min(w, h) * (0.4 + Math.random() * 0.5) }); }
+      st.rings = st.rings.filter(r => t - r.t0 < 9);
+      st.rings.forEach(r => {
+        const k = (t - r.t0) / 9;
+        const rad = r.max * (1 - Math.pow(1 - k, 2.2));
+        const a = Math.sin(Math.PI * k) * 0.3 * c.amount;
+        ctx.strokeStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a.toFixed(3) + ')';
+        ctx.lineWidth = 1.2 * (1 - k) + 0.3;
+        ctx.beginPath(); ctx.arc(r.x, r.y, rad, 0, 6.2832); ctx.stroke();
+        ctx.strokeStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (a * 0.35).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(r.x, r.y, rad * 0.82, 0, 6.2832); ctx.stroke();
+      });
+    },
+    embers: (ctx, w, h, t, st, c) => {
+      this.base(ctx, w, h, c, 1.1);
+      ctx.globalCompositeOperation = 'lighter';
+      st.p.forEach(p => {
+        const span = h * 1.25;
+        const prog = ((p.life * span + p.vy * t) % span) / span;
+        const y = h + 20 - prog * (h + 40);
+        const x = p.x + Math.sin(t * 0.5 + p.ph) * p.sw;
+        const a = Math.sin(Math.PI * Math.min(1, prog * 1.15)) * (0.34 + 0.3 * Math.sin(t * 4 + p.ph)) * c.amount;
+        if (a <= 0) return;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, p.r * 6);
+        g.addColorStop(0, 'rgba(255,' + Math.round(190 + c.g * 0.2) + ',140,' + a.toFixed(3) + ')');
+        g.addColorStop(0.4, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (a * 0.45).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, p.r * 6, 0, 6.2832); ctx.fill();
+      });
+      ctx.globalCompositeOperation = 'source-over';
+    },
+    ash: (ctx, w, h, t, st, c) => {
+      this.base(ctx, w, h, c, 0.55);
+      st.p.forEach(p => {
+        const y = ((p.y + p.vy * t) % (h + 30) + h + 30) % (h + 30) - 15;
+        const x = p.x + Math.sin(t * 0.35 + p.ph) * p.sw;
+        ctx.fillStyle = 'rgba(228,222,208,' + (p.a * 0.75 * c.amount).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.2832); ctx.fill();
+      });
+    },
+    contour: (ctx, w, h, t, st, c) => {
+      this.base(ctx, w, h, c, 0.7);
+      const grad = ctx.createLinearGradient(0, 0, w, 0);
+      st.lines.forEach((L, i) => {
+        const a = (0.1 + 0.09 * (0.5 + 0.5 * Math.sin(t * 0.25 + L.ph))) * c.amount;
+        ctx.strokeStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a.toFixed(3) + ')';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += 8) {
+          const u = x / w;
+          const y = L.y * h
+            + Math.sin(u * L.f1 * 6.2832 + t * L.s * 3 + L.ph) * L.a1
+            + Math.sin(u * L.f2 * 6.2832 - t * L.s * 2 + L.ph * 1.6) * L.a2;
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
+      const fade = ctx.createLinearGradient(0, 0, w, 0);
+      fade.addColorStop(0, 'rgba(10,11,14,1)'); fade.addColorStop(0.18, 'rgba(10,11,14,0)');
+      fade.addColorStop(0.82, 'rgba(10,11,14,0)'); fade.addColorStop(1, 'rgba(10,11,14,1)');
+      ctx.fillStyle = fade; ctx.fillRect(0, 0, w, h);
+    },
+    veil: (ctx, w, h, t, st, c) => {
+      const pulse = 0.75 + 0.45 * (0.5 + 0.5 * Math.sin(t * 0.16));
+      this.base(ctx, w, h, c, pulse);
+      const p = ctx.createPattern(st.tile, 'repeat');
+      ctx.save();
+      ctx.globalAlpha = 0.16 * c.amount;
+      ctx.translate((t * 7) % 128 - 128, (t * 4) % 128 - 128);
+      ctx.fillStyle = p; ctx.fillRect(0, 0, w + 256, h + 256);
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = 0.1 * c.amount;
+      ctx.translate(-((t * 11) % 128), -((t * 3) % 128));
+      ctx.fillStyle = p; ctx.fillRect(0, 0, w + 256, h + 256);
+      ctx.restore();
+    }
+  };
+
+  openFull = (i) => () => this.setState({ full: i });
+  closeFull = () => this.setState({ full: null });
+  step = (d) => () => this.setState(s => ({ full: ((s.full ?? 0) + d + 8) % 8 }));
+
+  renderVals() {
+    const f = this.state.full;
+    const cur = f == null ? null : this.list[f];
+    return {
+      variants: this.list.map((v, i) => ({ ...v, open: this.openFull(i) })),
+      fullOn: cur != null,
+      fullKey: cur ? cur.key : 'dust',
+      fullName: cur ? cur.name : '',
+      fullId: cur ? cur.id : '',
+      closeFull: this.closeFull,
+      prevFull: this.step(-1),
+      nextFull: this.step(1)
+    };
+  }
+}
+</script>
+</body>
+</html>

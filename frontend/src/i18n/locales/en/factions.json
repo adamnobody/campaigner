@@ -104,7 +104,8 @@
     "baseSection": "Core",
     "customSection": "Custom",
     "compareWithOthers": "Compare with others",
-    "customNone": "No custom metrics added."
+    "customNone": "No custom metrics added.",
+    "readabilityHint": "Keep the world legible at a glance: core figures stay together, while project-specific measures remain separate."
   },
   "politicalScaleGroups": {
     "state": {
@@ -128,6 +129,7 @@
     "createError": "Could not create scale",
     "loading": "Loading political scales…",
     "sectionTitle": "Political scales",
+    "readabilityHint": "Read each axis from left to right. The highlighted zone names the current position; comments preserve the reasoning behind it.",
     "addCustom": "Add custom scale",
     "manage": "Manage scales",
     "valueLabel": "Value: {{value}}",
@@ -183,6 +185,9 @@
     "newTitleFaction": "New faction",
     "fallbackNameState": "State",
     "fallbackNameFaction": "Faction",
+    "draft": "Draft",
+    "createHintState": "Only the name is required. Ruler, dynasty, territories, and heraldry can be linked later.",
+    "createHintFaction": "Only the name is required. Structure, relations, ambitions, and policy can be added after saving.",
     "tabs": {
       "overview": "Overview",
       "structure": "Structure",
@@ -358,7 +363,8 @@
   "customMetrics": {
     "name": "Name",
     "value": "Value",
-    "unit": "Unit"
+    "unit": "Unit",
+    "add": "Add custom metric"
   },
   "snackbar": {
     "loadError": "Failed to load",

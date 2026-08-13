@@ -25,14 +25,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      minHeight="240px"
-      gap={2}
+      minHeight="280px"
+      gap={1.5}
       sx={{ 
         p: 4,
         textAlign: 'center',
-        borderRadius: 3,
-        border: `1px dashed ${alpha(theme.palette.divider, 0.5)}`,
-        backgroundColor: alpha(theme.palette.background.paper, 0.3),
+        borderRadius: '16px',
+        border: '1px dashed rgba(255,255,255,.13)',
+        backgroundColor: alpha(theme.palette.common.white, 0.012),
       }}
     >
       {icon && (
@@ -40,14 +40,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           sx={{ 
             fontSize: 48, 
             color: theme.palette.primary.main, 
-            opacity: 0.8,
+            opacity: 0.55,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             width: 80,
             height: 80,
-            borderRadius: '50%',
-            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+            borderRadius: '14px',
+            backgroundColor: alpha(theme.palette.primary.main, 0.06),
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.14)}`,
             mb: 1
           }}
         >

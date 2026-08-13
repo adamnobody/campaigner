@@ -41,7 +41,11 @@ export const ConfirmDialog: React.FC = () => {
         sx: { minWidth: 400 },
       }}
     >
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+      <DialogTitle sx={{
+        fontFamily: (theme) => theme.campaigner.profile === 'design-system'
+          ? theme.campaigner.typography.display
+          : '"Cinzel", serif',
+      }}>
         {confirmDialog.title}
       </DialogTitle>
       <DialogContent>

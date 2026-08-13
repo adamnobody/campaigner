@@ -84,7 +84,8 @@ use crate::models::timeline::{
 };
 use crate::models::upload::{
     CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
-    FactionUploadImageInput, ProjectUploadMapImageInput, UploadFileInput, UploadSavedPath,
+    FactionUploadImageInput, ProjectUploadCoverInput, ProjectUploadMapImageInput, UploadFileInput,
+    UploadSavedPath,
 };
 use crate::models::wiki_link::{
     CreateWikiLinkInput, DeleteWikiLinkInput, ListWikiCategoriesInput, ListWikiLinksInput,
@@ -129,16 +130,16 @@ mod codegen_commands {
         ListFactionPoliciesInput, ListFactionRanksInput, ListPoliticalScaleAssignmentsInput,
         ListPoliticalScalesInput, ListWikiCategoriesInput, ListWikiLinksInput, Note,
         NotesListInput, NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
-        ProjectUploadMapImageInput, ReconcileCanvasSceneInput, RelationshipsListInput,
-        RemoveDynastyMemberInput, ReorderCanvasLayersInput, ReorderCanvasObjectsInput,
-        ReorderDogmasInput, ReorderDynastyEventsInput, ReorderTimelineInput,
-        ReplaceFactionCustomMetricsInput, ReplacePoliticalScaleAssignmentsInput,
-        SaveDynastyGraphPositionsInput, ScenarioBranch, SearchQueryInput, SearchResult,
-        SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
-        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
-        TimelineListInput, UnassignCharacterTraitInput, UnassignFactionAmbitionInput,
-        UpdateAmbitionExclusionsInput, UpdateAmbitionInput, UpdateBranchInput,
-        UpdateCanvasLayerInput, UpdateCanvasObjectInput, UpdateCanvasSceneInput,
+        ProjectUploadCoverInput, ProjectUploadMapImageInput, ReconcileCanvasSceneInput,
+        RelationshipsListInput, RemoveDynastyMemberInput, ReorderCanvasLayersInput,
+        ReorderCanvasObjectsInput, ReorderDogmasInput, ReorderDynastyEventsInput,
+        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
+        ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
+        SearchQueryInput, SearchResult, SetCharacterTagsInput, SetDogmaTagsInput,
+        SetDynastyTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
+        TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
+        UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
+        UpdateBranchInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput, UpdateCanvasSceneInput,
         UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
         UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
         UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
@@ -885,6 +886,7 @@ mod codegen_commands {
             description: String::new(),
             status: "active".to_string(),
             map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -899,6 +901,7 @@ mod codegen_commands {
             description: input.description.unwrap_or_default(),
             status: input.status.unwrap_or_else(|| "active".to_string()),
             map_image_path: None,
+            cover_image_path: input.cover_image_path,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -913,6 +916,7 @@ mod codegen_commands {
             description: String::new(),
             status: "active".to_string(),
             map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -929,6 +933,7 @@ mod codegen_commands {
                 description: None,
                 status: Some("active".to_string()),
                 map_image_base64: None,
+                cover_image_base64: None,
             },
             characters: Vec::new(),
             relationships: Vec::new(),
@@ -966,6 +971,7 @@ mod codegen_commands {
             description: String::new(),
             status: "active".to_string(),
             map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -980,6 +986,7 @@ mod codegen_commands {
             description: input.description.unwrap_or_default(),
             status: input.status.unwrap_or_else(|| "active".to_string()),
             map_image_path: input.map_image_path,
+            cover_image_path: input.cover_image_path,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -1706,6 +1713,22 @@ mod codegen_commands {
             description: String::new(),
             status: String::new(),
             map_image_path: None,
+            cover_image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn projects_upload_cover(_input: ProjectUploadCoverInput) -> Project {
+        Project {
+            id: 0,
+            name: String::new(),
+            description: String::new(),
+            status: String::new(),
+            map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -1842,6 +1865,7 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::factions_upload_banner,
             codegen_commands::dynasties_upload_image,
             codegen_commands::projects_upload_map_image,
+            codegen_commands::projects_upload_cover,
             codegen_commands::characters_list,
             codegen_commands::characters_get,
             codegen_commands::characters_create,
@@ -2079,6 +2103,7 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<FactionUploadBannerInput>()
         .typ::<DynastyUploadImageInput>()
         .typ::<ProjectUploadMapImageInput>()
+        .typ::<ProjectUploadCoverInput>()
         .typ::<WikiLink>()
         .typ::<WikiCategory>()
         .typ::<ListWikiLinksInput>()

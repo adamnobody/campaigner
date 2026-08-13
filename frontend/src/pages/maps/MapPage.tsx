@@ -1410,14 +1410,14 @@ export function CanvasPage() {
 
       <Typography
         variant="caption"
-        sx={{ color: 'text.secondary', mb: 0.25, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}
+        sx={{ color: 'text.secondary', px: 0.5, mb: 0.25, display: 'block', fontSize: '0.76rem', lineHeight: 1.45 }}
       >
         {canvasModeHint}
       </Typography>
       <Typography
         variant="caption"
         component="div"
-        sx={{ color: 'text.secondary', mb: territoryEditSession ? 0.5 : 1, fontSize: '0.72rem', lineHeight: 1.4 }}
+        sx={{ color: 'text.disabled', px: 0.5, mb: territoryEditSession ? 0.5 : 1, fontFamily: theme.campaigner.typography.mono, fontSize: '0.62rem', lineHeight: 1.4 }}
       >
         {t('map:page.modeShortcutsHint')}
       </Typography>
@@ -1442,7 +1442,8 @@ export function CanvasPage() {
           flex: 1,
           minHeight: 0,
           overflow: 'hidden',
-          border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+          borderRadius: '14px',
+          border: `1px solid ${theme.campaigner.surface.border}`,
           background: '#111820',
         }}
       >

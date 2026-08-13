@@ -64,11 +64,11 @@ export const GraphDetailsPanel: React.FC<Props> = ({
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.25 }}>
         {!selectedNode ? (
           <>
-            <Typography sx={{ fontWeight: 700, mb: 0.5 }}>{t('graph:details.notSelectedTitle')}</Typography>
+            <Typography variant="h6" sx={{ mb: 0.5 }}>{t('graph:details.notSelectedTitle')}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               {t('graph:details.notSelectedHint')}
             </Typography>
-            <Typography sx={{ fontWeight: 700, mb: 1 }}>{t('graph:details.legendTitle')}</Typography>
+            <Typography variant="overline" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>{t('graph:details.legendTitle')}</Typography>
             <GraphLegend dense />
           </>
         ) : (
@@ -83,14 +83,20 @@ export const GraphDetailsPanel: React.FC<Props> = ({
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
               }}
             />
-            <Typography sx={{ fontWeight: 700, mb: 0.5, wordBreak: 'break-word' }}>{selectedNode.label}</Typography>
+            <Typography variant="h6" sx={{ mb: 0.5, wordBreak: 'break-word' }}>{selectedNode.label}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
               {connectionsLine}
             </Typography>
             {metaRows.length > 0 ? (
               <Box sx={{ mb: 1.5 }}>
                 {metaRows.map((row) => (
-                  <Box key={row.key} display="flex" justifyContent="space-between" gap={1} sx={{ py: 0.25 }}>
+                  <Box
+                    key={row.key}
+                    display="flex"
+                    justifyContent="space-between"
+                    gap={1}
+                    sx={{ py: 0.6, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}
+                  >
                     <Typography variant="caption" color="text.secondary">
                       {row.label}
                     </Typography>
@@ -115,7 +121,15 @@ export const GraphDetailsPanel: React.FC<Props> = ({
                 if (!neighbor) return null;
                 const kindHint = edge.label || t(edgeKindI18nKey(edge.kind));
                 return (
-                  <Box key={edge.id}>
+                  <Box
+                    key={edge.id}
+                    sx={{
+                      p: 1,
+                      borderRadius: '8px',
+                      backgroundColor: theme.campaigner.surface.subtle,
+                      border: `1px solid ${theme.campaigner.surface.border}`,
+                    }}
+                  >
                     <Link
                       component={RouterLink}
                       to={getNodeRoute(projectId, neighbor)}

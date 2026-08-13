@@ -287,7 +287,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
         icon={<TrackChangesIcon />}
         defaultOpen
         action={
-          <Box display="flex" gap={1}>
+          <Box display="flex" gap={1} flexWrap="wrap" justifyContent="flex-end">
             <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
               {t('factions:politicalScales.addCustom')}
             </Button>
@@ -297,13 +297,36 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
           </Box>
         }
       >
-        <Box display="flex" flexDirection="column" gap={3}>
+        <Typography
+          variant="body2"
+          sx={{ color: 'text.secondary', maxWidth: 760, lineHeight: 1.7, mb: 3 }}
+        >
+          {t('factions:politicalScales.readabilityHint')}
+        </Typography>
+        <Box display="flex" flexDirection="column" gap={2}>
           {grouped.map(([category, items]) => (
-            <Box key={category}>
-              <Typography variant="subtitle2" sx={{ mb: 1.25, fontWeight: 700, color: 'text.secondary' }}>
+            <Box
+              key={category}
+              sx={{
+                p: { xs: 1.5, md: 2 },
+                border: `1px solid ${alpha(theme.palette.divider, 0.48)}`,
+                borderRadius: 2.5,
+                bgcolor: alpha(theme.palette.background.paper, 0.2),
+              }}
+            >
+              <Typography
+                sx={{
+                  mb: 1.5,
+                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontSize: '0.67rem',
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'primary.main',
+                }}
+              >
                 {t(`factions:politicalScaleGroups.${entityType}.${category}`, { defaultValue: category })}
               </Typography>
-              <Box display="flex" flexDirection="column" gap={2.5}>
+              <Box display="flex" flexDirection="column" gap={1.25}>
                 {items.map((scale) => {
                   const ld = localizedBuiltinPoliticalScale(scale, t);
                   const loc = localByScaleId[scale.id];
@@ -315,10 +338,11 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                     <GlassCard
                       key={scale.id}
                       sx={{
-                        p: 2.25,
+                        p: { xs: 1.75, md: 2.25 },
                         opacity: enabled ? 1 : 0.55,
                         border: `1px solid ${alpha(theme.palette.divider, 0.45)}`,
-                        backgroundColor: alpha(theme.palette.background.paper, 0.62),
+                        backgroundColor: alpha(theme.palette.background.paper, 0.46),
+                        borderRadius: 2,
                       }}
                     >
                       <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
@@ -326,10 +350,15 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                           <Typography variant="body2" sx={{ fontWeight: 700, mb: 1, lineHeight: 1.48, fontSize: '1rem' }}>
                             {ld.name}
                           </Typography>
-                          <Box display="flex" alignItems="center" gap={1.5}>
+                          <Box
+                            display="grid"
+                            gridTemplateColumns={{ xs: '1fr 1fr', md: 'minmax(110px, 150px) 1fr minmax(110px, 150px)' }}
+                            alignItems="center"
+                            gap={1.5}
+                          >
                             <Typography
                               variant="caption"
-                              sx={{ width: 120, color: alpha(theme.palette.text.secondary, 0.98), flexShrink: 0, fontSize: '0.88rem', lineHeight: 1.4 }}
+                              sx={{ color: alpha(theme.palette.text.secondary, 0.98), fontSize: '0.84rem', lineHeight: 1.4 }}
                             >
                               {ld.leftPoleLabel}
                             </Typography>
@@ -349,10 +378,11 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
                                 void saveMap(next);
                               }}
                               valueLabelDisplay="auto"
+                              sx={{ gridColumn: { xs: '1 / -1', md: 'auto' }, gridRow: { xs: 2, md: 1 } }}
                             />
                             <Typography
                               variant="caption"
-                              sx={{ width: 120, textAlign: 'right', color: alpha(theme.palette.text.secondary, 0.98), flexShrink: 0, fontSize: '0.88rem', lineHeight: 1.4 }}
+                              sx={{ textAlign: 'right', color: alpha(theme.palette.text.secondary, 0.98), fontSize: '0.84rem', lineHeight: 1.4 }}
                             >
                               {ld.rightPoleLabel}
                             </Typography>

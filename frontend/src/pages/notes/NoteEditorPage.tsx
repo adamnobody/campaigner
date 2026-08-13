@@ -409,7 +409,11 @@ export const NoteEditorPage: React.FC = () => {
   const isWiki = currentNote.noteType === 'wiki';
 
   const renderEditor = () => (
-    <Box ref={editorScrollRef} onScroll={handleEditorScroll} sx={{ height: '100%', overflow: 'auto' }}>
+    <Box
+      ref={editorScrollRef}
+      onScroll={handleEditorScroll}
+      sx={{ height: '100%', overflow: 'auto', backgroundColor: alpha(theme.palette.common.white, 0.012) }}
+    >
       {isMarkdown && (
         <NoteEditorMarkdownToolbar
           canUndo={history.canUndo}
@@ -430,7 +434,7 @@ export const NoteEditorPage: React.FC = () => {
         sx={{
           p: 2,
           '& .MuiInput-input': {
-            fontFamily: isMarkdown ? '"Fira Code", monospace' : '"Crimson Text", serif',
+            fontFamily: isMarkdown ? theme.campaigner.typography.mono : theme.campaigner.typography.display,
             fontSize: isMarkdown ? '0.9rem' : '1rem',
             lineHeight: 1.8,
             color: 'text.primary',
@@ -443,15 +447,38 @@ export const NoteEditorPage: React.FC = () => {
   );
 
   return (
-    <Box sx={{ height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-        <Box display="flex" alignItems="center" gap={2}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', lg: 'center' },
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: 1.5,
+          mb: 1,
+          px: { xs: 1.25, md: 1.75 },
+          py: 1.25,
+          border: `1px solid ${theme.campaigner.surface.border}`,
+          borderRadius: '14px',
+          backgroundColor: theme.campaigner.surface.subtle,
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, width: { xs: '100%', lg: 'auto' } }}>
           <IconButton onClick={() => navigate(-1)} aria-label={t('notes:editor.backAria')}>
             <ArrowBackIcon />
           </IconButton>
           <TextField value={title} onChange={e => handleTitleChange(e.target.value)} variant="standard"
-            sx={{ '& .MuiInput-input': { fontSize: '1.5rem', fontFamily: '"Cinzel", serif', fontWeight: 600, color: 'text.primary' }, minWidth: 300 }} />
+            sx={{
+              flex: 1,
+              minWidth: { xs: 120, sm: 300 },
+              '& .MuiInput-input': {
+                fontSize: { xs: '1.2rem', sm: '1.5rem' },
+                fontFamily: theme.campaigner.typography.display,
+                fontWeight: 600,
+                color: 'text.primary',
+              },
+            }} />
           <Chip label={currentNote.format.toUpperCase()} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: theme.palette.divider }} />
           {isWiki && <Chip label={t('notes:editor.wikiChip')} size="small" sx={{ backgroundColor: alpha(theme.palette.info.main, 0.2), color: theme.palette.info.main, fontWeight: 600 }} />}
           <IconButton onClick={handleTogglePin} color={currentNote.isPinned ? 'primary' : 'default'} aria-label={t('notes:editor.pinAria')}>
@@ -466,7 +493,7 @@ export const NoteEditorPage: React.FC = () => {
             </Tooltip>
           )}
         </Box>
-        <Box display="flex" alignItems="center" gap={2}>
+        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap" sx={{ justifyContent: { xs: 'flex-end', lg: 'initial' }, width: { xs: '100%', lg: 'auto' } }}>
           <Box display="flex" alignItems="center" gap={0.5}>
             {saveStatus === 'saved' && (
               <><CloudDoneIcon sx={{ fontSize: 16, color: alpha(theme.palette.success.main, 0.6) }} />
@@ -506,7 +533,7 @@ export const NoteEditorPage: React.FC = () => {
         </Box>
       </Box>
 
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" px={0.5} mb={1}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
           {t('notes:editor.hintBar', { wikiHint: isWiki ? t('notes:editor.hintBarWikiSuffix') : '' })}
         </Typography>
@@ -517,7 +544,17 @@ export const NoteEditorPage: React.FC = () => {
 
       {/* Main area: editor + wiki sidebar */}
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
-        <Paper sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', border: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper }}>
+        <Paper
+          elevation={0}
+          sx={{
+            flexGrow: 1,
+            overflow: 'hidden',
+            display: 'flex',
+            border: `1px solid ${theme.campaigner.surface.border}`,
+            borderRadius: '14px',
+            backgroundColor: theme.campaigner.surface.subtle,
+          }}
+        >
           {mode === 'edit' && <Box sx={{ width: '100%', height: '100%' }}>{renderEditor()}</Box>}
           {mode === 'split' && (
             <>

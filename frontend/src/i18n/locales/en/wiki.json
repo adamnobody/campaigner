@@ -39,6 +39,21 @@
     "moreLinks": "+{{count}} more",
     "linkPrefix": "→ "
   },
+  "article": {
+    "entityName": "wiki article",
+    "eyebrow": "Wiki · article",
+    "edit": "Edit",
+    "articleTab": "Article",
+    "contents": "Contents",
+    "links": "Links",
+    "tags": "Tags",
+    "timestamps": "Article dates",
+    "created": "Created {{date}}",
+    "updated": "Updated {{date}}",
+    "empty": "This article has no content yet.",
+    "loadError": "Could not load this wiki article",
+    "backToWiki": "Back to wiki"
+  },
   "dialogs": {
     "create": {
       "title": "New article",

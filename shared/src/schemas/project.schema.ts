@@ -8,6 +8,7 @@ export const projectSchema = z.object({
   description: z.string().max(LIMITS.PROJECT_DESCRIPTION_MAX).optional().default(''),
   status: z.enum(PROJECT_STATUSES).default('active'),
   mapImagePath: z.string().optional().nullable(),
+  coverImagePath: z.string().optional().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -18,6 +19,7 @@ export const createProjectSchema = z.object({
   status: z.enum(PROJECT_STATUSES).optional().default('active'),
   /** Display name for the initial main scenario branch (UI locale). */
   mainBranchName: z.string().min(1).max(120).trim().optional(),
+  coverImagePath: z.string().optional().nullable(),
 });
 
 export const updateProjectSchema = projectSchema

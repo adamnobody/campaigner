@@ -431,7 +431,7 @@ export const WikiPage: React.FC = () => {
               key={note.id}
               note={note}
               noteLinks={getLinksForNote(note.id)}
-              onOpenArticle={() => navigate(`/project/${pid}/notes/${note.id}`)}
+              onOpenArticle={() => navigate(`/project/${pid}/wiki/${note.id}`)}
               onToggleTagCategory={(name) => setSelectedCategory(selectedCategory === name ? '' : name)}
               onEditTags={(e) => handleOpenTagsEdit(note, e)}
               onDelete={(e) => handleDelete(note.id, note.title, e)}
