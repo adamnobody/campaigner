@@ -1,608 +1,367 @@
-import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Typography, Paper, TextField, IconButton,
-  ToggleButtonGroup, ToggleButton, Chip, Tooltip, useTheme, alpha,
+  Box, ButtonBase, Menu, MenuItem, TextField, Typography, useTheme,
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SaveIcon from '@mui/icons-material/Save';
-import EditIcon from '@mui/icons-material/Edit';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
-import PushPinIcon from '@mui/icons-material/PushPin';
-import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined';
-import CloudDoneIcon from '@mui/icons-material/CloudDone';
-import CloudOffIcon from '@mui/icons-material/CloudOff';
-import SyncIcon from '@mui/icons-material/Sync';
+import AddIcon from '@mui/icons-material/Add';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useTagStore } from '@/store/useTagStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
-import { useHistory } from '@/hooks/useHistory';
-import { DndButton } from '@/components/ui/DndButton';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import { wikiApi } from '@/api/wiki';
 import { notesApi } from '@/api/notes';
-import { NoteEditorMarkdownToolbar } from '@/pages/notes/components/NoteEditorMarkdownToolbar';
-import { NoteEditorWikiSidebar, type EditorWikiLink } from '@/pages/notes/components/NoteEditorWikiSidebar';
-import { InsertWikiLinkDialog } from '@/pages/notes/components/InsertWikiLinkDialog';
-import { CreateWikiLinkDialog } from '@/pages/notes/components/CreateWikiLinkDialog';
-import { MarkdownPreview } from '@/pages/notes/components/MarkdownPreview';
-import { shallow } from 'zustand/shallow';
-import { isNotFoundError } from '@/utils/error';
+import { uploadsApi } from '@/api/uploads';
+import { resolveUploadAssetUrl } from '@/utils/uploadAssetUrl';
+import { formatClock, formatRelativeTime, formatShortDate } from '@/utils/relativeTime';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
+import { DocChip } from '@/components/document-editor/DocChip';
+import { DocumentShell, Inspector, InspectorEyebrow, InspectorHint, InspectorSection, InspectorStat } from '@/components/document-editor/DocumentShell';
+import { EntityPickerDialog } from '@/components/document-editor/EntityPickerDialog';
+import { useDocumentChrome } from '@/components/document-editor/useDocumentChrome';
+import { useNoteDocument } from '@/components/document-editor/useNoteDocument';
+import { WorldTextEditor, type DocumentEntity, type WorldTextEditorHandle } from '@/components/document-editor/WorldTextEditor';
+import { extractEntityLinks, readingMinutes, type NoteKind } from '@/components/document-editor/documentMeta';
+import type { WikiLink } from '@campaigner/shared';
 
-const AUTOSAVE_DELAY = 3000;
-
-type EditorMode = 'edit' | 'preview' | 'split';
+const KINDS: NoteKind[] = ['note', 'idea', 'scene', 'question'];
 
 export const NoteEditorPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['notes', 'common']);
+  const { t, i18n } = useTranslation(['notes', 'common', 'wiki']);
   const { projectId, noteId } = useParams<{ projectId: string; noteId: string }>();
-  const pid = parseInt(projectId!);
-  const nid = parseInt(noteId!);
+  const pid = Number.parseInt(projectId!, 10);
+  const nid = Number.parseInt(noteId!, 10);
   const navigate = useNavigate();
-  const { currentNote, fetchNote, updateNote, setCurrentNote } = useNoteStore((state) => ({
-    currentNote: state.currentNote,
-    fetchNote: state.fetchNote,
-    updateNote: state.updateNote,
-    setCurrentNote: state.setCurrentNote,
-  }), shallow);
-  const showSnackbar = useUIStore((state) => state.showSnackbar);
   const theme = useTheme();
-  const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const untitled = t('notes:untitled');
+  const doc = useNoteDocument(nid, untitled);
+  const deleteNote = useNoteStore((state) => state.deleteNote);
+  const setTags = useNoteStore((state) => state.setTags);
+  const showSnackbar = useUIStore((state) => state.showSnackbar);
+  const showConfirmDialog = useUIStore((state) => state.showConfirmDialog);
+  const branches = useBranchStore((state) => state.branches);
+  const activeBranchId = useBranchStore((state) => state.activeBranchId);
+  const characters = useCharacterStore((state) => state.characters);
+  const fetchCharacters = useCharacterStore((state) => state.fetchCharacters);
+  const { fetchTags, findOrCreateTagsByNames } = useTagStore();
 
-  const [mode, setMode] = useState<EditorMode>('split');
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [previewContent, setPreviewContent] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved');
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [branchMissingDialogOpen, setBranchMissingDialogOpen] = useState(false);
-
-  // Wiki sidebar
-  const [showLinks, setShowLinks] = useState(false);
-  const [wikiLinks, setWikiLinks] = useState<EditorWikiLink[]>([]);
+  const editorRef = useRef<WorldTextEditorHandle>(null);
+  const [focusMode, setFocusMode] = useState(false);
+  const [readMode, setReadMode] = useState(false);
+  const [kindAnchor, setKindAnchor] = useState<HTMLElement | null>(null);
+  const [entityOpen, setEntityOpen] = useState(false);
+  const [tagDraft, setTagDraft] = useState('');
   const [wikiNotes, setWikiNotes] = useState<{ id: number; title: string }[]>([]);
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [insertWikiDialogOpen, setInsertWikiDialogOpen] = useState(false);
-  const [insertWikiInitialLabel, setInsertWikiInitialLabel] = useState('');
-  const insertWikiSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
-
-  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasChangesRef = useRef(false);
-  const titleRef = useRef('');
-  const contentRef = useRef('');
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const editorScrollRef = useRef<HTMLDivElement>(null);
-  const previewScrollRef = useRef<HTMLDivElement>(null);
-  const isUndoRedoRef = useRef(false);
-
-  const history = useHistory('');
-  const initializedNoteIdRef = useRef<number | null>(null);
-  const wikiNotesLoadedRef = useRef(false);
-  const closeMissingBranchEntity = useCallback(() => {
-    setBranchMissingDialogOpen(false);
-    setCurrentNote(null);
-    setLinkDialogOpen(false);
-    setInsertWikiDialogOpen(false);
-    navigate(`/project/${pid}/notes`, { replace: true });
-  }, [navigate, pid, setCurrentNote]);
+  const [wikiLinks, setWikiLinks] = useState<WikiLink[]>([]);
 
   useEffect(() => {
-    hasChangesRef.current = hasChanges;
-    titleRef.current = title;
-    contentRef.current = content;
-  }, [hasChanges, title, content]);
-
-  useEffect(() => {
-    if (mode === 'edit') {
-      setPreviewContent(content);
-      return;
+    if (doc.note?.noteType === 'wiki') {
+      navigate(`/project/${pid}/wiki/${nid}`, { replace: true });
     }
-    const timer = setTimeout(() => setPreviewContent(content), 180);
-    return () => clearTimeout(timer);
-  }, [content, mode]);
+  }, [doc.note?.noteType, navigate, nid, pid]);
 
   useEffect(() => {
-    fetchNote(nid).catch((error: unknown) => {
-      if (isNotFoundError(error)) {
-        hasChangesRef.current = false;
-        setHasChanges(false);
-        setCurrentNote(null);
-        setBranchMissingDialogOpen(true);
-        return;
-      }
-      showSnackbar(t('notes:snackbar.loadError'), 'error');
-    });
-  }, [nid, fetchNote, setCurrentNote, showSnackbar, t, activeBranchId]);
+    void fetchCharacters(pid);
+    void fetchTags(pid);
+    void notesApi.getAll(pid, { noteType: 'wiki', limit: 500 }).then((res) => {
+      setWikiNotes((res.data.data.items || []).map((note) => ({ id: note.id, title: note.title })));
+    }).catch(() => {});
+    void wikiApi.getLinks(pid, nid).then((res) => setWikiLinks(res.data.data || [])).catch(() => {});
+  }, [fetchCharacters, fetchTags, nid, pid]);
 
   useEffect(() => {
-    if (currentNote) {
-      if (initializedNoteIdRef.current !== currentNote.id) {
-        initializedNoteIdRef.current = currentNote.id;
-        setTitle(currentNote.title);
-        setContent(currentNote.content);
-        setPreviewContent(currentNote.content);
-        history.reset(currentNote.content);
-        setHasChanges(false);
-        setSaveStatus('saved');
+    if (doc.loadError) showSnackbar(t('notes:snackbar.loadError'), 'error');
+  }, [doc.loadError, showSnackbar, t]);
 
-        // Load wiki data if wiki note
-        if (currentNote.noteType === 'wiki') {
-          setShowLinks(true);
-          loadWikiData();
-        } else {
-          setShowLinks(false);
+  const kind = doc.meta.kind ?? 'note';
+  const branchName = branches.find((branch) => branch.id === activeBranchId)?.name ?? '';
+  const saveText = doc.saveStatus === 'saving'
+    ? t('common:document.saving')
+    : doc.saveStatus === 'unsaved'
+      ? t('common:document.unsaved')
+      : doc.saveStatus === 'error'
+        ? t('common:document.saveError')
+        : t('common:document.savedAt', { time: doc.lastSaved ? formatClock(doc.lastSaved, i18n.language) : '' });
+
+  const handleDelete = useCallback(() => {
+    showConfirmDialog(
+      t('notes:confirm.deleteNoteTitle'),
+      t('notes:confirm.deleteNoteMessage', { title: doc.title || untitled }),
+      async () => {
+        try {
+          await deleteNote(nid);
+          navigate(`/project/${pid}/notes`);
+        } catch {
+          showSnackbar(t('notes:snackbar.deleteError'), 'error');
         }
-      }
-    }
-  }, [currentNote]);
-
-  const loadWikiNotes = useCallback(async () => {
-    try {
-      const notesRes = await notesApi.getAll(pid, { noteType: 'wiki', limit: 500 });
-      setWikiNotes((notesRes.data.data.items || []).map((n: any) => ({ id: n.id, title: n.title })));
-      wikiNotesLoadedRef.current = true;
-    } catch {
-      // no-op
-    }
-  }, [pid]);
-
-  const loadWikiData = useCallback(async () => {
-    try {
-      const [linksRes] = await Promise.all([
-        wikiApi.getLinks(pid, nid),
-      ]);
-      setWikiLinks(linksRes.data.data || []);
-      await loadWikiNotes();
-    } catch {}
-  }, [loadWikiNotes, nid, pid]);
-
-  // Load all wiki notes for [[link]] resolution even for non-wiki notes
-  useEffect(() => {
-    wikiNotesLoadedRef.current = false;
-    loadWikiNotes();
-  }, [loadWikiNotes]);
-
-  // ==================== Save ====================
-  const doSave = useCallback(async (isAuto: boolean = false) => {
-    if (!hasChangesRef.current) return;
-    setSaving(true);
-    setSaveStatus('saving');
-    try {
-      await updateNote(nid, { title: titleRef.current, content: contentRef.current });
-      setHasChanges(false);
-      hasChangesRef.current = false;
-      setSaveStatus('saved');
-      setLastSaved(new Date());
-      if (!isAuto) showSnackbar(t('notes:snackbar.saved', { title: titleRef.current.trim() }), 'success');
-    } catch {
-      setSaveStatus('error');
-      if (!isAuto) showSnackbar(t('notes:snackbar.saveError'), 'error');
-    } finally {
-      setSaving(false);
-    }
-  }, [nid, updateNote, showSnackbar, t]);
-
-  const scheduleAutosave = useCallback(() => {
-    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-    autosaveTimerRef.current = setTimeout(() => doSave(true), AUTOSAVE_DELAY);
-  }, [doSave]);
-
-  const handleTitleChange = (value: string) => {
-    setTitle(value);
-    setHasChanges(true);
-    setSaveStatus('unsaved');
-    scheduleAutosave();
-  };
-
-  const handleContentChange = (value: string) => {
-    setContent(value);
-    setHasChanges(true);
-    setSaveStatus('unsaved');
-    scheduleAutosave();
-    if (!isUndoRedoRef.current) {
-      const ta = textareaRef.current;
-      history.push(value, ta?.selectionStart ?? value.length, ta?.selectionEnd ?? value.length);
-    }
-    isUndoRedoRef.current = false;
-  };
-
-  const handleSave = useCallback(() => doSave(false), [doSave]);
-
-  // ==================== Undo / Redo ====================
-  const handleUndo = useCallback(() => {
-    const entry = history.undo();
-    if (!entry) return;
-    isUndoRedoRef.current = true;
-    setContent(entry.value);
-    setHasChanges(true);
-    setSaveStatus('unsaved');
-    scheduleAutosave();
-    setTimeout(() => {
-      const ta = textareaRef.current;
-      if (ta) { ta.focus(); ta.setSelectionRange(entry.cursorStart, entry.cursorEnd); }
-    }, 0);
-  }, [history, scheduleAutosave]);
-
-  const handleRedo = useCallback(() => {
-    const entry = history.redo();
-    if (!entry) return;
-    isUndoRedoRef.current = true;
-    setContent(entry.value);
-    setHasChanges(true);
-    setSaveStatus('unsaved');
-    scheduleAutosave();
-    setTimeout(() => {
-      const ta = textareaRef.current;
-      if (ta) { ta.focus(); ta.setSelectionRange(entry.cursorStart, entry.cursorEnd); }
-    }, 0);
-  }, [history, scheduleAutosave]);
-
-  // ==================== Markdown insert ====================
-  const insertMarkdown = useCallback((type: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = content.substring(start, end);
-
-    if (type === 'wikilink') {
-      insertWikiSelectionRef.current = { start, end };
-      setInsertWikiInitialLabel(selected || '');
-      setInsertWikiDialogOpen(true);
-      return;
-    }
-
-    let insertion = '';
-    let cursorOffset = 0;
-
-    const ph = (key: string) => t(`notes:markdown.placeholders.${key}`);
-
-    switch (type) {
-      case 'bold': insertion = `**${selected || ph('bold')}**`; cursorOffset = selected ? insertion.length : 2; break;
-      case 'italic': insertion = `*${selected || ph('italic')}*`; cursorOffset = selected ? insertion.length : 1; break;
-      case 'heading': insertion = `## ${selected || ph('heading')}`; cursorOffset = insertion.length; break;
-      case 'link': insertion = `[${selected || ph('linkText')}](url)`; cursorOffset = selected ? insertion.length - 1 : 1; break;
-      case 'wikilink': insertion = `[[${selected || ph('wikiTitle')}]]`; cursorOffset = selected ? insertion.length : 2; break;
-      case 'code':
-        if (selected.includes('\n')) { insertion = `\`\`\`\n${selected || ph('code')}\n\`\`\``; }
-        else { insertion = `\`${selected || ph('code')}\``; }
-        cursorOffset = selected ? insertion.length : 1; break;
-      case 'list': insertion = selected ? selected.split('\n').map(line => `- ${line}`).join('\n') : `- ${ph('listItem')}`; cursorOffset = insertion.length; break;
-      case 'quote': insertion = selected ? selected.split('\n').map(line => `> ${line}`).join('\n') : `> ${ph('quote')}`; cursorOffset = insertion.length; break;
-      case 'hr': insertion = '\n---\n'; cursorOffset = insertion.length; break;
-      default: return;
-    }
-
-    const newContent = content.substring(0, start) + insertion + content.substring(end);
-    const newCursorPos = start + cursorOffset;
-    history.push(newContent, newCursorPos, newCursorPos);
-    isUndoRedoRef.current = true;
-    handleContentChange(newContent);
-    setTimeout(() => { textarea.focus(); textarea.setSelectionRange(newCursorPos, newCursorPos); }, 0);
-  }, [content, history, t]);
-
-  // ==================== Wiki links ====================
-  const handleCreateLink = async (target: { id: number; title: string }, label: string) => {
-    try {
-      await wikiApi.createLink({ projectId: pid, sourceNoteId: nid, targetNoteId: target.id, label: label.trim() });
-      setLinkDialogOpen(false);
-      showSnackbar(t('notes:snackbar.linkCreated'), 'success');
-      loadWikiData();
-    } catch (err: any) {
-      showSnackbar(err.response?.data?.message || t('notes:snackbar.linkDuplicate'), 'error');
-    }
-  };
-
-  const handleInsertWikiLink = (target: { id: number; title: string }, insertLabel: string) => {
-    const textarea = textareaRef.current;
-    const { start, end } = insertWikiSelectionRef.current;
-
-    const label = insertLabel.trim() || target.title;
-    const insertion = `[${label}](/__note__/${target.id})`;
-
-    const newContent = content.substring(0, start) + insertion + content.substring(end);
-    const newCursorPos = start + insertion.length;
-
-    history.push(newContent, newCursorPos, newCursorPos);
-    isUndoRedoRef.current = true;
-    handleContentChange(newContent);
-
-    setInsertWikiDialogOpen(false);
-
-    setTimeout(() => {
-      if (textarea) {
-        textarea.focus();
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-      }
-    }, 0);
-  };
-
-  const handleDeleteLink = async (linkId: number) => {
-    try {
-      await wikiApi.deleteLink(linkId, pid);
-      showSnackbar(t('notes:snackbar.linkDeleted'), 'success');
-      loadWikiData();
-    } catch {
-      showSnackbar(t('notes:snackbar.deleteError'), 'error');
-    }
-  };
-
-  // ==================== Hotkeys ====================
-  useHotkeys(useMemo(() => [
-    { key: 's', ctrl: true, handler: () => doSave(false) },
-    { key: 'b', ctrl: true, handler: () => insertMarkdown('bold') },
-    { key: 'i', ctrl: true, handler: () => insertMarkdown('italic') },
-    { key: 'z', ctrl: true, handler: handleUndo },
-    { key: 'z', ctrl: true, shift: true, handler: handleRedo },
-    { key: 'y', ctrl: true, handler: handleRedo },
-  ], [doSave, insertMarkdown, handleUndo, handleRedo]));
-
-  useEffect(() => {
-    return () => {
-      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
-      if (hasChangesRef.current && !branchMissingDialogOpen) {
-        updateNote(nid, { title: titleRef.current, content: contentRef.current }).catch(() => {});
-      }
-    };
-  }, [branchMissingDialogOpen, nid, updateNote]);
-
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (hasChangesRef.current) { e.preventDefault(); e.returnValue = ''; }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, []);
-
-  const handleEditorScroll = useCallback(() => {
-    if (!editorScrollRef.current || !previewScrollRef.current || mode !== 'split') return;
-    const editor = editorScrollRef.current;
-    const preview = previewScrollRef.current;
-    const ratio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
-    preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
-  }, [mode]);
-
-  const handleTogglePin = async () => {
-    if (!currentNote) return;
-    try {
-      await updateNote(nid, { isPinned: !currentNote.isPinned });
-      showSnackbar(currentNote.isPinned ? t('notes:snackbar.unpinned') : t('notes:snackbar.pinned'), 'success');
-    } catch { showSnackbar(t('notes:snackbar.togglePinError'), 'error'); }
-  };
-
-  const formatLastSaved = () => {
-    if (!lastSaved) return '';
-    const diff = Math.floor((Date.now() - lastSaved.getTime()) / 1000);
-    if (diff < 10) return t('notes:editor.saved.justNow');
-    if (diff < 60) return t('notes:editor.saved.secondsAgo', { count: diff });
-    if (diff < 3600) return t('notes:editor.saved.minutesAgo', { count: Math.floor(diff / 60) });
-    return lastSaved.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
-  };
-  
-  const wordCount = useMemo(() => {
-    const words = content.trim().split(/\s+/).filter(Boolean).length;
-    return { words, chars: content.length };
-  }, [content]);
-
-  if (!currentNote) {
-    return (
-      <>
-        <LoadingScreen />
-        <BranchEntityMissingDialog
-          open={branchMissingDialogOpen}
-          entityName={t('notes:noteTypes.note').toLowerCase()}
-          onClose={closeMissingBranchEntity}
-        />
-      </>
+      },
     );
-  }
+  }, [deleteNote, doc.title, navigate, nid, pid, showConfirmDialog, showSnackbar, t, untitled]);
 
-  const isMarkdown = currentNote.format === 'md';
-  const isWiki = currentNote.noteType === 'wiki';
+  const moreItems = useMemo(() => [{
+    label: t('notes:editor.delete'),
+    onClick: handleDelete,
+    danger: true,
+  }], [handleDelete, t]);
 
-  const renderEditor = () => (
-    <Box
-      ref={editorScrollRef}
-      onScroll={handleEditorScroll}
-      sx={{ height: '100%', overflow: 'auto', backgroundColor: alpha(theme.palette.common.white, 0.012) }}
-    >
-      {isMarkdown && (
-        <NoteEditorMarkdownToolbar
-          canUndo={history.canUndo}
-          canRedo={history.canRedo}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          onInsertMarkdown={insertMarkdown}
-          isWiki={isWiki}
-        />
-      )}
+  useDocumentChrome({
+    saveText,
+    readMode,
+    focusMode,
+    readIcon: 'eye',
+    moreItems,
+    onToggleRead: () => setReadMode((value) => !value),
+    onToggleFocus: () => setFocusMode((value) => !value),
+    onDone: () => {
+      void doc.persist().then(() => navigate(`/project/${pid}/notes`));
+    },
+  });
 
-      <TextField
-        value={content}
-        onChange={e => handleContentChange(e.target.value)}
-        multiline fullWidth variant="standard"
-        InputProps={{ disableUnderline: true }}
-        inputRef={textareaRef}
-        sx={{
-          p: 2,
-          '& .MuiInput-input': {
-            fontFamily: isMarkdown ? theme.campaigner.typography.mono : theme.campaigner.reading.fontFamily,
-            fontSize: `${isMarkdown ? Math.max(13, theme.campaigner.reading.fontSize - 1) : theme.campaigner.reading.fontSize}px`,
-            lineHeight: theme.campaigner.reading.lineHeight,
-            color: 'text.primary',
-          },
-          minHeight: '100%',
-        }}
-        placeholder={t('notes:editor.placeholder')}
-      />
-    </Box>
-  );
+  useHotkeys(useMemo(() => [{ key: 's', ctrl: true, handler: () => { void doc.persist(); } }], [doc.persist]));
+
+  const entities: DocumentEntity[] = useMemo(() => [
+    ...characters.map((character) => ({
+      id: `character:${character.id}`,
+      label: character.name,
+      href: `/project/${pid}/characters/${character.id}`,
+      group: t('common:searchDialog.types.character'),
+    })),
+    ...wikiNotes.map((note) => ({
+      id: `wiki:${note.id}`,
+      label: note.title,
+      href: `/__note__/${note.id}`,
+      group: t('wiki:page.title'),
+    })),
+  ], [characters, pid, t, wikiNotes]);
+
+  const slashItems = useMemo(() => [
+    { id: 'heading', label: t('notes:editor.slashHeading') },
+    { id: 'list', label: t('notes:editor.slashList') },
+    { id: 'quote', label: t('notes:editor.slashQuote') },
+    { id: 'entity-link', label: t('notes:editor.slashEntity') },
+    { id: 'question', label: t('notes:editor.slashQuestion') },
+    { id: 'image', label: t('notes:editor.slashImage') },
+    { id: 'hr', label: t('notes:editor.slashHr') },
+  ], [t]);
+
+  const insertEntity = async (entity: DocumentEntity) => {
+    editorRef.current?.insertHtml(`<a class="entity-pill" href="${entity.href}">${entity.label}</a>&nbsp;`);
+    const noteMatch = entity.href.match(/^\/__note__\/(\d+)$/);
+    if (noteMatch) {
+      try {
+        await wikiApi.createLink({ projectId: pid, sourceNoteId: nid, targetNoteId: Number(noteMatch[1]), label: entity.label });
+        const res = await wikiApi.getLinks(pid, nid);
+        setWikiLinks(res.data.data || []);
+      } catch {
+        // duplicate links are fine
+      }
+    }
+    setEntityOpen(false);
+  };
+
+  const addTag = async () => {
+    if (!tagDraft.trim() || !doc.note) return;
+    const names = [...(doc.note.tags ?? []).map((tag) => tag.name), tagDraft.trim()];
+    const ids = await findOrCreateTagsByNames(pid, names);
+    await setTags(doc.note.id, ids);
+    setTagDraft('');
+  };
+
+  const linked = [
+    ...wikiLinks.map((link) => ({
+      id: `link-${link.id}`,
+      label: link.sourceNoteId === nid ? link.targetTitle : link.sourceTitle,
+      href: `/project/${pid}/wiki/${link.sourceNoteId === nid ? link.targetNoteId : link.sourceNoteId}`,
+    })),
+    ...extractEntityLinks(doc.body).map((item, index) => ({
+      id: `md-${index}`,
+      label: item.label,
+      href: item.href.startsWith('/__note__/')
+        ? `/project/${pid}/wiki/${item.href.slice('/__note__/'.length)}`
+        : item.href,
+    })),
+  ].filter((item, index, all) => all.findIndex((other) => other.label === item.label) === index);
+
+  if (!doc.ready && !doc.missing) return <LoadingScreen />;
+
+  const empty = !doc.body.trim() && !readMode;
+  const minutes = readingMinutes(doc.words);
+  const metaLine = empty
+    ? `${t('notes:editor.wordMeta', { words: 0 })} • ${t('notes:editor.newNoteMeta')} • ${t('notes:editor.draft')}`
+    : `${t('notes:editor.wordMeta', { words: doc.words })} • ${t('notes:editor.changedAgo', { time: formatRelativeTime(doc.note?.updatedAt ?? new Date().toISOString(), i18n.language) })} • ${t('notes:editor.readingTime', { count: minutes })}`;
 
   return (
-    <Box sx={{ height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', lg: 'center' },
-          flexDirection: { xs: 'column', lg: 'row' },
-          gap: 1.5,
-          mb: 1,
-          px: { xs: 1.25, md: 1.75 },
-          py: 1.25,
-          border: `1px solid ${theme.campaigner.surface.border}`,
-          borderRadius: '14px',
-          backgroundColor: theme.campaigner.surface.subtle,
-        }}
-      >
-        <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, width: { xs: '100%', lg: 'auto' } }}>
-          <IconButton onClick={() => navigate(-1)} aria-label={t('notes:editor.backAria')}>
-            <ArrowBackIcon />
-          </IconButton>
-          <TextField value={title} onChange={e => handleTitleChange(e.target.value)} variant="standard"
-            sx={{
-              flex: 1,
-              minWidth: { xs: 120, sm: 300 },
-              '& .MuiInput-input': {
-                fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                fontFamily: theme.campaigner.typography.display,
-                fontWeight: 600,
-                color: 'text.primary',
-              },
-            }} />
-          <Chip label={currentNote.format.toUpperCase()} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: theme.palette.divider }} />
-          {isWiki && <Chip label={t('notes:editor.wikiChip')} size="small" sx={{ backgroundColor: alpha(theme.palette.info.main, 0.2), color: theme.palette.info.main, fontWeight: 600 }} />}
-          <IconButton onClick={handleTogglePin} color={currentNote.isPinned ? 'primary' : 'default'} aria-label={t('notes:editor.pinAria')}>
-            {currentNote.isPinned ? <PushPinIcon /> : <PushPinOutlinedIcon />}
-          </IconButton>
-          {isWiki && (
-            <Tooltip title={showLinks ? t('notes:editor.tooltipHideLinks') : t('notes:editor.tooltipShowLinks')}>
-              <IconButton onClick={() => setShowLinks(!showLinks)}
-                sx={{ color: showLinks ? theme.palette.info.main : 'text.disabled' }}>
-                <AccountTreeIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Box>
-        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap" sx={{ justifyContent: { xs: 'flex-end', lg: 'initial' }, width: { xs: '100%', lg: 'auto' } }}>
-          <Box display="flex" alignItems="center" gap={0.5}>
-            {saveStatus === 'saved' && (
-              <><CloudDoneIcon sx={{ fontSize: 16, color: alpha(theme.palette.success.main, 0.6) }} />
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.success.main, 0.6) }}>{t('notes:editor.saveStatusSaved', { time: formatLastSaved() })}</Typography></>
-            )}
-            {saveStatus === 'unsaved' && (
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.warning.main, 0.8) }}>{t('notes:editor.saveStatusUnsaved')}</Typography>
-            )}
-            {saveStatus === 'saving' && (
-              <><SyncIcon sx={{ fontSize: 16, color: alpha(theme.palette.info.main, 0.6), animation: 'spin 1s linear infinite',
-                '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } }} />
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.info.main, 0.6) }}>{t('notes:editor.saveStatusSaving')}</Typography></>
-            )}
-            {saveStatus === 'error' && (
-              <><CloudOffIcon sx={{ fontSize: 16, color: alpha(theme.palette.error.main, 0.6) }} />
-              <Typography variant="caption" sx={{ color: alpha(theme.palette.error.main, 0.6) }}>{t('notes:editor.saveStatusError')}</Typography></>
-            )}
-          </Box>
-          <ToggleButtonGroup value={mode} exclusive onChange={(_, v) => { if (v) setMode(v); }} size="small"
-            sx={{
-              '& .MuiToggleButton-root': {
-                color: 'text.secondary',
-                borderColor: theme.palette.divider,
-                '&.Mui-selected': {
-                  color: theme.palette.primary.main,
-                  backgroundColor: alpha(theme.palette.primary.main, 0.15),
-                },
-              },
-            }}>
-            <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} /> {t('notes:editor.modeEdit')}</ToggleButton>
-            <ToggleButton value="split"><VerticalSplitIcon fontSize="small" sx={{ mr: 0.5 }} /> {t('notes:editor.modeSplit')}</ToggleButton>
-            <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} /> {t('notes:editor.modePreview')}</ToggleButton>
-          </ToggleButtonGroup>
-          <DndButton variant="contained" startIcon={<SaveIcon />} onClick={handleSave} loading={saving} disabled={!hasChanges} size="small">
-            {t('common:save')}
-          </DndButton>
-        </Box>
-      </Box>
-
-      <Box display="flex" justifyContent="space-between" alignItems="center" px={0.5} mb={1}>
-        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          {t('notes:editor.hintBar', { wikiHint: isWiki ? t('notes:editor.hintBarWikiSuffix') : '' })}
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          {t('notes:editor.wordCount', { words: wordCount.words, chars: wordCount.chars })}
-        </Typography>
-      </Box>
-
-      {/* Main area: editor + wiki sidebar */}
-      <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
-        <Paper
-          elevation={0}
-          sx={{
-            flexGrow: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            border: `1px solid ${theme.campaigner.surface.border}`,
-            borderRadius: '14px',
-            backgroundColor: theme.campaigner.surface.subtle,
-          }}
-        >
-          {mode === 'edit' && <Box sx={{ width: '100%', height: '100%' }}>{renderEditor()}</Box>}
-          {mode === 'split' && (
-            <>
-              <Box sx={{ width: '50%', height: '100%', borderRight: `1px solid ${theme.palette.divider}` }}>{renderEditor()}</Box>
-              <Box sx={{ width: '50%', height: '100%' }}>
-                <MarkdownPreview content={previewContent} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
+    <>
+      <DocumentShell
+        focus={focusMode}
+        inspector={(
+          <Inspector>
+            <InspectorEyebrow>{t('notes:editor.inspectorTitle')}</InspectorEyebrow>
+            <InspectorSection title={t('notes:editor.inspectorTitle')}>
+              <InspectorStat label={t('notes:editor.statType')} value={t(`notes:kinds.${kind}`)} />
+              <InspectorStat label={t('notes:editor.statWords')} value={doc.words} />
+              <InspectorStat label={t('notes:editor.statChars')} value={doc.chars} />
+              <InspectorStat label={t('notes:editor.statCreated')} value={doc.note ? formatShortDate(doc.note.createdAt, i18n.language) : '—'} />
+            </InspectorSection>
+            <InspectorSection
+              title={t('notes:editor.tags')}
+              action={null}
+            >
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}>
+                {(doc.note?.tags ?? []).map((tag) => (
+                  <DocChip key={tag.id} label={tag.name} active muted={false} />
+                ))}
+                <TextField
+                  variant="standard"
+                  placeholder={t('notes:editor.addTag')}
+                  value={tagDraft}
+                  onChange={(event) => setTagDraft(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') void addTag(); }}
+                  InputProps={{ disableUnderline: true }}
+                  sx={{ width: 88, '& input': { fontSize: '0.75rem' } }}
+                />
               </Box>
-            </>
-          )}
-          {mode === 'preview' && (
-            <Box sx={{ width: '100%', height: '100%' }}>
-              <MarkdownPreview content={previewContent} isMarkdown={isMarkdown} wikiNotes={wikiNotes} projectId={pid} scrollRef={previewScrollRef} />
-            </Box>
-          )}
-        </Paper>
-
-        {showLinks && (
-          <NoteEditorWikiSidebar
-            wikiLinks={wikiLinks}
-            currentNoteId={nid}
-            onNavigateToNote={(id) => navigate(`/project/${pid}/notes/${id}`)}
-            onOpenCreateLink={() => setLinkDialogOpen(true)}
-            onDeleteLink={handleDeleteLink}
-          />
+            </InspectorSection>
+            <InspectorSection
+              title={t('notes:editor.linked')}
+              action={(
+                <ButtonBase onClick={() => setEntityOpen(true)} sx={{ color: 'text.disabled' }}>
+                  <AddIcon sx={{ fontSize: 16 }} />
+                </ButtonBase>
+              )}
+            >
+              {linked.length === 0 ? (
+                <Typography sx={{ color: 'text.disabled', fontSize: '0.78rem' }}>—</Typography>
+              ) : linked.map((item) => (
+                <Box
+                  key={item.id}
+                  onClick={() => navigate(item.href)}
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.55, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                >
+                  <AccountTreeIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+                  <Typography noWrap sx={{ fontSize: '0.8rem' }}>{item.label}</Typography>
+                </Box>
+              ))}
+            </InspectorSection>
+            <InspectorSection title={t('notes:editor.whatsNext')}>
+              <InspectorHint>{t('notes:editor.whatsNextBody')}</InspectorHint>
+            </InspectorSection>
+            <InspectorSection title={t('notes:editor.history')}>
+              {doc.note ? (
+                <Box sx={{ pl: 1.25, borderLeft: `1px solid ${theme.campaigner.surface.border}` }}>
+                  <Typography sx={{ fontSize: '0.78rem', pb: 1.25 }}>
+                    {t('notes:editor.historyUpdated')}
+                    <Box component="span" sx={{ color: 'text.disabled', display: 'block', fontSize: '0.7rem' }}>
+                      {formatRelativeTime(doc.note.updatedAt, i18n.language)}
+                    </Box>
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.78rem' }}>
+                    {t('notes:editor.historyCreated')}
+                    <Box component="span" sx={{ color: 'text.disabled', display: 'block', fontSize: '0.7rem' }}>
+                      {formatShortDate(doc.note.createdAt, i18n.language)}
+                    </Box>
+                  </Typography>
+                </Box>
+              ) : null}
+            </InspectorSection>
+          </Inspector>
         )}
-      </Box>
-
-      <InsertWikiLinkDialog
-        open={insertWikiDialogOpen}
-        onClose={() => setInsertWikiDialogOpen(false)}
-        wikiNotes={wikiNotes}
-        currentNoteId={nid}
-        initialLabel={insertWikiInitialLabel}
-        onInsert={handleInsertWikiLink}
-      />
-
-      <CreateWikiLinkDialog
-        open={linkDialogOpen}
-        onClose={() => setLinkDialogOpen(false)}
-        wikiNotes={wikiNotes}
-        currentNoteId={nid}
-        onCreateLink={handleCreateLink}
+      >
+        <Box sx={{ display: 'flex', gap: 1, pb: 2, flexWrap: 'wrap' }}>
+          <DocChip
+            active
+            label={t(`notes:kinds.${kind}`)}
+            onClick={(event) => setKindAnchor(event.currentTarget)}
+          />
+          {branchName ? <DocChip muted label={branchName} icon={<AccountTreeIcon sx={{ fontSize: 13 }} />} /> : null}
+        </Box>
+        <TextField
+          fullWidth
+          variant="standard"
+          value={doc.title}
+          onChange={(event) => doc.setTitle(event.target.value)}
+          placeholder={untitled}
+          InputProps={{ disableUnderline: true, readOnly: readMode }}
+          sx={{
+            '& input': {
+              fontFamily: theme.campaigner.typography.display,
+              fontSize: { xs: '2.15rem', md: '2.7rem' },
+              fontWeight: 600,
+              lineHeight: 1.05,
+              color: 'text.primary',
+            },
+          }}
+        />
+        <Typography sx={{ color: 'text.disabled', fontSize: '0.78rem', pt: 1.1, pb: 2.25 }}>
+          {metaLine}
+        </Typography>
+        <Box sx={{ height: 1, backgroundColor: theme.campaigner.surface.border, mb: 3 }} />
+        {doc.ready ? (
+          <WorldTextEditor
+            key={nid}
+            ref={editorRef}
+            initialMarkdown={doc.body}
+            readOnly={readMode}
+            placeholder={t('notes:editor.placeholder')}
+            slashTitle={t('notes:editor.slashTitle')}
+            slashItems={slashItems}
+            mentionItems={entities}
+            onChange={doc.setBody}
+            onCommand={(id) => {
+              if (id === 'entity-link') setEntityOpen(true);
+              if (id === 'question') doc.setMeta((meta) => ({ ...meta, kind: 'question' }));
+            }}
+            onUploadImage={async (file) => {
+              const uploaded = await uploadsApi.uploadDocumentImage(file);
+              const path = uploaded.data.data.path;
+              return { path, url: (await resolveUploadAssetUrl(path)) || path };
+            }}
+            onNavigate={(href) => navigate(href.startsWith('/__note__/') ? `/project/${pid}/wiki/${href.slice('/__note__/'.length)}` : href)}
+          />
+        ) : null}
+        {empty ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap', pt: 5 }}>
+            {[
+              { id: 'scene' as const, label: t('notes:editor.startScene') },
+              { id: 'question' as const, label: t('notes:editor.startQuestion') },
+              { id: 'idea' as const, label: t('notes:editor.startIdea') },
+            ].map((item) => (
+              <DocChip key={item.id} label={item.label} onClick={() => doc.setMeta((meta) => ({ ...meta, kind: item.id }))} />
+            ))}
+            <DocChip label={t('notes:editor.startMention')} onClick={() => setEntityOpen(true)} />
+          </Box>
+        ) : null}
+      </DocumentShell>
+      <Menu anchorEl={kindAnchor} open={Boolean(kindAnchor)} onClose={() => setKindAnchor(null)}>
+        {KINDS.map((item) => (
+          <MenuItem
+            key={item}
+            selected={item === kind}
+            onClick={() => {
+              doc.setMeta((meta) => ({ ...meta, kind: item }));
+              setKindAnchor(null);
+            }}
+          >
+            {t(`notes:kinds.${item}`)}
+          </MenuItem>
+        ))}
+      </Menu>
+      <EntityPickerDialog
+        open={entityOpen}
+        title={t('notes:editor.pickEntity')}
+        items={entities}
+        onClose={() => setEntityOpen(false)}
+        onPick={(item) => { void insertEntity(item); }}
       />
       <BranchEntityMissingDialog
-        open={branchMissingDialogOpen}
+        open={doc.missing}
         entityName={t('notes:noteTypes.note').toLowerCase()}
-        onClose={closeMissingBranchEntity}
+        onClose={() => navigate(`/project/${pid}/notes`, { replace: true })}
       />
-    </Box>
+    </>
   );
 };

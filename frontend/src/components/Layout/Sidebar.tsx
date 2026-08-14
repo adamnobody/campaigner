@@ -5,13 +5,14 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Divider,
   Box,
   Typography,
   Collapse,
   IconButton,
   Tooltip,
   alpha,
+  useMediaQuery,
+  type Theme,
 } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import PeopleIcon from '@mui/icons-material/People';
@@ -19,6 +20,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import SettingsIcon from '@mui/icons-material/Settings';
+import PaletteIcon from '@mui/icons-material/Palette';
 import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
@@ -41,6 +43,7 @@ import { useTimelineStore } from '@/store/useTimelineStore';
 import { useMapStore } from '@/store/useMapStore';
 import { useDynastyStore } from '@/store/useDynastyStore';
 import { useDogmaStore } from '@/store/useDogmaStore';
+import { campaignerLayout } from '@/theme/designSystem';
 
 type ProjectRoutePath =
   | ''
@@ -110,10 +113,11 @@ function tourAttrForSidebarPath(path: ProjectRoutePath): string | undefined {
 
 export const Sidebar: React.FC = () => {
   const { t } = useTranslation('navigation');
-  const { sidebarOpen, sidebarWidth, toggleSidebar } = useUIStore((state) => ({
+  const { sidebarOpen, sidebarWidth, toggleSidebar, setSidebarOpen } = useUIStore((state) => ({
     sidebarOpen: state.sidebarOpen,
     sidebarWidth: state.sidebarWidth,
     toggleSidebar: state.toggleSidebar,
+    setSidebarOpen: state.setSidebarOpen,
   }), shallow);
   const { currentProject, fetchProject } = useProjectStore((state) => ({
     currentProject: state.currentProject,
@@ -130,16 +134,17 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { projectId } = useParams<{ projectId: string }>();
   const [expanded, setExpanded] = useState<Set<ProjectRoutePath>>(new Set());
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
 
   const isProjectPage = !!projectId;
   const pid = projectId ? Number(projectId) : null;
 
-  const activePath = useMemo<ProjectRoutePath>(() => {
-    if (!projectId) return '';
+  const activePath = useMemo<ProjectRoutePath | null>(() => {
+    if (!projectId) return null;
     const section = location.pathname.split('/')[3] ?? '';
     return PROJECT_MENU_PATHS.includes(section as ProjectRoutePath)
       ? section as ProjectRoutePath
-      : '';
+      : null;
   }, [location.pathname, projectId]);
 
   const childItems = useMemo<Record<ProjectRoutePath, Array<{ id: string; label: string; to: string }>>>(() => {
@@ -177,6 +182,10 @@ export const Sidebar: React.FC = () => {
     setExpanded((current) => current.has(activePath) ? current : new Set(current).add(activePath));
   }, [activePath]);
 
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile, location.pathname, setSidebarOpen]);
+
   const toggleExpanded = (path: ProjectRoutePath) => {
     setExpanded((current) => {
       const next = new Set(current);
@@ -187,11 +196,13 @@ export const Sidebar: React.FC = () => {
   };
 
   const drawerSx = {
-    width: sidebarWidth,
+    width: isMobile ? 0 : sidebarWidth,
     flexShrink: 0,
     transition: 'width 220ms cubic-bezier(.4,0,.2,1)',
     '& .MuiDrawer-paper': {
-      width: sidebarWidth,
+      width: isMobile
+        ? `min(${campaignerLayout.sidebarExpanded}px, calc(100vw - 56px))`
+        : sidebarWidth,
       boxSizing: 'border-box',
       overflowX: 'hidden',
       backgroundColor: 'background.paper',
@@ -201,30 +212,41 @@ export const Sidebar: React.FC = () => {
   } as const;
 
   return (
-    <Drawer variant="permanent" sx={drawerSx}>
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', px: sidebarOpen ? 2.25 : 1.25, py: 2.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minHeight: 38, px: 1.25, mb: 2.5 }}>
+    <Drawer
+      variant={isMobile ? 'temporary' : 'permanent'}
+      open={isMobile ? sidebarOpen : true}
+      onClose={() => setSidebarOpen(false)}
+      ModalProps={{ keepMounted: true }}
+      sx={drawerSx}
+    >
+      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', px: 1.5, pt: 2.25, pb: 1.75 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: sidebarOpen ? 'flex-start' : 'center',
+            gap: 1.25,
+            minHeight: 38,
+            px: sidebarOpen ? 1.5 : 0,
+            mb: 2.25,
+          }}
+        >
           <CastleIcon sx={{ color: 'primary.main', fontSize: 21, flexShrink: 0 }} />
           {sidebarOpen ? (
-            <Typography sx={{ flex: 1, fontFamily: (theme) => theme.campaigner.typography.display, fontWeight: 600, fontSize: 21, color: '#ece7dd' }}>
+            <Typography sx={{ flex: 1, fontWeight: 600, fontSize: '1rem', color: '#ece7dd', letterSpacing: '.01em' }}>
               Campaigner
             </Typography>
           ) : null}
-          <Tooltip title={sidebarOpen ? t('topbar.collapseSidebar') : t('topbar.expandSidebar')}>
-            <IconButton size="small" onClick={toggleSidebar} aria-label={sidebarOpen ? t('topbar.collapseSidebar') : t('topbar.expandSidebar')}>
-              {sidebarOpen ? <KeyboardDoubleArrowLeftIcon fontSize="small" /> : <KeyboardDoubleArrowRightIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
         </Box>
 
         {sidebarOpen && currentProject ? (
-          <Box sx={{ px: 1.25, pb: 2.25 }}>
+          <Box sx={{ px: 1.25, pb: 2.5 }}>
             <Typography variant="overline" sx={{ color: 'rgba(232,228,220,.3)' }}>{t('sidebar.projectLabel')}</Typography>
-            <Typography sx={{ fontFamily: (theme) => theme.campaigner.typography.display, fontSize: 19, fontWeight: 600, color: '#e8e4dc', pt: 0.75 }} noWrap>
+            <Typography sx={{ fontSize: '0.94rem', fontWeight: 500, color: '#e8e4dc', pt: 0.5 }} noWrap>
               {currentProject.name}
             </Typography>
             {currentProject.description ? (
-              <Typography sx={{ color: 'rgba(232,228,220,.35)', fontSize: 11.5, pt: 0.5 }} noWrap>{currentProject.description}</Typography>
+              <Typography sx={{ color: 'rgba(232,228,220,.35)', fontSize: '0.72rem', pt: 0.5 }} noWrap>{currentProject.description}</Typography>
             ) : null}
           </Box>
         ) : null}
@@ -236,33 +258,51 @@ export const Sidebar: React.FC = () => {
             const canExpand = children.length > 0;
             const isExpanded = expanded.has(path) && sidebarOpen;
             const row = (
-              <ListItemButton
-                data-tour={tourAttrForSidebarPath(path)}
-                selected={active}
-                onClick={() => navigate(fullPath)}
-                sx={{
-                  height: 42,
-                  px: 1.25,
-                  borderRadius: '9px',
-                  gap: 1.25,
-                  mb: 0.25,
-                  '&.Mui-selected': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1) },
-                  '&.Mui-selected:hover': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.14) },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 0, color: active ? 'primary.main' : 'rgba(232,228,220,.42)' }}><Icon sx={{ fontSize: 19 }} /></ListItemIcon>
-                {sidebarOpen ? <ListItemText primary={t(path ? `menu.${path}` : 'menu.overview')} primaryTypographyProps={{ noWrap: true, fontSize: 13.5, color: active ? '#f0ece3' : 'rgba(232,228,220,.72)' }} /> : null}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.25 }}>
+                <ListItemButton
+                  data-tour={tourAttrForSidebarPath(path)}
+                  selected={active}
+                  onClick={() => navigate(fullPath)}
+                  sx={{
+                    height: 40,
+                    minWidth: 0,
+                    flex: 1,
+                    px: sidebarOpen ? 1.5 : 0,
+                    borderRadius: '9px',
+                    gap: 1.25,
+                    justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: 10,
+                      bottom: 10,
+                      width: 2,
+                      borderRadius: 2,
+                      backgroundColor: active ? 'primary.main' : 'transparent',
+                    },
+                    '&.Mui-selected': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1) },
+                    '&.Mui-selected:hover': { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.14) },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 0, color: active ? 'primary.main' : 'rgba(232,228,220,.42)' }}><Icon sx={{ fontSize: 19 }} /></ListItemIcon>
+                  {sidebarOpen ? <ListItemText primary={t(path ? `menu.${path}` : 'menu.overview')} primaryTypographyProps={{ noWrap: true, fontSize: '0.84rem', color: active ? '#f0ece3' : 'rgba(232,228,220,.72)' }} /> : null}
+                </ListItemButton>
                 {sidebarOpen && canExpand ? (
                   <IconButton
                     size="small"
-                    onClick={(event) => { event.stopPropagation(); toggleExpanded(path); }}
+                    onClick={() => toggleExpanded(path)}
                     aria-label={isExpanded ? t('sidebar.collapseSection') : t('sidebar.expandSection')}
-                    sx={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 180ms ease' }}
+                    sx={{
+                      ml: 0.25,
+                      transform: isExpanded ? 'rotate(90deg)' : 'none',
+                      transition: 'transform 180ms ease',
+                    }}
                   >
                     <ChevronRightIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 ) : null}
-              </ListItemButton>
+              </Box>
             );
             return (
               <React.Fragment key={path}>
@@ -273,7 +313,7 @@ export const Sidebar: React.FC = () => {
                       {children.map((child) => (
                         <ListItemButton key={`${path}-${child.id}`} onClick={() => navigate(child.to)} sx={{ minHeight: 32, borderRadius: '7px', px: 1.5, gap: 1 }}>
                           <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: location.pathname === child.to ? 'primary.main' : 'rgba(232,228,220,.28)', flexShrink: 0 }} />
-                          <ListItemText primary={child.label} primaryTypographyProps={{ noWrap: true, fontSize: 12.5, color: 'rgba(232,228,220,.62)' }} />
+                          <ListItemText primary={child.label} primaryTypographyProps={{ noWrap: true, fontSize: '0.78rem', color: 'rgba(232,228,220,.62)' }} />
                         </ListItemButton>
                       ))}
                     </List>
@@ -290,18 +330,83 @@ export const Sidebar: React.FC = () => {
         </List>
 
         <Box sx={{ pt: 1.25, mt: 1, borderTop: '1px solid rgba(255,255,255,.055)' }}>
+          <Tooltip
+            title={sidebarOpen ? t('topbar.collapseSidebar') : t('topbar.expandSidebar')}
+            placement="right"
+            disableHoverListener={sidebarOpen}
+          >
+            <ListItemButton
+              onClick={toggleSidebar}
+              aria-label={sidebarOpen ? t('topbar.collapseSidebar') : t('topbar.expandSidebar')}
+              sx={{
+                height: 38,
+                borderRadius: '9px',
+                px: sidebarOpen ? 1.25 : 0,
+                justifyContent: sidebarOpen ? 'flex-start' : 'center',
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: sidebarOpen ? 38 : 0, color: 'rgba(232,228,220,.32)' }}>
+                {sidebarOpen
+                  ? <KeyboardDoubleArrowLeftIcon sx={{ fontSize: 19 }} />
+                  : <KeyboardDoubleArrowRightIcon sx={{ fontSize: 19 }} />}
+              </ListItemIcon>
+              {sidebarOpen ? (
+                <ListItemText
+                  primary={t('topbar.collapseSidebar')}
+                  primaryTypographyProps={{ fontSize: '0.81rem', color: 'rgba(232,228,220,.5)' }}
+                />
+              ) : null}
+            </ListItemButton>
+          </Tooltip>
           {isProjectPage ? (
-            <ListItemButton data-tour="sidebar-settings" selected={location.pathname === `/project/${projectId}/settings`} onClick={() => navigate(`/project/${projectId}/settings`)} sx={{ height: 40, borderRadius: '9px', px: 1.25 }}>
+            <ListItemButton
+              data-tour="sidebar-settings"
+              selected={location.pathname === `/project/${projectId}/settings`}
+              onClick={() => navigate(`/project/${projectId}/settings`)}
+              sx={{
+                height: 38,
+                borderRadius: '9px',
+                px: sidebarOpen ? 1.25 : 0,
+                justifyContent: sidebarOpen ? 'flex-start' : 'center',
+              }}
+            >
               <ListItemIcon sx={{ minWidth: sidebarOpen ? 38 : 0 }}><SettingsIcon sx={{ fontSize: 19 }} /></ListItemIcon>
-              {sidebarOpen ? <ListItemText primary={t('sidebar.projectSettings')} primaryTypographyProps={{ fontSize: 13.5 }} /> : null}
+              {sidebarOpen ? <ListItemText primary={t('sidebar.projectSettings')} primaryTypographyProps={{ fontSize: '0.84rem' }} /> : null}
             </ListItemButton>
           ) : null}
-          <ListItemButton onClick={() => navigate('/')} sx={{ height: 40, borderRadius: '9px', px: 1.25 }}>
+          <Tooltip
+            title={t('sidebar.appearance')}
+            placement="right"
+            disableHoverListener={sidebarOpen}
+          >
+            <ListItemButton
+              onClick={() => navigate('/appearance', { state: { from: `${location.pathname}${location.search}` } })}
+              aria-label={t('sidebar.appearance')}
+              sx={{
+                height: 38,
+                borderRadius: '9px',
+                px: sidebarOpen ? 1.25 : 0,
+                justifyContent: sidebarOpen ? 'flex-start' : 'center',
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: sidebarOpen ? 38 : 0 }}><PaletteIcon sx={{ fontSize: 19 }} /></ListItemIcon>
+              {sidebarOpen ? <ListItemText primary={t('sidebar.appearance')} primaryTypographyProps={{ fontSize: '0.84rem' }} /> : null}
+            </ListItemButton>
+          </Tooltip>
+          <ListItemButton
+            onClick={() => navigate('/')}
+            sx={{
+              height: 38,
+              borderRadius: '9px',
+              px: sidebarOpen ? 1.25 : 0,
+              justifyContent: sidebarOpen ? 'flex-start' : 'center',
+            }}
+          >
             <ListItemIcon sx={{ minWidth: sidebarOpen ? 38 : 0 }}><HomeIcon sx={{ fontSize: 19 }} /></ListItemIcon>
-            {sidebarOpen ? <ListItemText primary={t('sidebar.allCampaigns')} primaryTypographyProps={{ fontSize: 13.5 }} /> : null}
+            {sidebarOpen ? <ListItemText primary={t('sidebar.allCampaigns')} primaryTypographyProps={{ fontSize: '0.84rem' }} /> : null}
           </ListItemButton>
         </Box>
       </Box>
     </Drawer>
   );
-};;
+};

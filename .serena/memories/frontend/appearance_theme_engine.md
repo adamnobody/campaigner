@@ -1,5 +1,1 @@
-# Appearance theme engine
-- `AppThemeProvider` now always builds one MUI theme through `createCampaignerTheme`; the route-aware legacy fork and remote custom-font injection were removed.
-- Pure preference-to-token mapping lives in `frontend/src/theme/appearanceTokens.ts`, using built-in/custom color presets, background tone, glow strength, bundled font preset IDs, density, motion, and reading metrics.
-- `theme.campaigner` exposes surface, glow, typography, density, motion, and reading tokens. Markdown note preview and wiki article reading surfaces consume the reading tokens.
-- Legacy `createAppTheme.ts` and `muiTheme.ts` were removed after confirming no imports remained.
+UI/reading type scale (2026-08-14): `readingFontSize` is 16–24 px (steps 16/18/20/22/24), not 14–18. `createCampaignerTheme` sets `html { fontSize }` from that value so rem UI scales with the appearance size control. Style defaults are 18–22. Persist `version: 3` remaps legacy 14–18 → 18/18/20/22/24. Clamp helper: `clampReadingFontSize` in `appearanceTokens.ts`.

@@ -54,6 +54,7 @@
   "branches": {
     "dialogTitle": "Новая ветка",
     "nameLabel": "Название ветки",
+    "selectorLabel": "Активная ветка",
     "loading": "Загрузка веток...",
     "nonePlaceholder": "Без веток",
     "created": "Ветка создана",

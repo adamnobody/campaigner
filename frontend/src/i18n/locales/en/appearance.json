@@ -61,7 +61,7 @@
     "localPreset": "Local font preset",
     "localPresetHint": "Only fonts packaged with Campaigner; no remote requests",
     "size": "Text size",
-    "sizeHint": "Articles, notes, and tables",
+    "sizeHint": "Whole interface, articles, and notes",
     "lineHeight": "Line spacing",
     "lineHeightHint": "Breathing room for long articles",
     "columnWidth": "Column width",
@@ -270,6 +270,48 @@
       "label": "Scholar Manuscript",
       "description": "Warm document style for reading."
     }
+  },
+  "createDialog": {
+    "titleCreate": "Create color theme",
+    "titleEdit": "Edit color theme",
+    "subtitle": "Set base colors, check the preview, and save the palette to the list.",
+    "themeName": "Theme name",
+    "namePlaceholder": "e.g. Royal Violet",
+    "nameError": "Name cannot be empty.",
+    "quickPresets": "Quick presets",
+    "quickPresetNames": {
+      "violet": "Royal Violet",
+      "emerald": "Emerald Grove",
+      "rose": "Rose Ember",
+      "amber": "Amber Forge",
+      "slate": "Slate Archive"
+    },
+    "fields": {
+      "background": {
+        "title": "Background",
+        "description": "Primary dark interface color."
+      },
+      "accent": {
+        "title": "Accent",
+        "description": "Color for active buttons and highlights."
+      },
+      "text": {
+        "title": "Text",
+        "description": "Primary color for headings and content."
+      }
+    },
+    "hexPlaceholder": "#RRGGBB",
+    "invalidHex": "Invalid HEX",
+    "livePreview": "Live preview",
+    "newThemeFallback": "New theme",
+    "previewCardLine": "Sample interface card with your palette.",
+    "previewProjectCard": "Project card",
+    "previewProjectDesc": "Short description and project status in your palette.",
+    "primaryButton": "Primary button",
+    "badgeSample": "Badge",
+    "lowContrast": "Low contrast: text may be hard to read.",
+    "saveCreate": "Save theme",
+    "saveEdit": "Save changes"
   },
   "confirmDelete": {
     "theme": {

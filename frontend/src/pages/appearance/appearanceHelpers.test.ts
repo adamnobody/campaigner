@@ -20,7 +20,7 @@ const snapshot: AppearanceSnapshot = {
   fontPresetId: 'lore-serif',
   uiDensity: 'comfortable',
   motionMode: 'full',
-  readingFontSize: 15,
+  readingFontSize: 20,
   readingLineHeight: 'normal',
   readingColumnWidth: 760,
 };

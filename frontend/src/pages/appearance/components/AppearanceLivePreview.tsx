@@ -58,6 +58,7 @@ export const AppearanceLivePreview: React.FC<AppearanceLivePreviewProps> = ({
               className={`${styles.previewTab} ${mode === option ? styles.previewTabActive : ''}`}
               key={option}
               type="button"
+              aria-pressed={mode === option}
               onClick={() => setMode(option)}
             >
               {t(`preview.tabs.${option}`)}

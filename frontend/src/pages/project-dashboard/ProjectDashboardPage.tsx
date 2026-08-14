@@ -12,7 +12,7 @@ import {
   useTheme,
   Chip,
 } from '@mui/material';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 
 import {
   CampaignerPage,
@@ -30,8 +30,9 @@ import { useDynastyStore } from '@/store/useDynastyStore';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useBranchStore } from '@/store/useBranchStore';
+import { OverviewEmptyState } from './OverviewEmptyState';
+import { Reveal } from './Reveal';
 
-// Icons
 import AddIcon from '@mui/icons-material/Add';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PeopleIcon from '@mui/icons-material/People';
@@ -44,72 +45,6 @@ import CallSplitIcon from '@mui/icons-material/CallSplit';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import HubIcon from '@mui/icons-material/Hub';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-
-type RevealProps = {
-  children: React.ReactNode;
-  shouldAnimate: boolean;
-  delay?: number;
-  animationKey: string;
-  style?: React.CSSProperties;
-};
-
-function Reveal({
-  children,
-  shouldAnimate,
-  delay = 0,
-  animationKey,
-  style,
-}: RevealProps) {
-  const [entered, setEntered] = useState(!shouldAnimate);
-
-  useEffect(() => {
-    if (!shouldAnimate) {
-      setEntered(true);
-      return;
-    }
-
-    setEntered(false);
-
-    let raf1 = 0;
-    let raf2 = 0;
-
-    raf1 = window.requestAnimationFrame(() => {
-      raf2 = window.requestAnimationFrame(() => {
-        setEntered(true);
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(raf1);
-      window.cancelAnimationFrame(raf2);
-    };
-  }, [animationKey, shouldAnimate]);
-
-  return (
-    <motion.div
-      initial={false}
-      animate={
-        shouldAnimate && !entered
-          ? { opacity: 0, y: 32 }
-          : { opacity: 1, y: 0 }
-      }
-      transition={
-        shouldAnimate && entered
-          ? {
-              duration: 0.42,
-              delay,
-              ease: [0.22, 1, 0.36, 1],
-            }
-          : {
-              duration: 0,
-            }
-      }
-      style={style}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 export const ProjectDashboardPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -182,10 +117,6 @@ export const ProjectDashboardPage: React.FC = () => {
     currentBranch: isRu ? 'Текущая ветка' : 'Current branch',
     timeline: isRu ? 'Таймлайн' : 'Timeline',
     suggestions: isRu ? 'Что можно улучшить' : 'Suggestions',
-    welcome: isRu ? 'Здесь начинается ваш мир' : 'Your world starts here',
-    startBuilding: isRu
-      ? 'Задайте первую опорную точку — остальная история постепенно выстроится вокруг неё.'
-      : 'Set the first anchor point and let the rest of the story grow around it.',
     dashboardDescription: isRu
       ? 'Мир в цифрах и последние правки. Отсюда удобно возвращаться туда, где вы остановились.'
       : 'Your world in numbers and its latest edits. Pick up exactly where you left off.',
@@ -201,10 +132,6 @@ export const ProjectDashboardPage: React.FC = () => {
     openGraph: isRu ? 'Открыть граф' : 'Open graph',
     emptyList: isRu ? 'Пока ничего нет' : 'Nothing here yet',
     viewAll: isRu ? 'Смотреть все' : 'View all',
-    firstSteps: isRu ? 'Первые шаги' : 'First steps',
-    firstStepsHint: isRu
-      ? 'Начните с любой сущности. Порядок не важен.'
-      : 'Start with any entity. There is no required order.',
     errorLoad: isRu ? 'Не удалось загрузить обзор проекта.' : 'Could not load the project overview.',
   };
 
@@ -352,80 +279,19 @@ export const ProjectDashboardPage: React.FC = () => {
   if (isEmptyProject) {
     return (
       <Box sx={{ position: 'relative', isolation: 'isolate', minHeight: '100%' }}>
-      <AnimatedContourWaves accentColor={theme.palette.primary.main} animate={shouldAnimate} />
-      <CampaignerPage maxWidth={1120} sx={{ pt: { xs: 1, md: 2 }, position: 'relative', zIndex: 1 }}>
-        <Reveal shouldAnimate={shouldAnimate} animationKey={`${animationKey}-header`}>
-          <CampaignerPageHeader
-            eyebrow={`${copy.overview}${activeBranch ? ` · ${activeBranch.name}` : ''}`}
-            title={copy.welcome}
-            description={copy.startBuilding}
-            actions={headerActions}
-          />
-        </Reveal>
-
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: { xs: 4, md: 6 }, pt: { xs: 2, md: 4 } }}>
-          <Reveal shouldAnimate={shouldAnimate} delay={0.08} animationKey={`${animationKey}-steps`}>
-            <CampaignerSurface sx={{ overflow: 'hidden', backgroundColor: 'transparent' }}>
-              <Box sx={{ px: { xs: 2.25, md: 3 }, py: 2.25, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
-                <Typography variant="h5">{copy.firstSteps}</Typography>
-                <Typography sx={{ color: 'text.secondary', fontSize: 12.5, pt: 0.75 }}>{copy.firstStepsHint}</Typography>
-              </Box>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
-                {firstStepActions.map((action, index) => (
-                  <ButtonBase
-                    key={action.to}
-                    component={RouterLink}
-                    to={action.to}
-                    sx={{
-                      minHeight: 76,
-                      justifyContent: 'flex-start',
-                      gap: 1.5,
-                      px: { xs: 2.25, md: 3 },
-                      color: 'text.primary',
-                      borderBottom: `1px solid ${theme.campaigner.surface.border}`,
-                      borderRight: { sm: index % 2 === 0 ? `1px solid ${theme.campaigner.surface.border}` : 'none' },
-                      textAlign: 'left',
-                      transition: shouldAnimate ? 'background-color 160ms ease' : 'none',
-                      '&:hover': { backgroundColor: alpha(theme.palette.common.white, 0.035) },
-                    }}
-                  >
-                    <action.icon sx={{ color: 'text.secondary', fontSize: 20 }} />
-                    <Typography sx={{ flex: 1, fontSize: 13.5 }}>{action.label}</Typography>
-                    <ArrowForwardIcon sx={{ color: 'text.disabled', fontSize: 17 }} />
-                  </ButtonBase>
-                ))}
-              </Box>
-            </CampaignerSurface>
-          </Reveal>
-
-          <Stack spacing={3.5}>
-            <Reveal shouldAnimate={shouldAnimate} delay={0.14} animationKey={`${animationKey}-branch`}>
-              <Box>
-                <Typography variant="overline" color="text.secondary">{copy.currentBranch}</Typography>
-                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ pt: 1.5 }}>
-                  <AccountTreeIcon sx={{ color: 'primary.main', fontSize: 19 }} />
-                  <Typography sx={{ fontSize: 14 }}>{activeBranch?.name ?? copy.emptyList}</Typography>
-                </Stack>
-                {activeBranch ? (
-                  <Typography sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.7, pt: 1 }}>
-                    {activeBranch.isMain ? copy.mainWorld : copy.altWorld}
-                  </Typography>
-                ) : null}
-              </Box>
-            </Reveal>
-            <Reveal shouldAnimate={shouldAnimate} delay={0.18} animationKey={`${animationKey}-empty-hint`}>
-              <Box sx={{ borderTop: `1px solid ${theme.campaigner.surface.border}`, pt: 2.75 }}>
-                <Typography variant="overline" color="text.secondary">{copy.suggestions}</Typography>
-                <Typography sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.75, pt: 1.5 }}>
-                  {isRu
-                    ? 'Заметка хорошо подходит для замысла, персонаж — для голоса мира, а холст — для места действия.'
-                    : 'A note captures the premise, a character gives the world a voice, and a canvas establishes the setting.'}
-                </Typography>
-              </Box>
-            </Reveal>
-          </Stack>
-        </Box>
-      </CampaignerPage>
+        <AnimatedContourWaves accentColor={theme.palette.primary.main} animate={shouldAnimate} />
+        <OverviewEmptyState
+          projectId={pid}
+          projectName={currentProject?.name ?? ''}
+          branchName={activeBranch?.name}
+          isMainBranch={Boolean(activeBranch?.isMain)}
+          shouldAnimate={shouldAnimate}
+          animationKey={animationKey}
+          characterCount={charStore.total}
+          stateCount={factionStore.factions.filter((faction) => faction.kind === 'state').length}
+          eventCount={timelineStore.events.length}
+          wikiCount={noteStore.notes.filter((note) => note.noteType === 'wiki').length}
+        />
       </Box>
     );
   }

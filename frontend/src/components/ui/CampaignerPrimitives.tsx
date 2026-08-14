@@ -11,7 +11,7 @@ import {
 
 export function CampaignerPage({
   children,
-  maxWidth = 1120,
+  maxWidth = 1640,
   sx,
 }: {
   children: React.ReactNode;
@@ -25,8 +25,8 @@ export function CampaignerPage({
           width: '100%',
           maxWidth,
           mx: 'auto',
-          px: { xs: 2, md: 5 },
-          pb: 6,
+          px: { xs: 2, md: 5, lg: 6 },
+          pb: 9,
           minWidth: 0,
         },
         ...(Array.isArray(sx) ? sx : [sx]),
@@ -36,6 +36,8 @@ export function CampaignerPage({
     </Box>
   );
 }
+
+export const campaignerPageHeaderPt = { xs: 3, md: 4.25 } as const;
 
 export function CampaignerPageHeader({
   eyebrow,
@@ -55,30 +57,33 @@ export function CampaignerPageHeader({
         alignItems: { xs: 'flex-start', md: 'flex-end' },
         justifyContent: 'space-between',
         flexDirection: { xs: 'column', md: 'row' },
-        gap: 2.5,
-        py: { xs: 3, md: 4 },
+        gap: { xs: 2.5, md: 5 },
+        pt: campaignerPageHeaderPt,
+        pb: 2.75,
+        borderBottom: (theme) => `1px solid ${theme.campaigner.surface.border}`,
       }}
     >
-      <Box sx={{ minWidth: 0 }}>
+      <Box sx={{ minWidth: 0, flex: '1 1 340px' }}>
         {eyebrow ? (
           <Typography
             variant="overline"
-            sx={{ display: 'block', color: 'primary.main', pb: 1.25 }}
+            sx={{ display: 'block', color: 'text.disabled', pb: 1 }}
           >
             {eyebrow}
           </Typography>
         ) : null}
-        <Typography variant="h2" sx={{ fontSize: { xs: '2.15rem', md: '2.9rem' } }}>
+        <Typography variant="h2" sx={{ fontSize: { xs: '2.15rem', md: '2.5rem' }, lineHeight: 1.02 }}>
           {title}
         </Typography>
         {description ? (
           <Typography
             sx={{
               color: 'text.secondary',
-              fontSize: '0.94rem',
-              lineHeight: 1.75,
-              maxWidth: 660,
-              pt: 1.5,
+              fontSize: '0.84rem',
+              lineHeight: 1.6,
+              maxWidth: 560,
+              pt: 1.25,
+              textWrap: 'pretty',
             }}
           >
             {description}
@@ -86,7 +91,7 @@ export function CampaignerPageHeader({
         ) : null}
       </Box>
       {actions ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
           {actions}
         </Box>
       ) : null}

@@ -1,14 +1,27 @@
 {
   "page": {
     "title": "Timeline",
-    "eyebrow": "World history",
+    "eyebrow": "Events · {{count}}",
     "subtitle": "Events in your calendar’s order. Eras are groups you can collapse to keep the current age in focus.",
     "addEvent": "Add event"
+  },
+  "aside": {
+    "summaryEvents": "Events",
+    "summaryEras": "Eras",
+    "summaryLinked": "With notes",
+    "summaryNoEra": "Without an era",
+    "storedBody": "Events in calendar order. Eras group them so the current age stays in focus."
   },
   "empty": {
     "title": "Timeline is empty",
     "description": "Create your world's history — eras, wars, discoveries, and turning points",
-    "action": "Add event"
+    "action": "Add event",
+    "templates": {
+      "title": "Start with a template",
+      "era": { "title": "Era", "description": "A frame for a group of events" },
+      "war": { "title": "War", "description": "Sides, cause, and outcome" },
+      "foundation": { "title": "Foundation", "description": "Who founded it and what it was built on" }
+    }
   },
   "filters": {
     "searchPlaceholder": "Search events…",

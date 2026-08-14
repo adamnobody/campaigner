@@ -27,7 +27,7 @@ export const appearanceSnapshotSchema = z.object({
   fontPresetId: safeIdSchema,
   uiDensity: z.enum(['compact', 'comfortable', 'spacious']),
   motionMode: z.enum(['full', 'reduced']),
-  readingFontSize: z.number().int().min(14).max(18),
+  readingFontSize: z.number().int().min(16).max(24),
   readingLineHeight: z.enum(['tight', 'normal', 'loose']),
   readingColumnWidth: z.union([z.literal(620), z.literal(760), z.literal(900)]),
 }).strict();

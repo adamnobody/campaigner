@@ -1,38 +1,48 @@
 {
+  "untitled": "Без названия",
   "list": {
     "title": "Заметки",
+    "eyebrow": "Заметки · {{count}}",
     "subtitle": "Свободные записи, идеи и черновики",
     "newNote": "Новая заметка",
-    "searchPlaceholder": "Поиск заметок...",
-    "tabAll": "Все ({{count}})",
-    "tabNotes": "Заметки",
-    "tabWiki": "Вики",
-    "tabMarkers": "Маркеры",
+    "searchPlaceholder": "Текст заметки или тег…",
+    "filterAll": "Все",
+    "sortNewest": "Сначала новые",
+    "sortOldest": "Сначала старые",
+    "viewGrid": "Сетка",
+    "viewList": "Список",
     "emptyFilteredTitle": "Ничего не найдено",
-    "emptyFilteredDescription": "Попробуйте изменить параметры поиска или выбрать другую вкладку",
-    "emptyFilteredAction": "Сбросить фильтры",
+    "emptyFilteredDescription": "Попробуйте другой поиск или фильтр",
     "emptyNoNotesTitle": "Заметок пока нет",
-    "emptyNoNotesDescription": "Создавайте заметки, идеи и черновики для вашего мира",
-    "emptyNoNotesAction": "Создать заметку",
-    "tooltipEditTags": "Редактировать теги",
-    "tooltipDelete": "Удалить",
-    "addTagsHint": "+ добавить теги"
+    "emptyNoNotesDescription": "Создавайте заметки, идеи и черновики для вашей игры",
+    "templates": {
+      "title": "Начать с шаблона",
+      "idea": { "title": "Идея", "description": "Одна мысль без структуры" },
+      "scene": { "title": "Сцена", "description": "Место, участники, конфликт" },
+      "question": { "title": "Вопрос к себе", "description": "То, что нужно решить позже" }
+    },
+    "summary": "Сводка",
+    "summaryTotal": "Всего",
+    "summaryWeek": "За неделю",
+    "summaryQuestions": "С вопросами",
+    "summaryUntagged": "Без тегов",
+    "storedTitle": "Что здесь хранится",
+    "storedBody": "Черновики и сырые идеи, которым ещё нет места в структуре.",
+    "linkedTitle": "Связано с",
+    "countArticles": "{{count}}",
+    "countNotes": "{{count}}",
+    "count": "{{shown}} из {{total}}"
+  },
+  "kinds": {
+    "note": "Заметка",
+    "idea": "Идея",
+    "scene": "Сцена",
+    "question": "Вопрос к миру"
   },
   "noteTypes": {
     "note": "Заметка",
     "wiki": "Вики",
     "marker_note": "Маркер"
-  },
-  "dialogs": {
-    "createTitle": "Новая заметка",
-    "createFieldTitle": "Название *",
-    "createFieldFormat": "Формат",
-    "tagsDialogTitle": "Теги: {{title}}",
-    "newTagHint": "Введите новый тег"
-  },
-  "tagField": {
-    "label": "Теги",
-    "placeholder": "Выберите или введите..."
   },
   "confirm": {
     "deleteNoteTitle": "Удалить заметку",
@@ -55,80 +65,38 @@
     "togglePinError": "Ошибка"
   },
   "editor": {
-    "placeholder": "Начните писать...",
-    "wikiChip": "WIKI",
-    "tooltipHideLinks": "Скрыть связи",
-    "tooltipShowLinks": "Показать связи",
-    "backAria": "Назад",
-    "pinAria": "Закрепить",
-    "saveStatusSaved": "Сохранено {{time}}",
-    "saveStatusUnsaved": "● Несохранённые изменения",
-    "saveStatusSaving": "Сохранение...",
-    "saveStatusError": "Ошибка сохранения",
-    "modeEdit": "Код",
-    "modeSplit": "Сплит",
-    "modePreview": "Превью",
-    "hintBar": "Автосохранение через 3 сек · Ctrl+S сохранить · Ctrl+Z отменить · Ctrl+Shift+Z повторить{{wikiHint}}",
-    "hintBarWikiSuffix": " · [Текст ссылки](/__note__/ID) — внутренняя вики-ссылка",
-    "wordCount": "{{words}} слов · {{chars}} символов",
-    "saved": {
-      "justNow": "только что",
-      "secondsAgo": "{{count}} сек. назад",
-      "minutesAgo": "{{count}} мин. назад"
-    }
-  },
-  "markdown": {
-    "placeholders": {
-      "bold": "жирный текст",
-      "italic": "курсив",
-      "heading": "Заголовок",
-      "linkText": "текст",
-      "wikiTitle": "Название статьи",
-      "code": "код",
-      "listItem": "элемент списка",
-      "quote": "цитата"
-    }
-  },
-  "toolbar": {
-    "undo": "Отменить (Ctrl+Z)",
-    "redo": "Повторить (Ctrl+Shift+Z)",
-    "heading": "Заголовок",
-    "bold": "Жирный (Ctrl+B)",
-    "italic": "Курсив (Ctrl+I)",
-    "list": "Список",
-    "quote": "Цитата",
-    "code": "Код",
-    "link": "Ссылка",
-    "hr": "Разделитель",
-    "wikiLink": "Внутренняя вики-ссылка"
-  },
-  "preview": {
-    "empty": "Пусто...",
-    "emptyMarkdown": "Пусто..."
-  },
-  "wikiSidebar": {
-    "title": "Связи ({{count}})",
-    "addLink": "Добавить связь",
-    "emptyTitle": "Нет связей",
-    "emptyHint": "Свяжите с другими вики-статьями",
-    "footerHint": "Используйте [Текст ссылки](/__note__/ID)",
-    "deleteLinkAria": "Удалить связь"
-  },
-  "wikiDialogs": {
-    "createTitle": "Добавить связь",
-    "createArticleLabel": "Вики-статья *",
-    "createArticlePlaceholder": "Выберите статью...",
-    "createNoOptions": "Нет статей",
-    "createLabelField": "Описание связи (опционально)",
-    "createLabelPlaceholder": "напр. столица, союзник, часть...",
-    "createSubmit": "Создать связь",
-    "insertTitle": "Вставить вики-ссылку",
-    "insertArticleLabel": "Вики-статья *",
-    "insertArticlePlaceholder": "Выберите статью...",
-    "insertNoOptions": "Нет статей",
-    "insertLinkTextLabel": "Текст ссылки",
-    "insertLinkTextPlaceholder": "Текст, который будет показан в статье",
-    "insertLinkTextHelper": "В текст будет вставлена markdown-ссылка на внутреннюю статью",
-    "insertSubmit": "Вставить"
+    "placeholder": "Пишите как думаете, / — вставить блок, @ — упомянуть персонажа или место.",
+    "newNoteMeta": "новая заметка",
+    "draft": "черновик",
+    "changedAgo": "изменено {{time}}",
+    "readingTime": "{{count}} мин. чтения",
+    "wordMeta": "{{words}} слов",
+    "slashTitle": "Вставить блок",
+    "slashHeading": "Заголовок раздела",
+    "slashList": "Список",
+    "slashQuote": "Цитата мира",
+    "slashEntity": "Ссылка на сущность",
+    "slashQuestion": "Вопрос к миру",
+    "slashImage": "Изображение",
+    "slashHr": "Разделитель",
+    "startScene": "Сцена",
+    "startQuestion": "Вопрос к миру",
+    "startIdea": "Идея",
+    "startMention": "Упомянуть персонажа",
+    "inspectorTitle": "Заметка",
+    "statType": "Тип",
+    "statWords": "Слов",
+    "statChars": "Символов",
+    "statCreated": "Создана",
+    "tags": "Теги",
+    "addTag": "+ тег",
+    "linked": "Связано с",
+    "whatsNext": "Что дальше",
+    "whatsNextBody": "Упоминания через @ автоматически появятся здесь как связи.",
+    "history": "История",
+    "historyCreated": "Создана",
+    "historyUpdated": "Изменена",
+    "pickEntity": "Связать сущность",
+    "delete": "Удалить заметку"
   }
 }

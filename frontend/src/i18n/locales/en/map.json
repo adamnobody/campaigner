@@ -56,6 +56,18 @@
       "root": "Canvas",
       "map": "Map"
     },
+    "layers": {
+      "title": "Layers",
+      "show": "Show layer {{name}}",
+      "hide": "Hide layer {{name}}",
+      "updateError": "Could not update layer visibility"
+    },
+    "legend": {
+      "title": "Legend",
+      "territories": "Territories",
+      "routes": "Routes and lines",
+      "markers": "Place markers"
+    },
     "toolbar": {
       "sceneStats": "Canvas scene · {{count}} objects{{selected}}",
       "selectedWithName": " · selected: {{name}}",

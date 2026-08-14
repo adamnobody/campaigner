@@ -1,10 +1,30 @@
 import { create } from 'zustand';
+import { campaignerLayout } from '@/theme/designSystem';
 
 export type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
+
+export type DocumentChromeMoreItem = {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+};
+
+export type DocumentChrome = {
+  saveText: string;
+  readMode: boolean;
+  focusMode: boolean;
+  readIcon?: 'eye' | 'book';
+  moreItems: DocumentChromeMoreItem[];
+  onToggleRead: () => void;
+  onToggleFocus: () => void;
+  onDone: () => void;
+};
 
 interface UIState {
   sidebarOpen: boolean;
   sidebarWidth: number;
+  editorFocus: boolean;
+  documentChrome: DocumentChrome | null;
 
   // Search
   searchOpen: boolean;
@@ -27,6 +47,8 @@ interface UIState {
   // Actions
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  setEditorFocus: (focus: boolean) => void;
+  setDocumentChrome: (chrome: DocumentChrome | null) => void;
   setSearchOpen: (open: boolean) => void;
   toggleSearch: () => void;
   showSnackbar: (message: string, severity?: SnackbarSeverity) => void;
@@ -37,7 +59,9 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: true,
-  sidebarWidth: 296,
+  sidebarWidth: campaignerLayout.sidebarExpanded,
+  editorFocus: false,
+  documentChrome: null,
 
   searchOpen: false,
 
@@ -56,9 +80,21 @@ export const useUIStore = create<UIState>((set) => ({
 
   toggleSidebar: () => set(state => {
     const sidebarOpen = !state.sidebarOpen;
-    return { sidebarOpen, sidebarWidth: sidebarOpen ? 296 : 88 };
+    return {
+      sidebarOpen,
+      sidebarWidth: sidebarOpen
+        ? campaignerLayout.sidebarExpanded
+        : campaignerLayout.sidebarCollapsed,
+    };
   }),
-  setSidebarOpen: (open) => set({ sidebarOpen: open, sidebarWidth: open ? 296 : 88 }),
+  setSidebarOpen: (open) => set({
+    sidebarOpen: open,
+    sidebarWidth: open
+      ? campaignerLayout.sidebarExpanded
+      : campaignerLayout.sidebarCollapsed,
+  }),
+  setEditorFocus: (focus) => set({ editorFocus: focus }),
+  setDocumentChrome: (chrome) => set({ documentChrome: chrome, editorFocus: Boolean(chrome?.focusMode) }),
   setSearchOpen: (open) => set({ searchOpen: open }),
   toggleSearch: () => set(state => ({ searchOpen: !state.searchOpen })),
 

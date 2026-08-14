@@ -32,6 +32,7 @@ import { shallow } from 'zustand/shallow';
 import { DndButton } from '@/components/ui/DndButton';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TabFade } from '@/components/ui/MotionSwitch';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import {
   CampaignerFieldRow,
@@ -432,6 +433,7 @@ export const CharacterDetailPage: React.FC = () => {
         <Tab value="relations" label={t('detail.tabs.relations')} />
       </Tabs>
 
+      <TabFade tab={activeTab}>
       {activeTab === 'overview' ? (
         <Box
           sx={{
@@ -752,6 +754,7 @@ export const CharacterDetailPage: React.FC = () => {
           )}
         </Box>
       ) : null}
+      </TabFade>
 
       {/* Relationship Dialog */}
       <Dialog open={relDialogOpen} onClose={() => setRelDialogOpen(false)} maxWidth="sm" fullWidth

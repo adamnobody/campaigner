@@ -102,7 +102,7 @@ export function MapToolbar({
     isToolAllowedForSceneType(toolMode, sceneType) && isToolbarToolVisible(toolMode);
 
   return (
-    <Box data-tour="map-toolbar" display="flex" flexDirection="column" gap={0.5} mb={1}>
+    <Box data-tour="map-toolbar" display="flex" flexDirection="column" gap={1} mb={1.25}>
       {showBreadcrumbs && (
         <Box display="flex" alignItems="center" gap={0.5} minWidth={0}>
           <Tooltip title={t('map:canvas.breadcrumbs.back')}>
@@ -144,15 +144,36 @@ export function MapToolbar({
         </Box>
       )}
 
-      <Box display="flex" justifyContent="space-between" alignItems="center" gap={2}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="flex-end"
+        gap={{ xs: 2, lg: 5 }}
+        flexWrap="wrap"
+      >
         <Box minWidth={0} display="flex" alignItems="center" gap={1}>
           <Box minWidth={0}>
+            <Typography
+              variant="overline"
+              sx={{ display: 'block', color: 'text.disabled', mb: 0.75 }}
+            >
+              {isRootCanvasScene(sceneType)
+                ? t('map:canvas.toolbar.sceneStatsRoot', {
+                    count: objectCount,
+                    selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
+                  })
+                : t('map:canvas.toolbar.sceneStats', {
+                    count: objectCount,
+                    selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
+                  })}
+            </Typography>
             <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
               <Typography
                 sx={{
-                  fontFamily: '"Cinzel", serif',
-                  fontWeight: 700,
-                  fontSize: '1.55rem',
+                  fontFamily: theme.campaigner.typography.display,
+                  fontWeight: 600,
+                  fontSize: { xs: '1.8rem', md: '2.1rem' },
+                  lineHeight: 1.02,
                   color: 'text.primary',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -167,25 +188,22 @@ export function MapToolbar({
                   label={sceneTypeLabel}
                   color={isRootCanvasScene(sceneType) ? 'primary' : 'default'}
                   variant="outlined"
-                  sx={{ fontWeight: 600 }}
+                  sx={{
+                    height: 24,
+                    fontFamily: theme.campaigner.typography.mono,
+                    fontSize: '0.65rem',
+                    fontWeight: 400,
+                    letterSpacing: '.06em',
+                    textTransform: 'uppercase',
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                  }}
                 />
               )}
             </Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              {isRootCanvasScene(sceneType)
-                ? t('map:canvas.toolbar.sceneStatsRoot', {
-                    count: objectCount,
-                    selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
-                  })
-                : t('map:canvas.toolbar.sceneStats', {
-                    count: objectCount,
-                    selected: selectedLabel ? t('map:canvas.toolbar.selectedWithName', { name: selectedLabel }) : '',
-                  })}
-            </Typography>
           </Box>
         </Box>
 
-        <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" justifyContent="flex-end">
+        <Box display="flex" gap={1.25} alignItems="center" flexWrap="wrap" justifyContent="flex-end">
           <ToggleButtonGroup
             value={mode}
             exclusive
@@ -194,13 +212,21 @@ export function MapToolbar({
             }}
             size="small"
             sx={{
+              p: 0.375,
+              border: `1px solid ${theme.campaigner.surface.border}`,
+              borderRadius: '9px',
+              backgroundColor: alpha(theme.palette.common.white, 0.025),
               '& .MuiToggleButton-root': {
                 color: 'text.secondary',
-                borderColor: theme.palette.divider,
+                width: 30,
+                height: 30,
+                p: 0,
+                border: 0,
+                borderRadius: '7px !important',
                 px: 0.8,
                 '&.Mui-selected': {
                   color: theme.palette.primary.main,
-                  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                  backgroundColor: alpha(theme.palette.primary.main, 0.14),
                 },
               },
             }}
@@ -286,9 +312,19 @@ export function MapToolbar({
             />
           )}
 
-          <Box display="flex" gap={0.5} sx={{ backgroundColor: alpha(theme.palette.background.paper, 0.6), borderRadius: 1, p: 0.5 }}>
+          <Box
+            display="flex"
+            gap={0.25}
+            sx={{
+              alignItems: 'center',
+              p: 0.375,
+              border: `1px solid ${theme.campaigner.surface.border}`,
+              borderRadius: '9px',
+              backgroundColor: alpha(theme.palette.common.white, 0.025),
+            }}
+          >
             <IconButton size="small" onClick={onZoomOut}><ZoomOutIcon fontSize="small" /></IconButton>
-            <Typography sx={{ color: 'text.primary', fontSize: '0.9rem', lineHeight: '30px', px: 1, minWidth: 48, textAlign: 'center' }}>
+            <Typography sx={{ color: 'text.secondary', fontFamily: theme.campaigner.typography.mono, fontSize: '0.72rem', lineHeight: '30px', px: 0.75, minWidth: 44, textAlign: 'center' }}>
               {t('map:canvas.toolbar.zoomPercent', { value: zoomPercent })}
             </Typography>
             <IconButton size="small" onClick={onZoomIn}><ZoomInIcon fontSize="small" /></IconButton>
@@ -296,7 +332,7 @@ export function MapToolbar({
           </Box>
 
           {!isMapScene(sceneType) && (
-            <Button data-tour="map-upload" variant="outlined" startIcon={<CloudUploadIcon />} size="small" onClick={onAddImage}>
+            <Button data-tour="map-upload" variant="contained" startIcon={<CloudUploadIcon />} size="small" onClick={onAddImage} sx={{ height: 38, px: 2 }}>
               {t('map:canvas.toolbar.addImage')}
             </Button>
           )}

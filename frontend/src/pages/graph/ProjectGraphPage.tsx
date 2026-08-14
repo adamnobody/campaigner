@@ -14,6 +14,12 @@ import { useTranslation } from 'react-i18next';
 import { useBranchStore } from '@/store/useBranchStore';
 import { EmptyState } from '@/components/ui/EmptyState';
 import HubIcon from '@mui/icons-material/Hub';
+import AddIcon from '@mui/icons-material/Add';
+import { DndButton } from '@/components/ui/DndButton';
+import {
+  CampaignerPage,
+  CampaignerPageHeader,
+} from '@/components/ui/CampaignerPrimitives';
 import { buildProjectGraph } from '@/pages/graph/data/buildProjectGraph';
 import { GraphCanvasShell } from '@/pages/graph/components/GraphCanvasShell';
 import { GraphDetailsPanel } from '@/pages/graph/components/GraphDetailsPanel';
@@ -996,24 +1002,47 @@ export const ProjectGraphPage: React.FC = () => {
 
   if (graphData.nodes.length === 0) {
     return (
-      <EmptyState
-        icon={<HubIcon sx={{ fontSize: 64 }} />}
-        title={t('graph:page.emptyTitle')}
-        description={t('graph:page.emptyDescription')}
-      />
+      <CampaignerPage>
+        <CampaignerPageHeader
+          eyebrow={t('graph:page.eyebrow', { count: 0 })}
+          title={t('graph:page.title')}
+          description={t('graph:page.subtitle')}
+          actions={(
+            <DndButton
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate(`/project/${pid}/characters/new`)}
+            >
+              {t('graph:page.emptyAction')}
+            </DndButton>
+          )}
+        />
+        <EmptyState
+          icon={<HubIcon />}
+          title={t('graph:page.emptyTitle')}
+          description={t('graph:page.emptyDescription')}
+          actionLabel={t('graph:page.emptyAction')}
+          actionIcon={<AddIcon />}
+          onAction={() => navigate(`/project/${pid}/characters/new`)}
+        />
+      </CampaignerPage>
     );
   }
 
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 64px - 46px)',
+        height: '100%',
         maxWidth: '100%',
         boxSizing: 'border-box',
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        pt: { xs: 2, md: 3 },
+        pr: { xs: 2, md: 4 },
+        pb: { xs: 2, md: 4 },
+        pl: { xs: 2, md: 6 },
       }}
     >
       <Typography

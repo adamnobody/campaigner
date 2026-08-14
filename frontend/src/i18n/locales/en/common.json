@@ -24,6 +24,16 @@
   "next": "Next",
   "skip": "Skip",
   "done": "Done",
+  "document": {
+    "focus": "Focus",
+    "read": "Read",
+    "done": "Done",
+    "more": "More",
+    "savedAt": "Saved {{time}}",
+    "saving": "Saving…",
+    "unsaved": "Unsaved",
+    "saveError": "Save failed"
+  },
   "branchMissing": {
     "title": "Item is not available in this branch",
     "message": "This item ({{entity}}) does not exist in the selected branch. Close this dialog to return back."
@@ -122,6 +132,11 @@
     "previewTitle": "Project name",
     "previewDescription": "Project description will look like this",
     "resetAll": "Reset all"
+  },
+  "catalog": {
+    "summary": "Summary",
+    "storedTitle": "What is stored here",
+    "linkedTitle": "Linked to"
   },
   "storeErrors": {
     "traitsLoad": "Could not load traits",

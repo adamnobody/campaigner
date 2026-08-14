@@ -9,16 +9,20 @@ import AddIcon from '@mui/icons-material/Add';
 import PersonIcon from '@mui/icons-material/Person';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import GroupsIcon from '@mui/icons-material/Groups';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useTagStore } from '@/store/useTagStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useFactionStore } from '@/store/useFactionStore';
+import { useDynastyStore } from '@/store/useDynastyStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssetAvatar } from '@/components/ui/AssetAvatar';
+import { CatalogAside, CatalogColumns } from '@/components/catalog/CatalogLayout';
 import {
   CampaignerPage,
   CampaignerPageHeader,
@@ -27,7 +31,7 @@ import {
 import { routes } from '@/utils/routes';
 
 export const CharactersPage: React.FC = () => {
-  const { t } = useTranslation(['characters', 'common']);
+  const { t } = useTranslation(['characters', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -48,6 +52,10 @@ export const CharactersPage: React.FC = () => {
 
   const { showSnackbar, showConfirmDialog } = useUIStore();
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const fetchFactions = useFactionStore((s) => s.fetchFactions);
+  const factions = useFactionStore((s) => s.factions);
+  const fetchDynasties = useDynastyStore((s) => s.fetchDynasties);
+  const dynasties = useDynastyStore((s) => s.dynasties);
 
   const [search, setSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -59,7 +67,9 @@ export const CharactersPage: React.FC = () => {
 
   useEffect(() => {
     fetchTags(pid).catch(() => {});
-  }, [pid, fetchTags]);
+    void fetchFactions(pid, { limit: 500 });
+    void fetchDynasties(pid);
+  }, [pid, fetchTags, fetchFactions, fetchDynasties, activeBranchId]);
 
   const filtered = useMemo(() => {
     return characters.filter((c: any) => {
@@ -88,6 +98,7 @@ export const CharactersPage: React.FC = () => {
     setSearch('');
     setSelectedTag('');
   };
+  const hasFilters = Boolean(debouncedSearch || selectedTag);
 
   if (loading && characters.length === 0 && !error) {
     return (
@@ -99,8 +110,29 @@ export const CharactersPage: React.FC = () => {
 
   return (
     <CampaignerPage>
+      <CatalogColumns
+        aside={(
+          <CatalogAside
+            summaryTitle={t('common:catalog.summary')}
+            summary={[
+              { label: t('characters:page.aside.summaryTotal'), value: characters.length },
+              { label: t('characters:page.aside.summaryAlive'), value: characters.filter((item) => item.status === 'alive').length },
+              { label: t('characters:page.aside.summaryPortrait'), value: characters.filter((item) => item.imagePath).length },
+              { label: t('characters:page.aside.summaryFaction'), value: characters.filter((item) => (item.factionIds?.length ?? 0) > 0).length },
+            ]}
+            storedTitle={t('common:catalog.storedTitle')}
+            storedBody={t('characters:page.aside.storedBody')}
+            linkedTitle={t('common:catalog.linkedTitle')}
+            linked={[
+              { label: t('navigation:menu.states'), value: factions.filter((item) => item.kind === 'state').length },
+              { label: t('navigation:menu.factions'), value: factions.filter((item) => item.kind === 'faction').length },
+              { label: t('navigation:menu.dynasties'), value: dynasties.length },
+            ]}
+          />
+        )}
+      >
       <CampaignerPageHeader
-        eyebrow={t('characters:page.eyebrow')}
+        eyebrow={t('characters:page.eyebrow', { count: characters.length })}
         title={t('characters:page.title')}
         description={t('characters:page.subtitle')}
         actions={
@@ -124,11 +156,10 @@ export const CharactersPage: React.FC = () => {
         }
       />
 
-      {(characters.length > 0 || search || selectedTag) && (
-        <CampaignerSurface
+      <CampaignerSurface
           sx={{
             p: 1.5,
-            mb: 3,
+            mb: characters.length === 0 ? 0 : 3,
             display: 'flex',
             gap: 1.5,
             alignItems: 'center',
@@ -182,8 +213,7 @@ export const CharactersPage: React.FC = () => {
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
             {t('characters:page.count', { filtered: filtered.length, total: characters.length })}
           </Typography>
-        </CampaignerSurface>
-      )}
+      </CampaignerSurface>
 
       {error && characters.length === 0 ? (
         <EmptyState
@@ -193,15 +223,36 @@ export const CharactersPage: React.FC = () => {
           actionLabel={t('characters:page.error.retry')}
           onAction={() => fetchCharacters(pid, { search: debouncedSearch || undefined, limit: 200 })}
         />
-      ) : characters.length === 0 ? (
+      ) : characters.length === 0 && !hasFilters ? (
         <EmptyState
           icon={<PersonIcon sx={{ fontSize: 64 }} />}
           title={t('characters:page.empty.noCharacters.title')}
           description={t('characters:page.empty.noCharacters.description')}
           actionLabel={t('characters:page.empty.noCharacters.action')}
           onAction={() => navigate(routes.characterDetail(pid, 'new'))}
+          templatesTitle={t('characters:page.empty.templates.title')}
+          templates={[
+            {
+              icon: <PersonIcon />,
+              title: t('characters:page.empty.templates.protagonist.title'),
+              description: t('characters:page.empty.templates.protagonist.description'),
+              onClick: () => navigate(routes.characterDetail(pid, 'new')),
+            },
+            {
+              icon: <AccountTreeIcon />,
+              title: t('characters:page.empty.templates.antagonist.title'),
+              description: t('characters:page.empty.templates.antagonist.description'),
+              onClick: () => navigate(routes.characterDetail(pid, 'new')),
+            },
+            {
+              icon: <GroupsIcon />,
+              title: t('characters:page.empty.templates.supporting.title'),
+              description: t('characters:page.empty.templates.supporting.description'),
+              onClick: () => navigate(routes.characterDetail(pid, 'new')),
+            },
+          ]}
         />
-      ) : filtered.length === 0 ? (
+      ) : characters.length === 0 || filtered.length === 0 ? (
         <EmptyState
           icon={<SearchIcon sx={{ fontSize: 64 }} />}
           title={t('characters:page.empty.noMatch.title')}
@@ -366,6 +417,7 @@ export const CharactersPage: React.FC = () => {
           ))}
         </Box>
       )}
+      </CatalogColumns>
     </CampaignerPage>
   );
 };

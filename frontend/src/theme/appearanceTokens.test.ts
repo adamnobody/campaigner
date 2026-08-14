@@ -48,7 +48,7 @@ describe('mapAppearanceTokens', () => {
     expect(tokens.spacing).toBe(7);
     expect(tokens.motion).toEqual({ duration: 0, transition: 'none' });
     expect(tokens.reading).toMatchObject({
-      fontSize: 18,
+      fontSize: 20,
       lineHeight: 1.55,
       columnWidth: 620,
     });

@@ -12,9 +12,19 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { TabFade } from '@/components/ui/MotionSwitch';
 import { shallow } from 'zustand/shallow';
-import { usePreferencesStore, type CustomColorThemePreset } from '@/store/usePreferencesStore';
+import {
+  usePreferencesStore,
+  type AccentGlow,
+  type BackgroundTone,
+  type FontMode,
+  type MotionMode,
+  type PreferencesState,
+  type ReadingLineHeight,
+  type UiDensity,
+} from '@/store/usePreferencesStore';
 import { THEME_PRESETS, type ThemePresetDefinition } from '@/theme/presets';
 import {
   INTERFACE_STYLE_ORDER,
@@ -24,6 +34,7 @@ import {
 import { AppearanceLivePreview } from './components/AppearanceLivePreview';
 import { InlinePaletteEditor } from './components/InlinePaletteEditor';
 import { FONT_PRESET_OPTIONS, getFontPreset } from './components/fontPresets';
+import { READING_FONT_SIZE_OPTIONS } from '@/theme/appearanceTokens';
 import {
   buildCustomColorTheme,
   toPortablePalette,
@@ -41,42 +52,6 @@ import {
 import styles from './AppearanceSettingsPage.module.css';
 
 type SectionId = 'style' | 'color' | 'text' | 'themes';
-type BackgroundTone = 'ink' | 'graphite' | 'warm' | 'blue';
-type AccentGlow = 'none' | 'soft' | 'strong';
-type FontMode = 'serif' | 'sans' | 'custom';
-type UiDensity = 'compact' | 'comfortable' | 'spacious';
-type MotionMode = 'full' | 'reduced';
-type ReadingLineHeight = 'tight' | 'normal' | 'loose';
-
-type SavedTheme = {
-  id: string;
-  name: string;
-  createdAt: string;
-  settings: AppearanceSnapshot;
-};
-
-type AppearanceStore = AppearanceSnapshot & {
-  customThemes: SavedTheme[];
-  customColorThemes: CustomColorThemePreset[];
-  selectedCustomThemeId: string | null;
-  setThemePreset: (value: string) => void;
-  setBackgroundTone: (value: BackgroundTone) => void;
-  setAccentGlow: (value: AccentGlow) => void;
-  setFontMode: (value: FontMode) => void;
-  setFontPresetId: (value: string) => void;
-  setUiDensity: (value: UiDensity) => void;
-  setMotionMode: (value: MotionMode) => void;
-  setReadingFontSize: (value: number) => void;
-  setReadingLineHeight: (value: ReadingLineHeight) => void;
-  setReadingColumnWidth: (value: number) => void;
-  applyInterfaceStyle: (value: InterfaceStyleId) => void;
-  saveCurrentAsCustomTheme: (name: string) => void;
-  applyCustomTheme: (id: string) => void;
-  deleteCustomTheme: (id: string) => void;
-  addCustomColorTheme: (theme: CustomColorThemePreset) => void;
-  deleteCustomColorTheme: (id: string) => void;
-  resetAppearance: () => void;
-};
 
 type SegmentOption<T extends string | number> = {
   value: T;
@@ -159,6 +134,7 @@ const Segments = <T extends string | number>({
         className={`${styles.segment} ${value === option.value ? styles.segmentSelected : ''}`}
         key={option.value}
         type="button"
+        aria-pressed={value === option.value}
         onClick={() => onChange(option.value)}
       >
         {option.swatch ? <span className={styles.toneDot} style={{ background: option.swatch }} /> : null}
@@ -168,7 +144,7 @@ const Segments = <T extends string | number>({
   </div>
 );
 
-const snapshotFrom = (store: AppearanceStore): AppearanceSnapshot => ({
+const snapshotFrom = (store: PreferencesState): AppearanceSnapshot => ({
   interfaceStyle: store.interfaceStyle,
   themePreset: store.themePreset,
   backgroundTone: store.backgroundTone,
@@ -188,10 +164,20 @@ const safeFilePart = (value: string) =>
 export const AppearanceSettingsPage: React.FC = () => {
   const { t } = useTranslation(['appearance', 'common']);
   const navigate = useNavigate();
-  const appearance = usePreferencesStore(
-    (state) => state as unknown as AppearanceStore,
-    shallow,
-  );
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  const goBack = () => {
+    if (from && from !== '/appearance') {
+      navigate(from);
+      return;
+    }
+    if (typeof window.history.state?.idx === 'number' && window.history.state.idx > 0) {
+      navigate(-1);
+      return;
+    }
+    navigate('/');
+  };
+  const appearance = usePreferencesStore((state) => state, shallow);
   const [section, setSection] = React.useState<SectionId>('style');
   const [themeName, setThemeName] = React.useState('');
   const [editingPaletteId, setEditingPaletteId] = React.useState<string | null>(null);
@@ -230,6 +216,7 @@ export const AppearanceSettingsPage: React.FC = () => {
     setReadingLineHeight,
     setReadingColumnWidth,
     applyInterfaceStyle,
+    applyAppearanceSnapshot,
     saveCurrentAsCustomTheme,
     applyCustomTheme,
     deleteCustomTheme,
@@ -298,32 +285,6 @@ export const AppearanceSettingsPage: React.FC = () => {
     },
   ];
 
-  const applySnapshot = React.useCallback((snapshot: AppearanceSnapshot) => {
-    applyInterfaceStyle(snapshot.interfaceStyle);
-    setThemePreset(snapshot.themePreset);
-    setBackgroundTone(snapshot.backgroundTone);
-    setAccentGlow(snapshot.accentGlow);
-    setFontMode(snapshot.fontMode);
-    setFontPresetId(snapshot.fontPresetId);
-    setUiDensity(snapshot.uiDensity);
-    setMotionMode(snapshot.motionMode);
-    setReadingFontSize(snapshot.readingFontSize);
-    setReadingLineHeight(snapshot.readingLineHeight);
-    setReadingColumnWidth(snapshot.readingColumnWidth);
-  }, [
-    applyInterfaceStyle,
-    setAccentGlow,
-    setBackgroundTone,
-    setFontMode,
-    setFontPresetId,
-    setMotionMode,
-    setReadingColumnWidth,
-    setReadingFontSize,
-    setReadingLineHeight,
-    setThemePreset,
-    setUiDensity,
-  ]);
-
   const savePalette = (draft: PaletteDraft) => {
     const id = editingPaletteId ?? `custom-${crypto.randomUUID()}`;
     addCustomColorTheme(buildCustomColorTheme(draft, id));
@@ -388,17 +349,16 @@ export const AppearanceSettingsPage: React.FC = () => {
   const confirmImport = () => {
     if (!importCandidate) return;
     importCandidate.customColorThemes.forEach((palette) => {
-      addCustomColorTheme(buildCustomColorTheme(palette, palette.id));
+      addCustomColorTheme(buildCustomColorTheme(palette, palette.id), false);
     });
     const existingNames = new Set(customThemes.map((theme) => theme.name.trim().toLocaleLowerCase()));
     importCandidate.customThemes.forEach((theme) => {
       const normalizedName = theme.name.trim().toLocaleLowerCase();
       if (existingNames.has(normalizedName)) return;
-      applySnapshot(theme.settings);
-      saveCurrentAsCustomTheme(theme.name);
+      saveCurrentAsCustomTheme(theme.name, theme.settings);
       existingNames.add(normalizedName);
     });
-    applySnapshot(importCandidate.active);
+    applyAppearanceSnapshot(importCandidate.active);
     setImportCandidate(null);
     setTransferMessage({ severity: 'success', text: t('appearance:transfer.imported') });
   };
@@ -424,6 +384,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                 className={`${styles.styleTile} ${selected ? styles.styleTileSelected : ''}`}
                 key={id}
                 type="button"
+                aria-pressed={selected}
                 onClick={() => applyInterfaceStyle(id)}
               >
                 <div
@@ -516,7 +477,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                     </button>
                   </div>
                 ) : null}
-                <button className={styles.paletteButton} type="button" onClick={() => setThemePreset(id)}>
+                <button className={styles.paletteButton} type="button" aria-pressed={selected} onClick={() => setThemePreset(id)}>
                   <span
                     className={`${styles.paletteSwatch} ${selected ? styles.paletteSelected : ''}`}
                     style={{ display: 'block', background: `linear-gradient(150deg, ${palette.background}, ${palette.accentSoft})` }}
@@ -584,6 +545,7 @@ export const AppearanceSettingsPage: React.FC = () => {
               className={`${styles.fontTile} ${fontMode === 'custom' && fontPresetId === preset.id ? styles.fontTileSelected : ''}`}
               key={preset.id}
               type="button"
+              aria-pressed={fontMode === 'custom' && fontPresetId === preset.id}
               onClick={() => {
                 setFontPresetId(preset.id);
                 setFontMode('custom');
@@ -599,7 +561,7 @@ export const AppearanceSettingsPage: React.FC = () => {
       <SettingRow label={t('appearance:text.size')} hint={t('appearance:text.sizeHint')}>
         <Segments
           value={readingFontSize}
-          options={[14, 15, 16, 17, 18].map((value) => ({ value, label: `Aa · ${value}` }))}
+          options={READING_FONT_SIZE_OPTIONS.map((value) => ({ value, label: `Aa · ${value}` }))}
           onChange={setReadingFontSize}
         />
       </SettingRow>
@@ -616,7 +578,7 @@ export const AppearanceSettingsPage: React.FC = () => {
       <SettingRow label={t('appearance:text.columnWidth')} hint={t('appearance:text.columnWidthHint')}>
         <Segments
           value={readingColumnWidth}
-          options={[620, 760, 900].map((value) => ({
+          options={([620, 760, 900] as const).map((value) => ({
             value,
             label: `${t(`appearance:columnWidths.${value}`)} · ${value}px`,
           }))}
@@ -727,9 +689,9 @@ export const AppearanceSettingsPage: React.FC = () => {
       } as React.CSSProperties}
     >
       <aside className={styles.sidebar}>
-        <button className={styles.back} type="button" onClick={() => navigate('/')}>
+        <button className={styles.back} type="button" onClick={goBack}>
           <ArrowBackIcon sx={{ fontSize: 18 }} />
-          {t('appearance:backHome')}
+          {from && from !== '/' ? t('common:back') : t('appearance:backHome')}
         </button>
         <div className={`${styles.eyebrow} ${styles.sidebarEyebrow}`}>{t('appearance:settings')}</div>
         <h1 className={styles.sidebarTitle}>{t('appearance:pageTitle')}</h1>
@@ -739,6 +701,7 @@ export const AppearanceSettingsPage: React.FC = () => {
               className={`${styles.navButton} ${section === item.id ? styles.navButtonActive : ''}`}
               key={item.id}
               type="button"
+              aria-current={section === item.id ? 'page' : undefined}
               onClick={() => setSection(item.id)}
             >
               {SECTION_ICONS[item.id]}
@@ -752,7 +715,7 @@ export const AppearanceSettingsPage: React.FC = () => {
 
       <main className={styles.body}>
         <nav className={styles.compactTabs} aria-label={t('appearance:pageTitle')}>
-          <button className={styles.back} type="button" onClick={() => navigate('/')} style={{ margin: 0, padding: '0 8px' }}>
+          <button className={styles.back} type="button" onClick={goBack} style={{ margin: 0, padding: '0 8px' }}>
             <ArrowBackIcon sx={{ fontSize: 18 }} />
           </button>
           {sections.map((item) => (
@@ -760,6 +723,7 @@ export const AppearanceSettingsPage: React.FC = () => {
               className={`${styles.compactTab} ${section === item.id ? styles.compactTabActive : ''}`}
               key={item.id}
               type="button"
+              aria-current={section === item.id ? 'page' : undefined}
               onClick={() => setSection(item.id)}
             >
               {SECTION_ICONS[item.id]}
@@ -772,6 +736,7 @@ export const AppearanceSettingsPage: React.FC = () => {
         <div className={styles.workspace}>
           <div className={styles.content}>
             <div className={styles.contentInner}>
+              <TabFade tab={section}>
               <header className={styles.pageHeader}>
                 <div>
                   <div className={styles.eyebrow}>{styleLabel(interfaceStyle)} · {paletteLabel(themePreset)}</div>
@@ -784,6 +749,7 @@ export const AppearanceSettingsPage: React.FC = () => {
                 </button>
               </header>
               {sectionContent}
+              </TabFade>
             </div>
           </div>
 

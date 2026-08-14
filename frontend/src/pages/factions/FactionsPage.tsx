@@ -21,17 +21,31 @@ import SearchIcon from '@mui/icons-material/Search';
 import GroupsIcon from '@mui/icons-material/Groups';
 import CastleIcon from '@mui/icons-material/Castle';
 import PeopleIcon from '@mui/icons-material/People';
+import PublicIcon from '@mui/icons-material/Public';
+import LocationCityIcon from '@mui/icons-material/LocationCity';
+import ShieldIcon from '@mui/icons-material/Shield';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useFactionStore } from '@/store/useFactionStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useDynastyStore } from '@/store/useDynastyStore';
+import { useTimelineStore } from '@/store/useTimelineStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { routes } from '@/utils/routes';
+import {
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
+import { CatalogAside, CatalogColumns } from '@/components/catalog/CatalogLayout';
 import {
   FACTION_KIND_ICONS,
   FACTION_STATUS_ICONS,
@@ -50,7 +64,7 @@ interface FactionsPageProps {
 }
 
 export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'faction' }) => {
-  const { t } = useTranslation(['factions', 'common']);
+  const { t } = useTranslation(['factions', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -65,6 +79,12 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   } = useFactionStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const fetchCharacters = useCharacterStore((s) => s.fetchCharacters);
+  const characters = useCharacterStore((s) => s.characters);
+  const fetchDynasties = useDynastyStore((s) => s.fetchDynasties);
+  const dynasties = useDynastyStore((s) => s.dynasties);
+  const fetchEvents = useTimelineStore((s) => s.fetchEvents);
+  const events = useTimelineStore((s) => s.events);
 
   const isStatePage = entityType === 'state';
   const listTitle = isStatePage ? t('factions:list.titleStates') : t('factions:list.titleFactions');
@@ -110,6 +130,12 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
       setTotalUnfiltered(useFactionStore.getState().total);
     });
   }, [entityType, fetchFactions, pid, activeBranchId]);
+
+  useEffect(() => {
+    void fetchCharacters(pid, { limit: 500 });
+    void fetchDynasties(pid);
+    void fetchEvents(pid);
+  }, [pid, fetchCharacters, fetchDynasties, fetchEvents, activeBranchId]);
 
   useEffect(() => {
     setInitialized(false);
@@ -187,66 +213,51 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   }
 
   return (
-    <Box sx={{ maxWidth: 1240, mx: 'auto' }}>
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
-        flexDirection={{ xs: 'column', sm: 'row' }}
-        gap={2}
-        mb={4}
-        sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.55)}`, pb: 3 }}
+    <CampaignerPage>
+      <CatalogColumns
+        aside={(
+          <CatalogAside
+            summaryTitle={t('common:catalog.summary')}
+            summary={[
+              { label: t('factions:list.aside.summaryTotal'), value: totalUnfiltered },
+              { label: t('factions:list.aside.summaryActive'), value: factions.filter((item) => item.status === 'active').length },
+              { label: t('factions:list.aside.summaryRuler'), value: factions.filter((item) => item.rulerCharacterId).length },
+              { label: t('factions:list.aside.summaryDynasty'), value: factions.filter((item) => item.rulingDynastyId).length },
+            ]}
+            storedTitle={t('common:catalog.storedTitle')}
+            storedBody={t(isStatePage ? 'factions:list.aside.storedBodyStates' : 'factions:list.aside.storedBodyFactions')}
+            linkedTitle={t('common:catalog.linkedTitle')}
+            linked={[
+              { label: t('navigation:menu.characters'), value: characters.length },
+              { label: t('navigation:menu.dynasties'), value: dynasties.length },
+              { label: t('navigation:menu.timeline'), value: events.length },
+            ]}
+          />
+        )}
       >
-        <Box>
-          <Typography
-            sx={{
-              mb: 1,
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '0.68rem',
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              color: 'primary.main',
-            }}
+      <CampaignerPageHeader
+        eyebrow={`${listTitle} · ${totalUnfiltered}`}
+        title={listTitle}
+        description={isStatePage ? t('factions:list.subtitleStates') : t('factions:list.subtitleFactions')}
+        actions={(
+          <DndButton
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate(routes.factionDetail(pid, entityType, 'new'))}
           >
-            {t(`factions:entityKinds.${entityType}`)} · {totalUnfiltered}
-          </Typography>
-          <Typography
-            sx={{
-              fontFamily: '"Cormorant Garamond", serif',
-              fontWeight: 600,
-              fontSize: { xs: '2.3rem', md: '3rem' },
-              lineHeight: 0.95,
-              color: 'text.primary',
-            }}
-          >
-            {listTitle}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.25, maxWidth: 620, lineHeight: 1.7 }}>
-            {isStatePage ? t('factions:list.subtitleStates') : t('factions:list.subtitleFactions')}
-          </Typography>
-        </Box>
-        <DndButton
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate(routes.factionDetail(pid, entityType, 'new'))}
-          sx={{ minHeight: 42, px: 2.5, borderRadius: 2 }}
-        >
-          {createLabel}
-        </DndButton>
-      </Box>
+            {createLabel}
+          </DndButton>
+        )}
+      />
 
-      {(totalUnfiltered > 0 || hasFilters) && (
-        <Box
+      <CampaignerSurface
           sx={{
             p: 1.25,
-            mb: 3,
+            mb: factions.length === 0 ? 0 : 3,
             display: 'flex',
             gap: 1.25,
             alignItems: 'center',
             flexWrap: 'wrap',
-            border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
-            borderRadius: 2.5,
-            bgcolor: alpha(theme.palette.background.paper, 0.28),
           }}
         >
           <TextField
@@ -289,8 +300,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
             {t('factions:list.count', { shown: factions.length, total })}
           </Typography>
-        </Box>
-      )}
+      </CampaignerSurface>
 
       {factions.length === 0 && !loading ? (
         hasFilters ? (
@@ -310,6 +320,24 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
             }
             actionLabel={createLabel}
             onAction={() => navigate(routes.factionDetail(pid, entityType, 'new'))}
+            templatesTitle={t('factions:list.templates.title')}
+            templates={(isStatePage
+              ? [
+                  ['kingdom', <CastleIcon key="kingdom" />],
+                  ['empire', <PublicIcon key="empire" />],
+                  ['city', <LocationCityIcon key="city" />],
+                ]
+              : [
+                  ['order', <ShieldIcon key="order" />],
+                  ['guild', <StorefrontIcon key="guild" />],
+                  ['cult', <LocalFireDepartmentIcon key="cult" />],
+                ]
+            ).map(([key, icon]) => ({
+              icon,
+              title: t(`factions:list.templates.${isStatePage ? 'states' : 'factions'}.${key}.title`),
+              description: t(`factions:list.templates.${isStatePage ? 'states' : 'factions'}.${key}.description`),
+              onClick: () => navigate(routes.factionDetail(pid, entityType, 'new')),
+            }))}
           />
         )
       ) : (
@@ -521,6 +549,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
           )}
         </>
       )}
-    </Box>
+      </CatalogColumns>
+    </CampaignerPage>
   );
 };

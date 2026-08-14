@@ -10,18 +10,26 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
 import GavelIcon from '@mui/icons-material/Gavel';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import BlockIcon from '@mui/icons-material/Block';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useTagStore } from '@/store/useTagStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useFactionStore } from '@/store/useFactionStore';
+import { useDynastyStore } from '@/store/useDynastyStore';
 import { DndButton } from '@/components/ui/DndButton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   CampaignerPage,
   CampaignerPageHeader,
   CampaignerSurface,
 } from '@/components/ui/CampaignerPrimitives';
+import { CatalogAside, CatalogColumns } from '@/components/catalog/CatalogLayout';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   DOGMA_CATEGORIES,
@@ -35,7 +43,7 @@ import { DogmaListItem } from '@/pages/dogmas/components/DogmaListItem';
 const PAGE_SIZE = 30;
 
 export const DogmasPage: React.FC = () => {
-  const { t } = useTranslation(['dogmas', 'common']);
+  const { t } = useTranslation(['dogmas', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const theme = useTheme();
@@ -47,6 +55,12 @@ export const DogmasPage: React.FC = () => {
 
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
+  const fetchCharacters = useCharacterStore((s) => s.fetchCharacters);
+  const characters = useCharacterStore((s) => s.characters);
+  const fetchFactions = useFactionStore((s) => s.fetchFactions);
+  const factions = useFactionStore((s) => s.factions);
+  const fetchDynasties = useDynastyStore((s) => s.fetchDynasties);
+  const dynasties = useDynastyStore((s) => s.dynasties);
 
   // Флаг: была ли хотя бы одна успешная загрузка (чтобы отличить "ещё не грузили" от "загрузили и пусто")
   const [initialized, setInitialized] = useState(false);
@@ -101,7 +115,10 @@ export const DogmasPage: React.FC = () => {
 
   useEffect(() => {
     fetchTags(pid).catch(() => {});
-  }, [pid, activeBranchId, fetchTags]);
+    void fetchCharacters(pid, { limit: 500 });
+    void fetchFactions(pid, { limit: 500 });
+    void fetchDynasties(pid);
+  }, [pid, activeBranchId, fetchTags, fetchCharacters, fetchFactions, fetchDynasties]);
 
   // Загрузка при смене фильтров
   useEffect(() => {
@@ -292,9 +309,30 @@ export const DogmasPage: React.FC = () => {
   }
 
   return (
-    <CampaignerPage maxWidth={900}>
+    <CampaignerPage>
+      <CatalogColumns
+        aside={(
+          <CatalogAside
+            summaryTitle={t('common:catalog.summary')}
+            summary={[
+              { label: t('dogmas:list.aside.summaryTotal'), value: totalUnfiltered },
+              { label: t('dogmas:list.aside.summaryCategories'), value: new Set(dogmas.map((item) => item.category)).size },
+              { label: t('dogmas:list.aside.summaryFundamental'), value: dogmas.filter((item) => item.importance === 'fundamental').length },
+              { label: t('dogmas:list.aside.summaryPublic'), value: dogmas.filter((item) => item.isPublic).length },
+            ]}
+            storedTitle={t('common:catalog.storedTitle')}
+            storedBody={t('dogmas:list.aside.storedBody')}
+            linkedTitle={t('common:catalog.linkedTitle')}
+            linked={[
+              { label: t('navigation:menu.characters'), value: characters.length },
+              { label: t('navigation:menu.states'), value: factions.filter((item) => item.kind === 'state').length },
+              { label: t('navigation:menu.dynasties'), value: dynasties.length },
+            ]}
+          />
+        )}
+      >
       <CampaignerPageHeader
-        eyebrow={t('dogmas:page.eyebrow')}
+        eyebrow={t('dogmas:page.eyebrow', { count: totalUnfiltered })}
         title={t('dogmas:page.title')}
         description={t('dogmas:page.subtitle')}
         actions={(
@@ -304,11 +342,10 @@ export const DogmasPage: React.FC = () => {
         )}
       />
 
-      {(totalUnfiltered > 0 || hasFilters) ? (
-        <CampaignerSurface
+      <CampaignerSurface
           sx={{
             p: 1.25,
-            mb: 3.5,
+            mb: dogmas.length === 0 ? 0 : 3.5,
             display: 'flex',
             gap: 1,
             alignItems: 'center',
@@ -364,8 +401,7 @@ export const DogmasPage: React.FC = () => {
           }}>
             {t('dogmas:list.count', { shown: dogmas.length, total })}
           </Typography>
-        </CampaignerSurface>
-      ) : null}
+      </CampaignerSurface>
 
       {error && initialized ? (
         <Alert
@@ -397,33 +433,34 @@ export const DogmasPage: React.FC = () => {
             </Button>
           </Box>
         ) : (
-          <Box
-            sx={{
-              mt: 1,
-              py: { xs: 6, md: 7.5 },
-              px: 4,
-              textAlign: 'center',
-              borderRadius: '16px',
-              border: `1px dashed ${alpha(theme.palette.text.primary, 0.13)}`,
-              backgroundColor: alpha(theme.palette.common.white, 0.012),
-            }}
-          >
-            <GavelIcon sx={{ color: 'text.disabled', fontSize: 30 }} />
-            <Typography sx={{
-              fontFamily: theme.campaigner.typography.display,
-              fontWeight: 600,
-              fontSize: '1.5rem',
-              mt: 1.25,
-            }}>
-              {t('dogmas:list.emptyNoDogmasTitle')}
-            </Typography>
-            <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', lineHeight: 1.7, mt: 1, mx: 'auto', maxWidth: 440 }}>
-              {t('dogmas:list.emptyNoDogmasDescription')}
-            </Typography>
-            <DndButton variant="outlined" startIcon={<AddIcon />} onClick={handleOpenCreate} sx={{ mt: 2.5 }}>
-              {t('dogmas:list.emptyNoDogmasAction')}
-            </DndButton>
-          </Box>
+          <EmptyState
+            icon={<GavelIcon />}
+            title={t('dogmas:list.emptyNoDogmasTitle')}
+            description={t('dogmas:list.emptyNoDogmasDescription')}
+            actionLabel={t('dogmas:list.emptyNoDogmasAction')}
+            onAction={handleOpenCreate}
+            templatesTitle={t('dogmas:list.templates.title')}
+            templates={[
+              {
+                icon: <AutoAwesomeIcon />,
+                title: t('dogmas:list.templates.magic.title'),
+                description: t('dogmas:list.templates.magic.description'),
+                onClick: handleOpenCreate,
+              },
+              {
+                icon: <DarkModeIcon />,
+                title: t('dogmas:list.templates.death.title'),
+                description: t('dogmas:list.templates.death.description'),
+                onClick: handleOpenCreate,
+              },
+              {
+                icon: <BlockIcon />,
+                title: t('dogmas:list.templates.prohibition.title'),
+                description: t('dogmas:list.templates.prohibition.description'),
+                onClick: handleOpenCreate,
+              },
+            ]}
+          />
         )
       ) : dogmas.length > 0 ? (
         <>
@@ -491,6 +528,7 @@ export const DogmasPage: React.FC = () => {
         </>
       ) : null}
 
+      </CatalogColumns>
       <DogmaFormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

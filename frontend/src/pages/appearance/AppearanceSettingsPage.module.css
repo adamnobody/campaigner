@@ -69,6 +69,7 @@
   background: transparent;
   cursor: pointer;
   font: 400 13.5px "IBM Plex Sans", sans-serif;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .navButton {
@@ -434,6 +435,11 @@
   .previewColumn { position: relative; min-height: auto; border-top: 1px solid rgba(255,255,255,.055); border-left: 0; }
   .content { padding: 22px 18px 38px; }
   .editorGrid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navButton,
+  .compactTab { transition: none; }
 }
 
 @media (max-width: 680px) {

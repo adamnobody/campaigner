@@ -7,9 +7,9 @@ export const campaignerFonts = {
 } as const;
 
 export const campaignerLayout = {
-  sidebarExpanded: 296,
-  sidebarCollapsed: 88,
-  contextBarHeight: 66,
+  sidebarExpanded: 268,
+  sidebarCollapsed: 68,
+  contextBarHeight: 52,
   pageGutter: 40,
 } as const;
 

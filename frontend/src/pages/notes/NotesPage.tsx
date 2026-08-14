@@ -1,422 +1,269 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Grid, TextField,
-  InputAdornment, Tabs, Tab, Chip, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, FormControl, InputLabel, Select, MenuItem,
-  Tooltip, useTheme, alpha,
+  Box, IconButton, InputAdornment, MenuItem, Select, TextField, Typography, alpha, useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import PushPinIcon from '@mui/icons-material/PushPin';
 import DescriptionIcon from '@mui/icons-material/Description';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import { useParams, useNavigate } from 'react-router-dom';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import TvOutlinedIcon from '@mui/icons-material/TvOutlined';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
-import { useUIStore } from '@/store/useUIStore';
+import { useWikiStore } from '@/store/useWikiStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useTimelineStore } from '@/store/useTimelineStore';
 import { useBranchStore } from '@/store/useBranchStore';
-import { useTagStore } from '@/store/useTagStore';
+import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { CampaignerPage, CampaignerPageHeader, CampaignerSurface } from '@/components/ui/CampaignerPrimitives';
-import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { ALLOWED_NOTE_FORMATS } from '@campaigner/shared';
-import type { Note } from '@campaigner/shared';
+import { CatalogAside, CatalogLayout } from '@/components/catalog/CatalogLayout';
+import { DocChip } from '@/components/document-editor/DocChip';
+import { parseDocument, serializeDocument, type NoteKind } from '@/components/document-editor/documentMeta';
+import { formatRelativeTime } from '@/utils/relativeTime';
+import { getPlainPreviewText } from '@/pages/wiki/components/wikiPreviewText';
+
+const FILTERS: Array<'all' | NoteKind> = ['all', 'idea', 'scene', 'question'];
 
 export const NotesPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['notes', 'common']);
+  const { t, i18n } = useTranslation(['notes', 'common', 'wiki', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
-  const pid = parseInt(projectId!);
+  const pid = Number.parseInt(projectId!, 10);
   const navigate = useNavigate();
   const theme = useTheme();
-  const { notes, total, loading, fetchNotes, createNote, deleteNote, setTags } = useNoteStore();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
-  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
-
-  const activeBranchId = useBranchStore((s) => s.activeBranchId);
-
+  const { notes, loading, fetchNotes, createNote } = useNoteStore();
+  const fetchLinks = useWikiStore((state) => state.fetchLinks);
+  const fetchCharacters = useCharacterStore((state) => state.fetchCharacters);
+  const characters = useCharacterStore((state) => state.characters);
+  const fetchEvents = useTimelineStore((state) => state.fetchEvents);
+  const events = useTimelineStore((state) => state.events);
+  const showSnackbar = useUIStore((state) => state.showSnackbar);
+  const activeBranchId = useBranchStore((state) => state.activeBranchId);
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState(0);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newFormat, setNewFormat] = useState<'md' | 'txt'>('md');
-  const [newTagsStr, setNewTagsStr] = useState('');
-  const [newTagsInput, setNewTagsInput] = useState('');
+  const [filter, setFilter] = useState<'all' | NoteKind>('all');
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const [grid, setGrid] = useState(true);
+  const [creating, setCreating] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
 
-  // Tags
-  const [tagsDialogOpen, setTagsDialogOpen] = useState(false);
-  const [tagsEditNote, setTagsEditNote] = useState<Note | null>(null);
-  const [editTagsStr, setEditTagsStr] = useState('');
-  const [editTagsInput, setEditTagsInput] = useState('');
-
-  const noteTypes = ['all', 'note', 'wiki', 'marker_note'];
+  useEffect(() => {
+    void fetchNotes(pid, { search: debouncedSearch || undefined, limit: 500 });
+  }, [activeBranchId, debouncedSearch, fetchNotes, pid]);
 
   useEffect(() => {
-    const noteType = tab === 0 ? undefined : noteTypes[tab];
-    fetchNotes(pid, { search: debouncedSearch || undefined, noteType });
-  }, [pid, fetchNotes, debouncedSearch, tab, activeBranchId]);
+    void fetchLinks(pid);
+    void fetchCharacters(pid);
+    void fetchEvents(pid);
+  }, [activeBranchId, fetchCharacters, fetchEvents, fetchLinks, pid]);
 
-  useEffect(() => {
-    fetchTags(pid).catch(() => {});
-  }, [pid, activeBranchId, fetchTags]);
+  const entries = useMemo(() => {
+    const list = notes.filter((note) => note.noteType !== 'wiki');
+    const filtered = list.filter((note) => {
+      if (filter === 'all') return true;
+      return (parseDocument(note.content).meta.kind ?? 'note') === filter;
+    });
+    filtered.sort((a, b) => {
+      const delta = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      return sort === 'newest' ? -delta : delta;
+    });
+    return filtered;
+  }, [filter, notes, sort]);
 
-  const allTagNames = tags.map(tag => tag.name);
-
-  const mergeTagValues = (tagsString: string, pendingInput: string): string => {
-    const committed = tagsString
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const pending = pendingInput
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    return Array.from(new Set([...committed, ...pending])).join(', ');
+  const noteList = notes.filter((note) => note.noteType !== 'wiki');
+  const wikiCount = notes.filter((note) => note.noteType === 'wiki').length;
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const summary = {
+    total: noteList.length,
+    week: noteList.filter((note) => new Date(note.updatedAt).getTime() >= weekAgo).length,
+    questions: noteList.filter((note) => parseDocument(note.content).meta.kind === 'question').length,
+    untagged: noteList.filter((note) => !note.tags?.length).length,
   };
+  const trulyEmpty = noteList.length === 0 && !search && filter === 'all';
 
-  // ============ Resolve tag names → ids ============
-  const resolveTagIds = async (tagsString: string): Promise<number[]> => {
-    const tagNames = tagsString.split(',').map(s => s.trim()).filter(Boolean);
-    if (tagNames.length === 0) return [];
-    return findOrCreateTagsByNames(pid, tagNames);
-  };
-
-  // ============ Create ============
-  const handleCreate = async () => {
-    if (!newTitle.trim()) return;
+  const createAndOpen = async (kind: NoteKind = 'note') => {
+    if (creating) return;
+    setCreating(true);
     try {
       const note = await createNote({
         projectId: pid,
-        title: newTitle.trim(),
-        content: '',
-        format: newFormat,
+        title: t('notes:untitled'),
+        content: serializeDocument({ kind }, ''),
+        format: 'md',
         noteType: 'note',
         isPinned: false,
       });
-
-      const finalTags = mergeTagValues(newTagsStr, newTagsInput);
-      if (finalTags.trim()) {
-        const tagIds = await resolveTagIds(finalTags);
-        if (tagIds.length > 0) await setTags(note.id, tagIds);
-      }
-
-      setCreateOpen(false);
-      setNewTitle('');
-      setNewTagsStr('');
-      setNewTagsInput('');
-      showSnackbar(t('notes:snackbar.created', { title: newTitle.trim() }), 'success');
       navigate(`/project/${pid}/notes/${note.id}`);
     } catch {
       showSnackbar(t('notes:snackbar.createError'), 'error');
+      setCreating(false);
     }
   };
-
-  // ============ Delete ============
-  const handleDelete = (id: number, title: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    showConfirmDialog(
-      t('notes:confirm.deleteNoteTitle'),
-      t('notes:confirm.deleteNoteMessage', { title }),
-      async () => {
-      try {
-        await deleteNote(id);
-        showSnackbar(t('notes:snackbar.deleted'), 'success');
-      } catch {
-        showSnackbar(t('notes:snackbar.deleteError'), 'error');
-      }
-    });
-  };
-
-  // ============ Edit tags ============
-  const handleOpenTagsEdit = (note: Note, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setTagsEditNote(note);
-    setEditTagsStr((note.tags || []).map((tag: { name: string }) => tag.name).join(', '));
-    setEditTagsInput('');
-    setTagsDialogOpen(true);
-  };
-
-  const handleSaveTags = async () => {
-    if (!tagsEditNote) return;
-    try {
-      const finalTags = mergeTagValues(editTagsStr, editTagsInput);
-      const tagIds = await resolveTagIds(finalTags);
-      await setTags(tagsEditNote.id, tagIds);
-      setTagsDialogOpen(false);
-      setTagsEditNote(null);
-      setEditTagsStr('');
-      setEditTagsInput('');
-      showSnackbar(t('notes:snackbar.tagsUpdated'), 'success');
-    } catch {
-      showSnackbar(t('notes:snackbar.saveError'), 'error');
-    }
-  };
-
-  const hasFilters = Boolean(debouncedSearch || tab !== 0);
 
   if (loading && notes.length === 0) return <LoadingScreen />;
 
   return (
-    <CampaignerPage>
-      <CampaignerPageHeader
-        title={t('notes:list.title')}
-        description={t('notes:list.subtitle')}
-        actions={(
-          <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-            {t('notes:list.newNote')}
-          </DndButton>
-        )}
-      />
-
-      {/* Filters */}
-      {(total > 0 || hasFilters) && (
-        <CampaignerSurface sx={{ p: { xs: 1.5, md: 2 }, mb: 3 }}>
-          <TextField
-            fullWidth
-            placeholder={t('notes:list.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            sx={{ mb: 2 }}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.secondary' }} /></InputAdornment>,
-            }}
-            size="small"
-          />
-
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
-            <Tab label={t('notes:list.tabAll', { count: total })} />
-            <Tab label={t('notes:list.tabNotes')} />
-            <Tab label={t('notes:list.tabWiki')} />
-            <Tab label={t('notes:list.tabMarkers')} />
-          </Tabs>
-        </CampaignerSurface>
+    <CatalogLayout
+      eyebrow={t('notes:list.eyebrow', { count: noteList.length })}
+      title={t('notes:list.title')}
+      subtitle={t('notes:list.subtitle')}
+      hasItems={entries.length > 0}
+      actions={(
+        <DndButton variant="contained" startIcon={<AddIcon />} loading={creating} onClick={() => { void createAndOpen(); }}>
+          {t('notes:list.newNote')}
+        </DndButton>
       )}
-
-      {/* Content */}
-      {notes.length === 0 && !loading ? (
-        hasFilters ? (
-          <EmptyState
-            icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title={t('notes:list.emptyFilteredTitle')}
-            description={t('notes:list.emptyFilteredDescription')}
-            actionLabel={t('notes:list.emptyFilteredAction')}
-            onAction={() => { setSearch(''); setTab(0); }}
+      toolbar={(
+        <>
+          <TextField
+            size="small"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t('notes:list.searchPlaceholder')}
+            sx={{ flexGrow: 1, maxWidth: 400 }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.secondary' }} /></InputAdornment> }}
           />
-        ) : (
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            {FILTERS.map((item) => (
+              <DocChip
+                key={item}
+                active={filter === item}
+                label={item === 'all' ? t('notes:list.filterAll') : t(`notes:kinds.${item}`)}
+                onClick={() => setFilter(item)}
+              />
+            ))}
+          </Box>
+          <Select size="small" value={sort} onChange={(event) => setSort(event.target.value as 'newest' | 'oldest')} sx={{ height: 34, fontSize: 12.5, minWidth: 170 }}>
+            <MenuItem value="newest">{t('notes:list.sortNewest')}</MenuItem>
+            <MenuItem value="oldest">{t('notes:list.sortOldest')}</MenuItem>
+          </Select>
+          <IconButton size="small" onClick={() => setGrid(true)} aria-label={t('notes:list.viewGrid')} sx={{ color: grid ? 'primary.main' : 'text.disabled' }}>
+            <ViewModuleIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => setGrid(false)} aria-label={t('notes:list.viewList')} sx={{ color: !grid ? 'primary.main' : 'text.disabled' }}>
+            <ViewListIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
+            {t('notes:list.count', { shown: entries.length, total: noteList.length })}
+          </Typography>
+        </>
+      )}
+      aside={(
+        <CatalogAside
+          summaryTitle={t('common:catalog.summary')}
+          summary={[
+            { label: t('notes:list.summaryTotal'), value: summary.total },
+            { label: t('notes:list.summaryWeek'), value: summary.week },
+            { label: t('notes:list.summaryQuestions'), value: summary.questions },
+            { label: t('notes:list.summaryUntagged'), value: summary.untagged },
+          ]}
+          storedTitle={t('common:catalog.storedTitle')}
+          storedBody={t('notes:list.storedBody')}
+          linkedTitle={t('common:catalog.linkedTitle')}
+          linked={[
+            { label: t('navigation:menu.wiki'), value: wikiCount },
+            { label: t('navigation:menu.timeline'), value: events.length },
+            { label: t('navigation:menu.characters'), value: characters.length },
+          ]}
+        />
+      )}
+    >
+      {entries.length === 0 ? (
+        trulyEmpty ? (
           <EmptyState
             icon={<DescriptionIcon sx={{ fontSize: 64 }} />}
             title={t('notes:list.emptyNoNotesTitle')}
             description={t('notes:list.emptyNoNotesDescription')}
-            actionLabel={t('notes:list.emptyNoNotesAction')}
-            onAction={() => setCreateOpen(true)}
+            actionLabel={t('notes:list.newNote')}
+            onAction={() => { void createAndOpen(); }}
+            templatesTitle={t('notes:list.templates.title')}
+            templates={[
+              {
+                icon: <LightbulbOutlinedIcon />,
+                title: t('notes:list.templates.idea.title'),
+                description: t('notes:list.templates.idea.description'),
+                onClick: () => { void createAndOpen('idea'); },
+              },
+              {
+                icon: <TvOutlinedIcon />,
+                title: t('notes:list.templates.scene.title'),
+                description: t('notes:list.templates.scene.description'),
+                onClick: () => { void createAndOpen('scene'); },
+              },
+              {
+                icon: <HelpOutlineIcon />,
+                title: t('notes:list.templates.question.title'),
+                description: t('notes:list.templates.question.description'),
+                onClick: () => { void createAndOpen('question'); },
+              },
+            ]}
+          />
+        ) : (
+          <EmptyState
+            icon={<SearchIcon />}
+            title={t('notes:list.emptyFilteredTitle')}
+            description={t('notes:list.emptyFilteredDescription')}
           />
         )
       ) : (
-        <Grid container spacing={2}>
-          {notes.map(note => (
-            <Grid item xs={12} md={6} key={note.id}>
-              <GlassCard
-                interactive
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: grid ? { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' } : '1fr',
+            gap: 1.5,
+          }}
+        >
+          {entries.map((note) => {
+            const kind = parseDocument(note.content).meta.kind ?? 'note';
+            return (
+              <Box
+                key={note.id}
                 onClick={() => navigate(`/project/${pid}/notes/${note.id}`)}
                 sx={{
-                  height: '100%',
-                  p: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
-                  borderColor: alpha(theme.palette.common.white, 0.075),
-                  '&:hover': {
-                    '& .card-actions': { opacity: 1 },
-                    '& .note-accent': { opacity: 1 },
-                  },
+                  p: 2.25,
+                  borderRadius: '14px',
+                  border: `1px solid ${theme.campaigner.surface.border}`,
+                  backgroundColor: theme.campaigner.surface.subtle,
+                  cursor: 'pointer',
+                  minWidth: 0,
+                  '&:hover': { borderColor: alpha(theme.palette.primary.main, 0.35) },
                 }}
               >
-                <Box
-                  className="note-accent"
+                <Typography sx={{ fontWeight: 600, fontSize: '1.02rem', pb: 0.75 }}>{note.title}</Typography>
+                <Typography
                   sx={{
-                    height: 2,
-                    opacity: note.isPinned ? 1 : 0.35,
-                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, transparent 72%)`,
-                    transition: 'opacity 160ms ease',
-                  }}
-                />
-                <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                  <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flex: 1 }}>
-                    {note.isPinned && <PushPinIcon fontSize="small" color="primary" />}
-                    <Typography variant="h6" noWrap sx={{ color: 'text.primary' }}>
-                      {note.title}
-                    </Typography>
-                  </Box>
-                  <Box className="card-actions" display="flex" gap={0} sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
-                    <Tooltip title={t('notes:list.tooltipEditTags')}>
-                      <IconButton size="small" onClick={(e) => handleOpenTagsEdit(note, e)}
-                        sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                        <LocalOfferIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('notes:list.tooltipDelete')}>
-                      <IconButton size="small" onClick={(e) => handleDelete(note.id, note.title, e)}
-                        sx={{ color: theme.palette.error.main, '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) } }}>
-                        <DeleteIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Box>
-
-                {note.content && (
-                  <Box sx={{
-                    mt: 1,
-                    maxHeight: '7em',
+                    color: 'text.secondary',
+                    fontSize: '0.84rem',
+                    lineHeight: 1.55,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
-                    position: 'relative',
-                    flexGrow: 1,
-                    '&::after': {
-                      content: '""',
-                      position: 'absolute',
-                      bottom: 0, left: 0, right: 0,
-                      height: '2em',
-                      background: `linear-gradient(transparent, ${theme.palette.background.paper})`,
-                      pointerEvents: 'none',
-                    },
-                    '& h1, & h2, & h3': { fontFamily: theme.campaigner.typography.display, color: 'text.primary', fontSize: '1rem', fontWeight: 600, my: 0.5 },
-                    '& p': { fontSize: '0.85rem', color: 'text.secondary', my: 0.3, lineHeight: 1.5 },
-                    '& ul, & ol': { pl: 2.5, my: 0.3 },
-                    '& li': { fontSize: '0.85rem', color: 'text.secondary', lineHeight: 1.5 },
-                    '& strong': { color: 'text.primary' },
-                    '& em': { color: 'text.secondary', fontStyle: 'italic' },
-                    '& a': { color: theme.palette.primary.main },
-                    '& code': { backgroundColor: alpha(theme.palette.text.primary, 0.1), px: 0.5, borderRadius: 0.5, fontSize: '0.8rem', color: 'text.primary' },
-                    '& pre': { backgroundColor: alpha(theme.palette.background.default, 0.5), p: 1, borderRadius: 1, fontSize: '0.8rem', overflow: 'hidden' },
-                    '& blockquote': { borderLeft: '2px solid', borderColor: theme.palette.primary.main, pl: 1, ml: 0, opacity: 0.8, color: 'text.secondary' },
-                    '& hr': { border: 'none', borderTop: `1px solid ${theme.palette.divider}`, my: 0.5 },
-                    '& img': { display: 'none' },
-                  }}>
-                    {note.format === 'md' ? (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.content}</ReactMarkdown>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.85rem' }}>
-                        {note.content}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-
-                <Box mt="auto" pt={1.5}>
-                  {/* Tags */}
-                  <Box display="flex" gap={0.5} flexWrap="wrap" alignItems="center">
-                    <Chip label={note.format.toUpperCase()} size="small" variant="outlined"
-                      sx={{ height: 22, fontSize: '0.65rem', color: 'text.secondary', borderColor: theme.palette.divider }} />
-                    <Chip label={t(`notes:noteTypes.${note.noteType}`, { defaultValue: note.noteType })} size="small" color="primary" variant="outlined"
-                      sx={{ height: 22, fontSize: '0.65rem' }} />
-                    {note.tags?.map((tag) => (
-                      <Chip key={tag.id ?? tag.name} label={tag.name} size="small"
-                        sx={{ height: 22, fontSize: '0.65rem', fontWeight: 600, backgroundColor: tag.color ? alpha(tag.color, 0.15) : alpha(theme.palette.primary.main, 0.15), color: tag.color || theme.palette.primary.main, borderRadius: 1 }} />
+                    minHeight: grid ? 62 : 0,
+                  }}
+                >
+                  {getPlainPreviewText(note.content)}
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 1, pt: 1.5 }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {kind !== 'note' ? <DocChip muted label={t(`notes:kinds.${kind}`)} /> : null}
+                    {(note.tags ?? []).slice(0, 3).map((tag) => (
+                      <DocChip key={tag.id} muted label={tag.name} />
                     ))}
                   </Box>
-
-                  {/* No tags hint */}
-                  {(!note.tags || note.tags.length === 0) && (
-                    <Box
-                      display="flex" alignItems="center" gap={0.5} mt={1}
-                      onClick={(e) => handleOpenTagsEdit(note, e)}
-                      sx={{ cursor: 'pointer', '&:hover': { '& .add-tag-text': { color: 'text.primary' } } }}
-                    >
-                      <LocalOfferIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                      <Typography className="add-tag-text" variant="caption"
-                        sx={{ color: 'text.secondary', transition: 'color 0.15s' }}>
-                        {t('notes:list.addTagsHint')}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  <Typography variant="caption" sx={{ color: 'text.disabled', mt: 1, display: 'block' }}>
-                    {new Date(note.updatedAt).toLocaleDateString(i18n.language)}
+                  <Typography sx={{ color: 'text.disabled', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+                    {formatRelativeTime(note.updatedAt, i18n.language)}
                   </Typography>
                 </Box>
-                </Box>
-              </GlassCard>
-            </Grid>
-          ))}
-        </Grid>
+              </Box>
+            );
+          })}
+        </Box>
       )}
-
-      {/* ============ Create Dialog ============ */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
-        <DialogTitle>{t('notes:dialogs.createTitle')}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus fullWidth label={t('notes:dialogs.createFieldTitle')} value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)} margin="normal"
-          />
-          <FormControl fullWidth margin="normal">
-            <InputLabel>{t('notes:dialogs.createFieldFormat')}</InputLabel>
-            <Select value={newFormat} label={t('notes:dialogs.createFieldFormat')} onChange={(e) => setNewFormat(e.target.value as 'md' | 'txt')}>
-              {ALLOWED_NOTE_FORMATS.map(f => (
-                <MenuItem key={f} value={f}>{f.toUpperCase()}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TagAutocompleteField
-            options={allTagNames}
-            value={newTagsStr}
-            pendingInput={newTagsInput}
-            onValueChange={setNewTagsStr}
-            onPendingInputChange={setNewTagsInput}
-            label={t('notes:tagField.label')}
-            placeholder={t('notes:tagField.placeholder')}
-            margin="normal"
-            noOptionsText={t('notes:dialogs.newTagHint')}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => { setCreateOpen(false); setNewTitle(''); setNewTagsStr(''); setNewTagsInput(''); }} color="inherit">
-            {t('common:cancel')}
-          </Button>
-          <DndButton variant="contained" onClick={handleCreate} disabled={!newTitle.trim()}>
-            {t('common:create')}
-          </DndButton>
-        </DialogActions>
-      </Dialog>
-
-      {/* ============ Edit Tags Dialog ============ */}
-      <Dialog open={tagsDialogOpen} onClose={() => setTagsDialogOpen(false)} maxWidth="sm" fullWidth
-        PaperProps={{ sx: { backgroundColor: theme.palette.background.paper, backgroundImage: 'none' } }}>
-        <DialogTitle>
-          {tagsEditNote ? t('notes:dialogs.tagsDialogTitle', { title: tagsEditNote.title }) : ''}
-        </DialogTitle>
-        <DialogContent>
-          <TagAutocompleteField
-            options={allTagNames}
-            value={editTagsStr}
-            pendingInput={editTagsInput}
-            onValueChange={setEditTagsStr}
-            onPendingInputChange={setEditTagsInput}
-            label={t('notes:tagField.label')}
-            placeholder={t('notes:tagField.placeholder')}
-            margin="normal"
-            noOptionsText={t('notes:dialogs.newTagHint')}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setTagsDialogOpen(false)} color="inherit">{t('common:cancel')}</Button>
-          <DndButton variant="contained" onClick={handleSaveTags}>
-            {t('common:save')}
-          </DndButton>
-        </DialogActions>
-      </Dialog>
-    </CampaignerPage>
+    </CatalogLayout>
   );
 };

@@ -17,7 +17,20 @@
     "emptyFilteredAction": "Reset filters",
     "emptyNoDynastiesTitle": "No dynasties yet",
     "emptyNoDynastiesDescription": "Create bloodlines — ruling houses, noble families, and ancient clans",
-    "emptyNoDynastiesAction": "Create dynasty"
+    "emptyNoDynastiesAction": "Create dynasty",
+    "templates": {
+      "title": "Start with a template",
+      "ruling": { "title": "Ruling house", "description": "Throne, succession, and branches" },
+      "noble": { "title": "Noble family", "description": "Lands and marriage alliances" },
+      "ancient": { "title": "Ancient lineage", "description": "A legend of origin" }
+    },
+    "aside": {
+      "summaryTotal": "Total",
+      "summaryActive": "Ruling",
+      "summaryFounder": "With a founder",
+      "summaryLinked": "Linked to a faction",
+      "storedBody": "Bloodlines, succession, and the houses that claim a throne or a name."
+    }
   },
   "statuses": {
     "active": "Ruling",

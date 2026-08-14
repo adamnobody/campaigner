@@ -33,6 +33,7 @@ import { CollapsibleSection as Section } from '@/components/detail/CollapsibleSe
 import { DynastyMemberDialog, DynastyFamilyLinkDialog, DynastyEventDialog } from '@/pages/dynasties/components/DynastyDialogs';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TabFade } from '@/components/ui/MotionSwitch';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import {
   DYNASTY_STATUSES, DYNASTY_STATUS_ICONS,
@@ -554,6 +555,7 @@ export const DynastyDetailPage: React.FC = () => {
         </Tabs>
       </Box>
 
+      <TabFade tab={activeTab}>
       {activeTab === 'overview' && (
         <Box display="flex" gap={{ xs: 3, md: 5 }} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
           <Box sx={{ width: { xs: '100%', md: 296 }, flexShrink: 0, order: { xs: 1, md: 2 } }}>
@@ -908,6 +910,7 @@ export const DynastyDetailPage: React.FC = () => {
           )}
         </Box>
       )}
+      </TabFade>
 
       {/* ===== DIALOGS ===== */}
       <DynastyMemberDialog

@@ -56,6 +56,18 @@
       "root": "Холст",
       "map": "Карта"
     },
+    "layers": {
+      "title": "Слои",
+      "show": "Показать слой {{name}}",
+      "hide": "Скрыть слой {{name}}",
+      "updateError": "Не удалось изменить видимость слоя"
+    },
+    "legend": {
+      "title": "Легенда",
+      "territories": "Территории",
+      "routes": "Маршруты и линии",
+      "markers": "Маркеры мест"
+    },
     "toolbar": {
       "sceneStats": "Сцена холста · {{count}} объектов{{selected}}",
       "selectedWithName": " · выбрано: {{name}}",

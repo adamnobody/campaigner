@@ -20,20 +20,26 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import CloseIcon from '@mui/icons-material/Close';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import HourglassTopIcon from '@mui/icons-material/HourglassTop';
+import ShieldIcon from '@mui/icons-material/Shield';
+import FoundationIcon from '@mui/icons-material/Foundation';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTimelineStore } from '@/store/useTimelineStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useTagStore } from '@/store/useTagStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
 import { notesApi } from '@/api/notes';
 import { DndButton } from '@/components/ui/DndButton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { GlassCard } from '@/components/ui/GlassCard';
 import {
   CampaignerPage,
   CampaignerPageHeader,
   CampaignerSurface,
 } from '@/components/ui/CampaignerPrimitives';
+import { CatalogAside, CatalogColumns } from '@/components/catalog/CatalogLayout';
 import { TagAutocompleteField } from '@/components/forms/TagAutocompleteField';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { TimelineEvent } from '@campaigner/shared';
@@ -62,10 +68,11 @@ const FALLBACK_ERA_HEX = '#5B9BD5';
 interface NoteOption {
   id: number;
   title: string;
+  noteType?: string;
 }
 
 export const TimelinePage: React.FC = () => {
-  const { t } = useTranslation(['timeline', 'common']);
+  const { t } = useTranslation(['timeline', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -77,6 +84,8 @@ export const TimelinePage: React.FC = () => {
   const theme = useTheme();
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
+  const fetchCharacters = useCharacterStore((s) => s.fetchCharacters);
+  const characters = useCharacterStore((s) => s.characters);
   const eraColors = useEraColors();
 
   // Dialog form
@@ -107,10 +116,15 @@ export const TimelinePage: React.FC = () => {
 
   useEffect(() => {
     fetchEvents(pid);
+    void fetchCharacters(pid, { limit: 500 });
     // Load notes for linking
     notesApi.getAll(pid, { limit: 500 }).then(res => {
       const items = res.data.data.items || res.data.data || [];
-      const opts: NoteOption[] = items.map((n: any) => ({ id: n.id, title: n.title }));
+      const opts: NoteOption[] = items.map((n: { id: number; title: string; noteType?: string }) => ({
+        id: n.id,
+        title: n.title,
+        noteType: n.noteType,
+      }));
       setAllNotes(opts);
       const m = new Map<number, string>();
       opts.forEach(n => m.set(n.id, n.title));
@@ -118,7 +132,7 @@ export const TimelinePage: React.FC = () => {
     }).catch(() => {});
 
     fetchTags(pid).catch(() => {});
-  }, [pid, fetchEvents, fetchTags, activeBranchId]);
+  }, [pid, fetchEvents, fetchTags, fetchCharacters, activeBranchId]);
 
   // Eras list
   const allEras = [...new Set(events.map(e => e.era || ''))].filter(Boolean);
@@ -325,9 +339,30 @@ export const TimelinePage: React.FC = () => {
   }
 
   return (
-    <CampaignerPage maxWidth={900}>
+    <CampaignerPage>
+      <CatalogColumns
+        aside={(
+          <CatalogAside
+            summaryTitle={t('common:catalog.summary')}
+            summary={[
+              { label: t('timeline:aside.summaryEvents'), value: events.length },
+              { label: t('timeline:aside.summaryEras'), value: allEras.length },
+              { label: t('timeline:aside.summaryLinked'), value: events.filter((item) => item.linkedNoteId).length },
+              { label: t('timeline:aside.summaryNoEra'), value: events.filter((item) => !item.era).length },
+            ]}
+            storedTitle={t('common:catalog.storedTitle')}
+            storedBody={t('timeline:aside.storedBody')}
+            linkedTitle={t('common:catalog.linkedTitle')}
+            linked={[
+              { label: t('navigation:menu.notes'), value: allNotes.filter((item) => item.noteType !== 'wiki').length },
+              { label: t('navigation:menu.wiki'), value: allNotes.filter((item) => item.noteType === 'wiki').length },
+              { label: t('navigation:menu.characters'), value: characters.length },
+            ]}
+          />
+        )}
+      >
       <CampaignerPageHeader
-        eyebrow={t('timeline:page.eyebrow')}
+        eyebrow={t('timeline:page.eyebrow', { count: events.length })}
         title={t('timeline:page.title')}
         description={t('timeline:page.subtitle')}
         actions={(
@@ -353,32 +388,71 @@ export const TimelinePage: React.FC = () => {
       ) : null}
 
       {events.length === 0 && !error ? (
-        <Box
-          sx={{
-            py: { xs: 6, md: 7.5 },
-            px: 4,
-            textAlign: 'center',
-            borderRadius: '16px',
-            border: `1px dashed ${alpha(theme.palette.text.primary, 0.13)}`,
-            backgroundColor: alpha(theme.palette.common.white, 0.012),
-          }}
-        >
-          <TimelineIcon sx={{ color: 'text.disabled', fontSize: 30 }} />
-          <Typography sx={{
-            fontFamily: theme.campaigner.typography.display,
-            fontWeight: 600,
-            fontSize: '1.5rem',
-            mt: 1.25,
-          }}>
-            {t('timeline:empty.title')}
-          </Typography>
-          <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', lineHeight: 1.7, mt: 1, mx: 'auto', maxWidth: 440 }}>
-            {t('timeline:empty.description')}
-          </Typography>
-          <DndButton variant="outlined" startIcon={<AddIcon />} onClick={handleOpenCreate} sx={{ mt: 2.5 }}>
-            {t('timeline:empty.action')}
-          </DndButton>
-        </Box>
+        <>
+          <CampaignerSurface
+            sx={{
+              p: 1.25,
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            <TextField
+              placeholder={t('timeline:filters.searchPlaceholder')}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              sx={{ flexGrow: 1, minWidth: 220, maxWidth: 400 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'text.disabled' }} />
+                  </InputAdornment>
+                ),
+              }}
+              size="small"
+            />
+            <Typography
+              sx={{
+                color: 'text.disabled',
+                ml: 'auto',
+                px: 1,
+                fontFamily: theme.campaigner.typography.mono,
+                fontSize: '0.65rem',
+              }}
+            >
+              {t('timeline:filters.countShown', { filtered: 0, total: 0 })}
+            </Typography>
+          </CampaignerSurface>
+          <EmptyState
+            icon={<TimelineIcon />}
+            title={t('timeline:empty.title')}
+            description={t('timeline:empty.description')}
+            actionLabel={t('timeline:empty.action')}
+            onAction={handleOpenCreate}
+            templatesTitle={t('timeline:empty.templates.title')}
+            templates={[
+              {
+                icon: <HourglassTopIcon />,
+                title: t('timeline:empty.templates.era.title'),
+                description: t('timeline:empty.templates.era.description'),
+                onClick: handleOpenCreate,
+              },
+              {
+                icon: <ShieldIcon />,
+                title: t('timeline:empty.templates.war.title'),
+                description: t('timeline:empty.templates.war.description'),
+                onClick: handleOpenCreate,
+              },
+              {
+                icon: <FoundationIcon />,
+                title: t('timeline:empty.templates.foundation.title'),
+                description: t('timeline:empty.templates.foundation.description'),
+                onClick: handleOpenCreate,
+              },
+            ]}
+          />
+        </>
       ) : events.length > 0 ? (
         <>
           <CampaignerSurface
@@ -680,6 +754,7 @@ export const TimelinePage: React.FC = () => {
           </Box>
         </>
       ) : null}
+      </CatalogColumns>
 
       <Dialog
         open={dialogOpen}

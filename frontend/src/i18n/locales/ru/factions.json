@@ -22,7 +22,28 @@
     "emptyNoStatesTitle": "Государств пока нет",
     "emptyNoStatesDescription": "Создайте первое государство для вашего мира",
     "emptyNoFactionsTitle": "Фракций пока нет",
-    "emptyNoFactionsDescription": "Создайте первую фракцию или внутреннюю группировку"
+    "emptyNoFactionsDescription": "Создайте первую фракцию или внутреннюю группировку",
+    "templates": {
+      "title": "Начать с шаблона",
+      "states": {
+        "kingdom": { "title": "Королевство", "description": "Династия, титулы и вассалы" },
+        "empire": { "title": "Империя", "description": "Провинции, наместники и дань" },
+        "city": { "title": "Вольный город", "description": "Совет, торговля и гарнизон" }
+      },
+      "factions": {
+        "order": { "title": "Орден", "description": "Устав, ранги и обеты" },
+        "guild": { "title": "Гильдия", "description": "Ремесло, монополия и пошлины" },
+        "cult": { "title": "Культ", "description": "Догма, обряд и тайна" }
+      }
+    },
+    "aside": {
+      "summaryTotal": "Всего",
+      "summaryActive": "Активных",
+      "summaryRuler": "С правителем",
+      "summaryDynasty": "С династией",
+      "storedBodyStates": "Государства, столицы и те, кто держит престол.",
+      "storedBodyFactions": "Ордена, гильдии, культы и внутренние группировки этого мира."
+    }
   },
   "entityKinds": {
     "state": "Государство",

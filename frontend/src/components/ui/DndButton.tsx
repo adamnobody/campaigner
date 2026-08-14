@@ -13,6 +13,7 @@ export const DndButton = forwardRef<HTMLButtonElement, DndButtonProps>(
       <Button
         ref={ref}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         sx={{
           fontFamily: theme.campaigner.typography.body,
           fontWeight: 500,

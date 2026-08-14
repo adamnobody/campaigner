@@ -46,4 +46,8 @@ export const uploadsApi = {
 
   uploadMapImage: (file: File) =>
     uploadGeneric('uploads_save_map_image', file),
+
+  // ponytail: no dedicated note-image command; character uploads already resolve via useAssetUrl
+  uploadDocumentImage: (file: File) =>
+    uploadGeneric('uploads_save_character_image', file),
 };

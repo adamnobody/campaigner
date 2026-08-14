@@ -6,6 +6,7 @@ import {
   getRecommendedPaletteForStyle,
   type InterfaceStyleId,
 } from '@/theme/interfaceStyles';
+import { clampReadingFontSize } from '@/theme/appearanceTokens';
 
 export type ThemePreset = string;
 
@@ -85,10 +86,11 @@ export interface PreferencesState {
   setReadingLineHeight: (value: ReadingLineHeight) => void;
   setReadingColumnWidth: (value: ReadingColumnWidth) => void;
   applyInterfaceStyle: (value: InterfaceStyle) => void;
-  saveCurrentAsCustomTheme: (name: string) => void;
+  applyAppearanceSnapshot: (value: unknown) => void;
+  saveCurrentAsCustomTheme: (name: string, settings?: unknown) => void;
   applyCustomTheme: (id: string) => void;
   deleteCustomTheme: (id: string) => void;
-  addCustomColorTheme: (theme: CustomColorThemePreset) => void;
+  addCustomColorTheme: (theme: CustomColorThemePreset, activate?: boolean) => void;
   deleteCustomColorTheme: (id: ThemePreset) => void;
 
   resetAppearance: () => void;
@@ -108,7 +110,7 @@ const DEFAULT_SNAPSHOT: CustomThemeSnapshot = {
   fontPresetId: 'lore-serif',
   uiDensity: 'comfortable' as UiDensity,
   motionMode: 'full' as MotionMode,
-  readingFontSize: 16,
+  readingFontSize: 20,
   readingLineHeight: 'normal',
   readingColumnWidth: 760,
 };
@@ -148,7 +150,16 @@ const nonEmptyString = (value: unknown, fallback: string): string =>
 
 const normalizeReadingFontSize = (value: unknown, fallback: number): number => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-  return Math.min(18, Math.max(14, value));
+  return clampReadingFontSize(value);
+};
+
+const bumpLegacyReadingSize = (size: number): number => {
+  if (size <= 14) return 18;
+  if (size === 15) return 18;
+  if (size === 16) return 20;
+  if (size === 17) return 22;
+  if (size === 18) return 24;
+  return clampReadingFontSize(size);
 };
 
 const isInterfaceStyle = (value: unknown): value is InterfaceStyle =>
@@ -246,7 +257,7 @@ const normalizeColorTheme = (value: unknown): CustomColorThemePreset | null => {
 
 export const migratePreferencesState = (
   persistedState: unknown,
-  _version = 0
+  version = 0
 ): PersistedPreferences => {
   const wrapped = isRecord(persistedState) && isRecord(persistedState.state)
     ? persistedState.state
@@ -268,12 +279,25 @@ export const migratePreferencesState = (
     ? source.selectedCustomThemeId
     : null;
 
-  return {
+  const next = {
     ...snapshot,
     customThemes,
     customColorThemes,
     selectedCustomThemeId,
   };
+
+  if (version < 3) {
+    next.readingFontSize = bumpLegacyReadingSize(next.readingFontSize);
+    next.customThemes = next.customThemes.map((theme) => ({
+      ...theme,
+      settings: {
+        ...theme.settings,
+        readingFontSize: bumpLegacyReadingSize(theme.settings.readingFontSize),
+      },
+    }));
+  }
+
+  return next;
 };
 
 export const removeCustomColorTheme = (
@@ -327,17 +351,21 @@ export const usePreferencesStore = create<PreferencesState>()(
           selectedCustomThemeId: null,
         });
       },
+      applyAppearanceSnapshot: (value) => set((state) => ({
+        ...normalizeCustomThemeSnapshot(value, pickSnapshot(state)),
+        selectedCustomThemeId: null,
+      })),
 
-      saveCurrentAsCustomTheme: (name) => {
+      saveCurrentAsCustomTheme: (name, settings) => {
         const trimmed = name.trim();
         if (!trimmed) return;
 
         const state = get();
         const theme: SavedCustomTheme = {
-          id: `custom-${Date.now().toString(36)}`,
+          id: `custom-${crypto.randomUUID()}`,
           name: trimmed,
           createdAt: new Date().toISOString(),
-          settings: pickSnapshot(state),
+          settings: normalizeCustomThemeSnapshot(settings, pickSnapshot(state)),
         };
 
         set((prev) => ({
@@ -360,10 +388,9 @@ export const usePreferencesStore = create<PreferencesState>()(
         customThemes: prev.customThemes.filter((t) => t.id !== id),
         selectedCustomThemeId: prev.selectedCustomThemeId === id ? null : prev.selectedCustomThemeId,
       })),
-      addCustomColorTheme: (theme) => set((prev) => ({
+      addCustomColorTheme: (theme, activate = true) => set((prev) => ({
         customColorThemes: [...prev.customColorThemes.filter((item) => item.id !== theme.id), theme],
-        themePreset: theme.id,
-        selectedCustomThemeId: null,
+        ...(activate ? { themePreset: theme.id, selectedCustomThemeId: null } : {}),
       })),
       deleteCustomColorTheme: (id) => set((state) => removeCustomColorTheme(state, id)),
 
@@ -377,7 +404,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     {
       name: 'campaigner-preferences',
       storage: createJSONStorage(() => createDebouncedStateStorage(220)),
-      version: 2,
+      version: 3,
       migrate: migratePreferencesState,
       partialize: (state) => ({
         interfaceStyle: state.interfaceStyle,

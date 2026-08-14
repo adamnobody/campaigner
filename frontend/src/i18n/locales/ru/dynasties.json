@@ -17,7 +17,20 @@
     "emptyFilteredAction": "Сбросить фильтры",
     "emptyNoDynastiesTitle": "Династий пока нет",
     "emptyNoDynastiesDescription": "Создайте родословные линии — правящие дома, благородные семьи и древние роды",
-    "emptyNoDynastiesAction": "Создать династию"
+    "emptyNoDynastiesAction": "Создать династию",
+    "templates": {
+      "title": "Начать с шаблона",
+      "ruling": { "title": "Правящий дом", "description": "Престол, наследование и ветви" },
+      "noble": { "title": "Благородная семья", "description": "Земли и брачные союзы" },
+      "ancient": { "title": "Древний род", "description": "Легенда о происхождении" }
+    },
+    "aside": {
+      "summaryTotal": "Всего",
+      "summaryActive": "Правящих",
+      "summaryFounder": "С основателем",
+      "summaryLinked": "Связанных с фракцией",
+      "storedBody": "Родословные, наследование и дома, которые держат престол или имя."
+    }
   },
   "statuses": {
     "active": "Правящая",

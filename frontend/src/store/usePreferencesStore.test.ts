@@ -3,6 +3,7 @@ import {
   migratePreferencesState,
   removeCustomColorTheme,
   type CustomColorThemePreset,
+  usePreferencesStore,
 } from './usePreferencesStore';
 
 const palette = (id: string): CustomColorThemePreset => ({
@@ -59,7 +60,7 @@ describe('migratePreferencesState', () => {
       fontPresetId: 'lore-serif',
       uiDensity: 'compact',
       motionMode: 'reduced',
-      readingFontSize: 16,
+      readingFontSize: 20,
       readingLineHeight: 'normal',
       readingColumnWidth: 760,
     });
@@ -95,7 +96,7 @@ describe('migratePreferencesState', () => {
       fontMode: 'serif',
       uiDensity: 'spacious',
       motionMode: 'reduced',
-      readingFontSize: 18,
+      readingFontSize: 24,
     });
     expect(Object.keys(result.customThemes[0]?.settings ?? {}).sort()).toEqual(snapshotKeys);
   });
@@ -123,5 +124,57 @@ describe('removeCustomColorTheme', () => {
     expect(result.selectedCustomThemeId).toBeNull();
     expect(result.customColorThemes.map(({ id }) => id)).toEqual(['custom-violet']);
     expect(result.customThemes[0]?.settings.themePreset).toBe('obsidian-gold');
+  });
+});
+
+describe('appearance actions', () => {
+  it('applies a complete snapshot without interface-style side effects', () => {
+    const original = usePreferencesStore.getState();
+    try {
+      usePreferencesStore.getState().applyAppearanceSnapshot({
+        interfaceStyle: 'sci-fi',
+        themePreset: 'royal-violet',
+        backgroundTone: 'blue',
+        accentGlow: 'strong',
+        fontMode: 'custom',
+        fontPresetId: 'technical-mono',
+        uiDensity: 'compact',
+        motionMode: 'reduced',
+        readingFontSize: 18,
+        readingLineHeight: 'loose',
+        readingColumnWidth: 900,
+      });
+
+      expect(usePreferencesStore.getState()).toMatchObject({
+        interfaceStyle: 'sci-fi',
+        themePreset: 'royal-violet',
+        backgroundTone: 'blue',
+        accentGlow: 'strong',
+        fontPresetId: 'technical-mono',
+        readingColumnWidth: 900,
+        selectedCustomThemeId: null,
+      });
+    } finally {
+      usePreferencesStore.setState(original, true);
+    }
+  });
+
+  it('creates unique saved-theme ids and accepts imported settings directly', () => {
+    const original = usePreferencesStore.getState();
+    try {
+      usePreferencesStore.setState({ customThemes: [] });
+      const actions = usePreferencesStore.getState();
+      actions.saveCurrentAsCustomTheme('First', { themePreset: 'midnight-cyan' });
+      actions.saveCurrentAsCustomTheme('Second', { themePreset: 'royal-violet' });
+
+      const themes = usePreferencesStore.getState().customThemes;
+      expect(new Set(themes.map(({ id }) => id)).size).toBe(2);
+      expect(themes.map(({ settings }) => settings.themePreset)).toEqual([
+        'royal-violet',
+        'midnight-cyan',
+      ]);
+    } finally {
+      usePreferencesStore.setState(original, true);
+    }
   });
 });

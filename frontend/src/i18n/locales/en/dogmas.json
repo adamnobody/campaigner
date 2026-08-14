@@ -1,6 +1,6 @@
 {
   "page": {
-    "eyebrow": "World rules",
+    "eyebrow": "Dogmas · {{count}}",
     "title": "World dogmas",
     "subtitle": "The fundamental laws behind everything else: magic, death, gods, and prohibitions. One dogma, one statement."
   },
@@ -15,7 +15,20 @@
     "emptyFilteredAction": "Reset filters",
     "emptyNoDogmasTitle": "No dogmas yet",
     "emptyNoDogmasDescription": "Define the fundamental laws of your world — how magic works, social rules, and what shapes reality",
-    "emptyNoDogmasAction": "Add dogma"
+    "emptyNoDogmasAction": "Add dogma",
+    "templates": {
+      "title": "Start with a template",
+      "magic": { "title": "Law of magic", "description": "Source, price, and limits" },
+      "death": { "title": "Death", "description": "What happens afterward" },
+      "prohibition": { "title": "Prohibition", "description": "What is forbidden and what happens if it is broken" }
+    },
+    "aside": {
+      "summaryTotal": "Total",
+      "summaryCategories": "Categories",
+      "summaryFundamental": "Fundamental",
+      "summaryPublic": "Public",
+      "storedBody": "Laws the world runs on: magic, death, gods, and what must not be broken."
+    }
   },
   "categories": {
     "cosmology": "Cosmology & world physics",

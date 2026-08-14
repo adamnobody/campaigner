@@ -1,6 +1,6 @@
 {
   "page": {
-    "eyebrow": "World cast",
+    "eyebrow": "Characters · {{count}}",
     "title": "Characters",
     "subtitle": "The cast of your story",
     "cardEyebrow": "Character",
@@ -22,7 +22,29 @@
         "title": "Nothing found",
         "description": "Try changing search or filters",
         "action": "Reset filters"
+      },
+      "templates": {
+        "title": "Start with a template",
+        "protagonist": {
+          "title": "Protagonist",
+          "description": "Goal, weakness, and character arc"
+        },
+        "antagonist": {
+          "title": "Antagonist",
+          "description": "Motive, means, and limits"
+        },
+        "supporting": {
+          "title": "Supporting character",
+          "description": "Role in the scene and key connections"
+        }
       }
+    },
+    "aside": {
+      "summaryTotal": "Total",
+      "summaryAlive": "Alive",
+      "summaryPortrait": "With portrait",
+      "summaryFaction": "In a faction",
+      "storedBody": "People of this world — names, roles, and how they stand to each other."
     }
   },
   "detail": {

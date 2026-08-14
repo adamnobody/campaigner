@@ -4,11 +4,7 @@ import {
   Typography,
   IconButton,
   Chip,
-  Container,
-  Avatar,
-  Fade,
-  Divider,
-  Stack,
+  ButtonBase,
   Tooltip,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
@@ -35,7 +31,6 @@ import {
   type CreateProjectWizardValue,
 } from '@/pages/home/components/CreateProjectDialog';
 import { EmptyStateIllustration } from '@/pages/home/components/HomePrimitives';
-import { GlassCard } from '@/components/ui/GlassCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { isSupportedLanguage } from '@/i18n/language';
 import { useAssetUrl } from '@/hooks/useAssetUrl';
@@ -66,10 +61,8 @@ function ProjectArchCard({
 
   return (
     <Box
-      component="button"
+      component="article"
       data-home-arch={archIndex}
-      type="button"
-      onClick={onOpen}
       sx={{
         width: 'auto',
         height: featured
@@ -127,9 +120,23 @@ function ProjectArchCard({
               : `drop-shadow(0 0 ${featured ? 22 : 16}px ${alpha(theme.palette.primary.main, strength * (featured ? 1.45 : 1))})`;
           },
         },
-        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 4 },
       }}
     >
+      <ButtonBase
+        aria-label={project.name}
+        onClick={onOpen}
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          borderRadius: 'inherit',
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: -4,
+          },
+        }}
+      />
       {!coverUrl ? (
         <Typography
           aria-hidden
@@ -335,13 +342,14 @@ export const HomePage: React.FC = () => {
         if (event.key === 'ArrowLeft') moveProject(-1);
         if (event.key === 'ArrowRight') moveProject(1);
       }}
-      tabIndex={-1}
+      tabIndex={projects.length > 1 ? 0 : -1}
+      aria-label={t('projects:home.libraryCount', { count: projects.length })}
       sx={{ minHeight: '100dvh', position: 'relative', overflow: 'hidden', backgroundColor: 'background.default', display: 'flex', flexDirection: 'column' }}
     >
       <HomeContourCanvas
         accentColor={theme.palette.primary.main}
         baseColor={theme.palette.background.default}
-        animate={motionMode === 'full'}
+        animate={motionMode === 'full' && !createDialogOpen}
         pulse={contourPulse}
         visible={!createDialogOpen}
       />
@@ -381,13 +389,13 @@ export const HomePage: React.FC = () => {
               transition: 'opacity 520ms ease 100ms, transform 520ms ease 100ms',
             }}
           >
-            <IconButton onClick={() => moveProject(-1)} disabled={projects.length < 2} aria-label={t('projects:home.previousProject')} sx={{ position: 'absolute', top: '50%', left: { md: 20, xl: 28 }, transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,.1)', bgcolor: 'rgba(14,17,22,.6)', display: { xs: 'none', md: 'inline-flex' }, zIndex: 2 }}><ChevronLeftIcon /></IconButton>
+            <IconButton onClick={() => moveProject(-1)} disabled={projects.length < 2} aria-label={t('projects:home.previousProject')} sx={{ position: 'absolute', top: '50%', left: { xs: 4, sm: 10, md: 20, xl: 28 }, transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,.1)', bgcolor: 'rgba(14,17,22,.78)', zIndex: 3 }}><ChevronLeftIcon /></IconButton>
             <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 'clamp(14px, 2.4vw, 30px)' }}>
             {leftProject ? <Box sx={{ display: { xs: 'none', lg: 'block' } }}><ProjectArchCard archIndex={0} project={leftProject} onOpen={() => navigate(`/project/${leftProject.id}`)} onDelete={(event) => handleDelete(leftProject.id, leftProject.name, event)} /></Box> : null}
             {centerProject ? <ProjectArchCard archIndex={1} featured project={centerProject} onOpen={() => navigate(`/project/${centerProject.id}`)} onDelete={(event) => handleDelete(centerProject.id, centerProject.name, event)} /> : null}
             {rightProject ? <Box sx={{ display: { xs: 'none', lg: 'block' } }}><ProjectArchCard archIndex={2} project={rightProject} onOpen={() => navigate(`/project/${rightProject.id}`)} onDelete={(event) => handleDelete(rightProject.id, rightProject.name, event)} /></Box> : null}
             </Box>
-            <IconButton onClick={() => moveProject(1)} disabled={projects.length < 2} aria-label={t('projects:home.nextProject')} sx={{ position: 'absolute', top: '50%', right: { md: 20, xl: 28 }, transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,.1)', bgcolor: 'rgba(14,17,22,.6)', display: { xs: 'none', md: 'inline-flex' }, zIndex: 2 }}><ChevronRightIcon /></IconButton>
+            <IconButton onClick={() => moveProject(1)} disabled={projects.length < 2} aria-label={t('projects:home.nextProject')} sx={{ position: 'absolute', top: '50%', right: { xs: 4, sm: 10, md: 20, xl: 28 }, transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', border: '1px solid rgba(255,255,255,.1)', bgcolor: 'rgba(14,17,22,.78)', zIndex: 3 }}><ChevronRightIcon /></IconButton>
           </Box>
         )}
 
@@ -411,9 +419,9 @@ export const HomePage: React.FC = () => {
             </Typography>
           ) : null}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.75, xl: 1.25 }, p: { xs: 0.75, xl: 1 }, borderRadius: { xs: '13px', xl: '16px' }, border: '1px solid rgba(255,255,255,.07)', backgroundColor: 'rgba(14,17,22,.76)', backdropFilter: 'blur(12px)' }}>
-            <Tooltip title={t('projects:home.actions.appearance')}><IconButton onClick={() => navigate('/appearance')} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><PaletteIcon /></IconButton></Tooltip>
-            <Tooltip title={t('projects:home.actions.import')}><IconButton onClick={handleImportClick} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><FileUploadIcon /></IconButton></Tooltip>
-            <Tooltip title={t('projects:home.actions.tutorial')}><IconButton onClick={handleCreateTutorialProject} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><SchoolIcon /></IconButton></Tooltip>
+            <Tooltip title={t('projects:home.actions.appearance')}><IconButton aria-label={t('projects:home.actions.appearance')} onClick={() => navigate('/appearance', { state: { from: '/' } })} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><PaletteIcon /></IconButton></Tooltip>
+            <Tooltip title={t('projects:home.actions.import')}><IconButton aria-label={t('projects:home.actions.import')} onClick={handleImportClick} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><FileUploadIcon /></IconButton></Tooltip>
+            <Tooltip title={t('projects:home.actions.tutorial')}><IconButton aria-label={t('projects:home.actions.tutorial')} onClick={handleCreateTutorialProject} sx={{ width: { xl: 44 }, height: { xl: 44 } }}><SchoolIcon /></IconButton></Tooltip>
             <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateDialogOpen(true)} sx={{ height: { xs: 46, xl: 52 }, px: { xs: 3, xl: 4 }, fontSize: { xl: 14 } }}>
               {t('projects:home.actions.createWorld')}
             </DndButton>

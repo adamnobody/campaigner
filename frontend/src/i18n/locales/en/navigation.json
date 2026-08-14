@@ -54,6 +54,7 @@
   "branches": {
     "dialogTitle": "New branch",
     "nameLabel": "Branch name",
+    "selectorLabel": "Active branch",
     "loading": "Loading branches…",
     "nonePlaceholder": "No branches",
     "created": "Branch created",

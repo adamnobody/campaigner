@@ -1,21 +1,46 @@
 {
+  "untitled": "Без названия",
   "page": {
     "title": "Вики",
+    "eyebrow": "Вики · {{count}}",
     "subtitle": "База знаний вашего мира",
-    "graph": "Граф",
+    "createArticle": "Создать статью",
     "linkArticles": "Связать статьи",
     "newArticle": "Новая статья",
-    "searchPlaceholder": "Поиск в вики…",
+    "searchPlaceholder": "Название статьи…",
     "chipAll": "Все",
-    "countShown": "{{filtered}} из {{total}}",
-    "resetFilters": "Сбросить фильтры"
+    "sortNewest": "Сначала изменённые",
+    "sortOldest": "Сначала старые",
+    "viewList": "Список",
+    "viewGrid": "Сетка",
+    "countArticles": "{{count}} статей",
+    "count": "{{shown}} из {{total}}",
+    "uncategorized": "Без категории",
+    "summary": "Сводка",
+    "summaryArticles": "Статей",
+    "summaryCategories": "Категорий",
+    "summaryLinked": "Со ссылками",
+    "summaryDrafts": "Черновиков",
+    "storedTitle": "Что здесь хранится",
+    "storedBody": "Основные статьи о локациях, предметах, магии, языках и каноне этого мира.",
+    "linkedTitle": "Связано с"
+  },
+  "categories": {
+    "location": "Локации",
+    "item": "Предметы",
+    "phenomenon": "Явления"
   },
   "empty": {
     "filteredTitle": "Ничего не найдено",
-    "filteredDescription": "Попробуйте изменить параметры поиска или фильтры",
+    "filteredDescription": "Попробуйте изменить поиск или фильтры",
     "noWikiTitle": "Вики пуста",
-    "noWikiDescription": "Создайте базу знаний вашего мира — локации, фракции, предметы, магия и многое другое",
-    "createFirstArticle": "Создать статью"
+    "noWikiDescription": "Создайте базу знаний вашего мира — локации, предметы, явления и поворотные моменты",
+    "templates": {
+      "title": "Начать с шаблона",
+      "location": { "title": "Локация", "description": "Место, границы и кто им правит" },
+      "item": { "title": "Предмет", "description": "Что это и почему важно" },
+      "phenomenon": { "title": "Явление", "description": "Как проявляется и чем грозит" }
+    }
   },
   "snackbar": {
     "created": "Статья создана: {{title}}",
@@ -25,63 +50,61 @@
     "tagsUpdated": "Теги обновлены",
     "error": "Произошла ошибка",
     "linkCreated": "Связь создана",
-    "linkErrorFallback": "Такая связь уже может существовать"
+    "linkErrorFallback": "Такая связь уже может существовать",
+    "coverError": "Не удалось загрузить обложку"
   },
   "confirm": {
     "deleteTitle": "Удалить статью",
     "deleteArticleMessage": "Удалить «{{title}}»?"
   },
-  "articleCard": {
-    "tooltipEditTags": "Редактировать теги",
-    "tooltipDelete": "Удалить",
-    "addTags": "+ добавить теги",
-    "linksHeading": "Связи ({{count}})",
-    "moreLinks": "+{{count}} ещё",
-    "linkPrefix": "→ "
-  },
   "article": {
     "entityName": "статья вики",
-    "eyebrow": "Вики · статья",
-    "edit": "Править",
-    "articleTab": "Статья",
-    "contents": "Содержание",
-    "links": "Связи",
-    "tags": "Теги",
-    "timestamps": "Даты статьи",
-    "created": "Создано {{date}}",
-    "updated": "Изменено {{date}}",
-    "empty": "В этой статье пока нет содержимого.",
     "loadError": "Не удалось загрузить статью вики",
-    "backToWiki": "Вернуться к вики"
+    "backToWiki": "Вернуться к вики",
+    "delete": "Удалить статью"
   },
-  "dialogs": {
-    "create": {
-      "title": "Новая статья",
-      "articleTitleLabel": "Название статьи *",
-      "articleTitlePlaceholder": "напр. Королевство Элдория"
-    },
-    "tags": {
-      "title": "Теги: {{articleTitle}}",
-      "articleTitleFallback": "Статья"
-    },
-    "link": {
-      "title": "Связать статьи",
-      "sourceLabel": "Первая статья *",
-      "targetLabel": "Вторая статья *",
-      "selectArticlePlaceholder": "Выберите статью…",
-      "noArticles": "Нет статей",
-      "relationLabel": "Описание связи (опционально)",
-      "relationPlaceholder": "напр. столица, союзник, часть…",
-      "relationHelper": "Краткое описание отношения между статьями",
-      "createLink": "Создать связь"
-    }
-  },
-  "tagField": {
-    "categoriesLabel": "Теги (категории)",
-    "categoriesPlaceholder": "Выберите или введите новые теги…",
-    "categoriesHelper": "Теги используются как категории для фильтрации вики-статей",
-    "editLabel": "Теги",
-    "editPlaceholder": "Выберите или введите…"
+  "editor": {
+    "coverHint": "Перетащите обложку или выберите из библиотеки",
+    "upload": "Загрузить",
+    "library": "Библиотека",
+    "pickCategory": "+ Выбрать категорию",
+    "draft": "Черновик",
+    "canon": "Канон",
+    "placeholder": "Начните с определения: что это, когда появилось и какова цена. / вставить раздел, @ сослаться на сущность.",
+    "expected": "ожидаемое {{count}}",
+    "example": "пример статьи",
+    "wordMeta": "{{words}} слов",
+    "sectionsMeta": "{{count}} раздела",
+    "changedAgo": "изменено {{time}}",
+    "slashTitle": "Вставить",
+    "slashDefinition": "Определение",
+    "slashSection": "Раздел",
+    "slashInfobox": "Поле инфобокса",
+    "slashEntity": "Ссылка на сущность",
+    "infobox": "Инфобокс",
+    "infoboxEmpty": "не заполнено",
+    "infoboxAdd": "Добавить поле",
+    "infoboxWhere": "Где",
+    "infoboxStart": "Начало",
+    "infoboxArea": "Область",
+    "publication": "Публикация",
+    "status": "Статус",
+    "branch": "Ветвь",
+    "category": "Категория",
+    "categoryNone": "не выбрана",
+    "playerVisible": "Видимость игрокам",
+    "yes": "да",
+    "no": "нет",
+    "toc": "Оглавление",
+    "tocEmpty": "Заголовки появятся здесь.",
+    "tags": "Теги",
+    "addTag": "+ тег",
+    "links": "Связи",
+    "startHint": "С чего начать статью",
+    "startHintBody": "Дайте определение в первом абзаце. Инфобокс должен стоять рядом, как в готовой статье.",
+    "conflicts": "Что здесь не сходится",
+    "conflictsHint": "Внутренние заметки о противоречиях.",
+    "pickEntity": "Связать сущность"
   },
   "graph": {
     "loading": "Загрузка графа вики…",

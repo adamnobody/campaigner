@@ -1,492 +1,298 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, TextField,
-  InputAdornment, Button, Chip,
-  useTheme, alpha,
+  Box, IconButton, InputAdornment, MenuItem, Select, TextField, Typography, alpha, useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import LinkIcon from '@mui/icons-material/Link';
-import CategoryIcon from '@mui/icons-material/Category';
-import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import { useParams, useNavigate } from 'react-router-dom';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useNoteStore } from '@/store/useNoteStore';
 import { useWikiStore } from '@/store/useWikiStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useFactionStore } from '@/store/useFactionStore';
 import { useBranchStore } from '@/store/useBranchStore';
-import { useTagStore } from '@/store/useTagStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { GlassCard } from '@/components/ui/GlassCard';
-import type { Note } from '@campaigner/shared';
-import { WikiArticleCard } from '@/pages/wiki/components/WikiArticleCard';
-import {
-  WikiCreateArticleDialog,
-  WikiTagsDialog,
-  WikiLinkArticlesDialog,
-} from '@/pages/wiki/components/WikiDialogs';
+import { CatalogAside, CatalogLayout } from '@/components/catalog/CatalogLayout';
+import { DocChip } from '@/components/document-editor/DocChip';
+import { parseDocument, serializeDocument } from '@/components/document-editor/documentMeta';
+import { formatRelativeTime } from '@/utils/relativeTime';
+import { routes } from '@/utils/routes';
+import { getPlainPreviewText } from '@/pages/wiki/components/wikiPreviewText';
+
+const BUILTIN_CATEGORIES = ['location', 'item', 'phenomenon'] as const;
+
+function articleCategory(content: string, tags: Array<{ name: string }> | undefined): string {
+  const meta = parseDocument(content).meta.category;
+  if (meta) return meta;
+  const tag = tags?.[0]?.name;
+  return tag || '';
+}
 
 export const WikiPage: React.FC = () => {
-  const { t } = useTranslation(['wiki', 'common']);
+  const { t, i18n } = useTranslation(['wiki', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
-  const pid = parseInt(projectId!);
+  const pid = Number.parseInt(projectId!, 10);
   const navigate = useNavigate();
   const theme = useTheme();
-
-  const { notes, loading, fetchNotes, createNote, deleteNote, setTags } = useNoteStore();
-  const { links, categories, fetchLinks, fetchCategories, createLink } = useWikiStore();
-  const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
-  const { showSnackbar, showConfirmDialog } = useUIStore();
-  const activeBranchId = useBranchStore((s) => s.activeBranchId);
-
+  const { notes, loading, fetchNotes, createNote } = useNoteStore();
+  const { links, fetchLinks } = useWikiStore();
+  const fetchCharacters = useCharacterStore((state) => state.fetchCharacters);
+  const characters = useCharacterStore((state) => state.characters);
+  const fetchFactions = useFactionStore((state) => state.fetchFactions);
+  const factions = useFactionStore((state) => state.factions);
+  const showSnackbar = useUIStore((state) => state.showSnackbar);
+  const activeBranchId = useBranchStore((state) => state.activeBranchId);
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [createOpen, setCreateOpen] = useState(false);
-  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [tagsDialogOpen, setTagsDialogOpen] = useState(false);
-  const [tagsEditNote, setTagsEditNote] = useState<Note | null>(null);
-
-  const [newTitle, setNewTitle] = useState('');
-  const [newTagsStr, setNewTagsStr] = useState('');
-  const [editTagsStr, setEditTagsStr] = useState('');
-  const [newTagsInput, setNewTagsInput] = useState('');
-  const [editTagsInput, setEditTagsInput] = useState('');
-
-  const [linkSource, setLinkSource] = useState<Note | null>(null);
-  const [linkTarget, setLinkTarget] = useState<Note | null>(null);
-  const [linkLabel, setLinkLabel] = useState('');
-
+  const [filter, setFilter] = useState('');
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const [grid, setGrid] = useState(false);
+  const [creating, setCreating] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
 
-  const reload = useCallback(async () => {
-    await Promise.all([
-      fetchNotes(pid, { noteType: 'wiki', search: debouncedSearch || undefined, limit: 500 }),
-      fetchCategories(pid),
-      fetchLinks(pid),
-      fetchTags(pid),
-    ]);
-  }, [pid, debouncedSearch, fetchNotes, fetchCategories, fetchLinks, fetchTags, activeBranchId]);
+  useEffect(() => {
+    void fetchNotes(pid, { noteType: 'wiki', search: debouncedSearch || undefined, limit: 500 });
+    void fetchLinks(pid);
+  }, [activeBranchId, debouncedSearch, fetchLinks, fetchNotes, pid]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    void fetchCharacters(pid);
+    void fetchFactions(pid);
+  }, [activeBranchId, fetchCharacters, fetchFactions, pid]);
 
-  const resolveTagIds = async (tagsString: string): Promise<number[]> => {
-    const tagNames = tagsString
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const articles = useMemo(() => {
+    const list = notes.filter((note) => {
+      if (!filter) return true;
+      return articleCategory(note.content, note.tags) === filter;
+    });
+    list.sort((a, b) => {
+      const delta = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      return sort === 'newest' ? -delta : delta;
+    });
+    return list;
+  }, [filter, notes, sort]);
 
-    if (tagNames.length === 0) return [];
-    return await findOrCreateTagsByNames(pid, tagNames);
-  };
+  const grouped = useMemo(() => {
+    const buckets = new Map<string, typeof articles>();
+    for (const article of articles) {
+      const key = articleCategory(article.content, article.tags) || 'uncategorized';
+      const bucket = buckets.get(key) ?? [];
+      bucket.push(article);
+      buckets.set(key, bucket);
+    }
+    return [...buckets.entries()];
+  }, [articles]);
 
-  const mergeTagValues = (tagsString: string, pendingInput: string): string => {
-    const committed = tagsString
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const drafts = notes.filter((note) => (parseDocument(note.content).meta.status ?? 'draft') === 'draft').length;
+  const linkedCount = notes.filter((note) => links.some((link) => link.sourceNoteId === note.id || link.targetNoteId === note.id)).length;
+  const categoryCount = new Set(notes.map((note) => articleCategory(note.content, note.tags)).filter(Boolean)).size;
+  const trulyEmpty = notes.length === 0 && !search && !filter;
 
-    const pending = pendingInput
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    return Array.from(new Set([...committed, ...pending])).join(', ');
-  };
-
-  const handleCreate = async () => {
-    if (!newTitle.trim()) return;
-
+  const createAndOpen = async (category?: string) => {
+    if (creating) return;
+    setCreating(true);
     try {
       const note = await createNote({
         projectId: pid,
-        title: newTitle.trim(),
-        content: `# ${newTitle.trim()}\n\n`,
+        title: t('wiki:untitled'),
+        content: serializeDocument({
+          status: 'draft',
+          category,
+          infobox: [
+            { key: t('wiki:editor.infoboxWhere'), value: '' },
+            { key: t('wiki:editor.infoboxStart'), value: '' },
+            { key: t('wiki:editor.infoboxArea'), value: '' },
+          ],
+        }, ''),
         format: 'md',
         noteType: 'wiki',
         isPinned: false,
       });
-
-      const finalTagsStr = mergeTagValues(newTagsStr, newTagsInput);
-
-      if (finalTagsStr.trim()) {
-        const tagIds = await resolveTagIds(finalTagsStr);
-        if (tagIds.length > 0) {
-          await setTags(note.id, tagIds);
-        }
-      }
-
-      setCreateOpen(false);
-      setNewTitle('');
-      setNewTagsStr('');
-      setNewTagsInput('');
-      showSnackbar(t('wiki:snackbar.created', { title: newTitle.trim() }), 'success');
-      navigate(`/project/${pid}/notes/${note.id}`);
+      navigate(`/project/${pid}/wiki/${note.id}`);
     } catch {
       showSnackbar(t('wiki:snackbar.createError'), 'error');
+      setCreating(false);
     }
   };
-
-  const handleDelete = (id: number, title: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    showConfirmDialog(
-      t('wiki:confirm.deleteTitle'),
-      t('wiki:confirm.deleteArticleMessage', { title }),
-      async () => {
-        try {
-          await deleteNote(id);
-          showSnackbar(t('wiki:snackbar.deleted', { title }), 'success');
-          await Promise.all([fetchLinks(pid), fetchCategories(pid)]);
-        } catch {
-          showSnackbar(t('wiki:snackbar.deleteError'), 'error');
-        }
-      },
-    );
-  };
-
-  const handleOpenTagsEdit = (note: Note, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setTagsEditNote(note);
-    setEditTagsStr((note.tags || []).map((tag) => tag.name).join(', '));
-    setEditTagsInput('');
-    setTagsDialogOpen(true);
-  };
-
-  const handleSaveTags = async () => {
-    if (!tagsEditNote) return;
-
-    try {
-      const finalTagsStr = mergeTagValues(editTagsStr, editTagsInput);
-      const tagIds = await resolveTagIds(finalTagsStr);
-      await setTags(tagsEditNote.id, tagIds);
-      setTagsDialogOpen(false);
-      setTagsEditNote(null);
-      setEditTagsStr('');
-      setEditTagsInput('');
-      showSnackbar(t('wiki:snackbar.tagsUpdated'), 'success');
-      await reload();
-    } catch {
-      showSnackbar(t('wiki:snackbar.error'), 'error');
-    }
-  };
-
-  const handleCreateLink = async () => {
-    if (!linkSource || !linkTarget) return;
-
-    try {
-      await createLink({
-        projectId: pid,
-        sourceNoteId: linkSource.id,
-        targetNoteId: linkTarget.id,
-        label: linkLabel.trim(),
-      });
-
-      setLinkDialogOpen(false);
-      setLinkSource(null);
-      setLinkTarget(null);
-      setLinkLabel('');
-      showSnackbar(t('wiki:snackbar.linkCreated'), 'success');
-      await fetchLinks(pid);
-    } catch (err: any) {
-      showSnackbar(err.message || t('wiki:snackbar.linkErrorFallback'), 'error');
-    }
-  };
-
-  const getLinksForNote = (noteId: number) => {
-    return links.filter((l) => l.sourceNoteId === noteId || l.targetNoteId === noteId);
-  };
-
-  const existingTagNames = useMemo(() => tags.map((t) => t.name), [tags]);
-
-  const filteredNotes = useMemo(() => {
-    let result = notes;
-    if (selectedCategory) {
-      result = result.filter((n) =>
-        n.tags?.some((tag) => tag.name === selectedCategory)
-      );
-    }
-    return result;
-  }, [notes, selectedCategory]);
-
-  const hasFilters = Boolean(search || selectedCategory);
 
   if (loading && notes.length === 0) return <LoadingScreen />;
 
-  return (
-    <Box sx={{ minWidth: 0, width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', md: 'center' }}
-        mb={3}
-        gap={2}
-        flexWrap="wrap"
-        sx={{ minWidth: 0 }}
-      >
-        <Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            {t('wiki:page.title')}
+  const renderArticle = (note: typeof articles[number]) => (
+    <Box
+      key={note.id}
+      onClick={() => navigate(`/project/${pid}/wiki/${note.id}`)}
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: grid ? '1fr' : { xs: '1fr', md: 'minmax(0, 1fr) auto' },
+        gap: 0.75,
+        px: grid ? 2 : 0.5,
+        py: grid ? 2 : 1.35,
+        borderRadius: grid ? '14px' : 1,
+        border: grid ? `1px solid ${theme.campaigner.surface.border}` : 'none',
+        backgroundColor: grid ? theme.campaigner.surface.subtle : 'transparent',
+        cursor: 'pointer',
+        minWidth: 0,
+        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
+      }}
+    >
+      <Box sx={{ minWidth: 0, display: 'flex', gap: 1.25, alignItems: 'baseline' }}>
+        {!grid ? <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0, mt: '0.45em' }} /> : null}
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.98rem' }}>{note.title}</Typography>
+          <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem', pt: 0.25 }} noWrap>
+            {getPlainPreviewText(note.content)}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {t('wiki:page.subtitle')}
-          </Typography>
-        </Box>
-
-        <Box display="flex" gap={1} flexWrap="wrap" sx={{ minWidth: 0 }}>
-          <DndButton variant="outlined" startIcon={<AccountTreeIcon />} onClick={() => navigate(`/project/${pid}/wiki/graph`)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
-            {t('wiki:page.graph')}
-          </DndButton>
-          <DndButton variant="outlined" startIcon={<LinkIcon />} onClick={() => setLinkDialogOpen(true)} sx={{ borderColor: alpha(theme.palette.primary.main, 0.5) }}>
-            {t('wiki:page.linkArticles')}
-          </DndButton>
-          <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
-            {t('wiki:page.newArticle')}
-          </DndButton>
         </Box>
       </Box>
+      <Typography sx={{ color: 'text.disabled', fontSize: '0.72rem', whiteSpace: 'nowrap', alignSelf: 'center' }}>
+        {formatRelativeTime(note.updatedAt, i18n.language)}
+      </Typography>
+    </Box>
+  );
 
-      {/* Filters */}
-      {(notes.length > 0 || hasFilters) && (
-        <GlassCard sx={{ p: 2, mb: 3 }}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' },
-              gridTemplateAreas: {
-                xs: `
-                  "search"
-                  "tags"
-                  "meta"
-                `,
-                md: `
-                  "search meta"
-                  "tags meta"
-                `,
-              },
-              gap: 2,
-              alignItems: 'start',
-              minWidth: 0,
-              maxWidth: '100%',
-            }}
-          >
-            <Box sx={{ gridArea: 'search', minWidth: 0, maxWidth: '100%' }}>
-              <TextField
-                fullWidth
-                placeholder={t('wiki:page.searchPlaceholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: 'text.secondary' }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-
-            <Box sx={{ gridArea: 'tags', minWidth: 0, maxWidth: '100%' }}>
-              {categories.length > 0 && (
-                <Box display="flex" gap={1} alignItems="flex-start" sx={{ minWidth: 0, maxWidth: '100%' }}>
-                  <CategoryIcon sx={{ fontSize: 18, color: 'text.secondary', mt: '6px', flexShrink: 0 }} />
-                  <Box
-                    display="flex"
-                    gap={0.75}
-                    flexWrap="wrap"
-                    alignItems="center"
-                    sx={{
-                      minWidth: 0,
-                      maxWidth: '100%',
-                      flex: 1,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <Chip
-                      label={t('wiki:page.chipAll')}
-                      size="small"
-                      onClick={() => setSelectedCategory('')}
-                      sx={{
-                        maxWidth: '100%',
-                        backgroundColor: !selectedCategory ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.text.secondary, 0.1),
-                        color: !selectedCategory ? theme.palette.primary.main : 'text.secondary',
-                        fontWeight: !selectedCategory ? 600 : 400,
-                        cursor: 'pointer',
-                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.15) },
-                      }}
-                    />
-                    {categories.map((cat) => (
-                      <Chip
-                        key={cat.name}
-                        label={`${cat.name} (${cat.count})`}
-                        size="small"
-                        onClick={() => setSelectedCategory(selectedCategory === cat.name ? '' : cat.name)}
-                        sx={{
-                          maxWidth: '100%',
-                          backgroundColor: selectedCategory === cat.name ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.text.secondary, 0.1),
-                          color: selectedCategory === cat.name ? theme.palette.primary.main : 'text.secondary',
-                          fontWeight: selectedCategory === cat.name ? 600 : 400,
-                          cursor: 'pointer',
-                          '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.15) },
-                          '& .MuiChip-label': {
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          },
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </Box>
-
-            <Box
-              sx={{
-                gridArea: 'meta',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: { xs: 'flex-start', md: 'flex-end' },
-                justifyContent: 'flex-start',
-                gap: 1,
-                minWidth: 0,
-                maxWidth: '100%',
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'text.secondary',
-                  textAlign: { xs: 'left', md: 'right' },
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {t('wiki:page.countShown', { filtered: filteredNotes.length, total: notes.length })}
-              </Typography>
-
-              {hasFilters && (
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setSearch('');
-                    setSelectedCategory('');
-                  }}
-                  size="small"
-                  sx={{
-                    borderColor: alpha(theme.palette.primary.main, 0.5),
-                    textTransform: 'none',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {t('common:reset')}
-                </Button>
-              )}
-            </Box>
-          </Box>
-        </GlassCard>
+  return (
+    <CatalogLayout
+      eyebrow={t('wiki:page.eyebrow', { count: notes.length })}
+      title={t('wiki:page.title')}
+      subtitle={t('wiki:page.subtitle')}
+      hasItems={articles.length > 0}
+      actions={(
+        <>
+          <DndButton variant="outlined" onClick={() => navigate(routes.wikiGraph(pid))} disabled={creating}>
+            {t('wiki:page.linkArticles')}
+          </DndButton>
+          <DndButton variant="contained" startIcon={<AddIcon />} loading={creating} onClick={() => { void createAndOpen(); }}>
+            {t('wiki:page.newArticle')}
+          </DndButton>
+        </>
       )}
-
-      {/* Content */}
-      {notes.length === 0 && !loading ? (
-        hasFilters ? (
-          <EmptyState
-            icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title={t('wiki:empty.filteredTitle')}
-            description={t('wiki:empty.filteredDescription')}
-            actionLabel={t('wiki:page.resetFilters')}
-            onAction={() => { setSearch(''); setSelectedCategory(''); }}
+      toolbar={(
+        <>
+          <TextField
+            size="small"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t('wiki:page.searchPlaceholder')}
+            sx={{ flexGrow: 1, maxWidth: 400 }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.secondary' }} /></InputAdornment> }}
           />
-        ) : (
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            <DocChip active={!filter} label={t('wiki:page.chipAll')} onClick={() => setFilter('')} />
+            {BUILTIN_CATEGORIES.map((item) => (
+              <DocChip
+                key={item}
+                active={filter === item}
+                label={t(`wiki:categories.${item}`)}
+                onClick={() => setFilter(filter === item ? '' : item)}
+              />
+            ))}
+          </Box>
+          <Select size="small" value={sort} onChange={(event) => setSort(event.target.value as 'newest' | 'oldest')} sx={{ height: 34, fontSize: 12.5, minWidth: 170 }}>
+            <MenuItem value="newest">{t('wiki:page.sortNewest')}</MenuItem>
+            <MenuItem value="oldest">{t('wiki:page.sortOldest')}</MenuItem>
+          </Select>
+          <IconButton size="small" onClick={() => setGrid(false)} aria-label={t('wiki:page.viewList')} sx={{ color: !grid ? 'primary.main' : 'text.disabled' }}>
+            <ViewListIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => setGrid(true)} aria-label={t('wiki:page.viewGrid')} sx={{ color: grid ? 'primary.main' : 'text.disabled' }}>
+            <ViewModuleIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
+            {t('wiki:page.count', { shown: articles.length, total: notes.length })}
+          </Typography>
+        </>
+      )}
+      aside={(
+        <CatalogAside
+          summaryTitle={t('common:catalog.summary')}
+          summary={[
+            { label: t('wiki:page.summaryArticles'), value: notes.length },
+            { label: t('wiki:page.summaryCategories'), value: categoryCount },
+            { label: t('wiki:page.summaryLinked'), value: linkedCount },
+            { label: t('wiki:page.summaryDrafts'), value: drafts },
+          ]}
+          storedTitle={t('common:catalog.storedTitle')}
+          storedBody={t('wiki:page.storedBody')}
+          linkedTitle={t('common:catalog.linkedTitle')}
+          linked={[
+            { label: t('navigation:menu.characters'), value: characters.length },
+            { label: t('navigation:menu.states'), value: factions.filter((item) => item.kind === 'state').length },
+            { label: t('navigation:menu.graph'), value: links.length },
+          ]}
+        />
+      )}
+    >
+      {articles.length === 0 ? (
+        trulyEmpty ? (
           <EmptyState
             icon={<MenuBookIcon sx={{ fontSize: 64 }} />}
             title={t('wiki:empty.noWikiTitle')}
             description={t('wiki:empty.noWikiDescription')}
-            actionLabel={t('wiki:empty.createFirstArticle')}
-            onAction={() => setCreateOpen(true)}
+            actionLabel={t('wiki:page.newArticle')}
+            onAction={() => { void createAndOpen(); }}
+            templatesTitle={t('wiki:empty.templates.title')}
+            templates={[
+              {
+                icon: <PlaceOutlinedIcon />,
+                title: t('wiki:empty.templates.location.title'),
+                description: t('wiki:empty.templates.location.description'),
+                onClick: () => { void createAndOpen('location'); },
+              },
+              {
+                icon: <Inventory2OutlinedIcon />,
+                title: t('wiki:empty.templates.item.title'),
+                description: t('wiki:empty.templates.item.description'),
+                onClick: () => { void createAndOpen('item'); },
+              },
+              {
+                icon: <AutoAwesomeIcon />,
+                title: t('wiki:empty.templates.phenomenon.title'),
+                description: t('wiki:empty.templates.phenomenon.description'),
+                onClick: () => { void createAndOpen('phenomenon'); },
+              },
+            ]}
+          />
+        ) : (
+          <EmptyState
+            icon={<SearchIcon />}
+            title={t('wiki:empty.filteredTitle')}
+            description={t('wiki:empty.filteredDescription')}
           />
         )
+      ) : grid ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
+          {articles.map(renderArticle)}
+        </Box>
       ) : (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              lg: 'repeat(3, minmax(0, 1fr))',
-            },
-            gap: 2,
-            width: '100%',
-            minWidth: 0,
-            maxWidth: '100%',
-            overflow: 'hidden',
-          }}
-        >
-          {filteredNotes.map((note) => (
-            <WikiArticleCard
-              key={note.id}
-              note={note}
-              noteLinks={getLinksForNote(note.id)}
-              onOpenArticle={() => navigate(`/project/${pid}/wiki/${note.id}`)}
-              onToggleTagCategory={(name) => setSelectedCategory(selectedCategory === name ? '' : name)}
-              onEditTags={(e) => handleOpenTagsEdit(note, e)}
-              onDelete={(e) => handleDelete(note.id, note.title, e)}
-            />
+        <Box>
+          {grouped.map(([key, group]) => (
+            <Box key={key} sx={{ pb: 2.5 }}>
+              <Typography
+                sx={{
+                  color: 'text.disabled',
+                  fontFamily: (th) => th.campaigner.typography.mono,
+                  fontSize: '0.62rem',
+                  letterSpacing: '.16em',
+                  textTransform: 'uppercase',
+                  pb: 1,
+                }}
+              >
+                {key === 'uncategorized' ? t('wiki:page.uncategorized') : t(`wiki:categories.${key}`, { defaultValue: key })} {group.length}
+              </Typography>
+              {group.map(renderArticle)}
+            </Box>
           ))}
         </Box>
       )}
-
-      <WikiCreateArticleDialog
-        open={createOpen}
-        onClose={() => {
-          setCreateOpen(false);
-          setNewTitle('');
-          setNewTagsStr('');
-          setNewTagsInput('');
-        }}
-        newTitle={newTitle}
-        setNewTitle={setNewTitle}
-        newTagsStr={newTagsStr}
-        setNewTagsStr={setNewTagsStr}
-        newTagsInput={newTagsInput}
-        setNewTagsInput={setNewTagsInput}
-        existingTagNames={existingTagNames}
-        onCreate={handleCreate}
-      />
-
-      <WikiTagsDialog
-        open={tagsDialogOpen}
-        onClose={() => {
-          setTagsDialogOpen(false);
-          setTagsEditNote(null);
-          setEditTagsStr('');
-          setEditTagsInput('');
-        }}
-        tagsEditNote={tagsEditNote}
-        editTagsStr={editTagsStr}
-        setEditTagsStr={setEditTagsStr}
-        editTagsInput={editTagsInput}
-        setEditTagsInput={setEditTagsInput}
-        existingTagNames={existingTagNames}
-        onSave={handleSaveTags}
-      />
-
-      <WikiLinkArticlesDialog
-        open={linkDialogOpen}
-        onClose={() => setLinkDialogOpen(false)}
-        notes={notes}
-        linkSource={linkSource}
-        setLinkSource={setLinkSource}
-        linkTarget={linkTarget}
-        setLinkTarget={setLinkTarget}
-        linkLabel={linkLabel}
-        setLinkLabel={setLinkLabel}
-        onCreateLink={handleCreateLink}
-      />
-    </Box>
+    </CatalogLayout>
   );
 };

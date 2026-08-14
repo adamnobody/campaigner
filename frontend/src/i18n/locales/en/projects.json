@@ -86,5 +86,51 @@
     "cancel": "Cancel",
     "submit": "✨ Create",
     "creating": "Creating..."
+  },
+  "overview": {
+    "empty": {
+      "unnamedWorld": "Unnamed world",
+      "description": "Project is empty. Start with what's already in your head — characters, places, or world rules. Connections will appear on their own.",
+      "openCanvas": "Open canvas",
+      "nameWorld": "Name the world",
+      "nameWorldTitle": "Name the world",
+      "nameWorldLabel": "World name",
+      "named": "World named",
+      "nameError": "Could not rename the world",
+      "newNote": "New note",
+      "stats": {
+        "characters": "Characters",
+        "states": "States",
+        "events": "Events",
+        "wiki": "Wiki articles",
+        "none": "none yet",
+        "timelineEmpty": "timeline is empty",
+        "wikiEmpty": "knowledge base is empty"
+      },
+      "start": {
+        "title": "Where to start",
+        "hint": "Three entries into the world. Order doesn't matter — start with what is clearest.",
+        "characterTitle": "First character",
+        "characterDescription": "The one through whose eyes the reader sees the world.",
+        "placeTitle": "First place",
+        "placeDescription": "A state, city, or land where it all begins.",
+        "dogmaTitle": "First dogma",
+        "dogmaDescription": "A rule that cannot be broken in this world."
+      },
+      "recent": {
+        "title": "Recently changed",
+        "meta": "no changes, last 7 days",
+        "empty": "No changes yet. As soon as you create the first entry, it will appear here."
+      },
+      "branch": {
+        "title": "Current branch",
+        "canonicalHint": "You are working in the world's main line. Later you can take a copy and see what would happen if history went another way.",
+        "altHint": "You are viewing an alternate version of the world."
+      },
+      "focus": {
+        "title": "Keeping focus",
+        "body": "You don't have to start with a world map. Sometimes describing a guard's cloak is enough — and the world already exists."
+      }
+    }
   }
 }

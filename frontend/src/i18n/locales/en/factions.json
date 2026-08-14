@@ -22,7 +22,28 @@
     "emptyNoStatesTitle": "No states yet",
     "emptyNoStatesDescription": "Create the first state for your world",
     "emptyNoFactionsTitle": "No factions yet",
-    "emptyNoFactionsDescription": "Create the first faction or inner group"
+    "emptyNoFactionsDescription": "Create the first faction or inner group",
+    "templates": {
+      "title": "Start with a template",
+      "states": {
+        "kingdom": { "title": "Kingdom", "description": "Dynasty, titles, and vassals" },
+        "empire": { "title": "Empire", "description": "Provinces, governors, and tribute" },
+        "city": { "title": "Free city", "description": "Council, trade, and garrison" }
+      },
+      "factions": {
+        "order": { "title": "Order", "description": "Charter, ranks, and vows" },
+        "guild": { "title": "Guild", "description": "Craft, monopoly, and duties" },
+        "cult": { "title": "Cult", "description": "Dogma, rite, and secret" }
+      }
+    },
+    "aside": {
+      "summaryTotal": "Total",
+      "summaryActive": "Active",
+      "summaryRuler": "With a ruler",
+      "summaryDynasty": "With a dynasty",
+      "storedBodyStates": "Nation-states, capitals, and who holds the throne.",
+      "storedBodyFactions": "Orders, guilds, cults, and inner groups of this world."
+    }
   },
   "entityKinds": {
     "state": "State",

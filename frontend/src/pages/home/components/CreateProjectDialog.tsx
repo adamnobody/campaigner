@@ -24,12 +24,14 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PaletteIcon from '@mui/icons-material/Palette';
 import { DndButton } from '@/components/ui/DndButton';
+import { TabFade } from '@/components/ui/MotionSwitch';
 import { THEME_PRESETS, type ThemePresetDefinition } from '@/theme/presets';
 import { usePreferencesStore, type CustomColorThemePreset } from '@/store/usePreferencesStore';
 import {
   CreateColorThemeDialog,
   type CreateColorThemeValues,
 } from '@/pages/appearance/components/CreateColorThemeDialog';
+import { buildCustomColorTheme } from '@/pages/appearance/paletteHelpers';
 
 export interface CreateProjectDialogProps {
   open: boolean;
@@ -45,37 +47,6 @@ export interface CreateProjectWizardValue {
 }
 
 const BUILTIN_PALETTES = Object.values(THEME_PRESETS);
-
-const hexToRgbTriplet = (hex: string) => {
-  const normalized = hex.trim().replace('#', '');
-  const full = normalized.length === 3
-    ? normalized.split('').map((char) => `${char}${char}`).join('')
-    : normalized;
-  const values = [0, 2, 4].map((index) => Number.parseInt(full.slice(index, index + 2), 16));
-  return values.some(Number.isNaN) ? '120, 130, 150' : values.join(', ');
-};
-
-const buildCustomPalette = (values: CreateColorThemeValues): CustomColorThemePreset => {
-  const accentRgb = hexToRgbTriplet(values.accent);
-  const textRgb = hexToRgbTriplet(values.text);
-  return {
-    id: `custom-${Date.now().toString(36)}`,
-    label: values.name,
-    background: values.background,
-    backgroundAccent: `radial-gradient(circle at top left, rgba(${accentRgb}, 0.2), transparent 34%)`,
-    panelBaseRgb: hexToRgbTriplet(values.background),
-    borderRgb: accentRgb,
-    textPrimary: values.text,
-    textSecondary: `rgba(${textRgb}, 0.8)`,
-    muted: `rgba(${textRgb}, 0.44)`,
-    accentMain: values.accent,
-    accentSoft: `rgba(${accentRgb}, 0.18)`,
-    accentStrong: values.accent,
-    success: '#7BD88F',
-    warning: '#F6C177',
-    error: '#FF7A7A',
-  };
-};
 
 export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, onClose, onSubmit }) => {
   const theme = useTheme();
@@ -149,7 +120,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, 
   };
 
   const saveCustomPalette = (values: CreateColorThemeValues) => {
-    const palette = buildCustomPalette(values);
+    const palette = buildCustomColorTheme(values, `custom-${crypto.randomUUID()}`);
     setPendingCustomPalette(palette);
     setSelectedTheme(palette.id);
     setCustomPaletteOpen(false);
@@ -218,6 +189,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, 
         </Box>
 
         <DialogContent sx={{ position: 'relative', zIndex: 1, backgroundColor: '#0e1116', px: { xs: 2.5, md: 4.25 }, py: 0 }}>
+          <TabFade tab={String(step)}>
           {step === 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>
               <Box>
@@ -291,6 +263,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, 
               </Box>
             </Box>
           ) : null}
+          </TabFade>
         </DialogContent>
 
         <DialogActions sx={{ position: 'relative', zIndex: 1, backgroundColor: '#0e1116', mt: 0, px: { xs: 2.5, md: 4.25 }, py: 2.5, borderTop: '1px solid rgba(255,255,255,.07)', justifyContent: 'space-between' }}>

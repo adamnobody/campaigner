@@ -1,21 +1,46 @@
 {
+  "untitled": "Untitled",
   "page": {
     "title": "Wiki",
-    "subtitle": "Your world's knowledge base",
-    "graph": "Graph",
+    "eyebrow": "Wiki · {{count}}",
+    "subtitle": "Knowledge base of your world",
+    "createArticle": "Create article",
     "linkArticles": "Link articles",
     "newArticle": "New article",
-    "searchPlaceholder": "Search wiki…",
+    "searchPlaceholder": "Article name…",
     "chipAll": "All",
-    "countShown": "{{filtered}} of {{total}}",
-    "resetFilters": "Reset filters"
+    "sortNewest": "Last modified first",
+    "sortOldest": "Oldest first",
+    "viewList": "List",
+    "viewGrid": "Grid",
+    "countArticles": "{{count}} articles",
+    "count": "{{shown}} of {{total}}",
+    "uncategorized": "Uncategorized",
+    "summary": "Summary",
+    "summaryArticles": "Articles",
+    "summaryCategories": "Categories",
+    "summaryLinked": "With links",
+    "summaryDrafts": "Drafts",
+    "storedTitle": "What is stored here",
+    "storedBody": "Main articles about places, items, magic, languages, and the canon of this world.",
+    "linkedTitle": "Linked to"
+  },
+  "categories": {
+    "location": "Locations",
+    "item": "Items",
+    "phenomenon": "Phenomena"
   },
   "empty": {
     "filteredTitle": "Nothing found",
     "filteredDescription": "Try changing search or filters",
     "noWikiTitle": "Wiki is empty",
-    "noWikiDescription": "Build your world's knowledge base — locations, factions, items, magic, and more",
-    "createFirstArticle": "Create article"
+    "noWikiDescription": "Create a knowledge base of your world — locations, items, phenomena, and turning points",
+    "templates": {
+      "title": "Start with a template",
+      "location": { "title": "Location", "description": "Place, borders, and who holds it" },
+      "item": { "title": "Item", "description": "What it is and why it matters" },
+      "phenomenon": { "title": "Phenomenon", "description": "How it appears and what it costs" }
+    }
   },
   "snackbar": {
     "created": "Article created: {{title}}",
@@ -25,63 +50,61 @@
     "tagsUpdated": "Tags updated",
     "error": "Something went wrong",
     "linkCreated": "Link created",
-    "linkErrorFallback": "This link may already exist"
+    "linkErrorFallback": "This link may already exist",
+    "coverError": "Could not upload cover"
   },
   "confirm": {
     "deleteTitle": "Delete article",
     "deleteArticleMessage": "Delete \"{{title}}\"?"
   },
-  "articleCard": {
-    "tooltipEditTags": "Edit tags",
-    "tooltipDelete": "Delete",
-    "addTags": "+ add tags",
-    "linksHeading": "Links ({{count}})",
-    "moreLinks": "+{{count}} more",
-    "linkPrefix": "→ "
-  },
   "article": {
     "entityName": "wiki article",
-    "eyebrow": "Wiki · article",
-    "edit": "Edit",
-    "articleTab": "Article",
-    "contents": "Contents",
-    "links": "Links",
-    "tags": "Tags",
-    "timestamps": "Article dates",
-    "created": "Created {{date}}",
-    "updated": "Updated {{date}}",
-    "empty": "This article has no content yet.",
     "loadError": "Could not load this wiki article",
-    "backToWiki": "Back to wiki"
+    "backToWiki": "Back to wiki",
+    "delete": "Delete article"
   },
-  "dialogs": {
-    "create": {
-      "title": "New article",
-      "articleTitleLabel": "Article title *",
-      "articleTitlePlaceholder": "e.g. Kingdom of Eldoria"
-    },
-    "tags": {
-      "title": "Tags: {{articleTitle}}",
-      "articleTitleFallback": "Article"
-    },
-    "link": {
-      "title": "Link articles",
-      "sourceLabel": "First article *",
-      "targetLabel": "Second article *",
-      "selectArticlePlaceholder": "Choose an article…",
-      "noArticles": "No articles",
-      "relationLabel": "Link description (optional)",
-      "relationPlaceholder": "e.g. capital, ally, part of…",
-      "relationHelper": "Short label for the relationship between articles",
-      "createLink": "Create link"
-    }
-  },
-  "tagField": {
-    "categoriesLabel": "Tags (categories)",
-    "categoriesPlaceholder": "Select or enter new tags…",
-    "categoriesHelper": "Tags act as categories for filtering wiki articles",
-    "editLabel": "Tags",
-    "editPlaceholder": "Select or enter…"
+  "editor": {
+    "coverHint": "Drag a cover here or choose from the library",
+    "upload": "Upload",
+    "library": "Library",
+    "pickCategory": "+ Select category",
+    "draft": "Draft",
+    "canon": "Canon",
+    "placeholder": "Start with a definition: what it is, when it appeared, and what it costs. / insert a section, @ link an entity.",
+    "expected": "expected {{count}}",
+    "example": "article example",
+    "wordMeta": "{{words}} words",
+    "sectionsMeta": "{{count}} sections",
+    "changedAgo": "edited {{time}}",
+    "slashTitle": "Insert",
+    "slashDefinition": "Definition",
+    "slashSection": "Section",
+    "slashInfobox": "Infobox field",
+    "slashEntity": "Entity link",
+    "infobox": "Infobox",
+    "infoboxEmpty": "not filled",
+    "infoboxAdd": "Add field",
+    "infoboxWhere": "Where",
+    "infoboxStart": "Start",
+    "infoboxArea": "Area",
+    "publication": "Publication",
+    "status": "Status",
+    "branch": "Branch",
+    "category": "Category",
+    "categoryNone": "not selected",
+    "playerVisible": "Player visibility",
+    "yes": "yes",
+    "no": "no",
+    "toc": "Table of contents",
+    "tocEmpty": "Headings will appear here.",
+    "tags": "Tags",
+    "addTag": "+ tag",
+    "links": "Connections",
+    "startHint": "How to start the article",
+    "startHintBody": "Give a definition in the first paragraph. The infobox should sit beside it, like in a finished article.",
+    "conflicts": "What doesn't add up",
+    "conflictsHint": "Internal notes about contradictions.",
+    "pickEntity": "Link an entity"
   },
   "graph": {
     "loading": "Loading wiki graph…",

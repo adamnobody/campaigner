@@ -61,7 +61,7 @@
     "localPreset": "Локальный пресет",
     "localPresetHint": "Только шрифты из поставки Campaigner, без сетевых запросов",
     "size": "Размер текста",
-    "sizeHint": "Статьи, заметки и таблицы",
+    "sizeHint": "Весь интерфейс, статьи и заметки",
     "lineHeight": "Межстрочный интервал",
     "lineHeightHint": "Дыхание длинных статей",
     "columnWidth": "Ширина колонки",
@@ -272,6 +272,48 @@
       "label": "Scholar Manuscript",
       "description": "Тёплый документный стиль для чтения."
     }
+  },
+  "createDialog": {
+    "titleCreate": "Создание цветовой темы",
+    "titleEdit": "Редактирование цветовой темы",
+    "subtitle": "Настройте базовые цвета, проверьте предпросмотр и сохраните палитру в общий список.",
+    "themeName": "Название темы",
+    "namePlaceholder": "Например, Royal Violet",
+    "nameError": "Название не может быть пустым.",
+    "quickPresets": "Быстрые пресеты",
+    "quickPresetNames": {
+      "violet": "Royal Violet",
+      "emerald": "Emerald Grove",
+      "rose": "Rose Ember",
+      "amber": "Amber Forge",
+      "slate": "Slate Archive"
+    },
+    "fields": {
+      "background": {
+        "title": "Фон",
+        "description": "Основной тёмный цвет интерфейса."
+      },
+      "accent": {
+        "title": "Акцент",
+        "description": "Цвет активных кнопок и выделений."
+      },
+      "text": {
+        "title": "Текст",
+        "description": "Основной цвет заголовков и контента."
+      }
+    },
+    "hexPlaceholder": "#RRGGBB",
+    "invalidHex": "Неверный HEX",
+    "livePreview": "Предпросмотр",
+    "newThemeFallback": "Новая тема",
+    "previewCardLine": "Пример карточки интерфейса с выбранными цветами темы.",
+    "previewProjectCard": "Карточка проекта",
+    "previewProjectDesc": "Краткое описание и статус проекта в вашей палитре.",
+    "primaryButton": "Основная кнопка",
+    "badgeSample": "Метка",
+    "lowContrast": "Низкий контраст: текст может быть плохо читаемым.",
+    "saveCreate": "Сохранить тему",
+    "saveEdit": "Сохранить изменения"
   },
   "confirmDelete": {
     "theme": {

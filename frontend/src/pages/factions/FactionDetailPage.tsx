@@ -47,6 +47,7 @@ import { FactionPoliticalScalesSection } from '@/pages/factions/components/Facti
 import { AssetAvatar } from '@/components/ui/AssetAvatar';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TabFade } from '@/components/ui/MotionSwitch';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import {
   FACTION_KIND_ICONS,
@@ -977,6 +978,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         </Tabs>
       </Box>
 
+      <TabFade tab={activeTab}>
       {activeTab === 'overview' && (
         <Box display="flex" gap={{ xs: 3, md: 5 }} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
           <Box sx={{ width: { xs: '100%', md: 296 }, flexShrink: 0, order: { xs: 1, md: 2 } }}>
@@ -1736,6 +1738,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           )}
         </Box>
       )}
+      </TabFade>
 
       {/* ===== DIALOGS ===== */}
       <FactionRankDialog

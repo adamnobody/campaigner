@@ -94,7 +94,7 @@ export function createCampaignerTheme(preferences: AppearanceThemePreferences) {
       caption: { fontFamily: fonts.body, fontWeight: 400 },
       overline: {
         fontFamily: fonts.mono,
-        fontSize: '0.6rem',
+        fontSize: '0.68rem',
         fontWeight: 400,
         letterSpacing: '0.16em',
       },
@@ -103,6 +103,7 @@ export function createCampaignerTheme(preferences: AppearanceThemePreferences) {
       MuiCssBaseline: {
         styleOverrides: {
           html: {
+            fontSize: `${reading.fontSize}px`,
             scrollBehavior: motion.duration === 0 ? 'auto' : 'smooth',
           },
           body: {
@@ -265,7 +266,7 @@ export function createCampaignerTheme(preferences: AppearanceThemePreferences) {
         styleOverrides: {
           root: {
             fontFamily: fonts.mono,
-            fontSize: '0.72rem',
+            fontSize: '0.8rem',
             letterSpacing: '0.08em',
           },
         },
@@ -297,7 +298,7 @@ export function createCampaignerTheme(preferences: AppearanceThemePreferences) {
           root: {
             minHeight: 38,
             fontFamily: fonts.body,
-            fontSize: '0.78rem',
+            fontSize: '0.86rem',
             fontWeight: 400,
             textTransform: 'none',
           },

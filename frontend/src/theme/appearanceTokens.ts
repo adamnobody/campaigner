@@ -52,6 +52,14 @@ const SPACING = { compact: 7, comfortable: 8, spacious: 10 } as const;
 const GLOW_STRENGTH = { none: 0, soft: 0.16, strong: 0.3 } as const;
 const READING_LINE_HEIGHT = { tight: 1.55, normal: 1.75, loose: 1.95 } as const;
 
+export const READING_FONT_SIZE_MIN = 16;
+export const READING_FONT_SIZE_MAX = 24;
+export const READING_FONT_SIZE_OPTIONS = [16, 18, 20, 22, 24] as const;
+
+export function clampReadingFontSize(value: number): number {
+  return Math.min(READING_FONT_SIZE_MAX, Math.max(READING_FONT_SIZE_MIN, Math.round(value)));
+}
+
 type Rgb = [number, number, number];
 
 const parseHex = (value: string): Rgb => {
@@ -130,7 +138,7 @@ export function mapAppearanceTokens(preferences: AppearanceThemePreferences) {
         : '160ms cubic-bezier(0.4, 0, 0.2, 1)',
     },
     reading: {
-      fontSize: Math.min(18, Math.max(14, preferences.readingFontSize)),
+      fontSize: clampReadingFontSize(preferences.readingFontSize),
       lineHeight: READING_LINE_HEIGHT[preferences.readingLineHeight],
       columnWidth: preferences.readingColumnWidth,
       fontFamily: fonts.body,

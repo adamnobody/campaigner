@@ -13,6 +13,7 @@ import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import { MapToolbar } from './components/MapToolbar';
+import { MapLayersPanel, MapLegendPanel } from './components/MapCanvasOverlays';
 import { MapMarkerDialog } from './components/MapMarkerDialog';
 import { MapSceneContainerDialog } from './components/MapSceneContainerDialog';
 import { MapMarkerPanel } from './components/MapMarkerPanel';
@@ -160,6 +161,7 @@ export function CanvasPage() {
   const [sceneTree, setSceneTree] = useState<CanvasScene[]>([]);
   const [navigationStack, setNavigationStack] = useState<NavigationEntry[]>([]);
   const [layers, setLayers] = useState<CanvasLayer[]>([]);
+  const [updatingLayerId, setUpdatingLayerId] = useState<number | null>(null);
   const [objects, setObjects] = useState<CanvasObject[]>([]);
   const [selectedObjectId, setSelectedObjectId] = useState<number | null>(null);
   const [mode, setMode] = useState<CanvasMode>('select');
@@ -236,6 +238,12 @@ export function CanvasPage() {
     list = mergeCurveTextGeometryDraft(list, curveTextGeometryDraft);
     return list;
   }, [objects, territoryEditSession, curveTextGeometryDraft]);
+  const legendObjects = useMemo(() => {
+    const hiddenLayerIds = new Set(
+      layers.filter((layer) => layer.isHidden).map((layer) => layer.id),
+    );
+    return canvasObjects.filter((object) => !hiddenLayerIds.has(object.layerId));
+  }, [canvasObjects, layers]);
 
   const inlineEditObject = useMemo(
     () => (inlineTextEdit
@@ -485,6 +493,31 @@ export function CanvasPage() {
     }
     return layer;
   }, [layers, projectIdNumber, scene]);
+
+  const toggleLayerVisibility = useCallback(async (layer: CanvasLayer) => {
+    setUpdatingLayerId(layer.id);
+    try {
+      const updated = await trackCanvasWrite(canvasApi.updateLayer({
+        id: layer.id,
+        name: null,
+        kind: null,
+        zIndex: null,
+        isHidden: !layer.isHidden,
+        isLocked: null,
+        opacity: null,
+        blendMode: null,
+        metadataJson: null,
+      }, projectIdNumber));
+      setLayers((current) => current.map((item) => (
+        item.id === updated.id ? updated : item
+      )));
+    } catch (error) {
+      console.error('[Canvas] update layer visibility failed', { layerId: layer.id, error });
+      showSnackbar(t('map:canvas.layers.updateError'), 'error');
+    } finally {
+      setUpdatingLayerId(null);
+    }
+  }, [projectIdNumber, showSnackbar, t]);
 
   const persistObject = useCallback(async (object: CanvasObject) => {
     if (!scene) return;
@@ -1363,7 +1396,19 @@ export function CanvasPage() {
   }
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        overflow: 'hidden',
+        pt: { xs: 2, md: 3.25 },
+        pr: { xs: 2, md: 4 },
+        pb: { xs: 2, md: 4 },
+        pl: { xs: 2, md: 6 },
+      }}
+    >
       <MapToolbar
         sceneName={scene.name}
         sceneType={scene.sceneType}
@@ -1410,14 +1455,14 @@ export function CanvasPage() {
 
       <Typography
         variant="caption"
-        sx={{ color: 'text.secondary', px: 0.5, mb: 0.25, display: 'block', fontSize: '0.76rem', lineHeight: 1.45 }}
+        sx={{ color: 'text.secondary', mb: 0.25, display: 'block', fontSize: '0.78rem', lineHeight: 1.55 }}
       >
         {canvasModeHint}
       </Typography>
       <Typography
         variant="caption"
         component="div"
-        sx={{ color: 'text.disabled', px: 0.5, mb: territoryEditSession ? 0.5 : 1, fontFamily: theme.campaigner.typography.mono, fontSize: '0.62rem', lineHeight: 1.4 }}
+        sx={{ color: 'text.disabled', mb: territoryEditSession ? 0.5 : 1.5, fontFamily: theme.campaigner.typography.mono, fontSize: '0.6rem', lineHeight: 1.4 }}
       >
         {t('map:page.modeShortcutsHint')}
       </Typography>
@@ -1442,9 +1487,12 @@ export function CanvasPage() {
           flex: 1,
           minHeight: 0,
           overflow: 'hidden',
-          borderRadius: '14px',
+          borderRadius: '12px',
           border: `1px solid ${theme.campaigner.surface.border}`,
-          background: '#111820',
+          backgroundColor: '#0e1116',
+          backgroundImage: `radial-gradient(${alpha(theme.palette.text.primary, 0.075)} 1px, transparent 1px)`,
+          backgroundSize: '38px 38px',
+          backgroundPosition: '19px 19px',
         }}
       >
         <PixiMapCanvas
@@ -1486,6 +1534,20 @@ export function CanvasPage() {
           onLargeBackgroundStatus={setLargeBackgroundStatus}
           onContextMenu={setContextMenu}
         />
+
+        {!selectedObject && !inlineTextEdit ? (
+          <>
+            <MapLayersPanel
+              layers={layers}
+              objects={objects}
+              updatingLayerId={updatingLayerId}
+              onToggle={(layer) => {
+                void toggleLayerVisibility(layer);
+              }}
+            />
+            {isMapScene(scene.sceneType) ? <MapLegendPanel objects={legendObjects} /> : null}
+          </>
+        ) : null}
 
         {inlineTextEdit && inlineEditObject && (
           <MapInlineTextEditor
