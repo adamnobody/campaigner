@@ -129,7 +129,11 @@ pub fn list_factions(
     }
     if let Some(search) = input.search.as_deref().filter(|value| !value.is_empty()) {
         let like = format!("%{search}%");
-        where_clauses.push("(f.name LIKE ? OR f.motto LIKE ? OR f.description LIKE ?)".to_string());
+        where_clauses.push(
+            "(f.name LIKE ? OR f.motto LIKE ? OR f.description LIKE ? OR f.headquarters LIKE ?)"
+                .to_string(),
+        );
+        params_vec.push(SqlValue::Text(like.clone()));
         params_vec.push(SqlValue::Text(like.clone()));
         params_vec.push(SqlValue::Text(like.clone()));
         params_vec.push(SqlValue::Text(like));
@@ -172,9 +176,13 @@ pub fn list_factions(
             f.created_at,
             f.updated_at,
             f.created_branch_id,
-            pf.name AS parent_faction_name
+            pf.name AS parent_faction_name,
+            d.name AS ruling_dynasty_name,
+            c.name AS ruler_name
         FROM factions f
         LEFT JOIN factions pf ON pf.id = f.parent_faction_id
+        LEFT JOIN dynasties d ON d.id = f.ruling_dynasty_id
+        LEFT JOIN characters c ON c.id = f.ruler_character_id
         WHERE {}
         ORDER BY f.sort_order ASC, f.name ASC
         "#,

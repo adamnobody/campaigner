@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -16,28 +16,27 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import SearchIcon from '@mui/icons-material/Search';
 import GroupsIcon from '@mui/icons-material/Groups';
 import CastleIcon from '@mui/icons-material/Castle';
-import PeopleIcon from '@mui/icons-material/People';
 import PublicIcon from '@mui/icons-material/Public';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import ShieldIcon from '@mui/icons-material/Shield';
+import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { factionsApi } from '@/api/factions';
+import { mapApi } from '@/api/maps';
 import { useFactionStore } from '@/store/useFactionStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useCharacterStore } from '@/store/useCharacterStore';
 import { useDynastyStore } from '@/store/useDynastyStore';
-import { useTimelineStore } from '@/store/useTimelineStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssetAvatar } from '@/components/ui/AssetAvatar';
-import { GlassCard } from '@/components/ui/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { routes } from '@/utils/routes';
 import {
@@ -47,34 +46,46 @@ import {
 } from '@/components/ui/CampaignerPrimitives';
 import { CatalogAside, CatalogColumns } from '@/components/catalog/CatalogLayout';
 import {
-  FACTION_KIND_ICONS,
   FACTION_STATUS_ICONS,
   FACTION_STATUSES,
-  FACTION_TYPE_ICONS,
-  STATE_TYPE_ICONS,
 } from '@campaigner/shared';
-import type { Faction } from '@campaigner/shared';
+import type { Faction, MapTerritorySummary } from '@campaigner/shared';
 
-const PAGE_SIZE = 40;
+const PAGE_SIZE = 500;
 
 type FactionEntityType = 'state' | 'faction';
+type SortKey = 'name' | 'place';
 
 interface FactionsPageProps {
   entityType?: FactionEntityType;
 }
 
+const STATE_TYPE_CHIPS = [
+  { id: '', labelKey: 'factions:list.filters.all' },
+  { id: 'kingdom', labelKey: 'factions:list.filters.kingdoms' },
+  { id: 'republic', labelKey: 'factions:list.filters.republics' },
+  { id: 'city_state', labelKey: 'factions:list.filters.cities' },
+] as const;
+
+const FACTION_TYPE_CHIPS = [
+  { id: '', labelKey: 'factions:list.filters.all' },
+  { id: 'order', labelKey: 'factions:list.filters.orders' },
+  { id: 'guild', labelKey: 'factions:list.filters.guilds' },
+  { id: 'cult', labelKey: 'factions:list.filters.cults' },
+] as const;
+
 export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'faction' }) => {
-  const { t } = useTranslation(['factions', 'common', 'navigation']);
+  const { t, i18n } = useTranslation(['factions', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
   const theme = useTheme();
   const {
     factions,
-    total,
     loading,
-    loadingMore,
     fetchFactions,
+    fetchRelations,
+    relations,
     deleteFaction,
   } = useFactionStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
@@ -83,20 +94,23 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
   const characters = useCharacterStore((s) => s.characters);
   const fetchDynasties = useDynastyStore((s) => s.fetchDynasties);
   const dynasties = useDynastyStore((s) => s.dynasties);
-  const fetchEvents = useTimelineStore((s) => s.fetchEvents);
-  const events = useTimelineStore((s) => s.events);
 
   const isStatePage = entityType === 'state';
   const listTitle = isStatePage ? t('factions:list.titleStates') : t('factions:list.titleFactions');
   const createLabel = isStatePage ? t('factions:list.createState') : t('factions:list.createFaction');
+  const collator = useMemo(
+    () => new Intl.Collator(i18n.language.startsWith('ru') ? 'ru' : 'en', { sensitivity: 'base' }),
+    [i18n.language],
+  );
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [sortBy, setSortBy] = useState<SortKey>('name');
   const [totalUnfiltered, setTotalUnfiltered] = useState(0);
+  const [linkedOtherCount, setLinkedOtherCount] = useState(0);
+  const [territories, setTerritories] = useState<MapTerritorySummary[]>([]);
   const [initialized, setInitialized] = useState(false);
-
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const statusColors: Record<string, string> = useMemo(
     () => ({
@@ -109,67 +123,104 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
     [theme]
   );
 
-  const loadFactions = useCallback(
-    async (append = false) => {
-      const offset = append ? useFactionStore.getState().factions.length : 0;
-      await fetchFactions(pid, {
-        kind: entityType,
-        status: filterStatus || undefined,
-        search: debouncedSearch || undefined,
-        limit: PAGE_SIZE,
-        offset,
-        append,
-      });
-      setInitialized(true);
-    },
-    [debouncedSearch, entityType, fetchFactions, filterStatus, pid, activeBranchId]
-  );
+  const loadFactions = useCallback(async () => {
+    await fetchFactions(pid, {
+      kind: entityType,
+      limit: PAGE_SIZE,
+    });
+    setTotalUnfiltered(useFactionStore.getState().total);
+    setInitialized(true);
+  }, [entityType, fetchFactions, pid, activeBranchId]);
 
   useEffect(() => {
-    fetchFactions(pid, { kind: entityType, limit: 1, offset: 0 }).then(() => {
-      setTotalUnfiltered(useFactionStore.getState().total);
-    });
-  }, [entityType, fetchFactions, pid, activeBranchId]);
+    setInitialized(false);
+    void loadFactions();
+  }, [loadFactions]);
 
   useEffect(() => {
     void fetchCharacters(pid, { limit: 500 });
     void fetchDynasties(pid);
-    void fetchEvents(pid);
-  }, [pid, fetchCharacters, fetchDynasties, fetchEvents, activeBranchId]);
+    void fetchRelations(pid);
+    mapApi
+      .getTerritorySummariesForProject(pid)
+      .then((res) => setTerritories(res.data.data || []))
+      .catch(() => setTerritories([]));
+    factionsApi
+      .getAll(pid, { kind: isStatePage ? 'faction' : 'state', limit: 1 })
+      .then((res) => setLinkedOtherCount(res.data.total || 0))
+      .catch(() => setLinkedOtherCount(0));
+  }, [pid, fetchCharacters, fetchDynasties, fetchRelations, activeBranchId, isStatePage]);
 
-  useEffect(() => {
-    setInitialized(false);
-    loadFactions(false);
-  }, [loadFactions]);
+  const typeLabel = useCallback((entity: Faction) => {
+    if (!entity.type) return '';
+    return entity.kind === 'state'
+      ? t(`factions:stateTypes.${entity.type}`, { defaultValue: entity.type })
+      : t(`factions:factionTypes.${entity.type}`, { defaultValue: entity.type });
+  }, [t]);
 
-  useEffect(() => {
-    if (observerRef.current) observerRef.current.disconnect();
+  const rulerNameOf = useCallback((entity: Faction) => {
+    if (entity.ruler?.name && entity.ruler.name !== '—') return entity.ruler.name;
+    return characters.find((character) => character.id === entity.rulerCharacterId)?.name || '';
+  }, [characters]);
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        const state = useFactionStore.getState();
-        if (
-          entries[0].isIntersecting &&
-          !state.loadingMore &&
-          !state.loading &&
-          state.factions.length < state.total
-        ) {
-          loadFactions(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
+  const displayed = useMemo(() => {
+    const query = debouncedSearch.trim().toLowerCase();
+    const items = factions.filter((entity) => {
+      if (filterType && entity.type !== filterType) return false;
+      if (!isStatePage && filterStatus && entity.status !== filterStatus) return false;
+      if (!query) return true;
+      const haystack = [
+        entity.name,
+        entity.headquarters,
+        entity.motto,
+        typeLabel(entity),
+        rulerNameOf(entity),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+    return [...items].sort((a, b) => {
+      if (sortBy === 'place') {
+        return collator.compare(a.headquarters || '', b.headquarters || '');
+      }
+      return collator.compare(a.name, b.name);
+    });
+  }, [collator, debouncedSearch, factions, filterStatus, filterType, isStatePage, rulerNameOf, sortBy, typeLabel]);
 
-    if (sentinelRef.current) {
-      observerRef.current.observe(sentinelRef.current);
-    }
+  const entityIds = useMemo(() => new Set(factions.map((item) => item.id)), [factions]);
+  const onCanvasCount = useMemo(() => {
+    const ids = new Set<number>();
+    territories.forEach((territory) => {
+      if (territory.factionId != null && entityIds.has(territory.factionId)) {
+        ids.add(territory.factionId);
+      }
+    });
+    return ids.size;
+  }, [entityIds, territories]);
+  const allianceCount = useMemo(() => {
+    const ids = new Set<number>();
+    relations.forEach((relation) => {
+      if (relation.relationType !== 'alliance') return;
+      if (entityIds.has(relation.sourceFactionId)) ids.add(relation.sourceFactionId);
+      if (entityIds.has(relation.targetFactionId)) ids.add(relation.targetFactionId);
+    });
+    return ids.size;
+  }, [entityIds, relations]);
+  const conflictCount = useMemo(() => {
+    const ids = new Set<number>();
+    relations.forEach((relation) => {
+      if (relation.relationType !== 'war') return;
+      if (entityIds.has(relation.sourceFactionId)) ids.add(relation.sourceFactionId);
+      if (entityIds.has(relation.targetFactionId)) ids.add(relation.targetFactionId);
+    });
+    return ids.size;
+  }, [entityIds, relations]);
 
-    return () => observerRef.current?.disconnect();
-  }, [loadFactions]);
-
-  const hasFilters = !!(debouncedSearch || filterStatus);
+  const hasFilters = !!(debouncedSearch || filterType || (!isStatePage && filterStatus));
   const clearFilters = () => {
     setSearch('');
+    setFilterType('');
     setFilterStatus('');
   };
 
@@ -189,20 +240,8 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
     );
   };
 
-  const getSubtitle = (entity: Faction): string => {
-    const parts: string[] = [];
-    if (entity.type) {
-      const typeLabel =
-        entity.kind === 'state'
-          ? t(`factions:stateTypes.${entity.type}`)
-          : t(`factions:factionTypes.${entity.type}`);
-      const icons = entity.kind === 'state' ? STATE_TYPE_ICONS : FACTION_TYPE_ICONS;
-      parts.push(`${icons[entity.type] || ''} ${typeLabel}`.trim());
-    }
-    if (entity.motto) parts.push(`«${entity.motto}»`);
-    if (entity.headquarters) parts.push(`📍 ${entity.headquarters}`);
-    return parts.join(' · ');
-  };
+  const typeChips = isStatePage ? STATE_TYPE_CHIPS : FACTION_TYPE_CHIPS;
+  const emptyCell = t('factions:list.emptyValue');
 
   if (!initialized && loading) {
     return (
@@ -218,19 +257,28 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
         aside={(
           <CatalogAside
             summaryTitle={t('common:catalog.summary')}
-            summary={[
+            summary={isStatePage ? [
+              { label: t('factions:list.aside.summaryTotal'), value: totalUnfiltered },
+              { label: t('factions:list.aside.summaryOnCanvas'), value: onCanvasCount },
+              { label: t('factions:list.aside.summaryAlliances'), value: allianceCount },
+              { label: t('factions:list.aside.summaryConflicts'), value: conflictCount },
+            ] : [
               { label: t('factions:list.aside.summaryTotal'), value: totalUnfiltered },
               { label: t('factions:list.aside.summaryActive'), value: factions.filter((item) => item.status === 'active').length },
-              { label: t('factions:list.aside.summaryRuler'), value: factions.filter((item) => item.rulerCharacterId).length },
-              { label: t('factions:list.aside.summaryDynasty'), value: factions.filter((item) => item.rulingDynastyId).length },
+              { label: t('factions:list.aside.summaryOnCanvas'), value: onCanvasCount },
+              { label: t('factions:list.aside.summaryAlliances'), value: allianceCount },
             ]}
             storedTitle={t('common:catalog.storedTitle')}
             storedBody={t(isStatePage ? 'factions:list.aside.storedBodyStates' : 'factions:list.aside.storedBodyFactions')}
             linkedTitle={t('common:catalog.linkedTitle')}
-            linked={[
+            linked={isStatePage ? [
+              { label: t('navigation:menu.dynasties'), value: dynasties.length },
+              { label: t('navigation:menu.factions'), value: linkedOtherCount },
+              { label: t('navigation:menu.map'), value: territories.length },
+            ] : [
               { label: t('navigation:menu.characters'), value: characters.length },
               { label: t('navigation:menu.dynasties'), value: dynasties.length },
-              { label: t('navigation:menu.timeline'), value: events.length },
+              { label: t('navigation:menu.states'), value: linkedOtherCount },
             ]}
           />
         )}
@@ -264,7 +312,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
             placeholder={isStatePage ? t('factions:list.searchStates') : t('factions:list.searchFactions')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            sx={{ flexGrow: 1, maxWidth: 400 }}
+            sx={{ flexGrow: 1, minWidth: 220, maxWidth: 360 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -275,14 +323,49 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
             size="small"
           />
 
-          <FormControl size="small" sx={{ minWidth: 180 }}>
-            <Select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} displayEmpty>
-              <MenuItem value="">{t('factions:list.anyStatus')}</MenuItem>
-              {FACTION_STATUSES.map((status) => (
-                <MenuItem key={status} value={status}>
-                  {FACTION_STATUS_ICONS[status]} {t(`factions:factionStatuses.${status}`)}
-                </MenuItem>
-              ))}
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            {typeChips.map((chip) => {
+              const selected = filterType === chip.id;
+              return (
+                <Chip
+                  key={chip.labelKey}
+                  clickable
+                  label={t(chip.labelKey)}
+                  onClick={() => setFilterType(chip.id)}
+                  variant={selected ? 'filled' : 'outlined'}
+                  sx={{
+                    height: 28,
+                    fontWeight: selected ? 600 : 500,
+                    color: selected ? 'primary.main' : 'text.secondary',
+                    backgroundColor: selected ? alpha(theme.palette.primary.main, 0.16) : 'transparent',
+                    borderColor: selected
+                      ? alpha(theme.palette.primary.main, 0.45)
+                      : alpha(theme.palette.divider, 0.7),
+                  }}
+                />
+              );
+            })}
+          </Box>
+
+          {!isStatePage ? (
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <Select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} displayEmpty>
+                <MenuItem value="">{t('factions:list.anyStatus')}</MenuItem>
+                {FACTION_STATUSES.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {FACTION_STATUS_ICONS[status]} {t(`factions:factionStatuses.${status}`)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : null}
+
+          <FormControl size="small" sx={{ minWidth: 150, ml: { md: 'auto' } }}>
+            <Select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortKey)}>
+              <MenuItem value="name">{t('factions:list.sortByName')}</MenuItem>
+              <MenuItem value="place">
+                {isStatePage ? t('factions:list.sortByCapital') : t('factions:list.sortByHeadquarters')}
+              </MenuItem>
             </Select>
           </FormControl>
 
@@ -297,8 +380,8 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
             </Button>
           )}
 
-          <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
-            {t('factions:list.count', { shown: factions.length, total })}
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {t('factions:list.count', { shown: displayed.length, total: totalUnfiltered })}
           </Typography>
       </CampaignerSurface>
 
@@ -323,231 +406,192 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
             templatesTitle={t('factions:list.templates.title')}
             templates={(isStatePage
               ? [
-                  ['kingdom', <CastleIcon key="kingdom" />],
-                  ['empire', <PublicIcon key="empire" />],
-                  ['city', <LocationCityIcon key="city" />],
+                  { key: 'kingdom', icon: <CastleIcon /> },
+                  { key: 'empire', icon: <PublicIcon /> },
+                  { key: 'city', icon: <LocationCityIcon /> },
                 ]
               : [
-                  ['order', <ShieldIcon key="order" />],
-                  ['guild', <StorefrontIcon key="guild" />],
-                  ['cult', <LocalFireDepartmentIcon key="cult" />],
+                  { key: 'order', icon: <ShieldIcon /> },
+                  { key: 'guild', icon: <StorefrontIcon /> },
+                  { key: 'cult', icon: <LocalFireDepartmentIcon /> },
                 ]
-            ).map(([key, icon]) => ({
-              icon,
-              title: t(`factions:list.templates.${isStatePage ? 'states' : 'factions'}.${key}.title`),
-              description: t(`factions:list.templates.${isStatePage ? 'states' : 'factions'}.${key}.description`),
+            ).map((item) => ({
+              icon: item.icon,
+              title: t(`factions:list.templates.${isStatePage ? 'states' : 'factions'}.${item.key}.title`),
+              description: t(`factions:list.templates.${isStatePage ? 'states' : 'factions'}.${item.key}.description`),
               onClick: () => navigate(routes.factionDetail(pid, entityType, 'new')),
             }))}
           />
         )
+      ) : displayed.length === 0 ? (
+        <EmptyState
+          icon={<SearchIcon sx={{ fontSize: 64 }} />}
+          title={t('factions:list.emptyFilteredTitle')}
+          description={t('factions:list.emptyFilteredDescription')}
+          actionLabel={t('factions:list.resetFilters')}
+          onAction={clearFilters}
+        />
       ) : (
-        <>
+        <CampaignerSurface sx={{ overflow: 'hidden' }}>
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, 1fr)',
-                xl: 'repeat(3, 1fr)',
+                xs: 'minmax(0, 1fr)',
+                md: isStatePage
+                  ? 'minmax(280px, 2.4fr) minmax(140px, 1fr) minmax(160px, 1fr) 40px'
+                  : 'minmax(280px, 2.4fr) minmax(140px, 1fr) minmax(140px, 1fr) 40px',
               },
-              gap: 2.25,
+              gap: 2,
+              px: 2,
+              py: 1.25,
+              borderBottom: `1px solid ${theme.campaigner.surface.border}`,
             }}
           >
-            {factions.map((entity) => {
-              const statusColor = statusColors[entity.status] || theme.palette.primary.main;
-              const entityColor = entity.color || statusColor;
-              const subtitle = getSubtitle(entity);
-              return (
-                <GlassCard
-                  interactive
-                  key={entity.id}
-                  onClick={() => navigate(routes.factionDetail(pid, entity.kind, entity.id))}
-                  sx={{
-                    p: 0,
-                    minHeight: 220,
-                    overflow: 'hidden',
-                    borderRadius: 3,
-                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-                    background: `linear-gradient(145deg, ${alpha(entityColor, 0.08)}, ${alpha(
-                      theme.palette.background.paper,
-                      0.4
-                    )} 48%)`,
-                    '&:hover': {
-                      '& .entity-actions': { opacity: 1 },
-                      '& .entity-avatar': { transform: 'translateY(-2px) scale(1.03)' },
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      height: 5,
-                      background: entity.color
-                        ? `linear-gradient(90deg, ${entity.color}, ${entity.secondaryColor || entity.color})`
-                        : `linear-gradient(90deg, ${statusColor}, transparent)`,
-                    }}
-                  />
-
-                  <Box sx={{ p: 2.75 }}>
-                    <Box display="flex" gap={2} alignItems="flex-start">
-                      <AssetAvatar
-                        className="entity-avatar"
-                        assetPath={entity.imagePath}
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          borderRadius: 2.5,
-                          bgcolor: alpha(entityColor, 0.1),
-                          color: entityColor,
-                          border: `1px solid ${alpha(entityColor, 0.35)}`,
-                          fontSize: '2rem',
-                          flexShrink: 0,
-                          transition: 'transform 180ms ease',
-                        }}
-                        variant="rounded"
-                      >
-                        {(entity.type
-                          ? (entity.kind === 'state' ? STATE_TYPE_ICONS[entity.type] : FACTION_TYPE_ICONS[entity.type])
-                          : FACTION_KIND_ICONS[entity.kind]) || '🏴'}
-                      </AssetAvatar>
-
-                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                        <Typography
-                          sx={{
-                            fontFamily: theme.campaigner.typography.display,
-                            fontWeight: 600,
-                            color: 'text.primary',
-                            fontSize: '1.45rem',
-                            lineHeight: 1.1,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {entity.name}
-                        </Typography>
-
-                        {subtitle && (
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: 'text.secondary',
-                              fontSize: '0.77rem',
-                              mt: 0.5,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {subtitle}
-                          </Typography>
-                        )}
-
-                        <Box display="flex" gap={0.75} mt={1.25} flexWrap="wrap" alignItems="center">
-                          <Chip
-                            label={`${FACTION_STATUS_ICONS[entity.status] || ''} ${t(`factions:factionStatuses.${entity.status}`)}`.trim()}
-                            size="small"
-                            sx={{
-                              height: 22,
-                              fontSize: '0.68rem',
-                              fontWeight: 600,
-                              backgroundColor: alpha(statusColor, 0.15),
-                              color: statusColor,
-                              borderRadius: 1,
-                            }}
-                          />
-                          {(entity.memberCount ?? 0) > 0 && (
-                            <Chip
-                              icon={<PeopleIcon sx={{ fontSize: '14px !important', color: 'inherit !important' }} />}
-                              label={entity.memberCount}
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: '0.65rem',
-                                backgroundColor: alpha(theme.palette.text.secondary, 0.1),
-                                color: 'text.secondary',
-                                borderRadius: 1,
-                                '& .MuiChip-icon': { ml: '4px' },
-                              }}
-                            />
-                          )}
-                          {entity.parentFaction && (
-                            <Chip
-                              label={`↑ ${entity.parentFaction.name}`}
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: '0.6rem',
-                                backgroundColor: alpha(theme.palette.primary.main, 0.15),
-                                color: theme.palette.primary.main,
-                                borderRadius: 1,
-                              }}
-                            />
-                          )}
-                        </Box>
-                      </Box>
-
-                      <Box
-                        className="entity-actions"
-                        display="flex"
-                        flexDirection="column"
-                        gap={0}
-                        sx={{ opacity: 0, transition: 'opacity 0.15s', flexShrink: 0 }}
-                      >
-                        <Tooltip title={t('factions:list.tooltipOpen')}>
-                          <IconButton size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={t('factions:list.tooltipDelete')}>
-                          <IconButton
-                            size="small"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleDelete(entity.id, entity.name);
-                            }}
-                            sx={{
-                              color: theme.palette.error.main,
-                              '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) },
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
-
-                    {entity.description && (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: 'text.secondary',
-                          fontSize: '0.82rem',
-                          lineHeight: 1.65,
-                          mt: 2,
-                          pt: 1.5,
-                          borderTop: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
-                      >
-                        {entity.description}
-                      </Typography>
-                    )}
-                  </Box>
-                </GlassCard>
-              );
-            })}
+            <Typography sx={{ color: 'text.disabled', fontSize: '0.62rem', letterSpacing: '.14em', textTransform: 'uppercase' }}>
+              {isStatePage ? t('factions:list.columns.state') : t('factions:list.columns.faction')}
+            </Typography>
+            <Typography sx={{ color: 'text.disabled', fontSize: '0.62rem', letterSpacing: '.14em', textTransform: 'uppercase', display: { xs: 'none', md: 'block' } }}>
+              {isStatePage ? t('factions:list.columns.capital') : t('factions:list.columns.headquarters')}
+            </Typography>
+            <Typography sx={{ color: 'text.disabled', fontSize: '0.62rem', letterSpacing: '.14em', textTransform: 'uppercase', display: { xs: 'none', md: 'block' } }}>
+              {isStatePage ? t('factions:list.columns.ruler') : t('factions:list.columns.status')}
+            </Typography>
+            <span />
           </Box>
 
-          {factions.length < total && (
-            <Box ref={sentinelRef} sx={{ py: 3, textAlign: 'center' }}>
-              {loadingMore && <Typography sx={{ color: 'text.secondary' }}>{t('factions:list.loadingMore')}</Typography>}
-            </Box>
-          )}
-        </>
+          {displayed.map((entity, index) => {
+            const entityColor = entity.color || theme.palette.primary.main;
+            const statusColor = statusColors[entity.status] || theme.palette.primary.main;
+            const typeText = typeLabel(entity);
+            const rulerName = rulerNameOf(entity);
+            return (
+              <Box
+                key={entity.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(routes.factionDetail(pid, entity.kind, entity.id))}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate(routes.factionDetail(pid, entity.kind, entity.id));
+                  }
+                }}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(0, 1fr) 40px',
+                    md: isStatePage
+                      ? 'minmax(280px, 2.4fr) minmax(140px, 1fr) minmax(160px, 1fr) 40px'
+                      : 'minmax(280px, 2.4fr) minmax(140px, 1fr) minmax(140px, 1fr) 40px',
+                  },
+                  gap: 2,
+                  alignItems: 'center',
+                  px: 2,
+                  py: 1.5,
+                  cursor: 'pointer',
+                  borderTop: index ? `1px solid ${alpha(theme.palette.divider, 0.45)}` : 0,
+                  transition: 'background-color 160ms ease',
+                  '&:hover, &:focus-visible': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                    outline: 'none',
+                    '& .entity-actions': { opacity: 1 },
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75, minWidth: 0 }}>
+                  <AssetAvatar
+                    assetPath={entity.imagePath}
+                    variant="rounded"
+                    sx={{
+                      width: 72,
+                      height: 72,
+                      flexShrink: 0,
+                      borderRadius: 2,
+                      bgcolor: alpha(entityColor, 0.1),
+                      color: entityColor,
+                      border: entity.imagePath
+                        ? `1px solid ${alpha(entityColor, 0.28)}`
+                        : `1px dashed ${alpha(theme.palette.primary.main, 0.28)}`,
+                    }}
+                  >
+                    {entity.imagePath ? null : <ShieldOutlinedIcon sx={{ fontSize: 32 }} />}
+                  </AssetAvatar>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontFamily: theme.campaigner.typography.display,
+                        fontWeight: 600,
+                        fontSize: '1.2rem',
+                        lineHeight: 1.15,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {entity.name}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: 'text.secondary',
+                        fontSize: '0.78rem',
+                        mt: 0.4,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {typeText || emptyCell}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Typography sx={{ color: 'text.secondary', fontSize: '0.88rem', display: { xs: 'none', md: 'block' } }}>
+                  {entity.headquarters?.trim() || emptyCell}
+                </Typography>
+
+                {isStatePage ? (
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.88rem', display: { xs: 'none', md: 'block' } }}>
+                    {rulerName || emptyCell}
+                  </Typography>
+                ) : (
+                  <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                    <Chip
+                      label={`${FACTION_STATUS_ICONS[entity.status] || ''} ${t(`factions:factionStatuses.${entity.status}`)}`.trim()}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.68rem',
+                        fontWeight: 600,
+                        backgroundColor: alpha(statusColor, 0.15),
+                        color: statusColor,
+                        borderRadius: 1,
+                      }}
+                    />
+                  </Box>
+                )}
+
+                <Box className="entity-actions" sx={{ opacity: 0, transition: 'opacity 0.15s' }}>
+                  <Tooltip title={t('factions:list.tooltipDelete')}>
+                    <IconButton
+                      size="small"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDelete(entity.id, entity.name);
+                      }}
+                      sx={{
+                        color: theme.palette.error.main,
+                        '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.1) },
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+            );
+          })}
+        </CampaignerSurface>
       )}
       </CatalogColumns>
     </CampaignerPage>

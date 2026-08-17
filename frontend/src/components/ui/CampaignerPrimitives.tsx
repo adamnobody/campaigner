@@ -67,7 +67,7 @@ export function CampaignerPageHeader({
         {eyebrow ? (
           <Typography
             variant="overline"
-            sx={{ display: 'block', color: 'text.disabled', pb: 1 }}
+            sx={{ display: 'block', color: 'primary.main', pb: 1 }}
           >
             {eyebrow}
           </Typography>

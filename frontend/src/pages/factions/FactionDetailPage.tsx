@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box, Typography, TextField, Button,
   Avatar, IconButton, Chip,
   Select, MenuItem, FormControl, InputLabel,
   List, ListItem, ListItemText, ListItemAvatar,
-  Grid,
+  Grid, Collapse,
   Dialog, DialogTitle, DialogContent, DialogActions,
   alpha, useTheme,
   Autocomplete,
@@ -23,12 +23,19 @@ import StarIcon from '@mui/icons-material/Star';
 import LinkIcon from '@mui/icons-material/Link';
 import PersonIcon from '@mui/icons-material/Person';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
+import PublicIcon from '@mui/icons-material/Public';
+import PaletteIcon from '@mui/icons-material/Palette';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { factionsApi } from '@/api/factions';
 import { dynastiesApi } from '@/api/dynasties';
 import { mapApi } from '@/api/maps';
 import { charactersApi } from '@/api/characters';
+import { notesApi } from '@/api/notes';
+import { uploadsApi } from '@/api/uploads';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useMapTerritoriesRefreshStore } from '@/store/useMapTerritoriesRefreshStore';
@@ -44,17 +51,23 @@ import { MetricInput } from '@/pages/factions/components/MetricInput';
 import { CustomMetricsEditor } from '@/pages/factions/components/CustomMetricsEditor';
 import { FactionCompareDialog } from '@/pages/factions/components/FactionCompareDialog';
 import { FactionPoliticalScalesSection } from '@/pages/factions/components/FactionPoliticalScalesSection';
-import { AssetAvatar } from '@/components/ui/AssetAvatar';
-import { GlassCard } from '@/components/ui/GlassCard';
+import { CoatOfArmsDropzone } from '@/pages/factions/components/CoatOfArmsDropzone';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TabFade } from '@/components/ui/MotionSwitch';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
+import { EntityPickerDialog } from '@/components/document-editor/EntityPickerDialog';
+import { WorldTextEditor, type DocumentEntity, type WorldTextEditorHandle } from '@/components/document-editor/WorldTextEditor';
 import {
-  FACTION_KIND_ICONS,
+  CampaignerFieldRow,
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
+import { resolveUploadAssetUrl } from '@/utils/uploadAssetUrl';
+import {
   FACTION_TYPES,
-  FACTION_TYPE_ICONS,
-  FACTION_STATUSES, FACTION_STATUS_ICONS,
-  STATE_TYPES, STATE_TYPE_ICONS,
+  FACTION_STATUSES,
+  STATE_TYPES,
   FACTION_RELATION_COLORS,
   POLICY_TYPES,
   POLICY_STATUSES,
@@ -75,8 +88,6 @@ import type {
 import { shallow } from 'zustand/shallow';
 import { routes } from '@/utils/routes';
 import { isNotFoundError } from '@/utils/error';
-import { useAssetUrl } from '@/hooks/useAssetUrl';
-
 // ==================== Types ====================
 
 interface FactionForm {
@@ -130,12 +141,84 @@ type RulerOption =
 
 // ==================== Helpers ====================
 
-const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+const STATUS_DOT: Record<string, string> = {
+  active: 'success.main',
+  disbanded: 'text.disabled',
+  secret: 'info.main',
+  exiled: 'warning.main',
+  destroyed: 'error.main',
+};
+
+const InfoRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => {
   const theme = useTheme();
   return (
     <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{label}</Typography>
-      <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>{value}</Typography>
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>
+        {label}
+      </Typography>
+      <Typography variant="body2" component="div" sx={{ color: 'text.primary', fontWeight: 500 }}>
+        {value}
+      </Typography>
+    </Box>
+  );
+};
+
+const SelectPlaceholder: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Typography component="span" sx={{ color: 'text.disabled' }}>{children}</Typography>
+);
+
+const StatusLabel: React.FC<{ status: string; label: string }> = ({ status, label }) => (
+  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: STATUS_DOT[status] ?? 'text.disabled' }} />
+    <span>{label}</span>
+  </Box>
+);
+
+const ArticleSection: React.FC<{
+  title: string;
+  icon: React.ReactNode;
+  defaultOpen?: boolean;
+  badge?: number;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, icon, defaultOpen = true, badge, action, children }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Box sx={{ mb: 3.75 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
+        <Box
+          component="button"
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          sx={{
+            minWidth: 0,
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.25,
+            p: 0,
+            border: 0,
+            color: 'text.primary',
+            background: 'none',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <Box sx={{ display: 'flex', color: 'primary.main', '& svg': { fontSize: 18 } }}>{icon}</Box>
+          <Typography variant="h5" sx={{ flex: 1, fontSize: '1.45rem' }}>{title}</Typography>
+          {badge ? <Chip label={badge} size="small" /> : null}
+          <ExpandMoreIcon
+            sx={{
+              color: 'text.secondary',
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 160ms ease',
+            }}
+          />
+        </Box>
+        {action && open ? <Box>{action}</Box> : null}
+      </Box>
+      <Collapse in={open}>{children}</Collapse>
     </Box>
   );
 };
@@ -147,7 +230,7 @@ interface FactionDetailPageProps {
 }
 
 export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType = 'faction' }) => {
-  const { t } = useTranslation(['factions', 'common']);
+  const { t } = useTranslation(['factions', 'common', 'notes']);
   const { projectId, factionId } = useParams<{ projectId: string; factionId: string }>();
   const pid = parseInt(projectId!);
   const isNew = !factionId || factionId === 'new';
@@ -247,10 +330,27 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const [territoryOptions, setTerritoryOptions] = useState<MapTerritorySummary[]>([]);
   const [rulerInput, setRulerInput] = useState('');
   const [creatingRuler, setCreatingRuler] = useState(false);
+  const [pendingCoatFile, setPendingCoatFile] = useState<File | null>(null);
+  const [pendingCoatPreview, setPendingCoatPreview] = useState<string | null>(null);
+  const [overviewHydrated, setOverviewHydrated] = useState(isNew);
+  const [entityOpen, setEntityOpen] = useState(false);
+  const [wikiNotes, setWikiNotes] = useState<{ id: number; title: string }[]>([]);
+  const editorRef = useRef<WorldTextEditorHandle>(null);
   /** Поля формы и тело PUT по маршруту, не по `currentFaction.kind` (иначе теряются state-only поля). */
   const resolvedEntityType: 'state' | 'faction' = normalizedEntityType;
   const isStateEntity = resolvedEntityType === 'state';
-  const resolvedBannerUrl = useAssetUrl(currentFaction?.bannerPath);
+  const clearPendingCoat = useCallback(() => {
+    setPendingCoatPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setPendingCoatFile(null);
+  }, []);
+  const pendingCoatPreviewRef = useRef<string | null>(null);
+  pendingCoatPreviewRef.current = pendingCoatPreview;
+  useEffect(() => () => {
+    if (pendingCoatPreviewRef.current) URL.revokeObjectURL(pendingCoatPreviewRef.current);
+  }, []);
   const closeMissingBranchEntity = useCallback(() => {
     setBranchMissingDialogOpen(false);
     setCurrentFaction(null);
@@ -268,7 +368,6 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   }, [pid, activeBranchId, fetchTags, fetchCharacters, fetchFactions, fetchRelations]);
 
   useEffect(() => {
-    if (normalizedEntityType !== 'state') return;
     let cancelled = false;
 
     dynastiesApi
@@ -287,10 +386,18 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       })
       .catch(() => {});
 
+    notesApi
+      .getAll(pid, { noteType: 'wiki', limit: 500 })
+      .then((res) => {
+        if (cancelled) return;
+        setWikiNotes((res.data.data.items || []).map((note) => ({ id: note.id, title: note.title })));
+      })
+      .catch(() => {});
+
     return () => {
       cancelled = true;
     };
-  }, [pid, normalizedEntityType, activeBranchId]);
+  }, [pid, activeBranchId]);
 
   useEffect(() => {
     if (isNew) {
@@ -298,11 +405,14 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       setCurrentFaction(null);
       setTagsInput('');
       setCustomMetrics([]);
+      setOverviewHydrated(true);
       if (normalizedEntityType === 'state') {
         setRulerInput('');
       }
       return;
     }
+    setOverviewHydrated(false);
+    clearPendingCoat();
     fetchFaction(pid, parseInt(factionId!)).catch((error: unknown) => {
       if (isNotFoundError(error)) {
         setCurrentFaction(null);
@@ -311,7 +421,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
       }
       showSnackbar(t('factions:snackbar.loadError'), 'error');
     });
-  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, setCurrentFaction, t, pid, activeBranchId]);
+  }, [entityType, factionId, isNew, normalizedEntityType, fetchFaction, showSnackbar, setCurrentFaction, t, pid, activeBranchId, clearPendingCoat]);
 
   useEffect(() => {
     if (isNew || !fid) {
@@ -403,6 +513,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     } else {
       setRulerInput('');
     }
+    setOverviewHydrated(true);
   }, [currentFaction, factionId, isNew, resolvedEntityType]);
 
   // ==================== Helpers ====================
@@ -479,7 +590,6 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
   const currentRanks: FactionRank[] = currentFaction?.ranks || [];
   const currentMembers: FactionMember[] = currentFaction?.members || [];
   const factionRelations = useMemo(() => fid ? relations.filter(r => r.sourceFactionId === fid || r.targetFactionId === fid) : [], [relations, fid]);
-  const previewTagsStr = mergeTagValues(form.tagsStr, tagsInput);
 
   const relationsForDisplay = useMemo(() => factionRelations.map(rel => {
     const isOut = rel.sourceFactionId === fid;
@@ -494,6 +604,110 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     const kind = target?.kind === 'state' ? 'state' : 'faction';
     return routes.factionDetail(pid, kind, targetId);
   };
+
+  const typeLabel = (typeKey: string) =>
+    isStateEntity
+      ? t(`factions:stateTypes.${typeKey}`, { defaultValue: typeKey })
+      : t(`factions:factionTypes.${typeKey}`, { defaultValue: typeKey });
+  const statusLabel = (statusKey: string) =>
+    t(`factions:factionStatuses.${statusKey}`, { defaultValue: statusKey });
+  const selectedTerritories = territoryOptions.filter((terr) => form.territoryIds.includes(terr.id));
+  const parentFaction = parentFactions.find((item) => String(item.id) === form.parentFactionId);
+  const rulingDynasty = dynastiesList.find((item) => String(item.id) === form.rulingDynastyId);
+
+  const mentionItems: DocumentEntity[] = useMemo(() => [
+    ...allCharacters.map((character) => ({
+      id: `character:${character.id}`,
+      label: character.name,
+      href: routes.characterDetail(pid, character.id),
+      group: t('factions:detail.connectionKinds.character'),
+    })),
+    ...factions
+      .filter((item) => item.id !== fid)
+      .map((item) => ({
+        id: `${item.kind}:${item.id}`,
+        label: item.name,
+        href: routes.factionDetail(pid, item.kind === 'state' ? 'state' : 'faction', item.id),
+        group: t(`factions:detail.connectionKinds.${item.kind === 'state' ? 'state' : 'faction'}`),
+      })),
+    ...dynastiesList.map((dynasty) => ({
+      id: `dynasty:${dynasty.id}`,
+      label: dynasty.name,
+      href: routes.dynastyDetail(pid, dynasty.id),
+      group: t('factions:detail.connectionKinds.dynasty'),
+    })),
+    ...wikiNotes.map((note) => ({
+      id: `wiki:${note.id}`,
+      label: note.title,
+      href: `/project/${pid}/wiki/${note.id}`,
+      group: t('factions:detail.connectionKinds.wiki'),
+    })),
+  ], [allCharacters, dynastiesList, factions, fid, pid, t, wikiNotes]);
+
+  const slashItems = useMemo(() => [
+    { id: 'heading', label: t('notes:editor.slashHeading') },
+    { id: 'list', label: t('notes:editor.slashList') },
+    { id: 'quote', label: t('notes:editor.slashQuote') },
+    { id: 'entity-link', label: t('notes:editor.slashEntity') },
+    { id: 'image', label: t('notes:editor.slashImage') },
+    { id: 'hr', label: t('notes:editor.slashHr') },
+  ], [t]);
+
+  const overviewConnections = useMemo(() => {
+    const items: Array<{
+      id: string;
+      name: string;
+      hint: string;
+      kind: string;
+      href?: string;
+    }> = [];
+    if (form.rulerCharacterId != null && form.rulerName) {
+      items.push({
+        id: `ruler-${form.rulerCharacterId}`,
+        name: form.rulerName,
+        hint: t('factions:detail.summary.ruler'),
+        kind: t('factions:detail.connectionKinds.character'),
+        href: routes.characterDetail(pid, form.rulerCharacterId),
+      });
+    }
+    if (rulingDynasty) {
+      items.push({
+        id: `dynasty-${rulingDynasty.id}`,
+        name: rulingDynasty.name,
+        hint: t('factions:detail.fields.dynasty'),
+        kind: t('factions:detail.connectionKinds.dynasty'),
+        href: routes.dynastyDetail(pid, rulingDynasty.id),
+      });
+    }
+    if (parentFaction) {
+      items.push({
+        id: `parent-${parentFaction.id}`,
+        name: parentFaction.name,
+        hint: isStateEntity ? t('factions:detail.fields.parentState') : t('factions:detail.fields.parentFaction'),
+        kind: t(`factions:detail.connectionKinds.${parentFaction.kind === 'state' ? 'state' : 'faction'}`),
+        href: resolveEntityPath(parentFaction.id),
+      });
+    }
+    relationsForDisplay.forEach((rel) => {
+      items.push({
+        id: `rel-${rel.id}`,
+        name: rel.otherName,
+        hint: rel.customLabel || t(`factions:relationTypes.${rel.relationType}`, { defaultValue: rel.relationType }),
+        kind: t('factions:detail.connectionKinds.faction'),
+        href: resolveEntityPath(rel.otherId),
+      });
+    });
+    return items;
+  }, [
+    form.rulerCharacterId,
+    form.rulerName,
+    isStateEntity,
+    parentFaction,
+    pid,
+    relationsForDisplay,
+    rulingDynasty,
+    t,
+  ]);
 
   const sortedFactionPolicies = useMemo(
     () => [...factionPolicies].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)),
@@ -578,7 +792,8 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         history: form.history.trim(), goals: form.goals.trim(),
         headquarters: form.headquarters.trim(),
         ...filteredMetricsPayload,
-        status: form.status, color: form.color.trim(), secondaryColor: form.secondaryColor.trim(),
+        status: resolvedEntityType === 'state' ? 'active' : form.status,
+        color: form.color.trim(), secondaryColor: form.secondaryColor.trim(),
         foundedDate: form.foundedDate.trim(), disbandedDate: form.disbandedDate.trim(),
         parentFactionId: form.parentFactionId ? parseInt(form.parentFactionId) : null,
       };
@@ -607,6 +822,14 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         const created = await createFaction({ ...payload, projectId: pid } as Parameters<typeof createFaction>[0]);
         await replaceCustomMetrics(created.id, { metrics: preparedCustomMetrics });
         if (finalTags.trim()) await saveTagsForFaction(created.id, finalTags);
+        if (pendingCoatFile) {
+          try {
+            await uploadImage(created.id, pendingCoatFile);
+          } catch {
+            showSnackbar(t('factions:snackbar.genericError'), 'error');
+          }
+          clearPendingCoat();
+        }
         setTagsInput('');
         bumpMapTerritories();
         mapApi.getTerritorySummariesForProject(pid).then((res) => setTerritoryOptions(res.data.data || [])).catch(() => {});
@@ -636,9 +859,21 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     });
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file || isNew) return;
-    try { await uploadImage(fid, file); showSnackbar(t('factions:snackbar.coatUploaded'), 'success'); } catch { showSnackbar(t('factions:snackbar.genericError'), 'error'); }
+  const applyCoatFile = async (file: File) => {
+    if (isNew) {
+      setPendingCoatPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
+      });
+      setPendingCoatFile(file);
+      return;
+    }
+    try {
+      await uploadImage(fid, file);
+      showSnackbar(t('factions:snackbar.coatUploaded'), 'success');
+    } catch {
+      showSnackbar(t('factions:snackbar.genericError'), 'error');
+    }
   };
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || isNew) return;
@@ -789,377 +1024,172 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
     );
   }
   const detailTitle = isNew
-    ? isStateEntity
-      ? t('factions:detail.newTitleState')
-      : t('factions:detail.newTitleFaction')
-    : form.name || (isStateEntity ? t('factions:detail.fallbackNameState') : t('factions:detail.fallbackNameFaction'));
+    ? (isStateEntity ? t('factions:detail.newTitleState') : t('factions:detail.newTitleFaction'))
+    : (form.name.trim()
+      || (isStateEntity ? t('factions:detail.fallbackNameState') : t('factions:detail.fallbackNameFaction')));
+  const detailEyebrow = isNew
+    ? t(isStateEntity ? 'factions:detail.eyebrowDraftState' : 'factions:detail.eyebrowDraftFaction')
+    : [
+        t(`factions:entityKinds.${resolvedEntityType}`),
+        form.type ? typeLabel(form.type) : null,
+      ].filter(Boolean).join(' · ');
+  const detailDescription = isNew
+    ? t(isStateEntity ? 'factions:detail.createHintState' : 'factions:detail.createHintFaction')
+    : (form.motto ? `«${form.motto}»` : undefined);
 
   return (
-    <Box
-      sx={{
-        maxWidth: 1240,
-        mx: 'auto',
-        '& .MuiInputBase-root': { borderRadius: 2 },
-        '& .MuiListItem-root': { minHeight: 58 },
-      }}
-    >
-      <Box display="flex" alignItems="center" mb={2}>
-        <IconButton onClick={() => navigate(routes.factionList(pid, normalizedEntityType))} sx={{ mr: 1 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="body2" color="text.secondary">
-          {isStateEntity ? t('factions:detail.backToListState') : t('factions:detail.backToListFaction')}
-        </Typography>
-      </Box>
-
-      <Box
-        sx={{
-          position: 'relative',
-          minHeight: { xs: 260, md: 300 },
-          mb: 0,
-          border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
-          borderRadius: '18px 18px 0 0',
-          overflow: 'hidden',
-          background: resolvedBannerUrl
-            ? `linear-gradient(90deg, ${alpha(theme.palette.background.default, 0.97)} 0%, ${alpha(
-                theme.palette.background.default,
-                0.76
-              )} 62%, ${alpha(theme.palette.background.default, 0.24)}), url("${resolvedBannerUrl}") center/cover`
-            : `radial-gradient(circle at 82% 20%, ${alpha(form.color || theme.palette.primary.main, 0.2)}, transparent 42%), ${alpha(
-                theme.palette.background.paper,
-                0.45
-              )}`,
-        }}
+    <CampaignerPage maxWidth={1180}>
+      <Button
+        variant="text"
+        size="small"
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate(routes.factionList(pid, normalizedEntityType))}
+        sx={{ mt: 2 }}
       >
-        <Box
-          sx={{
-            minHeight: { xs: 260, md: 300 },
-            p: { xs: 3, md: 4 },
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            gap: 3,
-          }}
-        >
-          <Box sx={{ minWidth: 0, maxWidth: 760 }}>
-            <Typography
-              sx={{
-                mb: 1.5,
-                fontFamily: theme.campaigner.typography.mono,
-                fontSize: '0.67rem',
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: 'primary.main',
-              }}
-            >
-              {t(`factions:entityKinds.${resolvedEntityType}`)} ·{' '}
-              {isNew ? t('factions:detail.draft') : t(`factions:factionStatuses.${form.status}`)}
-            </Typography>
-            <Typography
-              sx={{
-                fontFamily: theme.campaigner.typography.display,
-                fontWeight: 600,
-                fontSize: { xs: '2.5rem', md: '3.5rem' },
-                lineHeight: 0.98,
-                color: 'text.primary',
-                textWrap: 'balance',
-              }}
-            >
-              {detailTitle}
-            </Typography>
-            <Typography
-              sx={{
-                mt: 1.5,
-                maxWidth: 650,
-                fontFamily: theme.campaigner.typography.display,
-                fontSize: '1.15rem',
-                fontStyle: form.motto ? 'italic' : 'normal',
-                color: 'text.secondary',
-                lineHeight: 1.55,
-              }}
-            >
-              {form.motto
-                ? `«${form.motto}»`
-                : isNew
-                  ? t(isStateEntity ? 'factions:detail.createHintState' : 'factions:detail.createHintFaction')
-                  : t(`factions:entityKinds.${resolvedEntityType}`)}
-            </Typography>
-            <Box display="flex" gap={1} mt={3} flexWrap="wrap">
-              {!isNew && (
-                <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">
-                  {t('common:delete')}
-                </Button>
-              )}
-              <DndButton
-                variant="contained"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                loading={saving}
-                disabled={!form.name.trim()}
-              >
-                {isNew ? t('common:create') : t('common:save')}
-              </DndButton>
-            </Box>
-          </Box>
+        {isStateEntity ? t('factions:detail.backToListState') : t('factions:detail.backToListFaction')}
+      </Button>
 
-          <Box sx={{ display: { xs: 'none', sm: 'block' }, flexShrink: 0 }}>
-            {currentFaction?.imagePath ? (
-              <AssetAvatar
-                assetPath={currentFaction.imagePath}
-                sx={{
-                  width: 156,
-                  height: 156,
-                  borderRadius: 3,
-                  border: `1px solid ${alpha(form.color || theme.palette.primary.main, 0.55)}`,
-                  boxShadow: `0 20px 50px ${alpha(theme.palette.common.black, 0.4)}`,
-                }}
-                variant="rounded"
-              />
-            ) : (
-              <Avatar
-                sx={{
-                  width: 156,
-                  height: 156,
-                  borderRadius: 3,
-                  bgcolor: alpha(form.color || theme.palette.primary.main, 0.12),
-                  border: `1px dashed ${alpha(theme.palette.text.secondary, 0.35)}`,
-                  color: form.color || theme.palette.primary.main,
-                  fontSize: '3.4rem',
-                }}
-                variant="rounded"
-              >
-                {(
-                  (form.type
-                    ? resolvedEntityType === 'state'
-                      ? STATE_TYPE_ICONS[form.type]
-                      : FACTION_TYPE_ICONS[form.type]
-                    : null) || FACTION_KIND_ICONS[resolvedEntityType]
-                ) || '🏴'}
-              </Avatar>
-            )}
-          </Box>
-        </Box>
-      </Box>
+      <CampaignerPageHeader
+        eyebrow={detailEyebrow}
+        title={detailTitle}
+        description={detailDescription}
+        actions={
+          <>
+            {!isNew ? (
+              <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete} size="small">
+                {t('common:delete')}
+              </Button>
+            ) : null}
+            <DndButton
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={handleSave}
+              loading={saving}
+              disabled={!form.name.trim()}
+            >
+              {isNew ? t('common:create') : t('common:save')}
+            </DndButton>
+          </>
+        }
+      />
 
-      <Box
-        sx={{
-          mb: 3.5,
-          px: { xs: 1, md: 2.5 },
-          border: `1px solid ${alpha(theme.palette.divider, 0.55)}`,
-          borderTop: 0,
-          borderRadius: '0 0 14px 14px',
-          bgcolor: alpha(theme.palette.background.paper, 0.32),
-        }}
-      >
-        <Tabs
-          value={activeTab}
-          onChange={(_, value) => setActiveTab(value)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            minHeight: 52,
-            '& .MuiTabs-indicator': { height: 2, bgcolor: 'primary.main' },
-            '& .MuiTab-root': {
-              minHeight: 52,
-              px: 2,
-              fontSize: '0.78rem',
-              fontWeight: 500,
-              textTransform: 'none',
-              color: 'text.secondary',
-            },
-            '& .Mui-selected': { color: 'text.primary' },
-          }}
-        >
-          <Tab value="overview" label={t('factions:detail.tabs.overview')} />
-          <Tab value="structure" label={t('factions:detail.tabs.structure')} />
-          <Tab value="ambitions" label={t('factions:detail.tabs.ambitions')} />
-          <Tab value="politics" label={t('factions:detail.tabs.politics')} />
-          <Tab value="metrics" label={t('factions:detail.tabs.metrics')} />
-        </Tabs>
-      </Box>
+      <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)} variant="scrollable" scrollButtons="auto" sx={{ mb: 4 }}>
+        <Tab value="overview" label={t('factions:detail.tabs.overview')} />
+        <Tab value="structure" label={t('factions:detail.tabs.structure')} />
+        <Tab value="ambitions" label={t('factions:detail.tabs.ambitions')} />
+        <Tab value="politics" label={t('factions:detail.tabs.politics')} />
+        <Tab value="metrics" label={t('factions:detail.tabs.metrics')} />
+      </Tabs>
 
       <TabFade tab={activeTab}>
       {activeTab === 'overview' && (
-        <Box display="flex" gap={{ xs: 3, md: 5 }} sx={{ flexDirection: { xs: 'column', md: 'row' } }}>
-          <Box sx={{ width: { xs: '100%', md: 296 }, flexShrink: 0, order: { xs: 1, md: 2 } }}>
-            <GlassCard
-              sx={{
-                p: 2.5,
-                position: 'sticky',
-                top: 80,
-                borderRadius: 3,
-                bgcolor: alpha(theme.palette.background.paper, 0.3),
-                border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-              }}
-            >
-              <Typography
-                sx={{
-                  mb: 2,
-                  fontFamily: theme.campaigner.typography.mono,
-                  fontSize: '0.67rem',
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  color: 'text.secondary',
-                }}
-              >
-                {t('factions:detail.summary.title')}
-              </Typography>
-              
-              {!isNew && (
-                <Box display="flex" gap={1} mb={3}>
-                  <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small" sx={{ fontSize: '0.75rem', borderColor: alpha(theme.palette.divider, 0.5) }}>
-                    {t('factions:detail.summary.coatOfArms')}<input type="file" hidden accept="image/*" onChange={handleImageUpload} />
-                  </Button>
-                  <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small" sx={{ fontSize: '0.75rem', borderColor: alpha(theme.palette.divider, 0.5) }}>
-                    {t('factions:detail.summary.banner')}<input type="file" hidden accept="image/*" onChange={handleBannerUpload} />
-                  </Button>
-                </Box>
-              )}
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <InfoRow
-                  label={t('factions:detail.summary.entityKind')}
-                  value={`${FACTION_KIND_ICONS[resolvedEntityType] || ''} ${t(`factions:entityKinds.${resolvedEntityType}`)}`}
-                />
-                {form.type && (
-                  <InfoRow
-                    label={t('factions:detail.summary.type')}
-                    value={
-                      isStateEntity
-                        ? `${STATE_TYPE_ICONS[form.type] || ''} ${t(`factions:stateTypes.${form.type}`, { defaultValue: form.type })}`.trim()
-                        : `${FACTION_TYPE_ICONS[form.type] || ''} ${t(`factions:factionTypes.${form.type}`, { defaultValue: form.type })}`.trim()
-                    }
-                  />
-                )}
-                {form.status && (
-                  <InfoRow
-                    label={t('factions:detail.summary.status')}
-                    value={`${FACTION_STATUS_ICONS[form.status] || ''} ${t(`factions:factionStatuses.${form.status}`, { defaultValue: form.status })}`}
-                  />
-                )}
-                {isStateEntity && currentFaction?.ruler && (
-                  <Box sx={{ mb: 0.5, pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{t('factions:detail.summary.ruler')}</Typography>
-                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>
-                      <Link component={RouterLink} to={routes.characterDetail(pid, currentFaction.ruler.id)} underline="hover" color="inherit">
-                        {currentFaction.ruler.name}
-                      </Link>
-                    </Typography>
-                  </Box>
-                )}
-                {form.headquarters && (
-                  <InfoRow
-                    label={isStateEntity ? t('factions:detail.summary.capital') : t('factions:detail.summary.headquarters')}
-                    value={form.headquarters}
-                  />
-                )}
-                {(currentFaction?.territories?.length ?? 0) > 0 && (
-                  <Box sx={{ pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2, mb: 0.5 }}>{t('factions:detail.summary.territories')}</Typography>
-                    <Box display="flex" gap={0.5} flexWrap="wrap">
-                      {currentFaction!.territories!.map((terr) => (
-                        <Chip key={terr.id} label={terr.name} size="small" sx={{ height: 24, fontSize: '0.75rem' }} />
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-                {form.foundedDate && <InfoRow label={t('factions:detail.summary.founded')} value={form.foundedDate} />}
-                {form.disbandedDate && <InfoRow label={t('factions:detail.summary.disbanded')} value={form.disbandedDate} />}
-                {previewTagsStr.trim() && (
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>{t('factions:detail.summary.tags')}</Typography>
-                    <Box display="flex" gap={0.5} flexWrap="wrap">
-                      {previewTagsStr.split(',').map((tagPart, i) => { const s = tagPart.trim(); return s ? <Chip key={i} label={s} size="small" sx={{ height: 24, fontSize: '0.75rem' }} /> : null; })}
-                    </Box>
-                  </Box>
-                )}
-              </Box>
-            </GlassCard>
-          </Box>
-
-          <Box sx={{ flexGrow: 1, minWidth: 0, order: { xs: 2, md: 1 } }}>
-            <Section title={t('factions:detail.sections.basics')} icon={<EditIcon />} defaultOpen={true}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}><TextField fullWidth label={t('factions:detail.fields.name')} value={form.name} onChange={e => handleChange('name', e.target.value)} /></Grid>
-                <Grid item xs={12} sm={6}><TextField fullWidth label={t('factions:detail.fields.motto')} value={form.motto} onChange={e => handleChange('motto', e.target.value)} placeholder={t('factions:detail.placeholders.motto')} /></Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth><InputLabel>{t('factions:detail.fields.type')}</InputLabel>
-                    <Select value={form.type} label={t('factions:detail.fields.type')} onChange={e => handleChange('type', e.target.value)}>
-                      <MenuItem value="">{t('factions:detail.typeNotSet')}</MenuItem>
-                      {semanticTypeOptions.map((typeKey) => (
-                        <MenuItem key={typeKey} value={typeKey}>
-                          {isStateEntity
-                            ? `${STATE_TYPE_ICONS[typeKey] || ''} ${t(`factions:stateTypes.${typeKey}`, { defaultValue: typeKey })}`.trim()
-                            : `${FACTION_TYPE_ICONS[typeKey] || ''} ${t(`factions:factionTypes.${typeKey}`, { defaultValue: typeKey })}`.trim()}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth><InputLabel>{t('factions:detail.fields.status')}</InputLabel>
-                    <Select value={form.status} label={t('factions:detail.fields.status')} onChange={e => handleChange('status', e.target.value)}>
-                      {FACTION_STATUSES.map((s) => (
-                        <MenuItem key={s} value={s}>
-                          {FACTION_STATUS_ICONS[s]} {t(`factions:factionStatuses.${s}`, { defaultValue: s })}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 720px) 296px' },
+            gap: { xs: 4, lg: 6.5 },
+            alignItems: 'start',
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <ArticleSection title={t('factions:detail.sections.basics')} icon={<EditIcon />}>
+              <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                <CampaignerFieldRow label={t('factions:detail.fields.name')}>
                   <TextField
                     fullWidth
-                    label={isStateEntity ? t('factions:detail.summary.capital') : t('factions:detail.summary.headquarters')}
-                    value={form.headquarters}
-                    onChange={e => handleChange('headquarters', e.target.value)}
+                    required
+                    variant="standard"
+                    value={form.name}
+                    onChange={(event) => handleChange('name', event.target.value)}
+                    placeholder={isStateEntity ? t('factions:detail.placeholders.nameState') : t('factions:detail.placeholders.nameFaction')}
+                    inputProps={{ 'aria-label': t('factions:detail.fields.name') }}
                   />
-                </Grid>
-                {isStateEntity && (
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('factions:detail.fields.motto')}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.motto}
+                    onChange={(event) => handleChange('motto', event.target.value)}
+                    placeholder={t('factions:detail.placeholders.motto')}
+                    inputProps={{ 'aria-label': t('factions:detail.fields.motto') }}
+                  />
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('factions:detail.fields.type')}>
+                  <Select
+                    fullWidth
+                    displayEmpty
+                    variant="standard"
+                    value={form.type}
+                    onChange={(event) => handleChange('type', event.target.value)}
+                    renderValue={(value) =>
+                      value
+                        ? typeLabel(String(value))
+                        : (
+                          <SelectPlaceholder>
+                            {isStateEntity
+                              ? t('factions:detail.placeholders.typeState')
+                              : t('factions:detail.placeholders.typeFaction')}
+                          </SelectPlaceholder>
+                        )
+                    }
+                    inputProps={{ 'aria-label': t('factions:detail.fields.type') }}
+                  >
+                    <MenuItem value="">{t('factions:detail.typeNotSet')}</MenuItem>
+                    {semanticTypeOptions.map((typeKey) => (
+                      <MenuItem key={typeKey} value={typeKey}>{typeLabel(typeKey)}</MenuItem>
+                    ))}
+                  </Select>
+                </CampaignerFieldRow>
+                {!isStateEntity ? (
+                <CampaignerFieldRow label={t('factions:detail.fields.status')}>
+                  <Select
+                    fullWidth
+                    variant="standard"
+                    value={form.status}
+                    onChange={(event) => handleChange('status', event.target.value)}
+                    renderValue={(value) => (
+                      <StatusLabel status={String(value)} label={statusLabel(String(value))} />
+                    )}
+                    inputProps={{ 'aria-label': t('factions:detail.fields.status') }}
+                  >
+                    {FACTION_STATUSES.map((statusKey) => (
+                      <MenuItem key={statusKey} value={statusKey}>
+                        <StatusLabel status={statusKey} label={statusLabel(statusKey)} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </CampaignerFieldRow>
+                ) : null}
+                <CampaignerFieldRow label={isStateEntity ? t('factions:detail.summary.capital') : t('factions:detail.summary.headquarters')}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.headquarters}
+                    onChange={(event) => handleChange('headquarters', event.target.value)}
+                    placeholder={isStateEntity ? t('factions:detail.placeholders.capital') : t('factions:detail.placeholders.headquarters')}
+                  />
+                </CampaignerFieldRow>
+                {isStateEntity ? (
                   <>
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth>
-                        <InputLabel>{t('factions:detail.fields.dynasty')}</InputLabel>
-                        <Select
-                          value={form.rulingDynastyId}
-                          label={t('factions:detail.fields.dynasty')}
-                          onChange={(e) =>
-                            setForm((prev) => ({ ...prev, rulingDynastyId: e.target.value as string }))
-                          }
-                        >
-                          <MenuItem value="">{t('factions:detail.dynastyNotChosen')}</MenuItem>
-                          {dynastiesList.map((d) => (
-                            <MenuItem key={d.id} value={String(d.id)}>{d.name}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <CampaignerFieldRow label={t('factions:detail.summary.ruler')}>
                       <Autocomplete<RulerOption, false, false, false>
                         options={rulerOptions}
                         loading={creatingRuler}
                         value={rulerValue}
-                        onChange={async (_, v) => {
-                          if (v == null) {
-                            setForm((prev) => ({
-                              ...prev,
-                              rulerCharacterId: null,
-                              rulerName: '',
-                            }));
+                        onChange={async (_, value) => {
+                          if (value == null) {
+                            setForm((prev) => ({ ...prev, rulerCharacterId: null, rulerName: '' }));
                             setRulerInput('');
                             return;
                           }
-                          if (v.type === 'create') {
+                          if (value.type === 'create') {
                             setCreatingRuler(true);
                             try {
-                              const res = await charactersApi.create({ projectId: pid, name: v.name });
-                              const c = res.data.data;
-                              setForm((prev) => ({
-                                ...prev,
-                                rulerCharacterId: c.id,
-                                rulerName: c.name,
-                              }));
-                              setRulerInput(c.name);
+                              const res = await charactersApi.create({ projectId: pid, name: value.name });
+                              const created = res.data.data;
+                              setForm((prev) => ({ ...prev, rulerCharacterId: created.id, rulerName: created.name }));
+                              setRulerInput(created.name);
                               await fetchCharacters(pid, { limit: 500 });
                               showSnackbar(t('factions:snackbar.rulerCharacterCreated'), 'success');
                             } catch {
@@ -1169,27 +1199,24 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                             }
                             return;
                           }
-                          setForm((prev) => ({
-                            ...prev,
-                            rulerCharacterId: v.id,
-                            rulerName: v.name,
-                          }));
-                          setRulerInput(v.name);
+                          setForm((prev) => ({ ...prev, rulerCharacterId: value.id, rulerName: value.name }));
+                          setRulerInput(value.name);
                         }}
                         inputValue={rulerInput}
-                        onInputChange={(_, v, reason) => {
-                          if (reason === 'input') setRulerInput(v);
+                        onInputChange={(_, value, reason) => {
+                          if (reason === 'input') setRulerInput(value);
                           if (reason === 'clear') {
                             setRulerInput('');
-                            setForm((prev) => ({
-                              ...prev,
-                              rulerCharacterId: null,
-                              rulerName: '',
-                            }));
+                            setForm((prev) => ({ ...prev, rulerCharacterId: null, rulerName: '' }));
                           }
                         }}
-                        getOptionLabel={(o) =>
-                          o.type === 'create' ? t('factions:detail.rulerCreateOption', { name: o.name }) : o.name
+                        getOptionLabel={(option) =>
+                          option.type === 'create' ? t('factions:detail.rulerCreateOption', { name: option.name }) : option.name
+                        }
+                        noOptionsText={
+                          allCharacters.length === 0
+                            ? t('factions:detail.noOptions.charactersEmpty')
+                            : t('factions:detail.noOptions.charactersNone')
                         }
                         isOptionEqualToValue={(a, b) => {
                           if (a.type === 'create' && b.type === 'create') return a.name === b.name;
@@ -1208,116 +1235,402 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            label={t('factions:detail.summary.ruler')}
+                            variant="standard"
                             placeholder={t('factions:detail.placeholders.rulerSearch')}
                             disabled={creatingRuler}
                           />
                         )}
                       />
-                    </Grid>
+                    </CampaignerFieldRow>
+                    <CampaignerFieldRow label={t('factions:detail.fields.dynasty')}>
+                      <Autocomplete
+                        options={dynastiesList}
+                        value={rulingDynasty ?? null}
+                        onChange={(_, value) => {
+                          setForm((prev) => ({
+                            ...prev,
+                            rulingDynastyId: value ? String(value.id) : '',
+                          }));
+                        }}
+                        getOptionLabel={(option) => option.name}
+                        isOptionEqualToValue={(a, b) => a.id === b.id}
+                        noOptionsText={t('factions:detail.noOptions.dynasties')}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            variant="standard"
+                            placeholder={t('factions:detail.placeholders.dynasty')}
+                          />
+                        )}
+                      />
+                    </CampaignerFieldRow>
                   </>
-                )}
-                <Grid item xs={12}>
+                ) : null}
+              </CampaignerSurface>
+            </ArticleSection>
+
+            <ArticleSection title={t('factions:detail.sections.lands')} icon={<PublicIcon />}>
+              <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                <CampaignerFieldRow label={t('factions:detail.fields.territoryMap')} sx={{ alignItems: 'start' }}>
                   <Autocomplete<MapTerritorySummary, true, false, false>
                     multiple
                     options={territoryOptions}
-                    value={territoryOptions.filter((terr) => form.territoryIds.includes(terr.id))}
-                    onChange={(_, v) => handleTerritoriesMultiChange(v)}
-                    getOptionLabel={(o) => `${o.name} (${o.mapName})`}
+                    value={selectedTerritories}
+                    onChange={(_, value) => handleTerritoriesMultiChange(value)}
+                    getOptionLabel={(option) => `${option.name} (${option.mapName})`}
                     isOptionEqualToValue={(a, b) => a.id === b.id}
+                    noOptionsText={
+                      territoryOptions.length === 0
+                        ? t('factions:detail.noOptions.territoriesEmpty')
+                        : t('factions:detail.noOptions.territoriesNone')
+                    }
                     renderOption={(props, option) => {
                       const occupied = option.factionId != null && (isNew || option.factionId !== fid);
-                      const label =
-                        occupied && option.occupantName
-                          ? t('factions:detail.territoryOccupied', {
-                              name: option.name,
-                              mapName: option.mapName,
-                              occupant: option.occupantName,
-                            })
-                          : `${option.name} (${option.mapName})`;
+                      const label = occupied && option.occupantName
+                        ? t('factions:detail.territoryOccupied', {
+                            name: option.name,
+                            mapName: option.mapName,
+                            occupant: option.occupantName,
+                          })
+                        : `${option.name} (${option.mapName})`;
                       return (
                         <li {...props} key={option.id}>
-                          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                            <Typography variant="body2">{label}</Typography>
-                            {occupied && (
-                              <Chip
-                                size="small"
-                                label={t(
-                                  option.occupantKind === 'state'
-                                    ? 'factions:detail.territoryOccupantStateKind'
-                                    : 'factions:entityKinds.faction',
-                                )}
-                                variant="outlined"
-                                sx={{ height: 22, fontSize: '0.7rem' }}
-                              />
-                            )}
-                          </Box>
+                          <Typography variant="body2">{label}</Typography>
                         </li>
                       );
                     }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label={t('factions:detail.fields.territoryMap')}
+                        variant="standard"
                         placeholder={t('factions:detail.placeholders.territoryMap')}
                       />
                     )}
                     renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip {...getTagProps({ index })} key={option.id} size="small" label={option.name} />
-                      ))
+                      value.map((option, index) => {
+                        const occupant = factions.find((item) => item.id === option.factionId);
+                        const dot = occupant?.color || form.color || theme.palette.primary.main;
+                        return (
+                          <Chip
+                            {...getTagProps({ index })}
+                            key={option.id}
+                            size="small"
+                            label={
+                              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: dot }} />
+                                {option.name}
+                              </Box>
+                            }
+                          />
+                        );
+                      })
                     }
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}><TextField fullWidth label={t('factions:detail.fields.foundedDate')} value={form.foundedDate} onChange={e => handleChange('foundedDate', e.target.value)} /></Grid>
-                <Grid item xs={12} sm={6}><TextField fullWidth label={t('factions:detail.fields.disbandedDate')} value={form.disbandedDate} onChange={e => handleChange('disbandedDate', e.target.value)} /></Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>
-                      {isStateEntity ? t('factions:detail.fields.parentState') : t('factions:detail.fields.parentFaction')}
-                    </InputLabel>
-                    <Select
-                      value={form.parentFactionId}
-                      label={isStateEntity ? t('factions:detail.fields.parentState') : t('factions:detail.fields.parentFaction')}
-                      onChange={e => handleChange('parentFactionId', e.target.value)}
-                    >
-                      <MenuItem value="">{t('factions:detail.parentNone')}</MenuItem>
-                      {parentFactions.map((f) => (
-                        <MenuItem key={f.id} value={String(f.id)}>
-                          {FACTION_KIND_ICONS[f.kind] || '🏴'} {f.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={6} sm={3}><TextField fullWidth label={t('factions:detail.fields.primaryColor')} value={form.color || '#000000'} onChange={e => handleChange('color', e.target.value)} type="color" InputLabelProps={{ shrink: true }} /></Grid>
-                <Grid item xs={6} sm={3}><TextField fullWidth label={t('factions:detail.fields.secondaryColor')} value={form.secondaryColor || '#000000'} onChange={e => handleChange('secondaryColor', e.target.value)} type="color" InputLabelProps={{ shrink: true }} /></Grid>
-                <Grid item xs={12}>
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={isStateEntity ? t('factions:detail.fields.parentState') : t('factions:detail.fields.parentFaction')}>
+                  <Select
+                    fullWidth
+                    displayEmpty
+                    variant="standard"
+                    value={form.parentFactionId}
+                    onChange={(event) => handleChange('parentFactionId', event.target.value)}
+                    renderValue={(value) => {
+                      if (!value) {
+                        return (
+                          <SelectPlaceholder>
+                            {isStateEntity
+                              ? t('factions:detail.placeholders.parentState')
+                              : t('factions:detail.placeholders.parentFaction')}
+                          </SelectPlaceholder>
+                        );
+                      }
+                      return parentFactions.find((item) => String(item.id) === String(value))?.name
+                        || String(value);
+                    }}
+                  >
+                    <MenuItem value="">
+                      {isStateEntity ? t('factions:detail.parentIndependent') : t('factions:detail.parentNone')}
+                    </MenuItem>
+                    {parentFactions.length === 0 ? (
+                      <MenuItem disabled value="__empty">
+                        {isStateEntity
+                          ? t('factions:detail.noOptions.statesEmpty')
+                          : t('factions:detail.noOptions.factionsEmpty')}
+                      </MenuItem>
+                    ) : parentFactions.map((item) => (
+                      <MenuItem key={item.id} value={String(item.id)}>{item.name}</MenuItem>
+                    ))}
+                  </Select>
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('factions:detail.fields.foundedDate')}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.foundedDate}
+                    onChange={(event) => handleChange('foundedDate', event.target.value)}
+                  />
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('factions:detail.fields.disbandedDate')}>
+                  <TextField
+                    fullWidth
+                    variant="standard"
+                    value={form.disbandedDate}
+                    onChange={(event) => handleChange('disbandedDate', event.target.value)}
+                    placeholder="—"
+                  />
+                </CampaignerFieldRow>
+              </CampaignerSurface>
+            </ArticleSection>
+
+            <ArticleSection title={t('factions:detail.sections.identity')} icon={<PaletteIcon />}>
+              <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                <CampaignerFieldRow label={t('factions:detail.fields.primaryColor')}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '8px',
+                        bgcolor: form.color || '#4e8a6e',
+                        border: `1px solid ${theme.campaigner.surface.border}`,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      variant="standard"
+                      value={form.color}
+                      onChange={(event) => handleChange('color', event.target.value)}
+                    />
+                    <Box
+                      component="input"
+                      type="color"
+                      value={form.color || '#4e8a6e'}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => handleChange('color', event.target.value)}
+                      sx={{ width: 32, height: 32, border: 0, background: 'none', cursor: 'pointer', p: 0 }}
+                    />
+                  </Box>
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('factions:detail.fields.secondaryColor')}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '8px',
+                        bgcolor: form.secondaryColor || '#2a2a4a',
+                        border: `1px solid ${theme.campaigner.surface.border}`,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      variant="standard"
+                      value={form.secondaryColor}
+                      onChange={(event) => handleChange('secondaryColor', event.target.value)}
+                    />
+                    <Box
+                      component="input"
+                      type="color"
+                      value={form.secondaryColor || '#2a2a4a'}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => handleChange('secondaryColor', event.target.value)}
+                      sx={{ width: 32, height: 32, border: 0, background: 'none', cursor: 'pointer', p: 0 }}
+                    />
+                  </Box>
+                </CampaignerFieldRow>
+                <CampaignerFieldRow label={t('factions:detail.summary.tags')} sx={{ alignItems: 'start' }}>
                   <TagAutocompleteField
                     options={allTagNames}
                     value={form.tagsStr}
                     pendingInput={tagsInput}
-                    onValueChange={v => handleChange('tagsStr', v)}
+                    onValueChange={(value) => handleChange('tagsStr', value)}
                     onPendingInputChange={setTagsInput}
                     label={t('factions:tagField.label')}
                     placeholder={t('factions:tagField.placeholder')}
                     noOptionsText={t('factions:tagField.noOptions')}
                   />
-                </Grid>
-              </Grid>
-            </Section>
+                </CampaignerFieldRow>
+              </CampaignerSurface>
+            </ArticleSection>
 
-            <Section title={t('factions:detail.sections.history')} icon={<EditIcon />} defaultOpen={!isNew}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}><TextField fullWidth label={t('factions:detail.fields.description')} value={form.description} onChange={e => handleChange('description', e.target.value)} multiline rows={4} placeholder={t('factions:detail.placeholders.descriptionFaction')} /></Grid>
-                <Grid item xs={12}><TextField fullWidth label={t('factions:detail.fields.history')} value={form.history} onChange={e => handleChange('history', e.target.value)} multiline rows={6} placeholder={t('factions:detail.placeholders.history')} /></Grid>
-                <Grid item xs={12}><TextField fullWidth label={t('factions:detail.fields.goals')} value={form.goals} onChange={e => handleChange('goals', e.target.value)} multiline rows={4} placeholder={t('factions:detail.placeholders.goals')} /></Grid>
-              </Grid>
-            </Section>
+            <ArticleSection title={t('factions:detail.sections.history')} icon={<AutoStoriesIcon />}>
+              <CampaignerSurface sx={{ p: { xs: 2, md: 2.5 }, minHeight: 240 }}>
+                {overviewHydrated ? (
+                  <WorldTextEditor
+                    key={isNew ? 'new' : `faction-${fid}`}
+                    ref={editorRef}
+                    initialMarkdown={form.description}
+                    placeholder={t('factions:detail.placeholders.description')}
+                    slashTitle={t('notes:editor.slashTitle')}
+                    slashItems={slashItems}
+                    mentionItems={mentionItems}
+                    showSelectionToolbar
+                    onChange={(markdown) => handleChange('description', markdown)}
+                    onCommand={(id) => {
+                      if (id === 'entity-link') setEntityOpen(true);
+                    }}
+                    onUploadImage={async (file) => {
+                      const uploaded = await uploadsApi.uploadDocumentImage(file);
+                      const path = uploaded.data.data.path;
+                      return { path, url: (await resolveUploadAssetUrl(path)) || path };
+                    }}
+                    onNavigate={(href) => navigate(href)}
+                  />
+                ) : null}
+              </CampaignerSurface>
+              <Box sx={{ pt: 1.5 }}>
+                <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                  <CampaignerFieldRow label={t('factions:detail.fields.history')} sx={{ alignItems: 'start' }}>
+                    <TextField
+                      fullWidth
+                      variant="standard"
+                      value={form.history}
+                      onChange={(event) => handleChange('history', event.target.value)}
+                      multiline
+                      minRows={3}
+                      placeholder={t('factions:detail.placeholders.history')}
+                    />
+                  </CampaignerFieldRow>
+                  <CampaignerFieldRow label={t('factions:detail.fields.goals')} sx={{ alignItems: 'start' }}>
+                    <TextField
+                      fullWidth
+                      variant="standard"
+                      value={form.goals}
+                      onChange={(event) => handleChange('goals', event.target.value)}
+                      multiline
+                      minRows={2}
+                      placeholder={t('factions:detail.placeholders.goals')}
+                    />
+                  </CampaignerFieldRow>
+                </CampaignerSurface>
+              </Box>
+            </ArticleSection>
+
+            {overviewConnections.length > 0 || !isNew ? (
+              <ArticleSection
+                title={t('factions:detail.sections.relations')}
+                icon={<LinkIcon />}
+                badge={overviewConnections.length}
+                action={!isNew ? (
+                  <DndButton variant="outlined" startIcon={<AddIcon />} size="small" onClick={openRelationDialog}>
+                    {t('common:add')}
+                  </DndButton>
+                ) : undefined}
+              >
+                {overviewConnections.length === 0 ? (
+                  <EmptyState
+                    icon={<LinkIcon />}
+                    title={t('factions:relations.emptyTitle')}
+                    description={t('factions:relations.emptyDescription')}
+                    actionLabel={t('factions:relations.addLink')}
+                    onAction={openRelationDialog}
+                  />
+                ) : (
+                  <CampaignerSurface sx={{ overflow: 'hidden' }}>
+                    <List disablePadding>
+                      {overviewConnections.map((item, index) => (
+                        <ListItem
+                          key={item.id}
+                          onClick={item.href ? () => navigate(item.href!) : undefined}
+                          sx={{
+                            py: 1.5,
+                            px: 2.25,
+                            cursor: item.href ? 'pointer' : 'default',
+                            borderTop: index ? `1px solid ${theme.campaigner.surface.border}` : 0,
+                            '&:hover': item.href ? { backgroundColor: alpha(theme.palette.primary.main, 0.05) } : undefined,
+                          }}
+                        >
+                          <ListItemAvatar>
+                            <Avatar
+                              sx={{
+                                width: 36,
+                                height: 36,
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                color: 'primary.main',
+                              }}
+                            >
+                              <AccountTreeIcon sx={{ fontSize: 18 }} />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={item.name}
+                            secondary={item.hint}
+                            primaryTypographyProps={{ sx: { fontSize: '0.95rem' } }}
+                            secondaryTypographyProps={{ sx: { fontSize: '0.75rem' } }}
+                          />
+                          <Typography
+                            sx={{
+                              color: 'text.disabled',
+                              fontSize: '0.68rem',
+                              letterSpacing: '.12em',
+                              textTransform: 'uppercase',
+                              pl: 2,
+                            }}
+                          >
+                            {item.kind}
+                          </Typography>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </CampaignerSurface>
+                )}
+              </ArticleSection>
+            ) : null}
+          </Box>
+
+          <Box sx={{ position: { lg: 'sticky' }, top: { lg: 82 }, minWidth: 0 }}>
+            <CoatOfArmsDropzone
+              imagePath={currentFaction?.imagePath}
+              previewUrl={pendingCoatPreview}
+              label={isStateEntity ? t('factions:detail.summary.coatPlaceholderState') : t('factions:detail.summary.coatPlaceholderFaction')}
+              onFile={(file) => { void applyCoatFile(file); }}
+            />
+            {!isNew ? (
+              <Button component="label" variant="outlined" startIcon={<CloudUploadIcon />} fullWidth size="small" sx={{ mt: 1.25 }}>
+                {t('factions:detail.summary.banner')}
+                <input type="file" hidden accept="image/*" onChange={handleBannerUpload} />
+              </Button>
+            ) : null}
+
+            <Typography variant="overline" sx={{ color: 'text.secondary', display: 'block', pt: 3.25, pb: 1.25 }}>
+              {t('factions:detail.summary.title')}
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 1.25 }}>
+              <InfoRow
+                label={t('factions:detail.summary.type')}
+                value={form.type ? typeLabel(form.type) : t('factions:detail.summary.notSpecified')}
+              />
+              <InfoRow
+                label={isStateEntity ? t('factions:detail.summary.capital') : t('factions:detail.summary.headquarters')}
+                value={form.headquarters.trim() || t('factions:detail.summary.notSpecified')}
+              />
+              {isStateEntity ? (
+                <>
+                  <InfoRow
+                    label={t('factions:detail.summary.ruler')}
+                    value={
+                      form.rulerCharacterId != null && form.rulerName ? (
+                        <Link component={RouterLink} to={routes.characterDetail(pid, form.rulerCharacterId)} underline="hover" color="inherit">
+                          {form.rulerName}
+                        </Link>
+                      ) : t('factions:detail.summary.notSpecified')
+                    }
+                  />
+                  <InfoRow
+                    label={t('factions:detail.fields.dynasty')}
+                    value={rulingDynasty?.name || t('factions:detail.summary.notSpecified')}
+                  />
+                </>
+              ) : (
+                <InfoRow
+                  label={t('factions:detail.summary.status')}
+                  value={<StatusLabel status={form.status} label={statusLabel(form.status)} />}
+                />
+              )}
+            </Box>
           </Box>
         </Box>
       )}
-
       {activeTab === 'structure' && (
         <Box sx={{ maxWidth: 980, mx: 'auto' }}>
           {/* SECTION: Ranks */}
@@ -1765,6 +2078,16 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
         onCompare={(factionIds, metricKeys) => compareFactions({ factionIds, metricKeys })}
       />
 
+      <EntityPickerDialog
+        open={entityOpen}
+        title={t('notes:editor.pickEntity')}
+        items={mentionItems}
+        onClose={() => setEntityOpen(false)}
+        onPick={(item) => {
+          editorRef.current?.insertHtml(`<a class="entity-pill" href="${item.href}">${item.label}</a>&nbsp;`);
+          setEntityOpen(false);
+        }}
+      />
       <BranchEntityMissingDialog
         open={branchMissingDialogOpen}
         entityName={t(`factions:entityKinds.${resolvedEntityType}`).toLowerCase()}
@@ -1851,6 +2174,6 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </CampaignerPage>
   );
 };
