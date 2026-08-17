@@ -188,7 +188,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, 
           <IconButton onClick={handleClose} disabled={creating} aria-label={t('common:close')}><CloseIcon fontSize="small" /></IconButton>
         </Box>
 
-        <DialogContent sx={{ position: 'relative', zIndex: 1, backgroundColor: '#0e1116', px: { xs: 2.5, md: 4.25 }, py: 0 }}>
+        <DialogContent sx={{ position: 'relative', zIndex: 1, backgroundColor: '#0e1116', px: { xs: 2.5, md: 4.25 }, pt: 0.5, pb: 3.5 }}>
           <TabFade tab={String(step)}>
           {step === 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.25 }}>
@@ -255,10 +255,10 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, 
                 })}
                 <Box component="button" type="button" onClick={() => setCustomPaletteOpen(true)} sx={{ minHeight: 106, borderRadius: '12px', border: `1px dashed ${alpha(theme.palette.primary.main, 0.4)}`, bgcolor: alpha(theme.palette.primary.main, 0.04), color: 'primary.main', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Box><AddIcon /><Typography sx={{ fontSize: 11.5 }}>{t('projects:createDialog.palette.add')}</Typography></Box></Box>
               </Box>
-              <Box sx={{ mt: 2.5, p: 1.75, borderRadius: '12px', border: '1px solid rgba(255,255,255,.07)', backgroundColor: 'rgba(255,255,255,.015)', display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              <Box sx={{ mt: 2.5, p: 1.75, borderRadius: '12px', border: '1px solid rgba(255,255,255,.07)', backgroundColor: 'rgba(255,255,255,.015)', display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                 <Typography variant="overline" sx={{ color: 'text.secondary' }}>{t('projects:createDialog.palette.preview')}</Typography>
                 <Box sx={{ px: 1.5, height: 28, display: 'flex', alignItems: 'center', gap: 0.75, borderRadius: '8px', color: currentPalette.accentMain, border: `1px solid ${alpha(currentPalette.accentMain, 0.3)}`, backgroundColor: alpha(currentPalette.accentMain, 0.08) }}><Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: currentPalette.accentMain }} />{t('projects:defaultMainBranchName')}</Box>
-                <Box sx={{ px: 1.5, height: 28, display: 'flex', alignItems: 'center', borderRadius: '8px', bgcolor: currentPalette.accentMain, color: '#12140f', fontSize: 11.5 }}>{t('projects:createDialog.palette.previewButton')}</Box>
+                <Box sx={{ px: 1.75, height: 28, display: 'flex', alignItems: 'center', borderRadius: '8px', bgcolor: currentPalette.accentMain, color: '#12140f', fontSize: 11.5 }}>{t('projects:createDialog.palette.previewButton')}</Box>
                 <Typography sx={{ ml: 'auto', color: 'text.secondary', fontSize: 11.5 }}>{currentPalette.label}</Typography>
               </Box>
             </Box>
@@ -266,11 +266,11 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({ open, 
           </TabFade>
         </DialogContent>
 
-        <DialogActions sx={{ position: 'relative', zIndex: 1, backgroundColor: '#0e1116', mt: 0, px: { xs: 2.5, md: 4.25 }, py: 2.5, borderTop: '1px solid rgba(255,255,255,.07)', justifyContent: 'space-between' }}>
+        <DialogActions disableSpacing sx={{ position: 'relative', zIndex: 1, backgroundColor: '#0e1116', mt: 0, px: { xs: 2.5, md: 4.25 }, pt: 2.5, pb: 3.25, gap: 2, borderTop: '1px solid rgba(255,255,255,.07)', justifyContent: 'space-between' }}>
           <Typography sx={{ color: 'text.secondary', fontSize: 11.5, display: { xs: 'none', md: 'block' } }}>
             {step === 0 ? t('projects:createDialog.storageHint') : step === 1 ? t('projects:createDialog.navigation.fixedHint') : t('projects:createDialog.palette.fixedHint', { name: currentPalette.label })}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75, ml: 'auto' }}>
             {step > 0 ? <Button startIcon={<ArrowBackIcon />} onClick={() => setStep((value) => value - 1)} disabled={creating}>{t('common:back')}</Button> : <Button onClick={handleClose} disabled={creating}>{t('common:cancel')}</Button>}
             {step < 2 ? <DndButton variant="contained" endIcon={<ArrowForwardIcon />} onClick={() => setStep((value) => value + 1)} disabled={!newName.trim()}>{t('common:continue')}</DndButton> : <DndButton variant="contained" loading={creating} onClick={handleFinish}>{creating ? t('projects:createDialog.creating') : t('projects:createDialog.submit')}</DndButton>}
           </Box>

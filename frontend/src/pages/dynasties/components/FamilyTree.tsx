@@ -66,7 +66,7 @@ const MemberNode: React.FC<{ data: any }> = ({ data }) => {
       </Avatar>
 
       <Typography sx={{
-        fontFamily: '"Cormorant Garamond", serif',
+        fontFamily: theme.campaigner.typography.display,
         fontWeight: 600, fontSize: '0.98rem', color: 'text.primary',
         textAlign: 'center', maxWidth: 124,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

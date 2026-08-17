@@ -68,7 +68,7 @@ export const DynastyMemberDialog: React.FC<DynastyMemberDialogProps> = ({
   const { t } = useTranslation(['dynasties', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>{t('dynasties:dialogs.member.title')}</DialogTitle>
+      <DialogTitle sx={{ fontFamily: (theme) => theme.campaigner.typography.display, fontSize: '1.8rem', fontWeight: 600 }}>{t('dynasties:dialogs.member.title')}</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('dynasties:dialogs.member.character')}</InputLabel>
@@ -126,7 +126,7 @@ export const DynastyFamilyLinkDialog: React.FC<DynastyFamilyLinkDialogProps> = (
   const { t } = useTranslation(['dynasties', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>{t('dynasties:dialogs.familyLink.title')}</DialogTitle>
+      <DialogTitle sx={{ fontFamily: (theme) => theme.campaigner.typography.display, fontSize: '1.8rem', fontWeight: 600 }}>{t('dynasties:dialogs.familyLink.title')}</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="normal">
           <InputLabel>{t('dynasties:dialogs.familyLink.from')}</InputLabel>
@@ -187,7 +187,7 @@ export const DynastyEventDialog: React.FC<DynastyEventDialogProps> = ({
   const { t } = useTranslation(['dynasties', 'common']);
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={DIALOG_PAPER_PROPS}>
-      <DialogTitle sx={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '1.8rem', fontWeight: 600 }}>
+      <DialogTitle sx={{ fontFamily: (theme) => theme.campaigner.typography.display, fontSize: '1.8rem', fontWeight: 600 }}>
         {editingEvent ? t('dynasties:dialogs.event.titleEdit') : t('dynasties:dialogs.event.titleNew')}
       </DialogTitle>
       <DialogContent>

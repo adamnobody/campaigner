@@ -413,7 +413,7 @@ export const FactionsPage: React.FC<FactionsPageProps> = ({ entityType = 'factio
                       <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                         <Typography
                           sx={{
-                            fontFamily: '"Cormorant Garamond", serif',
+                            fontFamily: theme.campaigner.typography.display,
                             fontWeight: 600,
                             color: 'text.primary',
                             fontSize: '1.45rem',

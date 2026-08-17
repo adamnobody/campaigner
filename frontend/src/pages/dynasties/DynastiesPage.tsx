@@ -315,7 +315,7 @@ export const DynastiesPage: React.FC = () => {
 
                   {/* Name */}
                   <Typography sx={{
-                    fontFamily: '"Cormorant Garamond", serif', fontWeight: 600,
+                    fontFamily: theme.campaigner.typography.display, fontWeight: 600,
                     fontSize: '1.55rem', lineHeight: 1.1, color: 'text.primary',
                     px: 2,
                   }}>
@@ -326,7 +326,7 @@ export const DynastiesPage: React.FC = () => {
                   {dynasty.motto && (
                     <Typography sx={{
                       color: theme.palette.primary.main, fontStyle: 'italic',
-                      fontFamily: '"Cormorant Garamond", serif',
+                      fontFamily: theme.campaigner.typography.display,
                       fontSize: '1rem', mt: 0.65, px: 2,
                     }}>
                       «{dynasty.motto}»

@@ -845,7 +845,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
             <Typography
               sx={{
                 mb: 1.5,
-                fontFamily: '"IBM Plex Mono", monospace',
+                fontFamily: theme.campaigner.typography.mono,
                 fontSize: '0.67rem',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
@@ -857,7 +857,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
             </Typography>
             <Typography
               sx={{
-                fontFamily: '"Cormorant Garamond", serif',
+                fontFamily: theme.campaigner.typography.display,
                 fontWeight: 600,
                 fontSize: { xs: '2.5rem', md: '3.5rem' },
                 lineHeight: 0.98,
@@ -871,7 +871,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
               sx={{
                 mt: 1.5,
                 maxWidth: 650,
-                fontFamily: '"Cormorant Garamond", serif',
+                fontFamily: theme.campaigner.typography.display,
                 fontSize: '1.15rem',
                 fontStyle: form.motto ? 'italic' : 'normal',
                 color: 'text.secondary',
@@ -995,7 +995,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
               <Typography
                 sx={{
                   mb: 2,
-                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontFamily: theme.campaigner.typography.mono,
                   fontSize: '0.67rem',
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase',
@@ -1694,7 +1694,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
               <Typography
                 sx={{
                   mb: 1.5,
-                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontFamily: theme.campaigner.typography.mono,
                   fontSize: '0.67rem',
                   letterSpacing: '0.14em',
                   textTransform: 'uppercase',
@@ -1724,7 +1724,7 @@ export const FactionDetailPage: React.FC<FactionDetailPageProps> = ({ entityType
                 sx={{
                   mt: 4,
                   mb: 1.5,
-                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontFamily: theme.campaigner.typography.mono,
                   fontSize: '0.67rem',
                   letterSpacing: '0.14em',
                   textTransform: 'uppercase',

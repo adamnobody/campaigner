@@ -30,7 +30,7 @@ export const MetricInput: React.FC<MetricInputProps> = ({ label, unit, value, mi
       <Typography
         sx={{
           mb: 1,
-          fontFamily: '"IBM Plex Mono", monospace',
+          fontFamily: theme.campaigner.typography.mono,
           fontSize: '0.65rem',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
@@ -51,7 +51,7 @@ export const MetricInput: React.FC<MetricInputProps> = ({ label, unit, value, mi
           sx={{
             flex: 1,
             minWidth: 0,
-            fontFamily: '"Cormorant Garamond", serif',
+            fontFamily: theme.campaigner.typography.display,
             fontWeight: 600,
             fontSize: '2rem',
             lineHeight: 1,

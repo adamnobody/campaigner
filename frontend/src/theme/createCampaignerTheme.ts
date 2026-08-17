@@ -93,10 +93,12 @@ export function createCampaignerTheme(preferences: AppearanceThemePreferences) {
       },
       caption: { fontFamily: fonts.body, fontWeight: 400 },
       overline: {
-        fontFamily: fonts.mono,
-        fontSize: '0.68rem',
-        fontWeight: 400,
-        letterSpacing: '0.16em',
+        fontFamily: fonts.body,
+        fontSize: '0.75rem',
+        fontWeight: 500,
+        letterSpacing: '0.02em',
+        textTransform: 'none',
+        lineHeight: 1.4,
       },
     },
     components: {
@@ -177,6 +179,21 @@ export function createCampaignerTheme(preferences: AppearanceThemePreferences) {
             fontFamily: fonts.display,
             fontWeight: 600,
             fontSize: '1.65rem',
+          },
+        },
+      },
+      MuiDialogContent: {
+        styleOverrides: {
+          root: {
+            padding: '20px 24px 28px',
+          },
+        },
+      },
+      MuiDialogActions: {
+        styleOverrides: {
+          root: {
+            padding: '20px 24px 24px',
+            gap: 14,
           },
         },
       },
@@ -262,12 +279,32 @@ export function createCampaignerTheme(preferences: AppearanceThemePreferences) {
           },
         },
       },
+      MuiInputBase: {
+        styleOverrides: {
+          root: {
+            fontFamily: fonts.body,
+          },
+          input: {
+            fontFamily: fonts.body,
+            letterSpacing: 0,
+          },
+        },
+      },
+      MuiFormLabel: {
+        styleOverrides: {
+          root: {
+            fontFamily: fonts.body,
+            letterSpacing: 0,
+          },
+        },
+      },
       MuiInputLabel: {
         styleOverrides: {
           root: {
-            fontFamily: fonts.mono,
-            fontSize: '0.8rem',
-            letterSpacing: '0.08em',
+            fontFamily: fonts.body,
+            fontSize: '1rem',
+            fontWeight: 400,
+            letterSpacing: 0,
           },
         },
       },

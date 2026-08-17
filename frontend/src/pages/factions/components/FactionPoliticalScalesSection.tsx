@@ -317,7 +317,7 @@ export const FactionPoliticalScalesSection: React.FC<FactionPoliticalScalesSecti
               <Typography
                 sx={{
                   mb: 1.5,
-                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontFamily: theme.campaigner.typography.mono,
                   fontSize: '0.67rem',
                   letterSpacing: '0.14em',
                   textTransform: 'uppercase',

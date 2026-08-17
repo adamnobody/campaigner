@@ -95,7 +95,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
                 <Box display="flex" alignItems="center" gap={1} mb={0.5} flexWrap="wrap">
                   <Typography
                     sx={{
-                      fontFamily: '"Cormorant Garamond", serif',
+                      fontFamily: theme.campaigner.typography.display,
                       fontWeight: 600,
                       color: 'text.primary',
                       fontSize: '1.25rem',
@@ -114,7 +114,7 @@ const SortableEvent: React.FC<SortableEventProps> = ({ event, onEdit, onDelete }
                     }}
                   />
                 </Box>
-                <Typography sx={{ color: alpha(theme.palette.primary.main, 0.82), fontSize: '0.76rem', fontFamily: '"IBM Plex Mono", monospace' }}>
+                <Typography sx={{ color: alpha(theme.palette.primary.main, 0.82), fontSize: '0.76rem', fontFamily: theme.campaigner.typography.mono }}>
                   📅 {event.eventDate}
                 </Typography>
                 {event.description && (

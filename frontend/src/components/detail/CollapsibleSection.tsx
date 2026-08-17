@@ -52,7 +52,15 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           >
             {icon}
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.05rem', color: theme.palette.text.primary }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: theme.campaigner.typography.display,
+              fontWeight: 600,
+              fontSize: '1.05rem',
+              color: theme.palette.text.primary,
+            }}
+          >
             {title}
           </Typography>
           {badge !== undefined && badge > 0 && (

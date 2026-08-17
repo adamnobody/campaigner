@@ -212,7 +212,7 @@ export const FactionCompareDialog: React.FC<FactionCompareDialogProps> = ({
       <DialogTitle
         sx={{
           pt: 3,
-          fontFamily: '"Cormorant Garamond", serif',
+          fontFamily: theme.campaigner.typography.display,
           fontSize: '2rem',
           fontWeight: 600,
         }}
