@@ -13,6 +13,7 @@ const CharacterGraphPage = React.lazy(() => import('./pages/characters/Character
 const NotesPage = React.lazy(() => import('./pages/notes/NotesPage').then(m => ({ default: m.NotesPage })));
 const NoteEditorPage = React.lazy(() => import('./pages/notes/NoteEditorPage').then(m => ({ default: m.NoteEditorPage })));
 const WikiPage = React.lazy(() => import('./pages/wiki/WikiPage').then(m => ({ default: m.WikiPage })));
+const WikiArticlePage = React.lazy(() => import('./pages/wiki/WikiArticlePage').then(m => ({ default: m.WikiArticlePage })));
 const TimelinePage = React.lazy(() => import('./pages/timeline/TimelinePage').then(m => ({ default: m.TimelinePage })));
 const ProjectSettingsPage = React.lazy(() => import('./pages/project-settings/ProjectSettingsPage').then(m => ({ default: m.ProjectSettingsPage })));
 const WikiGraphPage = React.lazy(() => import('./pages/wiki/WikiGraphPage').then(m => ({ default: m.WikiGraphPage })));
@@ -55,6 +56,7 @@ const App: React.FC = () => {
               <Route path="notes" element={<ErrorBoundary><NotesPage /></ErrorBoundary>} />
               <Route path="notes/:noteId" element={<ErrorBoundary><NoteEditorPage /></ErrorBoundary>} />
               <Route path="wiki/graph" element={<ErrorBoundary><WikiGraphPage /></ErrorBoundary>} />
+              <Route path="wiki/:noteId" element={<ErrorBoundary><WikiArticlePage /></ErrorBoundary>} />
               <Route path="wiki" element={<ErrorBoundary><WikiPage /></ErrorBoundary>} />
               <Route path="timeline" element={<ErrorBoundary><TimelinePage /></ErrorBoundary>} />
               <Route path="dogmas" element={<ErrorBoundary><DogmasPage /></ErrorBoundary>} />

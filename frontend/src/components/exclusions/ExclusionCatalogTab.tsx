@@ -1,5 +1,6 @@
 import React, { useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { TabFade } from '@/components/ui/MotionSwitch';
 import {
   Alert,
   Box,
@@ -334,6 +335,7 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
             <Tab value="create" label={resolvedCreateTabLabel} />
           </Tabs>
 
+          <TabFade tab={catalogTab}>
           {catalogTab === 'catalog' ? (
             <Box sx={{ ...gridSx, pb: 1 }}>
               {items.map((item) => {
@@ -372,6 +374,7 @@ export function ExclusionCatalogTab<T extends ExclusionItem, TCreateExtra extend
               </Button>
             </Box>
           )}
+          </TabFade>
         </DialogContent>
       </Dialog>
 

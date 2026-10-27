@@ -1,11 +1,17 @@
 {
   "page": {
+    "eyebrow": "Персонажи · {{count}}",
     "title": "Персонажи",
     "subtitle": "Действующие лица вашей истории",
+    "cardEyebrow": "Персонаж",
     "relationshipGraph": "Граф связей",
     "searchPlaceholder": "Поиск по имени...",
     "allTags": "Все теги",
     "count": "{{filtered}} из {{total}}",
+    "error": {
+      "title": "Не удалось загрузить персонажей",
+      "retry": "Повторить"
+    },
     "empty": {
       "noCharacters": {
         "title": "Персонажи не найдены",
@@ -16,11 +22,36 @@
         "title": "Ничего не найдено",
         "description": "Попробуйте изменить параметры поиска или фильтры",
         "action": "Сбросить фильтры"
+      },
+      "templates": {
+        "title": "Начать с шаблона",
+        "protagonist": {
+          "title": "Протагонист",
+          "description": "Цель, слабость и арка персонажа"
+        },
+        "antagonist": {
+          "title": "Антагонист",
+          "description": "Мотив, средства и предел"
+        },
+        "supporting": {
+          "title": "Второстепенный",
+          "description": "Роль в сцене и ключевые связи"
+        }
       }
+    },
+    "aside": {
+      "summaryTotal": "Всего",
+      "summaryAlive": "Живых",
+      "summaryPortrait": "С портретом",
+      "summaryFaction": "Во фракции",
+      "storedBody": "Люди этого мира — имена, роли и то, как они стоят друг к другу."
     }
   },
   "detail": {
     "backToList": "К списку персонажей",
+    "eyebrowDraft": "Персонажи · Черновик",
+    "eyebrowCharacter": "Досье персонажа",
+    "createDescription": "Обязательно только имя. Остальное можно дописать после сессии.",
     "newCharacter": "Новый персонаж",
     "fallbackName": "Персонаж",
     "loading": "Загрузка...",
@@ -31,13 +62,16 @@
     },
     "summary": {
       "title": "Сводка",
+      "portrait": "Портрет персонажа",
       "uploadPhoto": "Загрузить фото",
       "titleLabel": "Титул",
       "descriptionLabel": "Описание",
-      "tagsLabel": "Теги"
+      "tagsLabel": "Теги",
+      "factionCount": "Связей с фракциями: {{count}}"
     },
     "sections": {
       "basics": "Основное",
+      "world": "Место в мире",
       "appearance": "Внешность",
       "historyNotes": "История и заметки",
       "relationships": "Связи"
@@ -54,6 +88,7 @@
       "relationshipDescription": "Описание связи"
     },
     "placeholders": {
+      "name": "Как зовут персонажа?",
       "titleExample": "напр. Король Севера",
       "bio": "Кто этот персонаж...",
       "factions": "Выберите фракции",
@@ -67,8 +102,12 @@
     "stateNotSpecified": "Не указано",
     "relationships": {
       "addLink": "Добавить связь",
+      "notSavedTitle": "Сначала сохраните персонажа",
+      "notSavedDescription": "Связи можно добавлять после создания персонажа.",
       "emptyTitle": "Нет связей",
       "emptyDescription": "Добавьте связи с другими персонажами",
+      "remove": "Удалить связь",
+      "dialogEyebrow": "Связь персонажей",
       "dialogTitle": "Добавить связь",
       "withWhom": "С кем",
       "type": "Тип связи",
@@ -81,15 +120,22 @@
   },
   "graph": {
     "loading": "Загрузка графа...",
+    "eyebrow": "Сеть персонажей",
     "title": "Граф связей",
     "hint": "Перетаскивание узла — переместить · Двойной клик — открыть · Фон — панорамирование · Колёсико — зум",
     "empty": "Нет персонажей для отображения",
+    "emptyDescription": "Создайте персонажей, чтобы увидеть их связи.",
+    "errorTitle": "Не удалось загрузить граф",
     "backToList": "К списку",
     "legendTitle": "Связи",
     "characterCount": "{{count}} персонажей",
     "edgeCount": "{{count}} связей",
     "open": "Открыть",
-    "closePanel": "Закрыть"
+    "closePanel": "Закрыть",
+    "selected": "Выбранный персонаж",
+    "zoomOut": "Уменьшить",
+    "zoomIn": "Увеличить",
+    "fit": "Вместить граф"
   },
   "relationshipTypes": {
     "ally": "Союзник",
@@ -126,6 +172,7 @@
     "tooltipConfigureExclusions": "Настроить исключения",
     "detach": "Открепить",
     "attach": "Прикрепить",
+    "createDialogEyebrow": "Пользовательская запись каталога",
     "createDialogTitle": "Новая черта характера",
     "fieldName": "Название",
     "fieldDescription": "Описание",

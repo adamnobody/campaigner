@@ -168,9 +168,10 @@ Rust (`src-tauri/src/`):
 
 Документация и прототипы:
 - `docs/prod/adr/*` — Architecture Decision Records (immutable, append-only)
-- `docs/prod/prototypes/<NNN>/` — SPEC и REPORT для sandbox-прототипов
-- `prototypes/<NNN>/` — код sandbox-прототипов; **не входит** в основной
-  build и не должен импортироваться из `frontend/` или `src-tauri/`
+- `docs/prod/prototypes/<NNN>/` — SPEC, REPORT, CARRYOVER (исторические артефакты)
+- Код sandbox-прототипов (`prototypes/<NNN>/`) **удалён** после валидации
+  (001 → mainline 0.3.1); **не импортировать** throwaway-код в `frontend/` /
+  `src-tauri/`
 
 ## Прототипы
 
@@ -179,9 +180,12 @@ Rust (`src-tauri/src/`):
 
 - SPEC в `docs/prod/prototypes/<NNN>/SPEC.md` — что и зачем делаем.
 - REPORT в той же папке — результат, скриншоты, FPS, вердикт **GO/NO-GO**.
-- Код в `prototypes/<NNN>/` с собственным `package.json`.
+- CARRYOVER (при необходимости) — что перенести в mainline.
+- Sandbox-код в `prototypes/<NNN>/` — только на время валидации; после **GO**
+  удаляется (001 удалён 2026-06-07). Новый прототип снова создаёт свой
+  `prototypes/<NNN>/package.json`.
 
-Правила работы в прототипе:
+Правила работы в **новом** sandbox-прототипе:
 - Не интегрировать с основным кодом (ни SQLite, ни Tauri, ни общих
   модулей frontend).
 - Минимум зависимостей; всё нестандартное — оправдывать в REPORT.md.
@@ -196,13 +200,13 @@ Rust (`src-tauri/src/`):
 | 0001 | Canvas rendering technology   | Accepted (validated prototype 001)      |
 | 0002 | MapPage migration strategy    | Accepted                                |
 | 0003 | Canvas data model             | Accepted                                |
-| 0004 | Scene types & scene_container | Proposed — `docs/adr/ADR-0004-*.md`     |
+| 0004 | Scene types & scene_container | Accepted — `docs/adr/ADR-0004-*.md`     |
 
 ## Активные прототипы
 
 | #   | Тема                              | Статус       |
 |-----|-----------------------------------|--------------|
-| 001 | Curve text & canvas foundation    | Validated (GO, see ADR-0001) |
+| 001 | Curve text & canvas foundation    | Validated (GO); sandbox code removed; SPEC/REPORT in `docs/prod/prototypes/001/` |
 
 ## Завершение задачи
 

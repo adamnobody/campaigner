@@ -1,6 +1,8 @@
-import { Divider, ListItemText, Menu, MenuItem } from '@mui/material';
+import { Divider, ListItemText, Menu, MenuItem, alpha, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { CanvasObject } from '@/api/canvas';
+import { isMapScene } from '../canvas/canvasTools';
+import type { ShapeVariant } from '../canvas/shapeObjectForm';
 
 export type MapContextMenuState = {
   mouseX: number;
@@ -12,15 +14,12 @@ export type MapContextMenuState = {
 
 type Props = {
   menu: MapContextMenuState;
+  sceneType?: string | null;
   onClose: () => void;
   onAddMarker: () => void;
   onAddText: () => void;
-  onAddCurveText: () => void;
   onAddImage: () => void;
-  onAddPolygon: () => void;
-  onAddRectangle: () => void;
-  onAddEllipse: () => void;
-  onAddPolyline: () => void;
+  onAddShape: (variant: ShapeVariant) => void;
   onDeleteSelected: () => void;
   onEditSelected: () => void;
   onDuplicateSelected: () => void;
@@ -28,17 +27,16 @@ type Props = {
   onSendToBack: () => void;
 };
 
+const SHAPE_MENU_VARIANTS: ShapeVariant[] = ['rectangle', 'ellipse', 'triangle', 'diamond', 'line'];
+
 export function MapCanvasContextMenu({
   menu,
+  sceneType,
   onClose,
   onAddMarker,
   onAddText,
-  onAddCurveText,
   onAddImage,
-  onAddPolygon,
-  onAddRectangle,
-  onAddEllipse,
-  onAddPolyline,
+  onAddShape,
   onDeleteSelected,
   onEditSelected,
   onDuplicateSelected,
@@ -46,7 +44,15 @@ export function MapCanvasContextMenu({
   onSendToBack,
 }: Props) {
   const { t } = useTranslation(['map']);
+  const theme = useTheme();
   const hasSelection = Boolean(menu?.targetObject);
+  const itemSx = {
+    minHeight: 36,
+    mx: 0.5,
+    px: 1.25,
+    borderRadius: '7px',
+    '& .MuiListItemText-primary': { fontSize: '0.78rem' },
+  } as const;
 
   return (
     <Menu
@@ -54,52 +60,59 @@ export function MapCanvasContextMenu({
       onClose={onClose}
       anchorReference="anchorPosition"
       anchorPosition={menu ? { top: menu.mouseY, left: menu.mouseX } : undefined}
+      slotProps={{
+        paper: {
+          sx: {
+            minWidth: 210,
+            p: 0.5,
+            borderRadius: '12px',
+            border: `1px solid ${theme.campaigner.surface.border}`,
+            backgroundColor: alpha(theme.palette.background.default, 0.96),
+            backdropFilter: 'blur(18px)',
+          },
+        },
+      }}
     >
       {!hasSelection && (
         <>
-          <MenuItem onClick={() => { onAddMarker(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onAddMarker(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.addMarker')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onAddText(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onAddText(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.addText')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onAddCurveText(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addCurveText')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddImage(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addImage')}</ListItemText>
-          </MenuItem>
+          {!isMapScene(sceneType) && (
+            <MenuItem sx={itemSx} onClick={() => { onAddImage(); onClose(); }}>
+              <ListItemText>{t('map:canvas.context.addImage')}</ListItemText>
+            </MenuItem>
+          )}
           <Divider />
-          <MenuItem onClick={() => { onAddPolygon(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addPolygon')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddRectangle(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addRectangle')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddEllipse(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addEllipse')}</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { onAddPolyline(); onClose(); }}>
-            <ListItemText>{t('map:canvas.context.addPolyline')}</ListItemText>
-          </MenuItem>
+          {SHAPE_MENU_VARIANTS.map((variant) => (
+            <MenuItem sx={itemSx} key={variant} onClick={() => { onAddShape(variant); onClose(); }}>
+              <ListItemText>{t(`map:shapePanel.variants.${variant}`)}</ListItemText>
+            </MenuItem>
+          ))}
         </>
       )}
       {hasSelection && (
         <>
-          <MenuItem onClick={() => { onEditSelected(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onEditSelected(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.edit')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onDuplicateSelected(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onDuplicateSelected(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.duplicate')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onBringToFront(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onBringToFront(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.bringToFront')}</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => { onSendToBack(); onClose(); }}>
+          <MenuItem sx={itemSx} onClick={() => { onSendToBack(); onClose(); }}>
             <ListItemText>{t('map:canvas.context.sendToBack')}</ListItemText>
           </MenuItem>
           <Divider />
-          <MenuItem onClick={() => { onDeleteSelected(); onClose(); }}>
+          <MenuItem
+            sx={{ ...itemSx, color: 'error.main', '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.08) } }}
+            onClick={() => { onDeleteSelected(); onClose(); }}
+          >
             <ListItemText>{t('map:canvas.context.delete')}</ListItemText>
           </MenuItem>
         </>

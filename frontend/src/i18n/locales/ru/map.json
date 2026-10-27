@@ -38,6 +38,7 @@
     "hintDrawTerritory": "Клик — вершины линии · замкнуть: наведи на первую точку (кольцо) и кликни, или R / «Контур готов» · «Сохранить» — имя и создание",
     "hintSelectMode": "ЛКМ drag — перемещение карты · СКМ drag — панорамирование · Колёсико — зум",
     "hintMarkerMode": "ЛКМ — добавить маркер · Ctrl + ЛКМ drag или СКМ drag — панорамирование · Колёсико — зум",
+    "hintSceneContainerMode": "ЛКМ — разместить карту на холсте · СКМ — панорамирование · Shift+клик — маркер поверх территории",
     "modeShortcutsHint": "Ctrl+1 — перемещение · Ctrl+2 — маркеры · Ctrl+3 — территории"
   },
   "canvas": {
@@ -46,8 +47,26 @@
       "sceneName": "Сцена 1"
     },
     "breadcrumbs": {
-      "back": "Назад к родительской карте",
-      "navigateTo": "Открыть {{name}}"
+      "back": "Назад на холст",
+      "navigateTo": "Открыть {{name}}",
+      "rootCanvas": "Холст",
+      "mapFallback": "Карта"
+    },
+    "sceneType": {
+      "root": "Холст",
+      "map": "Карта"
+    },
+    "layers": {
+      "title": "Слои",
+      "show": "Показать слой {{name}}",
+      "hide": "Скрыть слой {{name}}",
+      "updateError": "Не удалось изменить видимость слоя"
+    },
+    "legend": {
+      "title": "Легенда",
+      "territories": "Территории",
+      "routes": "Маршруты и линии",
+      "markers": "Маркеры мест"
     },
     "toolbar": {
       "sceneStats": "Сцена холста · {{count}} объектов{{selected}}",
@@ -71,7 +90,19 @@
       "tooltipMarker": "Режим маркера (Ctrl+2)",
       "tooltipDrawTerritory": "Рисовать территорию (Ctrl+3)",
       "save": "Сохранить",
-      "addImage": "Добавить изображение"
+      "addImage": "Добавить изображение",
+      "toolSceneContainer": "Добавить карту на холст",
+      "sceneStatsRoot": "Холст · {{count}} объектов{{selected}}"
+    },
+    "sceneContainer": {
+      "kindLabel": "Карта",
+      "openHint": "Двойной клик — открыть",
+      "openAction": "Открыть карту",
+      "selectionType": "Карта на холсте"
+    },
+    "imageCard": {
+      "kindLabel": "Изображение",
+      "defaultTitle": "Изображение"
     },
     "selection": {
       "title": "Выбранный объект",
@@ -141,6 +172,87 @@
     "uploadImage": "Загрузить изображение",
     "createChildMap": "Создать вложенную карту"
   },
+  "cardPanel": {
+    "imageTitle": "Изображение на холсте",
+    "subtitle": "Размер и подпись карточки",
+    "sectionTitle": "Подпись",
+    "titleLabel": "Заголовок",
+    "sectionSize": "Размер",
+    "sectionPosition": "Положение",
+    "width": "Ширина",
+    "height": "Высота"
+  },
+  "shapePanel": {
+    "title": "Фигура",
+    "addShape": "Добавить фигуру",
+    "addShapeTooltip": "Добавить фигуру на холст",
+    "addShapeTitle": "Выберите форму",
+    "sectionShape": "Форма",
+    "sectionStyle": "Стиль фигуры",
+    "sectionText": "Текст",
+    "sectionPosition": "Положение",
+    "width": "Ширина",
+    "height": "Высота",
+    "fill": "Заливка",
+    "fillHex": "Заливка (#)",
+    "stroke": "Обводка",
+    "strokeHex": "Обводка (#)",
+    "strokeWidth": "Толщина обводки · {{value}}",
+    "opacity": "Прозрачность · {{value}}%",
+    "labelPosition": "Положение текста",
+    "labelText": "Текст",
+    "labelFontSize": "Размер текста",
+    "labelColor": "Цвет текста",
+    "labelBold": "Жирный",
+    "variants": {
+      "rectangle": "Прямоугольник",
+      "ellipse": "Эллипс",
+      "triangle": "Треугольник",
+      "diamond": "Ромб",
+      "line": "Линия"
+    },
+    "labelPositions": {
+      "none": "Без текста",
+      "inside": "Внутри",
+      "above": "Над фигурой",
+      "below": "Под фигурой"
+    }
+  },
+  "textPanel": {
+    "titleText": "Текст",
+    "titleCurve": "Текст по кривой",
+    "positionLabel": "X: {{x}} · Y: {{y}}",
+    "sectionContent": "Содержимое",
+    "sectionStyle": "Стиль",
+    "sectionTransform": "Позиция",
+    "sectionCurve": "Кривая",
+    "fontSize": "Размер шрифта",
+    "fillColor": "Цвет",
+    "opacity": "Прозрачность · {{value}}%",
+    "fieldX": "X",
+    "fieldY": "Y",
+    "fieldRotation": "Поворот",
+    "curveStartX": "Начало X",
+    "curveStartY": "Начало Y",
+    "curveControlX": "Контроль X",
+    "curveControlY": "Контроль Y",
+    "curveEndX": "Конец X",
+    "curveEndY": "Конец Y",
+    "pointPathHint": "Кривая задана массивом точек в geometry_json. Здесь можно менять текст и стиль; точки пути сохраняются.",
+    "curveHandlesHint": "Форма кривой редактируется точками на холсте.",
+    "convertToCurveText": "Сделать текст по кривой",
+    "inlineEditHint": "Дважды кликните по тексту на холсте или выделите его и начните печатать.",
+    "sectionPresets": "Пресеты",
+    "preset": "Пресет стиля",
+    "presetStandard": "Стандартный текст",
+    "presetCustom": "Свой стиль",
+    "presetPreviewSample": "Заголовок на карте",
+    "presetName": "Название пресета",
+    "presetNamePlaceholder": "Мой стиль заголовка",
+    "presetDefaultName": "Пресет {{index}}",
+    "savePreset": "Сохранить пресет",
+    "deletePreset": "Удалить"
+  },
   "territoryPanel": {
     "subtitle": "Территория · контуров: {{rings}}, точек: {{points}}",
     "sectionDescription": "Описание",
@@ -196,6 +308,28 @@
   },
   "childMap": {
     "autoName": "Карта: {{title}}"
+  },
+  "mapBackground": {
+    "missingTitle": "У этой карты нет изображения-основы",
+    "missingHint": "Добавьте изображение карты, чтобы продолжить. Оно станет основой карты.",
+    "addButton": "Добавить фон карты"
+  },
+  "sceneContainerDialog": {
+    "title": "Новая карта на холсте",
+    "hint": "Карта появится на холсте карточкой. Откройте её двойным кликом или кнопкой в панели выбора.",
+    "nameLabel": "Название карты",
+    "nameRequired": "Укажите название карты",
+    "pickBackground": "Выбрать фоновое изображение",
+    "replaceBackground": "Заменить изображение",
+    "removeBackground": "Убрать изображение",
+    "previewAlt": "Предпросмотр фона карты",
+    "crop": "Обрезать",
+    "cropTitle": "Обрезка изображения карты",
+    "cropHint": "Перетащите рамку, чтобы переместить. Потяните углы, чтобы изменить область обрезки.",
+    "cropApply": "Применить обрезку",
+    "backgroundRequired": "Фоновое изображение обязательно",
+    "backgroundNote": "Изображение станет фоном географической карты. Его можно заменить позже.",
+    "create": "Создать карту"
   },
   "noteTypes": {
     "wiki": "Вики",

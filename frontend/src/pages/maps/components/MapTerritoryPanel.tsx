@@ -43,8 +43,8 @@ export const MapTerritoryPanel: React.FC<Props> = ({
   const ringCount = territoryRingsFromObject(selectedTerritory).length;
 
   return (
-    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.paper, 0.95), backdropFilter: 'blur(20px)' }}>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
+    <Box sx={{ ...sxPanelRoot(theme), backgroundColor: alpha(theme.palette.background.default, 0.94), backdropFilter: 'blur(20px)', borderColor: theme.campaigner.surface.border }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: `1px solid ${theme.campaigner.surface.border}` }}>
         <Box sx={{
           width: 40, height: 40, borderRadius: '8px',
           backgroundColor: `rgba(${hexToRgb(form.color)}, 0.3)`,
@@ -55,7 +55,7 @@ export const MapTerritoryPanel: React.FC<Props> = ({
           <PentagonIcon sx={{ fontSize: 20, color: form.color }} />
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 700, color: 'text.primary', fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography variant="h6" sx={{ color: 'text.primary', fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {form.name}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -88,7 +88,7 @@ export const MapTerritoryPanel: React.FC<Props> = ({
             <Box
               onClick={() => onNavigateToFaction(faction)}
               sx={{
-                mt: 1, p: 1.5, borderRadius: 1,
+                mt: 1, p: 1.5, borderRadius: '10px',
                 backgroundColor: `rgba(${hexToRgb(faction.color)}, 0.08)`,
                 border: `1px solid rgba(${hexToRgb(faction.color)}, 0.2)`,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1,
@@ -144,7 +144,7 @@ export const MapTerritoryPanel: React.FC<Props> = ({
         </Box>
       </Box>
 
-      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.campaigner.surface.border}`, backgroundColor: theme.campaigner.surface.subtle, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button fullWidth variant="outlined" startIcon={<EditIcon />} size="small"
             onClick={() => onEditTerritory(selectedTerritory)}

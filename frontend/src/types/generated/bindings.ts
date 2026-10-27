@@ -64,6 +64,7 @@ export const commands = {
 	parentObjectId: number | null,
 	name: string,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown,
 	metadataJson: unknown,
 	createdAt: string,
@@ -90,6 +91,7 @@ export const commands = {
 	canvasObjectsBulkDelete: (input: BulkDeleteCanvasObjectsInput) => __TAURI_INVOKE<void>("canvas_objects_bulk_delete", { input }),
 	canvasReconcileScene: (input: ReconcileCanvasSceneInput) => __TAURI_INVOKE<CanvasReconcileResult>("canvas_reconcile_scene", { input }),
 	canvasMarkersAttachChildScene: (input: AttachChildSceneToMarkerInput) => __TAURI_INVOKE<AttachChildSceneToMarkerResult>("canvas_markers_attach_child_scene", { input }),
+	canvasCreateMapSceneContainer: (input: CreateMapSceneContainerInput) => __TAURI_INVOKE<CreateMapSceneContainerResult>("canvas_create_map_scene_container", { input }),
 	projectsList: () => __TAURI_INVOKE<Project[]>("projects_list"),
 	projectsGet: (input: GetProjectInput) => __TAURI_INVOKE<Project>("projects_get", { input }),
 	projectsCreate: (input: CreateProjectInput) => __TAURI_INVOKE<Project>("projects_create", { input }),
@@ -104,12 +106,12 @@ export const commands = {
 	uploadsSaveCharacterImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_character_image", { input }),
 	uploadsSaveTraitImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_trait_image", { input }),
 	uploadsSaveAmbitionImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_ambition_image", { input }),
-	uploadsSaveAppearanceImage: (input: UploadFileInput) => __TAURI_INVOKE<UploadSavedPath>("uploads_save_appearance_image", { input }),
 	charactersUploadImage: (input: CharacterUploadImageInput) => __TAURI_INVOKE<Character>("characters_upload_image", { input }),
 	factionsUploadImage: (input: FactionUploadImageInput) => __TAURI_INVOKE<Faction>("factions_upload_image", { input }),
 	factionsUploadBanner: (input: FactionUploadBannerInput) => __TAURI_INVOKE<Faction>("factions_upload_banner", { input }),
 	dynastiesUploadImage: (input: DynastyUploadImageInput) => __TAURI_INVOKE<Dynasty_Serialize>("dynasties_upload_image", { input }),
 	projectsUploadMapImage: (input: ProjectUploadMapImageInput) => __TAURI_INVOKE<Project>("projects_upload_map_image", { input }),
+	projectsUploadCover: (input: ProjectUploadCoverInput) => __TAURI_INVOKE<Project>("projects_upload_cover", { input }),
 	charactersList: (input: CharactersListInput) => __TAURI_INVOKE<CharactersListResult>("characters_list", { input }),
 	charactersGet: (input: GetCharacterInput) => __TAURI_INVOKE<Character>("characters_get", { input }),
 	charactersCreate: (input: CreateCharacterInput) => __TAURI_INVOKE<Character>("characters_create", { input }),
@@ -299,6 +301,7 @@ export type CanvasScene = {
 	parentObjectId: number | null,
 	name: string,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown,
 	metadataJson: unknown,
 	createdAt: string,
@@ -469,6 +472,7 @@ export type CreateCanvasSceneInput = {
 	parentObjectId: number | null,
 	name: string,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown | null,
 	metadataJson: unknown | null,
 	branchId: number | null,
@@ -619,6 +623,24 @@ export type CreateFactionRelationInput = {
 	branchId: number | null,
 };
 
+export type CreateMapSceneContainerInput = {
+	projectId: number,
+	parentSceneId: number,
+	parentLayerId: number,
+	mapName: string,
+	backgroundPath: string,
+	objectName: string | null,
+	transformJson: unknown,
+	styleJson: unknown | null,
+	contentJson: unknown | null,
+	branchId: number | null,
+};
+
+export type CreateMapSceneContainerResult = {
+	containerObject: CanvasObject,
+	mapScene: CanvasScene,
+};
+
 export type CreateNoteInput = {
 	projectId: number,
 	folderId: number | null,
@@ -667,6 +689,7 @@ export type CreateProjectInput = {
 	description: string | null,
 	status: string | null,
 	mainBranchName: string | null,
+	coverImagePath: string | null,
 };
 
 export type CreateRelationshipInput = {
@@ -1416,6 +1439,7 @@ export type ExportProjectMeta_Deserialize = {
 	description: string | null,
 	status: string | null,
 	mapImageBase64: string | null,
+	coverImageBase64?: string | null,
 };
 
 export type ExportProjectMeta_Serialize = {
@@ -1423,6 +1447,7 @@ export type ExportProjectMeta_Serialize = {
 	description?: string | null,
 	status?: string | null,
 	mapImageBase64?: string | null,
+	coverImageBase64?: string | null,
 };
 
 export type ExportRelationshipRow = ExportRelationshipRow_Serialize | ExportRelationshipRow_Deserialize;
@@ -2066,8 +2091,16 @@ export type Project = {
 	description: string,
 	status: string,
 	mapImagePath: string | null,
+	coverImagePath: string | null,
 	createdAt: string,
 	updatedAt: string,
+};
+
+export type ProjectUploadCoverInput = {
+	projectId: number,
+	fileBytes: number[],
+	fileName: string,
+	mime: string,
 };
 
 export type ProjectUploadMapImageInput = {
@@ -2317,6 +2350,7 @@ export type UpdateCanvasSceneInput = {
 	id: number,
 	name: string | null,
 	backgroundPath: string | null,
+	sceneType: string | null,
 	viewportJson: unknown | null,
 	metadataJson: unknown | null,
 	branchId: number | null,
@@ -2524,6 +2558,7 @@ export type UpdateProjectInput = {
 	description: string | null,
 	status: string | null,
 	mapImagePath: string | null,
+	coverImagePath: string | null,
 };
 
 export type UpdateRelationshipInput = {

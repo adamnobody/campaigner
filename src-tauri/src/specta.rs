@@ -16,12 +16,12 @@ use crate::models::canvas::{
     AttachChildSceneToMarkerInput, AttachChildSceneToMarkerResult, BulkDeleteCanvasObjectsInput,
     BulkUpsertCanvasObjectsInput, CanvasLayer, CanvasObject, CanvasReconcileResult, CanvasScene,
     CanvasTerritorySummary, CreateCanvasLayerInput, CreateCanvasObjectInput,
-    CreateCanvasSceneInput, DeleteCanvasLayerInput, DeleteCanvasObjectInput,
-    DeleteCanvasSceneInput, GetCanvasObjectInput, GetCanvasSceneInput, GetCanvasSceneTreeInput,
-    GetRootCanvasSceneInput, ListCanvasLayersInput, ListCanvasObjectsInput,
-    ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput, ReorderCanvasLayersInput,
-    ReorderCanvasObjectsInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput,
-    UpdateCanvasSceneInput, UpsertCanvasObjectInput,
+    CreateCanvasSceneInput, CreateMapSceneContainerInput, CreateMapSceneContainerResult,
+    DeleteCanvasLayerInput, DeleteCanvasObjectInput, DeleteCanvasSceneInput, GetCanvasObjectInput,
+    GetCanvasSceneInput, GetCanvasSceneTreeInput, GetRootCanvasSceneInput, ListCanvasLayersInput,
+    ListCanvasObjectsInput, ListCanvasTerritorySummariesInput, ReconcileCanvasSceneInput,
+    ReorderCanvasLayersInput, ReorderCanvasObjectsInput, UpdateCanvasLayerInput,
+    UpdateCanvasObjectInput, UpdateCanvasSceneInput, UpsertCanvasObjectInput,
 };
 use crate::models::character::{
     Character, CharacterGraph, CharacterRelationship, CharactersListInput, CharactersListResult,
@@ -84,7 +84,8 @@ use crate::models::timeline::{
 };
 use crate::models::upload::{
     CharacterUploadImageInput, DynastyUploadImageInput, FactionUploadBannerInput,
-    FactionUploadImageInput, ProjectUploadMapImageInput, UploadFileInput, UploadSavedPath,
+    FactionUploadImageInput, ProjectUploadCoverInput, ProjectUploadMapImageInput, UploadFileInput,
+    UploadSavedPath,
 };
 use crate::models::wiki_link::{
     CreateWikiLinkInput, DeleteWikiLinkInput, ListWikiCategoriesInput, ListWikiLinksInput,
@@ -103,11 +104,12 @@ mod codegen_commands {
         CreateCanvasLayerInput, CreateCanvasObjectInput, CreateCanvasSceneInput,
         CreateCharacterInput, CreateCharacterTraitInput, CreateDemoProjectInput, CreateDogmaInput,
         CreateDynastyInput, CreateFactionInput, CreateFactionMemberInput, CreateFactionPolicyInput,
-        CreateFactionRankInput, CreateFactionRelationInput, CreateNoteInput,
-        CreatePoliticalScaleInput, CreateProjectInput, CreateRelationshipInput, CreateTagInput,
-        CreateTimelineEventInput, CreateWikiLinkInput, DeleteAmbitionInput, DeleteBranchInput,
-        DeleteCanvasLayerInput, DeleteCanvasObjectInput, DeleteCanvasSceneInput,
-        DeleteCharacterInput, DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
+        CreateFactionRankInput, CreateFactionRelationInput, CreateMapSceneContainerInput,
+        CreateMapSceneContainerResult, CreateNoteInput, CreatePoliticalScaleInput,
+        CreateProjectInput, CreateRelationshipInput, CreateTagInput, CreateTimelineEventInput,
+        CreateWikiLinkInput, DeleteAmbitionInput, DeleteBranchInput, DeleteCanvasLayerInput,
+        DeleteCanvasObjectInput, DeleteCanvasSceneInput, DeleteCharacterInput,
+        DeleteCharacterTraitInput, DeleteDogmaInput, DeleteDynastyEventInput,
         DeleteDynastyFamilyLinkInput, DeleteDynastyInput, DeleteFactionInput,
         DeleteFactionMemberInput, DeleteFactionPolicyInput, DeleteFactionRankInput,
         DeleteFactionRelationInput, DeleteGraphLayoutInput, DeleteNoteInput,
@@ -128,16 +130,16 @@ mod codegen_commands {
         ListFactionPoliciesInput, ListFactionRanksInput, ListPoliticalScaleAssignmentsInput,
         ListPoliticalScalesInput, ListWikiCategoriesInput, ListWikiLinksInput, Note,
         NotesListInput, NotesListResult, PoliticalScale, PoliticalScaleAssignment, Project,
-        ProjectUploadMapImageInput, ReconcileCanvasSceneInput, RelationshipsListInput,
-        RemoveDynastyMemberInput, ReorderCanvasLayersInput, ReorderCanvasObjectsInput,
-        ReorderDogmasInput, ReorderDynastyEventsInput, ReorderTimelineInput,
-        ReplaceFactionCustomMetricsInput, ReplacePoliticalScaleAssignmentsInput,
-        SaveDynastyGraphPositionsInput, ScenarioBranch, SearchQueryInput, SearchResult,
-        SetCharacterTagsInput, SetDogmaTagsInput, SetDynastyTagsInput, SetFactionTagsInput,
-        SetNoteTagsInput, SetTimelineTagsInput, Tag, TagsListInput, TimelineEvent,
-        TimelineListInput, UnassignCharacterTraitInput, UnassignFactionAmbitionInput,
-        UpdateAmbitionExclusionsInput, UpdateAmbitionInput, UpdateBranchInput,
-        UpdateCanvasLayerInput, UpdateCanvasObjectInput, UpdateCanvasSceneInput,
+        ProjectUploadCoverInput, ProjectUploadMapImageInput, ReconcileCanvasSceneInput,
+        RelationshipsListInput, RemoveDynastyMemberInput, ReorderCanvasLayersInput,
+        ReorderCanvasObjectsInput, ReorderDogmasInput, ReorderDynastyEventsInput,
+        ReorderTimelineInput, ReplaceFactionCustomMetricsInput,
+        ReplacePoliticalScaleAssignmentsInput, SaveDynastyGraphPositionsInput, ScenarioBranch,
+        SearchQueryInput, SearchResult, SetCharacterTagsInput, SetDogmaTagsInput,
+        SetDynastyTagsInput, SetFactionTagsInput, SetNoteTagsInput, SetTimelineTagsInput, Tag,
+        TagsListInput, TimelineEvent, TimelineListInput, UnassignCharacterTraitInput,
+        UnassignFactionAmbitionInput, UpdateAmbitionExclusionsInput, UpdateAmbitionInput,
+        UpdateBranchInput, UpdateCanvasLayerInput, UpdateCanvasObjectInput, UpdateCanvasSceneInput,
         UpdateCharacterInput, UpdateCharacterTraitExclusionsInput, UpdateDogmaInput,
         UpdateDynastyEventInput, UpdateDynastyInput, UpdateDynastyMemberInput, UpdateFactionInput,
         UpdateFactionMemberInput, UpdateFactionPolicyInput, UpdateFactionRankInput,
@@ -677,6 +679,7 @@ mod codegen_commands {
             parent_object_id: None,
             name: String::new(),
             background_path: None,
+            scene_type: None,
             viewport_json: serde_json::json!({}),
             metadata_json: serde_json::json!({}),
             created_at: String::new(),
@@ -859,6 +862,17 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
+    pub fn canvas_create_map_scene_container(
+        _input: CreateMapSceneContainerInput,
+    ) -> CreateMapSceneContainerResult {
+        CreateMapSceneContainerResult {
+            container_object: empty_canvas_object(),
+            map_scene: empty_canvas_scene(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
     pub fn projects_list() -> Vec<Project> {
         Vec::new()
     }
@@ -872,6 +886,7 @@ mod codegen_commands {
             description: String::new(),
             status: "active".to_string(),
             map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -886,6 +901,7 @@ mod codegen_commands {
             description: input.description.unwrap_or_default(),
             status: input.status.unwrap_or_else(|| "active".to_string()),
             map_image_path: None,
+            cover_image_path: input.cover_image_path,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -900,6 +916,7 @@ mod codegen_commands {
             description: String::new(),
             status: "active".to_string(),
             map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -916,6 +933,7 @@ mod codegen_commands {
                 description: None,
                 status: Some("active".to_string()),
                 map_image_base64: None,
+                cover_image_base64: None,
             },
             characters: Vec::new(),
             relationships: Vec::new(),
@@ -953,6 +971,7 @@ mod codegen_commands {
             description: String::new(),
             status: "active".to_string(),
             map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -967,6 +986,7 @@ mod codegen_commands {
             description: input.description.unwrap_or_default(),
             status: input.status.unwrap_or_else(|| "active".to_string()),
             map_image_path: input.map_image_path,
+            cover_image_path: input.cover_image_path,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -1628,14 +1648,6 @@ mod codegen_commands {
 
     #[tauri::command]
     #[specta::specta]
-    pub fn uploads_save_appearance_image(_input: UploadFileInput) -> UploadSavedPath {
-        UploadSavedPath {
-            path: "/uploads/appearance/appearance-0.png".to_string(),
-        }
-    }
-
-    #[tauri::command]
-    #[specta::specta]
     pub fn characters_upload_image(_input: CharacterUploadImageInput) -> Character {
         Character {
             id: 0,
@@ -1693,6 +1705,22 @@ mod codegen_commands {
             description: String::new(),
             status: String::new(),
             map_image_path: None,
+            cover_image_path: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
+    }
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn projects_upload_cover(_input: ProjectUploadCoverInput) -> Project {
+        Project {
+            id: 0,
+            name: String::new(),
+            description: String::new(),
+            status: String::new(),
+            map_image_path: None,
+            cover_image_path: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -1808,6 +1836,7 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::canvas_objects_bulk_delete,
             codegen_commands::canvas_reconcile_scene,
             codegen_commands::canvas_markers_attach_child_scene,
+            codegen_commands::canvas_create_map_scene_container,
             codegen_commands::projects_list,
             codegen_commands::projects_get,
             codegen_commands::projects_create,
@@ -1822,12 +1851,12 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
             codegen_commands::uploads_save_character_image,
             codegen_commands::uploads_save_trait_image,
             codegen_commands::uploads_save_ambition_image,
-            codegen_commands::uploads_save_appearance_image,
             codegen_commands::characters_upload_image,
             codegen_commands::factions_upload_image,
             codegen_commands::factions_upload_banner,
             codegen_commands::dynasties_upload_image,
             codegen_commands::projects_upload_map_image,
+            codegen_commands::projects_upload_cover,
             codegen_commands::characters_list,
             codegen_commands::characters_get,
             codegen_commands::characters_create,
@@ -2065,6 +2094,7 @@ pub fn export_bindings(path: &Path) -> Result<(), specta_typescript::Error> {
         .typ::<FactionUploadBannerInput>()
         .typ::<DynastyUploadImageInput>()
         .typ::<ProjectUploadMapImageInput>()
+        .typ::<ProjectUploadCoverInput>()
         .typ::<WikiLink>()
         .typ::<WikiCategory>()
         .typ::<ListWikiLinksInput>()

@@ -52,8 +52,8 @@ export const MapMarkerDialog: React.FC<Props> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
-      PaperProps={{ sx: { backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' } }}>
-      <DialogTitle sx={{ fontFamily: '"Cinzel", serif' }}>
+      >
+      <DialogTitle>
         {editingMarker ? t('map:markerDialog.editTitle') : t('map:markerDialog.createTitle')}
       </DialogTitle>
       <DialogContent>

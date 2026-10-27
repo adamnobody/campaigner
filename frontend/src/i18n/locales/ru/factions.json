@@ -6,14 +6,35 @@
     "subtitleFactions": "Внутренние объединения, организации и группировки",
     "createState": "Создать государство",
     "createFaction": "Создать фракцию",
-    "searchStates": "Поиск государств...",
-    "searchFactions": "Поиск фракций...",
+    "searchStates": "Название или столица...",
+    "searchFactions": "Название или штаб...",
     "anyStatus": "Любой статус",
     "count": "{{shown}} из {{total}}",
     "resetFilters": "Сбросить фильтры",
     "loadingMore": "Загрузка...",
     "tooltipOpen": "Открыть",
     "tooltipDelete": "Удалить",
+    "emptyValue": "—",
+    "sortByName": "По названию",
+    "sortByCapital": "По столице",
+    "sortByHeadquarters": "По штабу",
+    "filters": {
+      "all": "Все",
+      "kingdoms": "Королевства",
+      "republics": "Республики",
+      "cities": "Города",
+      "orders": "Ордена",
+      "guilds": "Гильдии",
+      "cults": "Культы"
+    },
+    "columns": {
+      "state": "Государство",
+      "faction": "Фракция",
+      "capital": "Столица",
+      "ruler": "Правитель",
+      "headquarters": "Штаб",
+      "status": "Статус"
+    },
     "confirmDeleteTitleState": "Удалить государство",
     "confirmDeleteTitleFaction": "Удалить фракцию",
     "confirmDeleteMessage": "Удалить «{{name}}»? Связанные записи участия и связи тоже будут удалены.",
@@ -22,7 +43,31 @@
     "emptyNoStatesTitle": "Государств пока нет",
     "emptyNoStatesDescription": "Создайте первое государство для вашего мира",
     "emptyNoFactionsTitle": "Фракций пока нет",
-    "emptyNoFactionsDescription": "Создайте первую фракцию или внутреннюю группировку"
+    "emptyNoFactionsDescription": "Создайте первую фракцию или внутреннюю группировку",
+    "templates": {
+      "title": "Начать с шаблона",
+      "states": {
+        "kingdom": { "title": "Королевство", "description": "Династия, титулы и вассалы" },
+        "empire": { "title": "Империя", "description": "Провинции, наместники и дань" },
+        "city": { "title": "Вольный город", "description": "Совет, торговля и гарнизон" }
+      },
+      "factions": {
+        "order": { "title": "Орден", "description": "Устав, ранги и обеты" },
+        "guild": { "title": "Гильдия", "description": "Ремесло, монополия и пошлины" },
+        "cult": { "title": "Культ", "description": "Догма, обряд и тайна" }
+      }
+    },
+    "aside": {
+      "summaryTotal": "Всего",
+      "summaryActive": "Активных",
+      "summaryRuler": "С правителем",
+      "summaryDynasty": "С династией",
+      "summaryOnCanvas": "На холсте",
+      "summaryAlliances": "В союзах",
+      "summaryConflicts": "В конфликте",
+      "storedBodyStates": "Государства, столицы и те, кто держит престол.",
+      "storedBodyFactions": "Ордена, гильдии, культы и внутренние группировки этого мира."
+    }
   },
   "entityKinds": {
     "state": "Государство",
@@ -104,7 +149,8 @@
     "baseSection": "Базовые",
     "customSection": "Кастомные",
     "compareWithOthers": "Сравнить с другими",
-    "customNone": "Кастомные показатели не добавлены."
+    "customNone": "Кастомные показатели не добавлены.",
+    "readabilityHint": "Ключевые числа собраны вместе для быстрого чтения, а особые показатели мира остаются в отдельной группе."
   },
   "politicalScaleGroups": {
     "state": {
@@ -128,6 +174,7 @@
     "createError": "Ошибка создания",
     "loading": "Загрузка политических шкал…",
     "sectionTitle": "Политические шкалы",
+    "readabilityHint": "Читайте каждую ось слева направо. Подсвеченная зона показывает текущее положение, а комментарий сохраняет причину выбора.",
     "addCustom": "Добавить свою шкалу",
     "manage": "Управление шкалами",
     "valueLabel": "Значение: {{value}}",
@@ -181,8 +228,15 @@
     "backToListFaction": "К списку фракций",
     "newTitleState": "Новое государство",
     "newTitleFaction": "Новая фракция",
+    "namePlaceholderTitleState": "Название государства",
+    "namePlaceholderTitleFaction": "Название фракции",
     "fallbackNameState": "Государство",
     "fallbackNameFaction": "Фракция",
+    "draft": "Черновик",
+    "eyebrowDraftState": "Государства · Черновик",
+    "eyebrowDraftFaction": "Фракции · Черновик",
+    "createHintState": "Обязательно только название. Правителя, династию, территории и герб можно привязать позже.",
+    "createHintFaction": "Обязательно только название. Структуру, связи, амбиции и политику можно добавить после сохранения.",
     "tabs": {
       "overview": "Обзор",
       "structure": "Структура",
@@ -193,8 +247,12 @@
     "summary": {
       "title": "Сводка",
       "coatOfArms": "Герб",
+      "coatPlaceholder": "Герб или знамя",
+      "coatPlaceholderState": "Герб государства",
+      "coatPlaceholderFaction": "Эмблема фракции",
       "banner": "Фон",
       "entityKind": "Сущность",
+      "name": "Название",
       "type": "Тип",
       "status": "Статус",
       "ruler": "Правитель",
@@ -204,10 +262,18 @@
       "territory": "Территория",
       "founded": "Основана",
       "disbanded": "Распущена",
-      "tags": "Теги"
+      "tags": "Теги",
+      "empty": "Не заполнено",
+      "notSpecified": "Не указано",
+      "noneSelected": "Не выбраны",
+      "territoriesCount": "{{count}} области",
+      "draftFooter": "Черновик. Ветвь: {{branch}}",
+      "savedFooter": "Ветвь: {{branch}}"
     },
     "sections": {
-      "basics": "Основная информация",
+      "basics": "Основное",
+      "lands": "Земли и время",
+      "identity": "Опознавание",
       "history": "Описание и история",
       "ranks": "Ранги",
       "members": "Члены",
@@ -235,17 +301,45 @@
       "relationDescriptionField": "Описание"
     },
     "placeholders": {
-      "motto": "напр. Зима близко",
+      "nameState": "Как называется государство",
+      "nameFaction": "Как называется фракция",
+      "motto": "Строка, которую высекают на воротах",
+      "type": "Королевство, республика, теократия…",
+      "typeState": "Королевство, республика, теократия…",
+      "typeFaction": "Гильдия, орден, культ…",
+      "capital": "Город или точка на карте",
+      "headquarters": "Штаб или место сбора",
+      "description": "Опишите место в мире. @ — ссылка на сущность, / — заголовок, список, цитата.",
       "descriptionFaction": "Общее описание фракции...",
       "history": "Как была основана, ключевые события...",
       "goals": "Чего добивается фракция...",
-      "rulerSearch": "Поиск или новое имя...",
-      "territoryMap": "Выберите области...",
+      "rulerSearch": "Персонаж из проекта",
+      "dynasty": "Выберите династию проекта",
+      "parentState": "Независимое или вассал",
+      "parentFaction": "Без родительской фракции",
+      "territoryMap": "Выберите области на холсте",
       "policyTitleSearch": "Введите название"
     },
     "typeNotSet": "Не указан",
     "dynastyNotChosen": "Не выбрано",
     "parentNone": "Нет",
+    "parentIndependent": "Независимое",
+    "noOptions": {
+      "charactersEmpty": "В проекте пока нет персонажей",
+      "charactersNone": "Никого не найдено",
+      "dynasties": "В проекте пока нет династий",
+      "territoriesEmpty": "На холсте пока нет областей",
+      "territoriesNone": "Ничего не найдено",
+      "statesEmpty": "В проекте пока нет других государств",
+      "factionsEmpty": "В проекте пока нет других фракций"
+    },
+    "connectionKinds": {
+      "character": "Персонаж",
+      "dynasty": "Династия",
+      "state": "Государство",
+      "faction": "Фракция",
+      "wiki": "Вики"
+    },
     "territoryOccupied": "{{name}} ({{mapName}}) — занято: {{occupant}}",
     "territoryOccupantStateKind": "государство",
     "territoryRebindTitle": "Перепривязка территории",
@@ -358,7 +452,8 @@
   "customMetrics": {
     "name": "Название",
     "value": "Значение",
-    "unit": "Единица"
+    "unit": "Единица",
+    "add": "Добавить свой показатель"
   },
   "snackbar": {
     "loadError": "Ошибка загрузки",

@@ -288,6 +288,7 @@ export interface ImportedProjectPayload {
     description?: string;
     status?: string;
     mapImageBase64?: string | null;
+    coverImageBase64?: string | null;
   };
   characters?: Array<{
     id: number;

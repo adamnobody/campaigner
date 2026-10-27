@@ -54,7 +54,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a14 70%, #000 100%)',
+        background: 'radial-gradient(ellipse at center, #15130f 0%, #090b0f 68%, #050608 100%)',
       }}
     >
       <Typography

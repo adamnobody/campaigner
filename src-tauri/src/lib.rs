@@ -131,6 +131,7 @@ pub fn run() {
             commands::canvas::canvas_objects_bulk_delete_command,
             commands::canvas::canvas_reconcile_scene_command,
             commands::canvas::canvas_markers_attach_child_scene_command,
+            commands::canvas::canvas_create_map_scene_container_command,
             commands::projects::projects_list_command,
             commands::projects::projects_get_command,
             commands::projects::projects_create_command,
@@ -172,12 +173,12 @@ pub fn run() {
             commands::uploads::uploads_save_character_image_command,
             commands::uploads::uploads_save_trait_image_command,
             commands::uploads::uploads_save_ambition_image_command,
-            commands::uploads::uploads_save_appearance_image_command,
             commands::uploads::characters_upload_image_command,
             commands::uploads::factions_upload_image_command,
             commands::uploads::factions_upload_banner_command,
             commands::uploads::dynasties_upload_image_command,
-            commands::uploads::projects_upload_map_image_command
+            commands::uploads::projects_upload_map_image_command,
+            commands::uploads::projects_upload_cover_command
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");

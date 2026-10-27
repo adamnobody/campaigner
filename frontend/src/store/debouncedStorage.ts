@@ -8,9 +8,6 @@ const createNoopStorage = (): StateStorage => ({
   removeItem: () => {},
 });
 
-const isDataUrl = (value: unknown): value is string =>
-  typeof value === 'string' && value.startsWith('data:');
-
 const prunePreferencesPayload = (rawValue: string): string | null => {
   try {
     const parsed = JSON.parse(rawValue) as { state?: Record<string, unknown> };
@@ -19,27 +16,8 @@ const prunePreferencesPayload = (rawValue: string): string | null => {
 
     const prunedState: Record<string, unknown> = { ...state };
 
-    if (isDataUrl(prunedState.homeBackgroundImage)) {
-      prunedState.homeBackgroundImage = '';
-    }
-    if (isDataUrl(prunedState.panelPatternUrl)) {
-      prunedState.panelPatternUrl = '';
-    }
-    if (isDataUrl(prunedState.cardPatternUrl)) {
-      prunedState.cardPatternUrl = '';
-    }
-
     if (Array.isArray(prunedState.customThemes)) {
-      prunedState.customThemes = prunedState.customThemes.slice(0, 20).map((theme) => {
-        if (!theme || typeof theme !== 'object') return theme;
-        const typedTheme = theme as { settings?: Record<string, unknown> };
-        if (!typedTheme.settings || typeof typedTheme.settings !== 'object') return theme;
-        const settings = { ...typedTheme.settings };
-        if (isDataUrl(settings.homeBackgroundImage)) settings.homeBackgroundImage = '';
-        if (isDataUrl(settings.panelPatternUrl)) settings.panelPatternUrl = '';
-        if (isDataUrl(settings.cardPatternUrl)) settings.cardPatternUrl = '';
-        return { ...typedTheme, settings };
-      });
+      prunedState.customThemes = prunedState.customThemes.slice(0, 20);
     }
 
     if (Array.isArray(prunedState.customColorThemes)) {
@@ -60,28 +38,16 @@ const pickMinimalPreferencesPayload = (rawValue: string): string | null => {
 
     const minimal = {
       interfaceStyle: state.interfaceStyle,
-      autoApplyRecommendedPalette: state.autoApplyRecommendedPalette,
       themePreset: state.themePreset,
-      surfaceMode: state.surfaceMode,
+      backgroundTone: state.backgroundTone,
+      accentGlow: state.accentGlow,
       fontMode: state.fontMode,
+      fontPresetId: state.fontPresetId,
       uiDensity: state.uiDensity,
       motionMode: state.motionMode,
-      transparency: state.transparency,
-      blur: state.blur,
-      borderRadius: state.borderRadius,
-      homeBackgroundOpacity: state.homeBackgroundOpacity,
-      customBodyFontFamily: state.customBodyFontFamily,
-      customHeadingFontFamily: state.customHeadingFontFamily,
-      customFontCssUrl: state.customFontCssUrl,
-      panelPatternMode: state.panelPatternMode,
-      panelPatternOpacity: state.panelPatternOpacity,
-      panelPatternSize: state.panelPatternSize,
-      cardPatternMode: state.cardPatternMode,
-      cardPatternOpacity: state.cardPatternOpacity,
-      cardPatternSize: state.cardPatternSize,
-      homeBackgroundImage: '',
-      panelPatternUrl: '',
-      cardPatternUrl: '',
+      readingFontSize: state.readingFontSize,
+      readingLineHeight: state.readingLineHeight,
+      readingColumnWidth: state.readingColumnWidth,
       customThemes: [],
       customColorThemes: [],
       selectedCustomThemeId: null,

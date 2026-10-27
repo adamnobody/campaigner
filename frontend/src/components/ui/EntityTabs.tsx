@@ -11,18 +11,16 @@ export const EntityTabs: React.FC<EntityTabsProps> = ({ value, onChange, tabs })
   const theme = useTheme();
 
   return (
-    <Box sx={{ mb: 3, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+    <Box sx={{ mb: 4, borderBottom: '1px solid rgba(255,255,255,.07)' }}>
       <Tabs
         value={value}
         onChange={onChange}
         variant="scrollable"
         scrollButtons="auto"
         sx={{
-          minHeight: 48,
+          minHeight: 38,
           '& .MuiTabs-indicator': {
-            height: 3,
-            borderTopLeftRadius: 3,
-            borderTopRightRadius: 3,
+            height: 1,
             backgroundColor: theme.palette.primary.main,
           },
         }}
@@ -35,13 +33,14 @@ export const EntityTabs: React.FC<EntityTabsProps> = ({ value, onChange, tabs })
             icon={tab.icon}
             iconPosition="start"
             sx={{
-              minHeight: 48,
-              fontWeight: 600,
+              minHeight: 38,
+              fontWeight: 300,
               textTransform: 'none',
-              fontSize: '0.95rem',
+              fontSize: '0.78rem',
               color: theme.palette.text.secondary,
               '&.Mui-selected': {
-                color: theme.palette.primary.main,
+                color: theme.palette.text.primary,
+                fontWeight: 400,
               },
             }}
           />

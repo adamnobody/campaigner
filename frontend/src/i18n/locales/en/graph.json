@@ -1,9 +1,12 @@
 {
   "page": {
+    "eyebrow": "Connections · {{count}}",
     "title": "Project graph",
+    "subtitle": "A map of connections between the entities in your world.",
     "loading": "Loading project graph…",
     "emptyTitle": "No graph data yet",
     "emptyDescription": "Add characters, factions, events, or links to see your project graph.",
+    "emptyAction": "Create first character",
     "canvasDoubleClickHint": "Double-click a node to open the entity"
   },
   "toolbar": {

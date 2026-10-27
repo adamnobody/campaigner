@@ -15,4 +15,6 @@ export const routes = {
 
   factionDetail: (pid: number | string, kind: 'state' | 'faction', id: number | 'new') =>
     `${routes.factionList(pid, kind)}/${id}`,
+
+  wikiGraph: (pid: number | string) => `/project/${pid}/wiki/graph`,
 };

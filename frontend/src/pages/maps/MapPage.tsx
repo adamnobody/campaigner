@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Box, Button, Chip, CircularProgress, Paper, Stack, Typography, alpha, useTheme } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
@@ -12,10 +13,16 @@ import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
 import { BranchEntityMissingDialog } from '@/components/ui/BranchEntityMissingDialog';
 import { MapToolbar } from './components/MapToolbar';
+import { MapLayersPanel, MapLegendPanel } from './components/MapCanvasOverlays';
 import { MapMarkerDialog } from './components/MapMarkerDialog';
+import { MapSceneContainerDialog } from './components/MapSceneContainerDialog';
 import { MapMarkerPanel } from './components/MapMarkerPanel';
 import { MapTerritoryDialog } from './components/MapTerritoryDialog';
 import { MapTerritoryPanel } from './components/MapTerritoryPanel';
+import { MapInlineTextEditor } from './components/MapInlineTextEditor';
+import { MapTextPanel } from './components/MapTextPanel';
+import { MapShapePanel } from './components/MapShapePanel';
+import { MapCardPanel } from './components/MapCardPanel';
 import { MapCanvasContextMenu, type MapContextMenuState } from './components/MapCanvasContextMenu';
 import { PixiMapCanvas, type PixiMapCanvasHandle } from './canvas/PixiMapCanvas';
 import type { ViewportPersist } from './canvas/canvasViewport';
@@ -27,7 +34,26 @@ import {
   resolveNavigationTrail,
   truncateNavigationStack,
   type NavigationEntry,
+  type NavigationVia,
 } from './canvas/navigationStack';
+import { curveTextGeometryJsonEquals, mergeCurveTextGeometryDraft } from './canvas/curveTextHandles';
+import {
+  applyTextContentToObject,
+  resolveTextContent,
+} from './canvas/textObjectForm';
+import {
+  loadActiveTextPresetId,
+  loadTextPresets,
+  resolveTextPresetStyleForCreate,
+  type MapTextStylePreset,
+} from './canvas/textPresets';
+import {
+  buildShapeCreateInput,
+  isShapeKind,
+  type ShapeVariant,
+} from './canvas/shapeObjectForm';
+import { isMapScene, normalizeCanvasModeForSceneType } from './canvas/canvasTools';
+import { mapSceneNeedsBackground } from './canvas/mapBackground';
 import {
   appendCompletedTerritoryRing,
   buildTerritoryRingsForCreateDialog,
@@ -43,7 +69,6 @@ import {
   DEFAULT_MARKER_FORM,
   DEFAULT_TERRITORY_FORM,
   defaultImageObject,
-  defaultShapeObject,
   defaultTextObject,
   markerFormFromObject,
   factionDetailPath,
@@ -62,6 +87,7 @@ import {
   type TerritoryFactionOption,
   type TerritoryFormState,
 } from './canvas/canvasModel';
+import type { ImageCardDisplayLabels, SceneContainerDisplayLabels } from './canvas/canvasReconciler';
 
 const MAX_TEXTURE_SIZE = 16384;
 const pendingInitialSceneLoads = new Map<string, Promise<CanvasScene>>();
@@ -73,6 +99,7 @@ const createInitialScene = (projectId: number, sceneName: string): Promise<Canva
     parentObjectId: null,
     name: sceneName,
     backgroundPath: null,
+    sceneType: 'root_canvas',
     viewportJson: null,
     metadataJson: null,
   });
@@ -134,6 +161,7 @@ export function CanvasPage() {
   const [sceneTree, setSceneTree] = useState<CanvasScene[]>([]);
   const [navigationStack, setNavigationStack] = useState<NavigationEntry[]>([]);
   const [layers, setLayers] = useState<CanvasLayer[]>([]);
+  const [updatingLayerId, setUpdatingLayerId] = useState<number | null>(null);
   const [objects, setObjects] = useState<CanvasObject[]>([]);
   const [selectedObjectId, setSelectedObjectId] = useState<number | null>(null);
   const [mode, setMode] = useState<CanvasMode>('select');
@@ -144,6 +172,8 @@ export function CanvasPage() {
   const [zoomPercent, setZoomPercent] = useState(100);
   const [contextMenu, setContextMenu] = useState<MapContextMenuState>(null);
   const [markerDialogOpen, setMarkerDialogOpen] = useState(false);
+  const [sceneContainerDialogOpen, setSceneContainerDialogOpen] = useState(false);
+  const [pendingSceneContainerPoint, setPendingSceneContainerPoint] = useState<CanvasPoint | null>(null);
   const [editingMarker, setEditingMarker] = useState<CanvasObject | null>(null);
   const [markerForm, setMarkerForm] = useState<MarkerFormState>(DEFAULT_MARKER_FORM);
   const [createNestedMapInDialog, setCreateNestedMapInDialog] = useState(false);
@@ -156,6 +186,7 @@ export function CanvasPage() {
   const [territoryForm, setTerritoryForm] = useState<TerritoryFormState>(DEFAULT_TERRITORY_FORM);
   const pixiCanvasRef = useRef<PixiMapCanvasHandle | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const mapBackgroundInputRef = useRef<HTMLInputElement | null>(null);
   const childMapImageInputRef = useRef<HTMLInputElement | null>(null);
   const dialogNestedMapImageInputRef = useRef<HTMLInputElement | null>(null);
   const pendingChildMapMarkerIdRef = useRef<number | null>(null);
@@ -168,6 +199,14 @@ export function CanvasPage() {
     rings: CanvasPoint[][];
     snapshot: CanvasObject;
   } | null>(null);
+  const [textPresets, setTextPresets] = useState<MapTextStylePreset[]>([]);
+  const [activeTextPresetId, setActiveTextPresetId] = useState<string | null>(null);
+  const [inlineTextEdit, setInlineTextEdit] = useState<{
+    objectId: number;
+    selectAll?: boolean;
+    replaceWithSeed?: string;
+  } | null>(null);
+  const [textLayoutTick, setTextLayoutTick] = useState(0);
   const reportedImageLoadErrorsRef = useRef(new Set<string>());
   const viewportPersistTimerRef = useRef<number | null>(null);
   const pendingViewportRef = useRef<{ sceneId: number; viewport: ViewportPersist } | null>(null);
@@ -185,14 +224,33 @@ export function CanvasPage() {
     [objects, selectedObjectId],
   );
 
+  const [curveTextGeometryDraft, setCurveTextGeometryDraft] = useState<CanvasObject | null>(null);
+
   const canvasObjects = useMemo(() => {
-    if (!territoryEditSession) return objects;
-    return objects.map((object) => (
-      object.id === territoryEditSession.objectId
-        ? withTerritoryEditRings(object, territoryEditSession.rings)
-        : object
-    ));
-  }, [objects, territoryEditSession]);
+    let list = objects;
+    if (territoryEditSession) {
+      list = list.map((object) => (
+        object.id === territoryEditSession.objectId
+          ? withTerritoryEditRings(object, territoryEditSession.rings)
+          : object
+      ));
+    }
+    list = mergeCurveTextGeometryDraft(list, curveTextGeometryDraft);
+    return list;
+  }, [objects, territoryEditSession, curveTextGeometryDraft]);
+  const legendObjects = useMemo(() => {
+    const hiddenLayerIds = new Set(
+      layers.filter((layer) => layer.isHidden).map((layer) => layer.id),
+    );
+    return canvasObjects.filter((object) => !hiddenLayerIds.has(object.layerId));
+  }, [canvasObjects, layers]);
+
+  const inlineEditObject = useMemo(
+    () => (inlineTextEdit
+      ? canvasObjects.find((object) => object.id === inlineTextEdit.objectId) ?? null
+      : null),
+    [canvasObjects, inlineTextEdit],
+  );
 
   const notesMap = useMemo(
     () => new Map(notes.map((note) => [note.id, note])),
@@ -223,8 +281,40 @@ export function CanvasPage() {
     if (territoryEditSession) return t('map:page.hintEditingPoints');
     if (mode === 'draw_territory') return t('map:page.hintDrawTerritory');
     if (mode === 'marker') return t('map:page.hintMarkerMode');
+    if (mode === 'scene_container') return t('map:page.hintSceneContainerMode');
     return t('map:page.hintSelectMode');
   }, [mode, t, territoryEditSession]);
+
+  const sceneTypesById = useMemo(
+    () => new Map(sceneTree.map((item) => [item.id, item.sceneType])),
+    [sceneTree],
+  );
+
+  const linkedSceneNames = useMemo(
+    () => new Map(sceneTree.map((item) => [item.id, item.name])),
+    [sceneTree],
+  );
+
+  const linkedSceneBackgroundPaths = useMemo(
+    () => new Map(
+      sceneTree.flatMap((item) => {
+        const path = item.backgroundPath?.trim();
+        return path ? [[item.id, path] as const] : [];
+      }),
+    ),
+    [sceneTree],
+  );
+
+  const sceneContainerLabels = useMemo((): SceneContainerDisplayLabels => ({
+    defaultTitle: t('map:canvas.breadcrumbs.mapFallback'),
+    openHint: t('map:canvas.sceneContainer.openHint'),
+    kindLabel: t('map:canvas.sceneContainer.kindLabel'),
+  }), [t]);
+
+  const imageCardLabels = useMemo((): ImageCardDisplayLabels => ({
+    defaultTitle: t('map:canvas.imageCard.defaultTitle'),
+    kindLabel: t('map:canvas.imageCard.kindLabel'),
+  }), [t]);
 
   const selectedLabel = useMemo(() => {
     if (!selectedObject) return null;
@@ -232,13 +322,30 @@ export function CanvasPage() {
       const content = asRecord(selectedObject.contentJson);
       return asString(content.title, selectedObject.name ?? selectedObject.kind);
     }
+    if (selectedObject.kind === 'scene_container') {
+      const content = asRecord(selectedObject.contentJson);
+      const override = asString(content.titleOverride, '').trim();
+      if (override) return override;
+      if (selectedObject.linkedSceneId != null) {
+        return linkedSceneNames.get(selectedObject.linkedSceneId) ?? selectedObject.name ?? t('map:canvas.breadcrumbs.mapFallback');
+      }
+    }
+    if (selectedObject.kind === 'text' || selectedObject.kind === 'curve_text') {
+      const line = (selectedObject.name ?? '').trim();
+      if (line) return line;
+    }
     return selectedObject.name ?? selectedObject.kind;
-  }, [selectedObject]);
+  }, [linkedSceneNames, selectedObject, t]);
 
   const navigationTrail = useMemo(() => {
     if (!scene) return [];
     return resolveNavigationTrail(navigationStack, sceneTree, scene.id);
   }, [navigationStack, scene, sceneTree]);
+
+  useEffect(() => {
+    if (!scene) return;
+    setMode((current) => normalizeCanvasModeForSceneType(current, scene.sceneType));
+  }, [scene?.id, scene?.sceneType]);
 
   const navigateToMapScene = useCallback((sceneId: number, stackAfterNavigate: NavigationEntry[]) => {
     setNavigationStack(stackAfterNavigate);
@@ -257,14 +364,17 @@ export function CanvasPage() {
     navigateToMapScene(parent.sceneId, truncateNavigationStack(trail, trail.length - 2));
   }, [navigateToMapScene, navigationStack, scene, sceneTree]);
 
-  const handleOpenChildMap = useCallback((childSceneId: number) => {
+  const handleOpenChildMap = useCallback((
+    childSceneId: number,
+    via: NavigationVia = 'marker',
+  ) => {
     if (!scene) return;
     const child = sceneTree.find((item) => item.id === childSceneId);
     const trail = resolveNavigationTrail(navigationStack, sceneTree, scene.id);
     const nextStack = pushNavigationEntry(trail, {
       sceneId: childSceneId,
-      label: child?.name ?? t('map:canvas.defaults.sceneName'),
-      via: 'marker',
+      label: child?.name ?? t('map:canvas.breadcrumbs.mapFallback'),
+      via,
     });
     navigateToMapScene(childSceneId, nextStack);
   }, [navigateToMapScene, navigationStack, scene, sceneTree, t]);
@@ -322,6 +432,12 @@ export function CanvasPage() {
 
   useEffect(() => {
     if (!projectIdNumber) return;
+    setTextPresets(loadTextPresets(projectIdNumber));
+    setActiveTextPresetId(loadActiveTextPresetId(projectIdNumber));
+  }, [projectIdNumber]);
+
+  useEffect(() => {
+    if (!projectIdNumber) return;
     void notesApi.getAll(projectIdNumber, { limit: 500 })
       .then((response) => {
         setNotes(response.data.data.items.map((note) => ({
@@ -359,6 +475,7 @@ export function CanvasPage() {
         id: pendingViewport.sceneId,
         name: null,
         backgroundPath: null,
+        sceneType: null,
         viewportJson: pendingViewport.viewport,
         metadataJson: null,
       }, projectIdRef.current)).catch((error) => {
@@ -376,6 +493,31 @@ export function CanvasPage() {
     }
     return layer;
   }, [layers, projectIdNumber, scene]);
+
+  const toggleLayerVisibility = useCallback(async (layer: CanvasLayer) => {
+    setUpdatingLayerId(layer.id);
+    try {
+      const updated = await trackCanvasWrite(canvasApi.updateLayer({
+        id: layer.id,
+        name: null,
+        kind: null,
+        zIndex: null,
+        isHidden: !layer.isHidden,
+        isLocked: null,
+        opacity: null,
+        blendMode: null,
+        metadataJson: null,
+      }, projectIdNumber));
+      setLayers((current) => current.map((item) => (
+        item.id === updated.id ? updated : item
+      )));
+    } catch (error) {
+      console.error('[Canvas] update layer visibility failed', { layerId: layer.id, error });
+      showSnackbar(t('map:canvas.layers.updateError'), 'error');
+    } finally {
+      setUpdatingLayerId(null);
+    }
+  }, [projectIdNumber, showSnackbar, t]);
 
   const persistObject = useCallback(async (object: CanvasObject) => {
     if (!scene) return;
@@ -652,42 +794,177 @@ export function CanvasPage() {
     }
   }, [attachNestedMapToMarker, nestedMapSceneName, objects, showSnackbar, t]);
 
-  const handleMarkerOpenLinkedScene = useCallback((marker: CanvasObject) => {
-    if (marker.linkedSceneId == null) return;
-    handleOpenChildMap(marker.linkedSceneId);
+  const handleMarkerOpenLinkedScene = useCallback((object: CanvasObject) => {
+    if (object.linkedSceneId == null) return;
+    const via: NavigationVia = object.kind === 'scene_container' ? 'container' : 'marker';
+    handleOpenChildMap(object.linkedSceneId, via);
   }, [handleOpenChildMap]);
+
+  const handleSaveSceneContainer = useCallback(async (mapName: string, file: File) => {
+    if (!scene || !pendingSceneContainerPoint) return;
+    setSceneContainerDialogOpen(false);
+    setLoading(true);
+    try {
+      const backgroundPath = await canvasApi.uploadCanvasAsset(file);
+      const layer = await contentLayer();
+      const transformJson = {
+        x: pendingSceneContainerPoint.x,
+        y: pendingSceneContainerPoint.y,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+      };
+
+      const result = await trackCanvasWrite(canvasApi.createMapSceneContainer({
+        projectId: projectIdNumber,
+        parentSceneId: scene.id,
+        parentLayerId: layer.id,
+        mapName,
+        backgroundPath,
+        objectName: mapName,
+        transformJson,
+        styleJson: null,
+        contentJson: { titleOverride: mapName },
+      }));
+
+      setObjects((current) => [...current, result.containerObject]);
+      setSelectedObjectId(result.containerObject.id);
+      setMode('select');
+      const tree = await canvasApi.getSceneTree(projectIdNumber);
+      setSceneTree(tree);
+
+      showSnackbar(t('map:snackbar.nestedMapCreated'), 'success');
+    } catch (error) {
+      console.error('[Canvas] createMapSceneContainer failed', error);
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : t('map:snackbar.nestedMapCreateError');
+      showSnackbar(message, 'error');
+    } finally {
+      setLoading(false);
+      setPendingSceneContainerPoint(null);
+    }
+  }, [scene, pendingSceneContainerPoint, contentLayer, projectIdNumber, showSnackbar, t]);
+
+  const handleShiftCanvasClick = useCallback((point: CanvasPoint) => {
+    openMarkerDialog(point);
+  }, [openMarkerDialog]);
+
+  const handleObjectMove = useCallback((object: CanvasObject, point: CanvasPoint) => {
+    persistObject(withObjectPosition(object, point.x, point.y));
+  }, [persistObject]);
+
+  const handleTextObjectSave = useCallback((object: CanvasObject) => {
+    void persistObject(object);
+  }, [persistObject]);
+
+  const handleShapeObjectSave = useCallback((object: CanvasObject) => {
+    void persistObject(object);
+  }, [persistObject]);
+
+  const handleCardObjectSave = useCallback((object: CanvasObject) => {
+    void persistObject(object);
+  }, [persistObject]);
+
+  const buildNewTextObject = useCallback((
+    layerId: number,
+    point: CanvasPoint,
+    kind: 'text' | 'curve_text',
+  ) => {
+    if (!scene) return null;
+    const object = defaultTextObject(scene.id, layerId, point, kind);
+    const style = resolveTextPresetStyleForCreate(textPresets, activeTextPresetId);
+    return {
+      ...object,
+      styleJson: {
+        ...object.styleJson,
+        fill: style.fill,
+        fontSize: style.fontSize,
+        opacity: style.opacity,
+      },
+    };
+  }, [activeTextPresetId, scene, textPresets]);
+
+  const openInlineTextEdit = useCallback((object: CanvasObject, options?: {
+    selectAll?: boolean;
+    replaceWithSeed?: string;
+  }) => {
+    setSelectedObjectId(object.id);
+    setInlineTextEdit({
+      objectId: object.id,
+      selectAll: options?.selectAll,
+      replaceWithSeed: options?.replaceWithSeed,
+    });
+    setTextLayoutTick((tick) => tick + 1);
+  }, []);
+
+  const handleTextEditRequest = useCallback((object: CanvasObject) => {
+    openInlineTextEdit(object, { selectAll: true });
+  }, [openInlineTextEdit]);
+
+  const handleInlineTextCommit = useCallback((text: string) => {
+    const object = objects.find((item) => item.id === inlineTextEdit?.objectId);
+    setInlineTextEdit(null);
+    if (!object) return;
+    void persistObject(applyTextContentToObject(object, text));
+  }, [inlineTextEdit?.objectId, objects, persistObject]);
+
+  const handleInlineTextCancel = useCallback(() => {
+    setInlineTextEdit(null);
+  }, []);
+
+  const placeCreatedText = useCallback(async (
+    point: CanvasPoint,
+    kind: 'text' | 'curve_text' = 'text',
+  ) => {
+    if (!scene) return;
+    const layer = await contentLayer();
+    const draft = buildNewTextObject(layer.id, point, kind);
+    if (!draft) return;
+    const created = await createCanvasObject(draft);
+    setObjects((current) => [...current, created]);
+    setSelectedObjectId(created.id);
+    setMode('select');
+    openInlineTextEdit(created, { selectAll: true });
+  }, [buildNewTextObject, contentLayer, createCanvasObject, openInlineTextEdit, scene]);
 
   const handleCanvasClick = useCallback(async (point: CanvasPoint) => {
     if (!scene) return;
+    if (mode === 'scene_container') {
+      setPendingSceneContainerPoint(point);
+      setSceneContainerDialogOpen(true);
+      return;
+    }
     if (mode === 'marker') {
       openMarkerDialog(point);
       return;
     }
     if (mode === 'text' || mode === 'curve_text') {
-      const layer = await contentLayer();
-      const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, mode));
-      setObjects((current) => [...current, created]);
-      setSelectedObjectId(created.id);
-      setMode('select');
-      return;
-    }
-    if (mode === 'rectangle' || mode === 'ellipse') {
-      const layer = await contentLayer();
-      const created = await createCanvasObject(defaultShapeObject(scene.id, layer.id, point, mode));
-      setObjects((current) => [...current, created]);
-      setSelectedObjectId(created.id);
-      setMode('select');
+      await placeCreatedText(point, mode);
       return;
     }
     if (mode === 'image') {
       pendingImagePointRef.current = point;
       imageInputRef.current?.click();
     }
-  }, [contentLayer, createCanvasObject, mode, openMarkerDialog, projectIdNumber, scene]);
+  }, [contentLayer, createCanvasObject, mode, openMarkerDialog, placeCreatedText, scene]);
 
-  const handleObjectMove = useCallback((object: CanvasObject, point: CanvasPoint) => {
-    persistObject(withObjectPosition(object, point.x, point.y));
+  const handleCurveTextGeometryDraft = useCallback((object: CanvasObject) => {
+    setCurveTextGeometryDraft(object);
+  }, []);
+
+  const handleCurveTextGeometryCommit = useCallback((object: CanvasObject) => {
+    setCurveTextGeometryDraft(object);
+    void persistObject(object);
   }, [persistObject]);
+
+  useEffect(() => {
+    if (!curveTextGeometryDraft) return;
+    const committed = objects.find((item) => item.id === curveTextGeometryDraft.id);
+    if (committed && curveTextGeometryJsonEquals(committed, curveTextGeometryDraft)) {
+      setCurveTextGeometryDraft(null);
+    }
+  }, [objects, curveTextGeometryDraft]);
 
   const handleObjectSelect = useCallback((object: CanvasObject | null) => {
     setSelectedObjectId(object?.id ?? null);
@@ -700,8 +977,30 @@ export function CanvasPage() {
     showSnackbar(t('map:canvas.snackbar.imageLoadError'), 'error');
   }, [showSnackbar, t]);
 
+  useEffect(() => {
+    if (inlineTextEdit) return;
+    if (!selectedObject) return;
+    if (selectedObject.kind !== 'text' && selectedObject.kind !== 'curve_text') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (event.key.length !== 1) return;
+      event.preventDefault();
+      openInlineTextEdit(selectedObject, { replaceWithSeed: event.key });
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inlineTextEdit, openInlineTextEdit, selectedObject]);
+
   const handleViewportChange = useCallback((viewport: ViewportPersist) => {
     setZoomPercent(Math.round(viewport.scale * 100));
+    if (inlineTextEdit) setTextLayoutTick((tick) => tick + 1);
     if (!scene) return;
     pendingViewportRef.current = { sceneId: scene.id, viewport };
     if (viewportPersistTimerRef.current != null) window.clearTimeout(viewportPersistTimerRef.current);
@@ -713,13 +1012,21 @@ export function CanvasPage() {
         id: pending.sceneId,
         name: null,
         backgroundPath: null,
+        sceneType: null,
         viewportJson: pending.viewport,
         metadataJson: null,
       }, projectIdNumber)).catch((error) => {
         console.error('[Canvas] viewport persist failed', { sceneId: pending.sceneId, error });
       });
     }, 400);
-  }, [projectIdNumber, scene]);
+  }, [inlineTextEdit, projectIdNumber, scene]);
+
+  useEffect(() => {
+    if (!inlineTextEdit) return;
+    if (selectedObjectId !== inlineTextEdit.objectId) {
+      setInlineTextEdit(null);
+    }
+  }, [inlineTextEdit, selectedObjectId]);
 
   const readImageSize = useCallback((file: File) => new Promise<{ width: number; height: number }>((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -773,10 +1080,30 @@ export function CanvasPage() {
     }
   }, [contentLayer, createCanvasObject, readImageSize, scene, showSnackbar, t]);
 
+  const uploadMapSceneBackground = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !scene || !isMapScene(scene.sceneType)) return;
+    setLoading(true);
+    try {
+      const updated = await trackCanvasWrite(
+        canvasApi.uploadSceneBackground(scene.id, projectIdNumber, file),
+      );
+      setScene(updated);
+      showSnackbar(t('map:snackbar.mapUploaded'), 'success');
+    } catch (error) {
+      console.error('[Canvas] upload map background failed', { sceneId: scene.id, error });
+      showSnackbar(t('map:snackbar.mapUploadError'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectIdNumber, scene, showSnackbar, t]);
+
   const uploadBackground = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !scene) return;
+    if (isMapScene(scene.sceneType)) return;
     const fallbackPoint = pixiCanvasRef.current?.getViewportCenter() ?? { x: 0, y: 0 };
     const point = pendingImagePointRef.current ?? fallbackPoint;
     const role: 'background' | null = pendingImagePointRef.current ? null : 'background';
@@ -886,6 +1213,27 @@ export function CanvasPage() {
     );
   }, [contextMenu?.targetObject, projectIdNumber, selectedObject, showConfirmDialog, t]);
 
+  useEffect(() => {
+    if (inlineTextEdit) return;
+    if (!selectedObject) return;
+    if (selectedObject.kind !== 'text' && selectedObject.kind !== 'curve_text') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.key !== 'Delete') return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      deleteSelected();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteSelected, inlineTextEdit, selectedObject]);
+
   const selectedForMenu = useMemo(
     () => contextMenu?.targetObject ?? selectedObject ?? null,
     [contextMenu?.targetObject, selectedObject],
@@ -906,14 +1254,19 @@ export function CanvasPage() {
     void factory({ x: contextMenu.worldX, y: contextMenu.worldY });
   }, [contextMenu]);
 
-  const createShapeAt = useCallback(async (point: CanvasPoint, kind: 'polygon' | 'rectangle' | 'ellipse' | 'polyline') => {
+  const createShapePresetAt = useCallback(async (point: CanvasPoint, variant: ShapeVariant) => {
     if (!scene) return;
     const layer = await contentLayer();
-    const created = await createCanvasObject(defaultShapeObject(scene.id, layer.id, point, kind));
+    const created = await createCanvasObject(buildShapeCreateInput(scene.id, layer.id, point, variant));
     setObjects((current) => [...current, created]);
     setSelectedObjectId(created.id);
     setMode('select');
   }, [contentLayer, createCanvasObject, scene]);
+
+  const addShapePreset = useCallback((variant: ShapeVariant, point?: CanvasPoint) => {
+    const placement = point ?? pixiCanvasRef.current?.getViewportCenter() ?? { x: 0, y: 0 };
+    void createShapePresetAt(placement, variant);
+  }, [createShapePresetAt]);
 
   const duplicateSelected = useCallback(async () => {
     if (!selectedForMenu || !scene) return;
@@ -969,11 +1322,6 @@ export function CanvasPage() {
       '1': 'select',
       '2': 'marker',
       '3': 'text',
-      '4': 'polygon',
-      '5': 'polyline',
-      '6': 'rectangle',
-      '7': 'ellipse',
-      '8': 'curve_text',
       '9': 'image',
     };
 
@@ -1011,7 +1359,7 @@ export function CanvasPage() {
       const next = keyToMode[event.key];
       if (!next) return;
       event.preventDefault();
-      setMode(next);
+      setMode(normalizeCanvasModeForSceneType(next, scene?.sceneType));
       if (next !== 'polygon' && next !== 'draw_territory' && next !== 'polyline') {
         pixiCanvasRef.current?.cancelDrawing();
         setDraftPointsCount(0);
@@ -1048,9 +1396,23 @@ export function CanvasPage() {
   }
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+    <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        overflow: 'hidden',
+        pt: { xs: 2, md: 3.25 },
+        pr: { xs: 2, md: 4 },
+        pb: { xs: 2, md: 4 },
+        pl: { xs: 2, md: 6 },
+      }}
+    >
       <MapToolbar
         sceneName={scene.name}
+        sceneType={scene.sceneType}
+        sceneTypesById={sceneTypesById}
         navigationTrail={navigationTrail}
         onBreadcrumbNavigate={handleBreadcrumbNavigate}
         onNavigationBack={handleNavigationBack}
@@ -1088,18 +1450,19 @@ export function CanvasPage() {
         }}
         onCancelTerritory={handleCancelTerritoryDrawing}
         onAddImage={() => openImagePickerAt()}
+        onAddShape={(variant) => addShapePreset(variant)}
       />
 
       <Typography
         variant="caption"
-        sx={{ color: 'text.secondary', mb: 0.25, display: 'block', fontSize: '0.8rem', lineHeight: 1.45 }}
+        sx={{ color: 'text.secondary', mb: 0.25, display: 'block', fontSize: '0.78rem', lineHeight: 1.55 }}
       >
         {canvasModeHint}
       </Typography>
       <Typography
         variant="caption"
         component="div"
-        sx={{ color: 'text.secondary', mb: territoryEditSession ? 0.5 : 1, fontSize: '0.72rem', lineHeight: 1.4 }}
+        sx={{ color: 'text.disabled', mb: territoryEditSession ? 0.5 : 1.5, fontFamily: theme.campaigner.typography.mono, fontSize: '0.6rem', lineHeight: 1.4 }}
       >
         {t('map:page.modeShortcutsHint')}
       </Typography>
@@ -1113,6 +1476,7 @@ export function CanvasPage() {
       )}
 
       <input ref={imageInputRef} type="file" hidden accept="image/*" onChange={uploadBackground} />
+      <input ref={mapBackgroundInputRef} type="file" hidden accept="image/*" onChange={uploadMapSceneBackground} />
       <input ref={childMapImageInputRef} type="file" hidden accept="image/*" onChange={(event) => { void handleChildMapImageSelected(event); }} />
       <input ref={dialogNestedMapImageInputRef} type="file" hidden accept="image/*" onChange={handleDialogNestedMapImagePick} />
 
@@ -1123,8 +1487,12 @@ export function CanvasPage() {
           flex: 1,
           minHeight: 0,
           overflow: 'hidden',
-          border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
-          background: '#111820',
+          borderRadius: '12px',
+          border: `1px solid ${theme.campaigner.surface.border}`,
+          backgroundColor: '#0e1116',
+          backgroundImage: `radial-gradient(${alpha(theme.palette.text.primary, 0.075)} 1px, transparent 1px)`,
+          backgroundSize: '38px 38px',
+          backgroundPosition: '19px 19px',
         }}
       >
         <PixiMapCanvas
@@ -1132,6 +1500,10 @@ export function CanvasPage() {
           scene={scene}
           layers={layers}
           objects={canvasObjects}
+          linkedSceneNames={linkedSceneNames}
+          linkedSceneBackgroundPaths={linkedSceneBackgroundPaths}
+          sceneContainerLabels={sceneContainerLabels}
+          imageCardLabels={imageCardLabels}
           territoryEditRings={territoryEditSession?.rings ?? null}
           onTerritoryEditChange={(rings) => {
             setTerritoryEditSession((current) => (current ? { ...current, rings } : null));
@@ -1142,8 +1514,13 @@ export function CanvasPage() {
           selectedObjectId={selectedObjectId}
           mode={mode}
           onCanvasClick={handleCanvasClick}
+          onShiftCanvasClick={handleShiftCanvasClick}
           onObjectSelect={handleObjectSelect}
           onObjectMove={handleObjectMove}
+          onCurveTextGeometryDraft={handleCurveTextGeometryDraft}
+          onCurveTextGeometryCommit={handleCurveTextGeometryCommit}
+          onTextEditRequest={handleTextEditRequest}
+          editingTextObjectId={inlineTextEdit?.objectId ?? null}
           onMarkerOpenLinkedScene={handleMarkerOpenLinkedScene}
           onDraftPointCountChange={(count) => {
             setDraftPointsCount(count);
@@ -1157,6 +1534,66 @@ export function CanvasPage() {
           onLargeBackgroundStatus={setLargeBackgroundStatus}
           onContextMenu={setContextMenu}
         />
+
+        {!selectedObject && !inlineTextEdit ? (
+          <>
+            <MapLayersPanel
+              layers={layers}
+              objects={objects}
+              updatingLayerId={updatingLayerId}
+              onToggle={(layer) => {
+                void toggleLayerVisibility(layer);
+              }}
+            />
+            {isMapScene(scene.sceneType) ? <MapLegendPanel objects={legendObjects} /> : null}
+          </>
+        ) : null}
+
+        {inlineTextEdit && inlineEditObject && (
+          <MapInlineTextEditor
+            key={inlineTextEdit.objectId}
+            getLayout={() => pixiCanvasRef.current?.getTextEditLayout(inlineTextEdit.objectId) ?? null}
+            layoutTick={textLayoutTick}
+            initialText={resolveTextContent(inlineEditObject)}
+            selectAll={inlineTextEdit.selectAll}
+            replaceWithSeed={inlineTextEdit.replaceWithSeed}
+            onCommit={handleInlineTextCommit}
+            onCancel={handleInlineTextCancel}
+          />
+        )}
+
+        {mapSceneNeedsBackground(scene) && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+              px: 3,
+              textAlign: 'center',
+              backgroundColor: alpha(theme.palette.background.default, 0.88),
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            <Typography variant="h6" sx={{ fontFamily: '"Cinzel", serif' }}>
+              {t('map:mapBackground.missingTitle')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420 }}>
+              {t('map:mapBackground.missingHint')}
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => mapBackgroundInputRef.current?.click()}
+            >
+              {t('map:mapBackground.addButton')}
+            </Button>
+          </Box>
+        )}
 
         {(mode === 'draw_territory' || territoryEditSession) && (
           <Box
@@ -1271,7 +1708,59 @@ export function CanvasPage() {
           </Box>
         )}
 
-        {selectedObject && selectedObject.kind !== 'marker' && selectedObject.kind !== 'territory' && (
+        {(selectedObject?.kind === 'text' || selectedObject?.kind === 'curve_text') && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapTextPanel
+              key={selectedObject.id}
+              projectId={projectIdNumber}
+              selectedObject={selectedObject}
+              presets={textPresets}
+              onPresetsChange={setTextPresets}
+              onActivePresetChange={setActiveTextPresetId}
+              onClose={() => setSelectedObjectId(null)}
+              onSave={handleTextObjectSave}
+              onDelete={() => deleteSelected()}
+            />
+          </Box>
+        )}
+
+        {selectedObject && isShapeKind(selectedObject.kind) && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapShapePanel
+              key={selectedObject.id}
+              selectedObject={selectedObject}
+              onClose={() => setSelectedObjectId(null)}
+              onSave={handleShapeObjectSave}
+              onDelete={() => deleteSelected()}
+            />
+          </Box>
+        )}
+
+        {(selectedObject?.kind === 'scene_container' || selectedObject?.kind === 'image') && (
+          <Box sx={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 2 }}>
+            <MapCardPanel
+              key={selectedObject.id}
+              selectedObject={selectedObject}
+              onClose={() => setSelectedObjectId(null)}
+              onSave={handleCardObjectSave}
+              onDelete={() => deleteSelected()}
+              onOpenLinkedScene={
+                selectedObject.kind === 'scene_container' && selectedObject.linkedSceneId != null
+                  ? () => handleOpenChildMap(selectedObject.linkedSceneId!, 'container')
+                  : undefined
+              }
+            />
+          </Box>
+        )}
+
+        {selectedObject
+          && selectedObject.kind !== 'marker'
+          && selectedObject.kind !== 'territory'
+          && selectedObject.kind !== 'text'
+          && selectedObject.kind !== 'curve_text'
+          && selectedObject.kind !== 'scene_container'
+          && selectedObject.kind !== 'image'
+          && !isShapeKind(selectedObject.kind) && (
           <Paper
             elevation={6}
             sx={{
@@ -1284,7 +1773,7 @@ export function CanvasPage() {
               backdropFilter: 'blur(8px)',
             }}
           >
-            <Stack spacing={1}>
+            <Stack spacing={1.5}>
               <Typography variant="subtitle2" color="text.secondary">{t('map:canvas.selection.title')}</Typography>
               <Typography fontWeight={700}>{selectedObject.name ?? selectedObject.kind}</Typography>
               <Typography variant="caption" color="text.secondary">
@@ -1311,6 +1800,7 @@ export function CanvasPage() {
 
       <MapCanvasContextMenu
         menu={contextMenu}
+        sceneType={scene.sceneType}
         onClose={() => setContextMenu(null)}
         onAddMarker={() => {
           if (!contextMenu) return;
@@ -1318,37 +1808,15 @@ export function CanvasPage() {
         }}
         onAddText={() => {
           placeByContextMenu(async (point) => {
-            if (!scene) return;
-            const layer = await contentLayer();
-            const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, 'text'));
-            setObjects((current) => [...current, created]);
-            setSelectedObjectId(created.id);
-          });
-        }}
-        onAddCurveText={() => {
-          placeByContextMenu(async (point) => {
-            if (!scene) return;
-            const layer = await contentLayer();
-            const created = await createCanvasObject(defaultTextObject(scene.id, layer.id, point, 'curve_text'));
-            setObjects((current) => [...current, created]);
-            setSelectedObjectId(created.id);
+            await placeCreatedText(point, 'text');
           });
         }}
         onAddImage={() => {
           if (!contextMenu) return;
           openImagePickerAt({ x: contextMenu.worldX, y: contextMenu.worldY });
         }}
-        onAddPolygon={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'polygon'));
-        }}
-        onAddRectangle={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'rectangle'));
-        }}
-        onAddEllipse={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'ellipse'));
-        }}
-        onAddPolyline={() => {
-          placeByContextMenu(async (point) => createShapeAt(point, 'polyline'));
+        onAddShape={(variant) => {
+          placeByContextMenu(async (point) => createShapePresetAt(point, variant));
         }}
         onEditSelected={() => {
           if (!selectedForMenu) return;
@@ -1402,6 +1870,16 @@ export function CanvasPage() {
         onSave={() => {
           void saveMarker();
         }}
+      />
+
+      <MapSceneContainerDialog
+        open={sceneContainerDialogOpen}
+        onClose={() => {
+          setSceneContainerDialogOpen(false);
+          setPendingSceneContainerPoint(null);
+          setMode('select');
+        }}
+        onSave={handleSaveSceneContainer}
       />
 
       <BranchEntityMissingDialog

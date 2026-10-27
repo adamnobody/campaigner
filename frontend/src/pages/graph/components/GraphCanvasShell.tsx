@@ -22,12 +22,12 @@ export const GraphCanvasShell: React.FC<Props> = ({ children }) => {
         minHeight: { xs: 320, md: 0 },
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 2,
+        borderRadius: '14px',
         overflow: 'hidden',
-        border: `1px solid ${alpha(theme.palette.divider, 0.85)}`,
+        border: `1px solid ${theme.campaigner.surface.border}`,
         backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.25) : theme.palette.background.default,
         backgroundImage: `
-          radial-gradient(ellipse 100% 70% at 50% 38%, ${alpha(theme.palette.primary.main, 0.07)} 0%, transparent 52%),
+          radial-gradient(ellipse 100% 70% at 50% 38%, ${alpha(theme.palette.primary.main, 0.055)} 0%, transparent 52%),
           linear-gradient(165deg, ${alpha(theme.palette.background.paper, 0.5)} 0%, ${alpha(theme.palette.background.default, 0.95)} 100%)
         `,
         boxShadow: `inset 0 0 0 1px ${alpha(theme.palette.common.white, theme.palette.mode === 'dark' ? 0.04 : 0.06)}`,

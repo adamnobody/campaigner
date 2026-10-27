@@ -2,22 +2,34 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Typography, TextField,
   Button, Chip, Select, MenuItem, FormControl,
-  InputAdornment, Collapse, useTheme, alpha,
+  InputAdornment, Collapse, useTheme, alpha, CircularProgress, Alert, ButtonBase,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
 import GavelIcon from '@mui/icons-material/Gavel';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import BlockIcon from '@mui/icons-material/Block';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDogmaStore } from '@/store/useDogmaStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useTagStore } from '@/store/useTagStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useFactionStore } from '@/store/useFactionStore';
+import { useDynastyStore } from '@/store/useDynastyStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { GlassCard } from '@/components/ui/GlassCard';
+import {
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
+import { CatalogAside, CatalogColumns } from '@/components/catalog/CatalogLayout';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   DOGMA_CATEGORIES,
@@ -31,18 +43,24 @@ import { DogmaListItem } from '@/pages/dogmas/components/DogmaListItem';
 const PAGE_SIZE = 30;
 
 export const DogmasPage: React.FC = () => {
-  const { t } = useTranslation(['dogmas', 'common']);
+  const { t } = useTranslation(['dogmas', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const theme = useTheme();
   const {
-    dogmas, total, loading, loadingMore,
-    fetchDogmas, createDogma, updateDogma, deleteDogma, setTags,
+    dogmas, total, loading, loadingMore, error,
+    fetchDogmas, createDogma, updateDogma, deleteDogma, setTags, clearError,
   } = useDogmaStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
 
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
   const { tags, fetchTags, findOrCreateTagsByNames } = useTagStore();
+  const fetchCharacters = useCharacterStore((s) => s.fetchCharacters);
+  const characters = useCharacterStore((s) => s.characters);
+  const fetchFactions = useFactionStore((s) => s.fetchFactions);
+  const factions = useFactionStore((s) => s.factions);
+  const fetchDynasties = useDynastyStore((s) => s.fetchDynasties);
+  const dynasties = useDynastyStore((s) => s.dynasties);
 
   // Флаг: была ли хотя бы одна успешная загрузка (чтобы отличить "ещё не грузили" от "загрузили и пусто")
   const [initialized, setInitialized] = useState(false);
@@ -97,7 +115,10 @@ export const DogmasPage: React.FC = () => {
 
   useEffect(() => {
     fetchTags(pid).catch(() => {});
-  }, [pid, activeBranchId, fetchTags]);
+    void fetchCharacters(pid, { limit: 500 });
+    void fetchFactions(pid, { limit: 500 });
+    void fetchDynasties(pid);
+  }, [pid, activeBranchId, fetchTags, fetchCharacters, fetchFactions, fetchDynasties]);
 
   // Загрузка при смене фильтров
   useEffect(() => {
@@ -182,9 +203,10 @@ export const DogmasPage: React.FC = () => {
     setEditingDogma(null);
   };
 
-  const handleOpenCreate = () => { resetForm(); setDialogOpen(true); };
+  const handleOpenCreate = () => { clearError(); resetForm(); setDialogOpen(true); };
 
   const handleOpenEdit = (dogma: Dogma) => {
+    clearError();
     setEditingDogma(dogma);
     setTitle(dogma.title);
     setCategory(dogma.category);
@@ -267,41 +289,73 @@ export const DogmasPage: React.FC = () => {
     });
   };
 
-  // ==================== Render ====================
+  const retryLoad = () => {
+    clearError();
+    setInitialized(false);
+    loadDogmas(false);
+  };
 
-  // Первая загрузка — показываем спиннер
   if (!initialized && loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={28} />
+          <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 1.5 }}>
+            {t('dogmas:states.loading')}
+          </Typography>
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            {t('dogmas:page.title')}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {t('dogmas:page.subtitle')}
-          </Typography>
-        </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
-          {t('dogmas:list.addDogma')}
-        </DndButton>
-      </Box>
+    <CampaignerPage>
+      <CatalogColumns
+        aside={(
+          <CatalogAside
+            summaryTitle={t('common:catalog.summary')}
+            summary={[
+              { label: t('dogmas:list.aside.summaryTotal'), value: totalUnfiltered },
+              { label: t('dogmas:list.aside.summaryCategories'), value: new Set(dogmas.map((item) => item.category)).size },
+              { label: t('dogmas:list.aside.summaryFundamental'), value: dogmas.filter((item) => item.importance === 'fundamental').length },
+              { label: t('dogmas:list.aside.summaryPublic'), value: dogmas.filter((item) => item.isPublic).length },
+            ]}
+            storedTitle={t('common:catalog.storedTitle')}
+            storedBody={t('dogmas:list.aside.storedBody')}
+            linkedTitle={t('common:catalog.linkedTitle')}
+            linked={[
+              { label: t('navigation:menu.characters'), value: characters.length },
+              { label: t('navigation:menu.states'), value: factions.filter((item) => item.kind === 'state').length },
+              { label: t('navigation:menu.dynasties'), value: dynasties.length },
+            ]}
+          />
+        )}
+      >
+      <CampaignerPageHeader
+        eyebrow={t('dogmas:page.eyebrow', { count: totalUnfiltered })}
+        title={t('dogmas:page.title')}
+        description={t('dogmas:page.subtitle')}
+        actions={(
+          <DndButton variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
+            {t('dogmas:list.addDogma')}
+          </DndButton>
+        )}
+      />
 
-      {/* Filters — видны если есть хотя бы одна догма в проекте или активны фильтры */}
-      {(totalUnfiltered > 0 || hasFilters) && (
-        <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+      <CampaignerSurface
+          sx={{
+            p: 1.25,
+            mb: dogmas.length === 0 ? 0 : 3.5,
+            display: 'flex',
+            gap: 1,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <TextField
             placeholder={t('dogmas:list.searchPlaceholder')}
             value={search} onChange={e => setSearch(e.target.value)}
-            sx={{ flexGrow: 1, maxWidth: 400 }}
+            sx={{ flexGrow: 1, minWidth: 220, maxWidth: 400 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -312,7 +366,7 @@ export const DogmasPage: React.FC = () => {
             size="small"
           />
 
-          <FormControl size="small" sx={{ minWidth: 200 }}>
+          <FormControl size="small" sx={{ minWidth: 190 }}>
             <Select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} displayEmpty>
               <MenuItem value="">{t('dogmas:list.allCategories')}</MenuItem>
               {DOGMA_CATEGORIES.map(cat => (
@@ -333,83 +387,122 @@ export const DogmasPage: React.FC = () => {
           </FormControl>
 
           {hasFilters && (
-            <Button variant="outlined" onClick={clearFilters}
-              size="small" sx={{ borderColor: alpha(theme.palette.primary.main, 0.5), textTransform: 'none' }}>
+            <Button variant="text" onClick={clearFilters} size="small">
               {t('common:reset')}
             </Button>
           )}
 
-          <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
+          <Typography sx={{
+            color: 'text.disabled',
+            ml: 'auto',
+            px: 1,
+            fontFamily: theme.campaigner.typography.mono,
+            fontSize: '0.65rem',
+          }}>
             {t('dogmas:list.count', { shown: dogmas.length, total })}
           </Typography>
-        </GlassCard>
-      )}
+      </CampaignerSurface>
 
-      {/* Content */}
-      {dogmas.length === 0 && !loading ? (
+      {error && initialized ? (
+        <Alert
+          severity="error"
+          variant="outlined"
+          action={(
+            <Button color="inherit" size="small" startIcon={<RefreshIcon />} onClick={retryLoad}>
+              {t('dogmas:states.retry')}
+            </Button>
+          )}
+          sx={{ mb: 3, borderRadius: '12px' }}
+        >
+          {t('dogmas:states.error')}
+        </Alert>
+      ) : null}
+
+      {dogmas.length === 0 && !loading && !error ? (
         hasFilters ? (
-          /* Пустой результат фильтрации */
-          <EmptyState
-            icon={<SearchIcon sx={{ fontSize: 64 }} />}
-            title={t('dogmas:list.emptyFilteredTitle')}
-            description={t('dogmas:list.emptyFilteredDescription')}
-            actionLabel={t('dogmas:list.emptyFilteredAction')}
-            onAction={clearFilters}
-          />
+          <Box sx={{ py: 7, textAlign: 'center' }}>
+            <SearchIcon sx={{ color: 'text.disabled', fontSize: 30 }} />
+            <Typography sx={{ fontFamily: theme.campaigner.typography.display, fontSize: '1.5rem', mt: 1.5 }}>
+              {t('dogmas:list.emptyFilteredTitle')}
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', mt: 1 }}>
+              {t('dogmas:list.emptyFilteredDescription')}
+            </Typography>
+            <Button variant="outlined" onClick={clearFilters} sx={{ mt: 2.5 }}>
+              {t('dogmas:list.emptyFilteredAction')}
+            </Button>
+          </Box>
         ) : (
-          /* Вообще нет догм в проекте */
           <EmptyState
-            icon={<GavelIcon sx={{ fontSize: 64 }} />}
+            icon={<GavelIcon />}
             title={t('dogmas:list.emptyNoDogmasTitle')}
             description={t('dogmas:list.emptyNoDogmasDescription')}
             actionLabel={t('dogmas:list.emptyNoDogmasAction')}
             onAction={handleOpenCreate}
+            templatesTitle={t('dogmas:list.templates.title')}
+            templates={[
+              {
+                icon: <AutoAwesomeIcon />,
+                title: t('dogmas:list.templates.magic.title'),
+                description: t('dogmas:list.templates.magic.description'),
+                onClick: handleOpenCreate,
+              },
+              {
+                icon: <DarkModeIcon />,
+                title: t('dogmas:list.templates.death.title'),
+                description: t('dogmas:list.templates.death.description'),
+                onClick: handleOpenCreate,
+              },
+              {
+                icon: <BlockIcon />,
+                title: t('dogmas:list.templates.prohibition.title'),
+                description: t('dogmas:list.templates.prohibition.description'),
+                onClick: handleOpenCreate,
+              },
+            ]}
           />
         )
-      ) : (
+      ) : dogmas.length > 0 ? (
         <>
-          {/* Dogmas grouped by category */}
           {groupedCategories.map((group) => {
             const collapsed = collapsedCategories.has(group.key);
 
             return (
-              <Box key={group.key} sx={{ mb: 3 }}>
-                {/* Category header */}
-                <Box
+              <Box key={group.key} sx={{ mb: 4 }}>
+                <ButtonBase
                   onClick={() => toggleCategory(group.key)}
                   sx={{
-                    display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer',
-                    mb: 1.5, py: 1, px: 2,
-                    backgroundColor: alpha(theme.palette.background.paper, 0.4),
-                    borderRadius: 2,
-                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-                    transition: 'all 0.15s',
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.action.hover, 0.1),
-                      borderColor: alpha(theme.palette.divider, 0.8),
-                    },
+                    width: '100%',
+                    display: 'flex', alignItems: 'center', gap: 1.25,
+                    mb: 1.5, pb: 1,
+                    borderBottom: `1px solid ${theme.campaigner.surface.border}`,
+                    justifyContent: 'flex-start',
                   }}
                 >
-                  <Typography sx={{ fontSize: '1.4rem' }}>{group.icon}</Typography>
+                  <Typography sx={{ fontSize: '1.05rem' }}>{group.icon}</Typography>
                   <Typography sx={{
-                    fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.1rem',
+                    fontFamily: theme.campaigner.typography.display, fontWeight: 600, fontSize: '1.35rem',
                     color: 'text.primary', flexGrow: 1,
+                    textAlign: 'left',
                   }}>
                     {group.label}
                   </Typography>
                   <Chip label={`${group.dogmas.length}`} size="small"
                     sx={{
-                      height: 22, fontSize: '0.75rem',
-                      backgroundColor: alpha(theme.palette.text.secondary, 0.1),
-                      color: 'text.secondary',
+                      height: 20,
+                      fontSize: '0.62rem',
+                      fontFamily: theme.campaigner.typography.mono,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.campaigner.surface.border}`,
+                      color: 'text.disabled',
                     }} />
                   {collapsed
                     ? <ExpandMoreIcon sx={{ color: 'text.secondary' }} />
                     : <ExpandLessIcon sx={{ color: 'text.secondary' }} />}
-                </Box>
+                </ButtonBase>
 
                 <Collapse in={!collapsed}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pl: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
                     {group.dogmas.map((dogma) => (
                       <DogmaListItem
                         key={dogma.id}
@@ -428,13 +521,14 @@ export const DogmasPage: React.FC = () => {
           {dogmas.length < total && (
             <Box ref={sentinelRef} sx={{ py: 3, textAlign: 'center' }}>
               {loadingMore && (
-                <Typography sx={{ color: 'text.secondary' }}>{t('common:loading')}</Typography>
+                <CircularProgress size={22} aria-label={t('common:loading')} />
               )}
             </Box>
           )}
         </>
-      )}
+      ) : null}
 
+      </CatalogColumns>
       <DogmaFormDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -460,6 +554,6 @@ export const DogmasPage: React.FC = () => {
         existingTagNames={existingTagNames}
         onSave={handleSave}
       />
-    </Box>
+    </CampaignerPage>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dialog, Box, TextField, Typography, List, ListItemButton,
-  ListItemIcon, ListItemText, Chip, InputAdornment, CircularProgress,
+  ListItemIcon, ListItemText, Chip, InputAdornment, CircularProgress, alpha,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useNavigate } from 'react-router-dom';
@@ -115,10 +115,10 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => 
       fullWidth
       PaperProps={{
         sx: {
-          backgroundColor: 'rgba(20, 20, 35, 0.98)',
-          border: '1px solid rgba(255,255,255,0.15)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: 2,
+          backgroundColor: (theme) => alpha(theme.palette.background.default, 0.98),
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(12px)',
+          borderRadius: '16px',
           overflow: 'hidden',
           position: 'fixed',
           top: '15%',
@@ -168,7 +168,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ open, onClose }) => 
             disableUnderline: true,
             sx: {
               fontSize: '1.1rem',
-              color: '#fff',
+              color: 'text.primary',
             },
           }}
         />

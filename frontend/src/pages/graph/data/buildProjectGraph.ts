@@ -6,7 +6,9 @@ import { dogmasApi } from '@/api/dogmas';
 import { timelineApi } from '@/api/timeline';
 import { notesApi } from '@/api/notes';
 import { wikiApi } from '@/api/wiki';
+import { extractEntityLinks, parseDocument } from '@/components/document-editor/documentMeta';
 import type { GraphEdge, GraphNode, ProjectGraphData } from '@/pages/graph/types';
+import { hrefToGraphNodeId } from './graphEntityLinks';
 
 const toNodeId = (type: GraphNode['type'], entityId: number) => `${type}:${entityId}`;
 
@@ -283,6 +285,33 @@ export const buildProjectGraph = async (
       target,
       kind,
       label: link.label || '',
+    });
+  });
+
+  const linkedPairs = new Set(
+    Array.from(edges.values()).map((edge) => sortedPair(edge.source, edge.target)),
+  );
+
+  notes.forEach((note: { id: number; content?: string; noteType?: string }) => {
+    const sourceType = note.noteType === 'wiki' ? 'wiki' : 'note';
+    const source = toNodeId(sourceType, note.id);
+    if (!nodes.has(source) || typeof note.content !== 'string' || !note.content) return;
+
+    extractEntityLinks(parseDocument(note.content).body).forEach((link) => {
+      const target = hrefToGraphNodeId(link.href, noteTypeById);
+      if (!target || target === source || !nodes.has(target)) return;
+      const pair = sortedPair(source, target);
+      if (linkedPairs.has(pair)) return;
+      linkedPairs.add(pair);
+      const targetType = target.slice(0, target.indexOf(':'));
+      const kind = sourceType === 'wiki' && targetType === 'wiki' ? 'wiki-link' : 'note-link';
+      pushEdge(edges, {
+        id: `${kind}:${pair}:mention`,
+        source,
+        target,
+        kind,
+        label: link.label,
+      });
     });
   });
 

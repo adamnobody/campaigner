@@ -403,7 +403,7 @@ export const WikiGraphPage: React.FC = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-        <Typography sx={{ color: 'rgba(255,255,255,0.5)' }}>{t('wiki:graph.loading')}</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('wiki:graph.loading')}</Typography>
       </Box>
     );
   }
@@ -412,28 +412,40 @@ export const WikiGraphPage: React.FC = () => {
 
   return (
     <Box sx={{ height: 'calc(100vh - 64px - 48px)', display: 'flex', flexDirection: 'column' }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 1.25,
+          mb: 1,
+          p: 1.25,
+          borderRadius: '14px',
+          border: `1px solid ${theme.campaigner.surface.border}`,
+          backgroundColor: theme.campaigner.surface.subtle,
+        }}
+      >
         <Box display="flex" alignItems="center" gap={2}>
           <DndButton variant="outlined" startIcon={<ArrowBackIcon />} size="small"
-            onClick={() => navigate(`/project/${pid}/wiki`)}
-            sx={{ borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>
+            onClick={() => navigate(`/project/${pid}/wiki`)}>
             {t('common:back')}
           </DndButton>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.5rem', color: '#fff' }}>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.35rem', md: '1.7rem' } }}>
             {t('wiki:graph.title')}
           </Typography>
         </Box>
-        <Box display="flex" gap={0.5} sx={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 1, p: 0.5 }}>
-          <IconButton size="small" onClick={() => zoomBtn(-0.2)} sx={{ color: '#fff' }} title={t('wiki:graph.tooltips.zoomOut')} aria-label={t('wiki:graph.tooltips.zoomOut')}><ZoomOutIcon fontSize="small" /></IconButton>
-          <Typography sx={{ color: '#fff', fontSize: '0.8rem', lineHeight: '30px', px: 1, minWidth: 45, textAlign: 'center' }}>
+        <Box display="flex" gap={0.5} sx={{ backgroundColor: theme.campaigner.surface.raised, border: `1px solid ${theme.campaigner.surface.border}`, borderRadius: '10px', p: 0.5 }}>
+          <IconButton size="small" onClick={() => zoomBtn(-0.2)} title={t('wiki:graph.tooltips.zoomOut')} aria-label={t('wiki:graph.tooltips.zoomOut')}><ZoomOutIcon fontSize="small" /></IconButton>
+          <Typography sx={{ color: 'text.secondary', fontFamily: theme.campaigner.typography.mono, fontSize: '0.7rem', lineHeight: '30px', px: 1, minWidth: 45, textAlign: 'center' }}>
             {t('wiki:graph.zoomPercent', { value: zoomDisplay })}
           </Typography>
-          <IconButton size="small" onClick={() => zoomBtn(0.2)} sx={{ color: '#fff' }} title={t('wiki:graph.tooltips.zoomIn')} aria-label={t('wiki:graph.tooltips.zoomIn')}><ZoomInIcon fontSize="small" /></IconButton>
-          <IconButton size="small" onClick={fitCamera} sx={{ color: '#fff' }} title={t('wiki:graph.tooltips.fitView')} aria-label={t('wiki:graph.tooltips.fitView')}><CenterFocusStrongIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={() => zoomBtn(0.2)} title={t('wiki:graph.tooltips.zoomIn')} aria-label={t('wiki:graph.tooltips.zoomIn')}><ZoomInIcon fontSize="small" /></IconButton>
+          <IconButton size="small" onClick={fitCamera} title={t('wiki:graph.tooltips.fitView')} aria-label={t('wiki:graph.tooltips.fitView')}><CenterFocusStrongIcon fontSize="small" /></IconButton>
         </Box>
       </Box>
 
-      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', mb: 1, display: 'block' }}>
+      <Typography variant="caption" sx={{ color: 'text.disabled', mb: 1, px: 0.5, display: 'block' }}>
         {t('wiki:graph.mouseHint')}
       </Typography>
 
@@ -444,7 +456,18 @@ export const WikiGraphPage: React.FC = () => {
         </GlassCard>
       ) : (
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
-          <Box ref={wrapRef} sx={{ position: 'absolute', inset: 0, borderRadius: 2, border: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.default, overflow: 'hidden' }}>
+          <Box
+            ref={wrapRef}
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '14px',
+              border: `1px solid ${theme.campaigner.surface.border}`,
+              backgroundColor: theme.palette.background.default,
+              backgroundImage: `radial-gradient(circle at 50% 35%, ${alpha(theme.palette.primary.main, 0.055)}, transparent 46%)`,
+              overflow: 'hidden',
+            }}
+          >
             <canvas ref={canvasRef}
               style={{ display: 'block', cursor: dragIdRef.current ? 'grabbing' : panningRef.current ? 'grabbing' : 'grab' }}
               onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp} onDoubleClick={onDblClick} />

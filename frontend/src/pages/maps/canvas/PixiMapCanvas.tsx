@@ -1,21 +1,57 @@
 import {
   Application,
+  Assets,
   Container,
   Graphics,
   Point,
   Rectangle,
+  Sprite,
   Texture,
   TilingSprite,
   type FederatedPointerEvent,
 } from 'pixi.js';
+import { resolveUploadAssetUrl } from '@/utils/uploadAssetUrl';
 import { Viewport } from 'pixi-viewport';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { CanvasLayer, CanvasObject, CanvasScene } from '@/api/canvas';
 import type { MapContextMenuState } from '../components/MapCanvasContextMenu';
 import { computeObjectsBounds } from './canvasBounds';
+import { isMapScene } from './canvasTools';
+import {
+  buildMapAutoFitKey,
+  clampPointToMapBounds,
+  clampViewportPersistToMapBounds,
+  computeFitToBoundsViewport,
+  getCanvasWorldSize,
+  getMapSceneWorldBounds,
+  isImageBackedMapScene,
+  isMapViewportMisaligned,
+  isPointInsideMapBounds,
+  resolveMapBackgroundAssetPath,
+  shouldAutoFitMapBackgroundOnLoad,
+  shouldUseInfiniteCanvas,
+  type MapBackgroundSize,
+} from './mapBackground';
+import {
+  canEditCurveTextBezierHandles,
+  curveTextGeometryJsonEquals,
+  getCurveTextBezierGeometry,
+  getCurveTextHandleWorldPositions,
+  hitCurveTextHandle,
+  mergeCurveTextGeometryDraft,
+  withUpdatedCurveTextHandle,
+  type CurveTextHandleId,
+} from './curveTextHandles';
 import type { CanvasMode, CanvasPoint } from './canvasModel';
-import { objectTransform } from './canvasModel';
-import { hitTestObjects, reconcilePixiObjects, type ReconcileState } from './canvasReconciler';
+import { objectTransform, withObjectPosition } from './canvasModel';
+import { textEditLayoutFromObject, textObjectWorldAnchor, type TextEditScreenLayout } from './textEditLayout';
+import {
+  hitTestObjects,
+  reconcilePixiObjects,
+  type ImageCardDisplayLabels,
+  type ReconcileState,
+  type SceneContainerDisplayLabels,
+} from './canvasReconciler';
 import {
   deleteTerritoryVertex,
   findNearestTerritoryEdge,
@@ -28,6 +64,7 @@ import {
   clampZoom,
   fitViewportToBounds,
   isBoundsVisibleInViewport,
+  isDefaultPersist,
   MAX_ZOOM,
   MIN_ZOOM,
   parseStoredViewport,
@@ -37,11 +74,10 @@ import {
   type ViewportPersist,
 } from './canvasViewport';
 
-const WORLD_SIZE = 20000;
 const DOT_STEP = 64;
-const DOT_COLOR = 0x9fb0bf;
-const DOT_ALPHA = 0.18;
-const DOT_RADIUS = 0.95;
+const DOT_COLOR = 0xb4c5d6;
+const DOT_ALPHA = 0.38;
+const DOT_RADIUS = 2;
 
 type DragState = {
   objectId: number;
@@ -51,6 +87,25 @@ type DragState = {
   startY: number;
   moved: boolean;
 } | null;
+
+type ResizeHandleId = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+type CardResizeState = {
+  objectId: number;
+  handle: ResizeHandleId;
+  startPointer: CanvasPoint;
+  startX: number;
+  startY: number;
+  startWidth: number;
+  startHeight: number;
+  minWidth: number;
+  minHeight: number;
+} | null;
+
+type ResizeHandleHit = {
+  handle: ResizeHandleId;
+  cursor: string;
+};
 
 type PanState = {
   startX: number;
@@ -70,9 +125,18 @@ type VertexDragState = {
   pointIndex: number;
 } | null;
 
+type CurveHandleDragState = {
+  objectId: number;
+  handle: CurveTextHandleId;
+} | null;
+
 const VERTEX_HIT_PX = 10;
+const CURVE_HANDLE_HIT_PX = 12;
 const EDGE_HIT_PX = 14;
 const VERTEX_GUARD_PX = 8;
+const CARD_RESIZE_HANDLE_SCREEN = 12;
+const MIN_CARD_WIDTH = 72;
+const MIN_CARD_HEIGHT = 72;
 
 type Props = {
   scene: CanvasScene;
@@ -81,8 +145,14 @@ type Props = {
   selectedObjectId: number | null;
   mode: CanvasMode;
   onCanvasClick: (point: CanvasPoint) => void;
+  onShiftCanvasClick?: (point: CanvasPoint) => void;
   onObjectSelect: (object: CanvasObject | null) => void;
   onObjectMove: (object: CanvasObject, point: CanvasPoint) => void;
+  onCurveTextGeometryDraft?: (object: CanvasObject) => void;
+  onCurveTextGeometryCommit?: (object: CanvasObject) => void;
+  /** Double-click on text / curve_text opens inline editor. */
+  onTextEditRequest?: (object: CanvasObject) => void;
+  editingTextObjectId?: number | null;
   /** Double-click on a marker that has linkedSceneId (select mode, no drag). */
   onMarkerOpenLinkedScene?: (object: CanvasObject) => void;
   onDraftPointCountChange: (count: number) => void;
@@ -99,6 +169,10 @@ type Props = {
   onTerritoryVertexDeleteRejected: () => void;
   /** Closed rings already finished via «Complete ring» (draw_territory only). */
   territoryDraftCompletedRings?: CanvasPoint[][];
+  linkedSceneNames?: ReadonlyMap<number, string>;
+  linkedSceneBackgroundPaths?: ReadonlyMap<number, string>;
+  sceneContainerLabels?: SceneContainerDisplayLabels;
+  imageCardLabels?: ImageCardDisplayLabels;
 };
 
 export type PixiMapCanvasHandle = {
@@ -112,6 +186,7 @@ export type PixiMapCanvasHandle = {
   cancelDrawing: () => boolean;
   getDrawingPoints: () => CanvasPoint[];
   clearDrawingPoints: () => void;
+  getTextEditLayout: (objectId: number) => TextEditScreenLayout | null;
 };
 
 const isClosedDrawMode = (mode: CanvasMode): boolean =>
@@ -135,8 +210,9 @@ const redrawDraftPolyline = (
   points: CanvasPoint[],
   hoverPoint: CanvasPoint | null,
   snapToFirst: boolean,
+  skipClear = false,
 ): void => {
-  graphics.clear();
+  if (!skipClear) graphics.clear();
   if (points.length === 0) return;
   graphics.moveTo(points[0].x, points[0].y);
   for (let index = 1; index < points.length; index += 1) {
@@ -204,8 +280,13 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   selectedObjectId,
   mode,
   onCanvasClick,
+  onShiftCanvasClick,
   onObjectSelect,
   onObjectMove,
+  onCurveTextGeometryDraft,
+  onCurveTextGeometryCommit,
+  onTextEditRequest,
+  editingTextObjectId = null,
   onMarkerOpenLinkedScene,
   onDraftPointCountChange,
   onCreatePolygon,
@@ -219,10 +300,17 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   onTerritoryEditChange,
   onTerritoryVertexDeleteRejected,
   territoryDraftCompletedRings = [],
+  linkedSceneNames,
+  linkedSceneBackgroundPaths,
+  sceneContainerLabels,
+  imageCardLabels,
 }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const viewportRef = useRef<Viewport | null>(null);
+  const backgroundLayerRef = useRef<Container | null>(null);
+  const backgroundSizeRef = useRef<MapBackgroundSize | null>(null);
+  const [backgroundLoadTick, setBackgroundLoadTick] = useState(0);
   const rootObjectsRef = useRef<Container | null>(null);
   const reconcileStateRef = useRef<ReconcileState>({ layerContainers: new Map(), objects: new Map() });
   const dotsRef = useRef<TilingSprite | null>(null);
@@ -237,19 +325,33 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const lastDrawClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
   const lastTerritoryEditClickRef = useRef<{ at: number; x: number; y: number } | null>(null);
   const vertexDragRef = useRef<VertexDragState>(null);
+  const curveHandleDragRef = useRef<CurveHandleDragState>(null);
+  const curveTextGeometryDraftRef = useRef<CanvasObject | null>(null);
+  const objectDragPositionRef = useRef<{ objectId: number; x: number; y: number } | null>(null);
+  const cardResizeStateRef = useRef<CardResizeState>(null);
+  const cardResizeDraftRef = useRef<CanvasObject | null>(null);
+  const objectsPropRef = useRef<CanvasObject[]>(objects);
+  const selectedObjectIdRef = useRef<number | null>(selectedObjectId);
   const territoryEditRingsRef = useRef<CanvasPoint[][] | null>(null);
   const territoryDraftCompletedRingsRef = useRef<CanvasPoint[][]>([]);
   const onTerritoryEditChangeRef = useRef(onTerritoryEditChange);
   const onTerritoryVertexDeleteRejectedRef = useRef(onTerritoryVertexDeleteRejected);
   const lastMarkerClickRef = useRef<{ objectId: number; at: number } | null>(null);
+  const lastTextClickRef = useRef<{ objectId: number; at: number } | null>(null);
+  const editingTextObjectIdRef = useRef<number | null>(editingTextObjectId);
   const spacePressedRef = useRef(false);
   const canvasHostRef = useRef<HTMLCanvasElement | null>(null);
   const liveObjectsRef = useRef<CanvasObject[]>(objects);
   const currentModeRef = useRef<CanvasMode>(mode);
   const sceneRef = useRef<CanvasScene>(scene);
   const onCanvasClickRef = useRef(onCanvasClick);
+  const onShiftCanvasClickRef = useRef(onShiftCanvasClick);
+  const shiftClickPointerRef = useRef<{ downX: number; downY: number; worldPoint: CanvasPoint } | null>(null);
   const onObjectSelectRef = useRef(onObjectSelect);
   const onObjectMoveRef = useRef(onObjectMove);
+  const onCurveTextGeometryDraftRef = useRef(onCurveTextGeometryDraft);
+  const onCurveTextGeometryCommitRef = useRef(onCurveTextGeometryCommit);
+  const onTextEditRequestRef = useRef(onTextEditRequest);
   const onMarkerOpenLinkedSceneRef = useRef(onMarkerOpenLinkedScene);
   const onDraftPointCountChangeRef = useRef(onDraftPointCountChange);
   const onCreatePolygonRef = useRef(onCreatePolygon);
@@ -260,20 +362,220 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
   const onContextMenuRef = useRef(onContextMenu);
   const onLargeBackgroundStatusRef = useRef(onLargeBackgroundStatus);
   const sceneIdRef = useRef<number | null>(null);
-  const autoFitSceneRef = useRef<number | null>(null);
+  const autoFitKeyRef = useRef<string | null>(null);
+  const userViewAdjustedRef = useRef(false);
+  const applyingCameraRef = useRef(false);
   const [pixiReady, setPixiReady] = useState(false);
   const [viewportScale, setViewportScale] = useState(1);
+  const layersRef = useRef(layers);
+  const viewportScaleRef = useRef(viewportScale);
+  const linkedSceneNamesRef = useRef(linkedSceneNames);
+  const linkedSceneBackgroundPathsRef = useRef(linkedSceneBackgroundPaths);
+  const sceneContainerLabelsRef = useRef(sceneContainerLabels);
+  const imageCardLabelsRef = useRef(imageCardLabels);
 
   const forceRender = () => {
     appRef.current?.render();
   };
 
-  liveObjectsRef.current = objects;
+  const isResizableCardObject = (object: CanvasObject | null | undefined): object is CanvasObject =>
+    Boolean(object && (object.kind === 'scene_container' || object.kind === 'image'));
+
+  const resolveCardGeometry = (object: CanvasObject): { width: number; height: number } => {
+    const geometry = object.geometryJson as Record<string, unknown> | null;
+    const width = typeof geometry?.width === 'number' ? geometry.width : 240;
+    const height = typeof geometry?.height === 'number' ? geometry.height : 160;
+    return { width, height };
+  };
+
+  const withCardSizeAndPosition = (
+    object: CanvasObject,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): CanvasObject => ({
+    ...object,
+    transformJson: {
+      ...object.transformJson as Record<string, unknown>,
+      x,
+      y,
+    },
+    geometryJson: {
+      ...object.geometryJson as Record<string, unknown>,
+      width,
+      height,
+    },
+  });
+
+  const resizeCursorForHandle = (handle: ResizeHandleId): string => {
+    if (handle === 'n' || handle === 's') return 'ns-resize';
+    if (handle === 'e' || handle === 'w') return 'ew-resize';
+    if (handle === 'ne' || handle === 'sw') return 'nesw-resize';
+    return 'nwse-resize';
+  };
+
+  const hitCardResizeHandle = (
+    object: CanvasObject,
+    worldPoint: CanvasPoint,
+    viewportScale: number,
+  ): ResizeHandleHit | null => {
+    if (!isResizableCardObject(object)) return null;
+    const transform = objectTransform(object);
+    const { width, height } = resolveCardGeometry(object);
+    const localX = worldPoint.x - transform.x;
+    const localY = worldPoint.y - transform.y;
+    const threshold = CARD_RESIZE_HANDLE_SCREEN / Math.max(viewportScale, 0.05);
+    const nearLeft = Math.abs(localX) <= threshold;
+    const nearRight = Math.abs(localX - width) <= threshold;
+    const nearTop = Math.abs(localY) <= threshold;
+    const nearBottom = Math.abs(localY - height) <= threshold;
+    const insideX = localX >= -threshold && localX <= width + threshold;
+    const insideY = localY >= -threshold && localY <= height + threshold;
+
+    if (insideX && insideY && nearLeft && nearTop) return { handle: 'nw', cursor: resizeCursorForHandle('nw') };
+    if (insideX && insideY && nearRight && nearTop) return { handle: 'ne', cursor: resizeCursorForHandle('ne') };
+    if (insideX && insideY && nearLeft && nearBottom) return { handle: 'sw', cursor: resizeCursorForHandle('sw') };
+    if (insideX && insideY && nearRight && nearBottom) return { handle: 'se', cursor: resizeCursorForHandle('se') };
+    if (insideX && nearLeft && localY >= 0 && localY <= height) return { handle: 'w', cursor: resizeCursorForHandle('w') };
+    if (insideX && nearRight && localY >= 0 && localY <= height) return { handle: 'e', cursor: resizeCursorForHandle('e') };
+    if (insideY && nearTop && localX >= 0 && localX <= width) return { handle: 'n', cursor: resizeCursorForHandle('n') };
+    if (insideY && nearBottom && localX >= 0 && localX <= width) return { handle: 's', cursor: resizeCursorForHandle('s') };
+    return null;
+  };
+
+  const resolveResizeFrame = (
+    resizeState: Exclude<CardResizeState, null>,
+    pointer: CanvasPoint,
+  ): { x: number; y: number; width: number; height: number } => {
+    const dx = pointer.x - resizeState.startPointer.x;
+    const dy = pointer.y - resizeState.startPointer.y;
+
+    let x = resizeState.startX;
+    let y = resizeState.startY;
+    let width = resizeState.startWidth;
+    let height = resizeState.startHeight;
+
+    if (resizeState.handle.includes('e')) {
+      width = Math.max(resizeState.minWidth, resizeState.startWidth + dx);
+    }
+    if (resizeState.handle.includes('s')) {
+      height = Math.max(resizeState.minHeight, resizeState.startHeight + dy);
+    }
+    if (resizeState.handle.includes('w')) {
+      const maxLeft = resizeState.startWidth - resizeState.minWidth;
+      const applied = Math.min(dx, maxLeft);
+      x = resizeState.startX + applied;
+      width = resizeState.startWidth - applied;
+    }
+    if (resizeState.handle.includes('n')) {
+      const maxTop = resizeState.startHeight - resizeState.minHeight;
+      const applied = Math.min(dy, maxTop);
+      y = resizeState.startY + applied;
+      height = resizeState.startHeight - applied;
+    }
+
+    return { x, y, width, height };
+  };
+
+  const resolveEffectiveObjects = (source = objectsPropRef.current): CanvasObject[] => {
+    let list = mergeCurveTextGeometryDraft(source, curveTextGeometryDraftRef.current);
+    const resizeDraft = cardResizeDraftRef.current;
+    if (resizeDraft) {
+      list = list.map((object) => (object.id === resizeDraft.id ? resizeDraft : object));
+    }
+    const dragPosition = objectDragPositionRef.current;
+    if (dragPosition) {
+      list = list.map((object) => (
+        object.id === dragPosition.objectId
+          ? withObjectPosition(object, dragPosition.x, dragPosition.y)
+          : object
+      ));
+    }
+    return list;
+  };
+
+  const objectPositionNear = (object: CanvasObject, x: number, y: number): boolean => {
+    const transform = objectTransform(object);
+    return Math.abs(transform.x - x) < 0.5 && Math.abs(transform.y - y) < 0.5;
+  };
+
+  const syncPendingObjectDragPosition = (source: CanvasObject[]) => {
+    const dragPosition = objectDragPositionRef.current;
+    if (!dragPosition) return;
+    const committed = source.find((item) => item.id === dragPosition.objectId);
+    if (committed && objectPositionNear(committed, dragPosition.x, dragPosition.y)) {
+      objectDragPositionRef.current = null;
+    }
+  };
+
+  const syncPendingCardResizeDraft = (source: CanvasObject[]) => {
+    const draft = cardResizeDraftRef.current;
+    if (!draft) return;
+    const committed = source.find((item) => item.id === draft.id);
+    if (!committed) return;
+    if (
+      JSON.stringify(committed.transformJson) === JSON.stringify(draft.transformJson)
+      && JSON.stringify(committed.geometryJson) === JSON.stringify(draft.geometryJson)
+    ) {
+      cardResizeDraftRef.current = null;
+    }
+  };
+
+  const isInteractiveObjectDragActive = () => (
+    Boolean(curveHandleDragRef.current || objectDragPositionRef.current || cardResizeStateRef.current || cardResizeDraftRef.current)
+  );
+
+  const syncCurveTextDraft = (draft: CanvasObject) => {
+    curveTextGeometryDraftRef.current = draft;
+    liveObjectsRef.current = resolveEffectiveObjects();
+  };
+
+  const reconcileLiveObjects = () => {
+    const root = rootObjectsRef.current;
+    if (!root) return;
+    const effectiveObjects = resolveEffectiveObjects();
+    liveObjectsRef.current = effectiveObjects;
+    reconcilePixiObjects(
+      root,
+      reconcileStateRef.current,
+      layersRef.current,
+      effectiveObjects,
+      selectedObjectIdRef.current,
+      (object, resourcePath) => {
+        onImageLoadErrorRef.current(object, resourcePath);
+      },
+      {
+        viewportScale: viewportScaleRef.current,
+        linkedSceneNames: linkedSceneNamesRef.current,
+        linkedSceneBackgroundPaths: linkedSceneBackgroundPathsRef.current,
+        sceneContainerLabels: sceneContainerLabelsRef.current,
+        imageCardLabels: imageCardLabelsRef.current,
+        editingTextObjectId: editingTextObjectIdRef.current,
+      },
+    );
+    forceRender();
+  };
+
+  objectsPropRef.current = objects;
+  layersRef.current = layers;
+  viewportScaleRef.current = viewportScale;
+  linkedSceneNamesRef.current = linkedSceneNames;
+  linkedSceneBackgroundPathsRef.current = linkedSceneBackgroundPaths;
+  sceneContainerLabelsRef.current = sceneContainerLabels;
+  imageCardLabelsRef.current = imageCardLabels;
+  liveObjectsRef.current = resolveEffectiveObjects();
   currentModeRef.current = mode;
   sceneRef.current = scene;
   onCanvasClickRef.current = onCanvasClick;
+  onShiftCanvasClickRef.current = onShiftCanvasClick;
   onObjectSelectRef.current = onObjectSelect;
   onObjectMoveRef.current = onObjectMove;
+  onCurveTextGeometryDraftRef.current = onCurveTextGeometryDraft;
+  onCurveTextGeometryCommitRef.current = onCurveTextGeometryCommit;
+  onTextEditRequestRef.current = onTextEditRequest;
+  editingTextObjectIdRef.current = editingTextObjectId;
+  selectedObjectIdRef.current = selectedObjectId;
   onMarkerOpenLinkedSceneRef.current = onMarkerOpenLinkedScene;
   onDraftPointCountChangeRef.current = onDraftPointCountChange;
   onCreatePolygonRef.current = onCreatePolygon;
@@ -331,6 +633,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     const viewport = viewportRef.current;
     const draft = draftRef.current;
     if (!viewport || !draft) return;
+    draft.clear();
     const completed = territoryDraftCompletedRingsRef.current;
     if (completed.length > 0 && currentModeRef.current === 'draw_territory') {
       for (const ring of completed) {
@@ -346,7 +649,19 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       drawingPointsRef.current,
       drawingHoverRef.current,
       snapToFirstRef.current,
+      true,
     );
+
+    const selectedCurveText = getSelectedCurveTextObject();
+    if (
+      selectedCurveText
+      && canEditCurveTextBezierHandles(selectedCurveText)
+      && currentModeRef.current === 'select'
+    ) {
+      drawCurveTextHandles(draft, viewport, selectedCurveText);
+    }
+
+    forceRender();
   };
 
   const setDrawingPoints = (points: CanvasPoint[]) => {
@@ -362,12 +677,107 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     setDrawingPoints([]);
   };
 
+  const isFiniteMapActive = () =>
+    isImageBackedMapScene(sceneRef.current, backgroundSizeRef.current);
+
+  const getFiniteMapBounds = () => {
+    const size = backgroundSizeRef.current;
+    return size ? getMapSceneWorldBounds(size) : null;
+  };
+
+  const resizeViewportWorld = (viewport: Viewport) => {
+    const world = getCanvasWorldSize(sceneRef.current, backgroundSizeRef.current);
+    viewport.resize(viewport.screenWidth, viewport.screenHeight, world.width, world.height);
+  };
+
+  const fitMapBackgroundToViewport = (viewport: Viewport, size: MapBackgroundSize): ViewportPersist => {
+    const mapBounds = getMapSceneWorldBounds(size);
+    applyingCameraRef.current = true;
+    try {
+      resizeViewportWorld(viewport);
+      const persist = computeFitToBoundsViewport(
+        viewport.screenWidth,
+        viewport.screenHeight,
+        mapBounds,
+      );
+      applyPersistToViewport(viewport, persist);
+      return persist;
+    } finally {
+      applyingCameraRef.current = false;
+    }
+  };
+
+  const applyCamera = (viewport: Viewport, persist: ViewportPersist) => {
+    applyingCameraRef.current = true;
+    applyPersistToViewport(viewport, persist);
+    applyingCameraRef.current = false;
+  };
+
   const syncDots = () => {
     const viewport = viewportRef.current;
     const dots = dotsRef.current;
     const app = appRef.current;
     if (!viewport || !dots || !app) return;
+    dots.visible = shouldUseInfiniteCanvas(sceneRef.current.sceneType);
+    if (!dots.visible) return;
     updateDots(dots, viewport, app.renderer.width, app.renderer.height);
+  };
+
+  const guardMapPlacementPoint = (point: CanvasPoint): CanvasPoint | null => {
+    if (!isFiniteMapActive()) return point;
+    const bounds = getFiniteMapBounds();
+    if (!bounds) return point;
+    return isPointInsideMapBounds(point, bounds) ? point : null;
+  };
+
+  const clampCurveHandleWorldPoint = (point: CanvasPoint): CanvasPoint => {
+    if (!isFiniteMapActive()) return point;
+    const size = backgroundSizeRef.current;
+    if (!size) return point;
+    return clampPointToMapBounds(point, getMapSceneWorldBounds(size));
+  };
+
+  const getSelectedCurveTextObject = (): CanvasObject | null => {
+    const selectedId = selectedObjectIdRef.current;
+    if (selectedId == null) return null;
+    const object = liveObjectsRef.current.find((item) => item.id === selectedId);
+    if (!object || object.kind !== 'curve_text') return null;
+    return object;
+  };
+
+  const applyCurveHandleWorldPoint = (object: CanvasObject, handle: CurveTextHandleId, worldPoint: CanvasPoint) =>
+    withUpdatedCurveTextHandle(object, handle, clampCurveHandleWorldPoint(worldPoint));
+
+  const drawCurveTextHandles = (draft: Graphics, viewport: Viewport, object: CanvasObject) => {
+    const scale = Math.max(viewport.scale.x, 0.05);
+    const geometry = getCurveTextBezierGeometry(object);
+    const transform = objectTransform(object);
+    const toWorld = (local: CanvasPoint): CanvasPoint => ({
+      x: transform.x + local.x,
+      y: transform.y + local.y,
+    });
+    const start = toWorld(geometry.start);
+    const control = toWorld(geometry.control);
+    const end = toWorld(geometry.end);
+
+    draft.moveTo(start.x, start.y);
+    for (let index = 1; index <= 32; index += 1) {
+      const t = index / 32;
+      const mt = 1 - t;
+      draft.lineTo(
+        mt * mt * start.x + 2 * mt * t * control.x + t * t * end.x,
+        mt * mt * start.y + 2 * mt * t * control.y + t * t * end.y,
+      );
+    }
+    draft.stroke({ color: 0xf8d7a4, width: 1.5 / scale, alpha: 0.75 });
+
+    const drawHandle = (point: CanvasPoint, fill: number) => {
+      draft.circle(point.x, point.y, 6 / scale).fill({ color: fill, alpha: 0.95 });
+      draft.circle(point.x, point.y, 8 / scale).stroke({ color: 0xffffff, width: 1.5 / scale, alpha: 0.9 });
+    };
+    drawHandle(start, 0x5ecfff);
+    drawHandle(control, 0xf8d7a4);
+    drawHandle(end, 0xbb8fce);
   };
 
   const fitToContentInternal = (source: 'auto' | 'manual') => {
@@ -375,12 +785,15 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     if (!viewport) return;
 
     const visibleObjects = liveObjectsRef.current.filter((object) => !object.isHidden);
-    const bounds = computeObjectsBounds(visibleObjects);
+    const finiteMap = isFiniteMapActive();
+    const mapBounds = finiteMap ? getFiniteMapBounds() : null;
+    const bounds = mapBounds ?? computeObjectsBounds(visibleObjects);
     const cameraBefore = snapshotFromViewport(viewport);
 
     console.debug('[Canvas] fitToContent', {
       source,
       sceneId: sceneRef.current.id,
+      finiteMap,
       objectCount: visibleObjects.length,
       bbox: bounds
         ? {
@@ -393,19 +806,32 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       cameraBefore,
     });
 
-    if (!bounds || visibleObjects.length === 0) {
-      if (!viewport) return;
+    if (!bounds || (!finiteMap && visibleObjects.length === 0)) {
       const fallback = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
-      applyPersistToViewport(viewport, fallback);
+      applyCamera(viewport, fallback);
       syncDots();
       setViewportScale(clampZoom(viewport.scale.x));
       onViewportChangeRef.current(persistFromViewport(viewport));
       return;
     }
 
-    const cameraAfter = fitViewportToBounds(viewport, bounds);
+    if (finiteMap && mapBounds) {
+      const persist = computeFitToBoundsViewport(
+        viewport.screenWidth,
+        viewport.screenHeight,
+        mapBounds,
+      );
+      applyCamera(viewport, persist);
+    } else {
+      fitViewportToBounds(viewport, bounds);
+    }
+
+    if (source === 'manual') {
+      userViewAdjustedRef.current = true;
+    }
+
     syncDots();
-    console.debug('[Canvas] fitToContent applied', { cameraAfter });
+    console.debug('[Canvas] fitToContent applied', { cameraAfter: snapshotFromViewport(viewport) });
     setViewportScale(clampZoom(viewport.scale.x));
     onViewportChangeRef.current(persistFromViewport(viewport));
   };
@@ -431,6 +857,52 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       return 0;
     }
     return points.length;
+  };
+
+  /** Place vertex on pointerdown so rapid clicks are not dropped by small cursor drift before pointerup. */
+  const appendDrawingPointAt = (viewport: Viewport, worldPoint: CanvasPoint) => {
+    const placementPoint = guardMapPlacementPoint(worldPoint);
+    if (!placementPoint) return;
+
+    if (isClosedDrawMode(currentModeRef.current)) {
+      if (drawingPointsRef.current.length > 0) {
+        const first = drawingPointsRef.current[0];
+        const firstScreen = viewport.toScreen(first.x, first.y);
+        const clickScreen = viewport.toScreen(placementPoint.x, placementPoint.y);
+        const distance = Math.hypot(firstScreen.x - clickScreen.x, firstScreen.y - clickScreen.y);
+        if (distance <= 8 && drawingPointsRef.current.length >= 3) {
+          finishDrawingInternal();
+          return;
+        }
+      }
+
+      const now = Date.now();
+      const last = lastDrawClickRef.current;
+      const isDoubleClick = Boolean(
+        last && now - last.at < 280 && Math.hypot(last.x - placementPoint.x, last.y - placementPoint.y) < 12,
+      );
+      lastDrawClickRef.current = { at: now, x: placementPoint.x, y: placementPoint.y };
+
+      const next = [...drawingPointsRef.current, placementPoint];
+      setDrawingPoints(next);
+      if (isDoubleClick && next.length >= 3) {
+        finishDrawingInternal();
+      }
+      return;
+    }
+
+    const now = Date.now();
+    const last = lastDrawClickRef.current;
+    const isDoubleClick = Boolean(
+      last && now - last.at < 280 && Math.hypot(last.x - placementPoint.x, last.y - placementPoint.y) < 12,
+    );
+    lastDrawClickRef.current = { at: now, x: placementPoint.x, y: placementPoint.y };
+
+    const next = [...drawingPointsRef.current, placementPoint];
+    setDrawingPoints(next);
+    if (isDoubleClick && next.length >= 2) {
+      finishDrawingInternal();
+    }
   };
 
   useImperativeHandle(ref, () => ({
@@ -478,6 +950,20 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     clearDrawingPoints() {
       setDrawingPoints([]);
     },
+    getTextEditLayout(objectId: number) {
+      const viewport = viewportRef.current;
+      const host = hostRef.current;
+      if (!viewport || !host) return null;
+      const object = liveObjectsRef.current.find((item) => item.id === objectId);
+      if (!object || (object.kind !== 'text' && object.kind !== 'curve_text')) return null;
+      const anchor = textObjectWorldAnchor(object);
+      const screen = viewport.toScreen(anchor.x, anchor.y);
+      return {
+        left: screen.x,
+        top: screen.y,
+        ...textEditLayoutFromObject(object, viewport.scale.x),
+      };
+    },
   }), [onViewportChange, scene]);
 
   useEffect(() => {
@@ -501,12 +987,13 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       app.canvas.style.width = '100%';
       app.canvas.style.height = '100%';
       host.appendChild(app.canvas);
+      const initialWorld = getCanvasWorldSize(sceneRef.current, backgroundSizeRef.current);
       const viewport = new Viewport({
         events: app.renderer.events,
         screenWidth: host.clientWidth,
         screenHeight: host.clientHeight,
-        worldWidth: WORLD_SIZE,
-        worldHeight: WORLD_SIZE,
+        worldWidth: initialWorld.width,
+        worldHeight: initialWorld.height,
       });
       viewport.wheel().pinch().decelerate().clampZoom({ minScale: MIN_ZOOM, maxScale: MAX_ZOOM });
       app.stage.eventMode = 'static';
@@ -526,6 +1013,11 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       app.stage.addChild(dots);
       app.stage.addChild(viewport);
 
+      const backgroundLayer = new Container();
+      backgroundLayer.eventMode = 'none';
+      backgroundLayerRef.current = backgroundLayer;
+      viewport.addChild(backgroundLayer);
+
       const rootObjects = new Container();
       rootObjects.sortableChildren = true;
       rootObjectsRef.current = rootObjects;
@@ -537,18 +1029,68 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       viewport.addChild(draft);
 
       const syncViewport = () => {
+        if (!applyingCameraRef.current && isImageBackedMapScene(sceneRef.current, backgroundSizeRef.current)) {
+          const mapBounds = backgroundSizeRef.current
+            ? getMapSceneWorldBounds(backgroundSizeRef.current)
+            : null;
+          if (mapBounds) {
+            const current = persistFromViewport(viewport);
+            const clamped = clampViewportPersistToMapBounds(
+              current,
+              mapBounds,
+              viewport.screenWidth,
+              viewport.screenHeight,
+            );
+            if (
+              Math.abs(clamped.centerX - current.centerX) > 0.5
+              || Math.abs(clamped.centerY - current.centerY) > 0.5
+            ) {
+              applyingCameraRef.current = true;
+              applyPersistToViewport(viewport, clamped);
+              applyingCameraRef.current = false;
+            }
+          }
+        }
         setViewportScale(clampZoom(viewport.scale.x));
         onViewportChangeRef.current(persistFromViewport(viewport));
         syncDots();
       };
+      const markUserViewportGesture = () => {
+        if (!applyingCameraRef.current) {
+          userViewAdjustedRef.current = true;
+        }
+      };
       viewport.on('moved', syncViewport);
-      viewport.on('zoomed', syncViewport);
+      viewport.on('zoomed', () => {
+        markUserViewportGesture();
+        syncViewport();
+      });
 
       const handlePointerDown = (event: FederatedPointerEvent) => {
         const worldPoint = pointFromEvent(viewport, event);
         const editRings = territoryEditRingsRef.current;
         const isEditingTerritory = Boolean(editRings && editRings.length > 0);
         const forcePan = spacePressedRef.current;
+
+        if (event.button === 1) {
+          panStateRef.current = {
+            startX: event.global.x,
+            startY: event.global.y,
+            viewportX: viewport.x,
+            viewportY: viewport.y,
+          };
+          updateCursor('grabbing');
+          return;
+        }
+
+        if (event.shiftKey && !forcePan) {
+          shiftClickPointerRef.current = {
+            downX: event.global.x,
+            downY: event.global.y,
+            worldPoint,
+          };
+          return;
+        }
 
         if (isEditingTerritory && !forcePan) {
           const scale = viewport.scale.x;
@@ -587,10 +1129,52 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         }
 
         if (event.button !== 0) return;
+
+        if (currentModeRef.current === 'select' && !forcePan) {
+          const selectedObject = liveObjectsRef.current.find((item) => item.id === selectedObjectIdRef.current) ?? null;
+          const handleHit = selectedObject
+            ? hitCardResizeHandle(selectedObject, worldPoint, viewport.scale.x)
+            : null;
+          if (handleHit && isResizableCardObject(selectedObject)) {
+            const transform = objectTransform(selectedObject);
+            const geometry = resolveCardGeometry(selectedObject);
+            cardResizeStateRef.current = {
+              objectId: selectedObject.id,
+              handle: handleHit.handle,
+              startPointer: worldPoint,
+              startX: transform.x,
+              startY: transform.y,
+              startWidth: geometry.width,
+              startHeight: geometry.height,
+              minWidth: MIN_CARD_WIDTH,
+              minHeight: MIN_CARD_HEIGHT,
+            };
+            updateCursor(handleHit.cursor);
+            return;
+          }
+
+          const selectedCurve = getSelectedCurveTextObject();
+          if (selectedCurve) {
+            const handleHit = hitCurveTextHandle(
+              worldPoint,
+              selectedCurve,
+              CURVE_HANDLE_HIT_PX,
+              viewport.scale.x,
+            );
+            if (handleHit) {
+              curveHandleDragRef.current = { objectId: selectedCurve.id, handle: handleHit };
+              syncCurveTextDraft(selectedCurve);
+              updateCursor('move');
+              return;
+            }
+          }
+        }
+
         const hit = hitTestObjects(reconcileStateRef.current, liveObjectsRef.current, worldPoint);
         const isDrawing = isDrawingMode(currentModeRef.current);
 
         if (isDrawing && !forcePan) {
+          appendDrawingPointAt(viewport, worldPoint);
           drawPointerRef.current = {
             downX: event.global.x,
             downY: event.global.y,
@@ -598,7 +1182,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           };
           drawingHoverRef.current = worldPoint;
           redrawDraft();
-          updateCursor('crosshair');
+          updateCursor('pointer');
           return;
         }
 
@@ -618,7 +1202,10 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         }
 
         if (currentModeRef.current !== 'select' && !isDrawing && !hit) {
-          onCanvasClickRef.current(worldPoint);
+          const placementPoint = guardMapPlacementPoint(worldPoint);
+          if (placementPoint) {
+            onCanvasClickRef.current(placementPoint);
+          }
         }
 
         panStateRef.current = {
@@ -633,6 +1220,34 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const handlePointerMove = (event: FederatedPointerEvent) => {
         const worldPoint = pointFromEvent(viewport, event);
         const isDrawing = isDrawingMode(currentModeRef.current);
+
+        if (cardResizeStateRef.current && currentModeRef.current === 'select') {
+          const resizeState = cardResizeStateRef.current;
+          const object = liveObjectsRef.current.find((item) => item.id === resizeState.objectId);
+          if (object && isResizableCardObject(object)) {
+            const frame = resolveResizeFrame(resizeState, worldPoint);
+            const draft = withCardSizeAndPosition(object, frame.x, frame.y, frame.width, frame.height);
+            cardResizeDraftRef.current = draft;
+            liveObjectsRef.current = resolveEffectiveObjects();
+            reconcileLiveObjects();
+            updateCursor(resizeCursorForHandle(resizeState.handle));
+            return;
+          }
+        }
+
+        if (curveHandleDragRef.current) {
+          const drag = curveHandleDragRef.current;
+          const object = liveObjectsRef.current.find((item) => item.id === drag.objectId);
+          if (object) {
+            const updated = applyCurveHandleWorldPoint(object, drag.handle, worldPoint);
+            syncCurveTextDraft(updated);
+            reconcileLiveObjects();
+            onCurveTextGeometryDraftRef.current?.(updated);
+            redrawDraft();
+          }
+          updateCursor('move');
+          return;
+        }
 
         if (vertexDragRef.current) {
           const drag = vertexDragRef.current;
@@ -683,6 +1298,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
             pan.viewportX + (event.global.x - pan.startX),
             pan.viewportY + (event.global.y - pan.startY),
           );
+          userViewAdjustedRef.current = true;
           syncViewport();
           return;
         }
@@ -692,10 +1308,11 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           if (Math.hypot(event.global.x - drag.startX, event.global.y - drag.startY) > 2) {
             drag.moved = true;
           }
-          const entry = reconcileStateRef.current.objects.get(drag.objectId);
-          if (entry) {
-            entry.display.position.set(worldPoint.x - drag.offsetX, worldPoint.y - drag.offsetY);
-          }
+          const x = worldPoint.x - drag.offsetX;
+          const y = worldPoint.y - drag.offsetY;
+          objectDragPositionRef.current = { objectId: drag.objectId, x, y };
+          liveObjectsRef.current = resolveEffectiveObjects();
+          reconcileLiveObjects();
           updateCursor('move');
           return;
         }
@@ -707,12 +1324,22 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
           updateCursor(vertexHit ? 'pointer' : 'grab');
         } else if (spacePressedRef.current) {
           updateCursor('grab');
-        } else if (isDrawing) {
-          updateCursor('crosshair');
-        } else if (hovered) {
+        } else if (currentModeRef.current !== 'select') {
           updateCursor('pointer');
         } else {
-          updateCursor('grab');
+          const selectedObject = liveObjectsRef.current.find((item) => item.id === selectedObjectIdRef.current) ?? null;
+          const handleHit = selectedObject
+            ? hitCardResizeHandle(selectedObject, worldPoint, viewport.scale.x)
+            : null;
+          if (handleHit) {
+            updateCursor(handleHit.cursor);
+            return;
+          }
+          if (hovered) {
+            updateCursor('pointer');
+          } else {
+            updateCursor('grab');
+          }
         }
       };
 
@@ -720,9 +1347,37 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         const worldPoint = pointFromEvent(viewport, event);
         const editRings = territoryEditRingsRef.current;
 
+        if (shiftClickPointerRef.current) {
+          const shiftClick = shiftClickPointerRef.current;
+          shiftClickPointerRef.current = null;
+          const distance = Math.hypot(event.global.x - shiftClick.downX, event.global.y - shiftClick.downY);
+          if (distance <= 4) {
+            const placementPoint = guardMapPlacementPoint(shiftClick.worldPoint);
+            if (placementPoint && onShiftCanvasClickRef.current) {
+              onShiftCanvasClickRef.current(placementPoint);
+            }
+            return;
+          }
+        }
+
+        if (curveHandleDragRef.current) {
+          const drag = curveHandleDragRef.current;
+          curveHandleDragRef.current = null;
+          const object = liveObjectsRef.current.find((item) => item.id === drag.objectId);
+          if (object) {
+            const updated = applyCurveHandleWorldPoint(object, drag.handle, worldPoint);
+            syncCurveTextDraft(updated);
+            reconcileLiveObjects();
+            onCurveTextGeometryCommitRef.current?.(updated);
+          }
+          redrawDraft();
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
+          return;
+        }
+
         if (vertexDragRef.current) {
           vertexDragRef.current = null;
-          updateCursor('grab');
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
         }
 
         if (editRings && editRings.length > 0 && event.button === 0) {
@@ -756,15 +1411,46 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
 
         if (panStateRef.current) {
           panStateRef.current = null;
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
+        }
+
+        if (cardResizeStateRef.current && currentModeRef.current === 'select') {
+          const resizeState = cardResizeStateRef.current;
+          cardResizeStateRef.current = null;
+          const draft = cardResizeDraftRef.current;
+          if (draft) {
+            cardResizeDraftRef.current = null;
+            liveObjectsRef.current = resolveEffectiveObjects();
+            onObjectMoveRef.current(draft, objectTransform(draft));
+          }
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
+          return;
         }
 
         if (dragStateRef.current && currentModeRef.current === 'select') {
           const drag = dragStateRef.current;
           dragStateRef.current = null;
           if (!drag.moved) {
+            objectDragPositionRef.current = null;
             const clicked = liveObjectsRef.current.find((item) => item.id === drag.objectId);
             if (
-              clicked?.kind === 'marker'
+              (clicked?.kind === 'text' || clicked?.kind === 'curve_text')
+              && onTextEditRequestRef.current
+            ) {
+              const now = Date.now();
+              const last = lastTextClickRef.current;
+              if (last?.objectId === clicked.id && now - last.at < 400) {
+                lastTextClickRef.current = null;
+                onTextEditRequestRef.current(clicked);
+                updateCursor('text');
+                return;
+              }
+              lastTextClickRef.current = { objectId: clicked.id, at: now };
+              updateCursor('pointer');
+              return;
+            }
+            if (
+              (clicked?.kind === 'marker' || clicked?.kind === 'scene_container')
               && clicked.linkedSceneId != null
               && onMarkerOpenLinkedSceneRef.current
             ) {
@@ -784,55 +1470,20 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
             return;
           }
           lastMarkerClickRef.current = null;
+          const x = worldPoint.x - drag.offsetX;
+          const y = worldPoint.y - drag.offsetY;
+          objectDragPositionRef.current = { objectId: drag.objectId, x, y };
+          liveObjectsRef.current = resolveEffectiveObjects();
           const movedObject = liveObjectsRef.current.find((item) => item.id === drag.objectId);
           if (movedObject) {
-            onObjectMoveRef.current(movedObject, {
-              x: worldPoint.x - drag.offsetX,
-              y: worldPoint.y - drag.offsetY,
-            });
+            onObjectMoveRef.current(movedObject, { x, y });
           }
           updateCursor('pointer');
           return;
         }
 
         if (drawPointerRef.current && isDrawingMode(currentModeRef.current)) {
-          const draw = drawPointerRef.current;
           drawPointerRef.current = null;
-          if (draw.moved) return;
-
-          const now = Date.now();
-          const last = lastDrawClickRef.current;
-          const isDoubleClick = Boolean(
-            last && now - last.at < 280 && Math.hypot(last.x - worldPoint.x, last.y - worldPoint.y) < 12,
-          );
-          lastDrawClickRef.current = { at: now, x: worldPoint.x, y: worldPoint.y };
-
-          if (isClosedDrawMode(currentModeRef.current)) {
-            if (drawingPointsRef.current.length > 0) {
-              const first = drawingPointsRef.current[0];
-              const firstScreen = viewport.toScreen(first.x, first.y);
-              const worldScreen = viewport.toScreen(worldPoint.x, worldPoint.y);
-              const distance = Math.hypot(firstScreen.x - worldScreen.x, firstScreen.y - worldScreen.y);
-              snapToFirstRef.current = distance <= 8;
-            }
-            if (snapToFirstRef.current && drawingPointsRef.current.length >= 3) {
-              finishDrawingInternal();
-              return;
-            }
-            const next = [...drawingPointsRef.current, worldPoint];
-            setDrawingPoints(next);
-            if (isDoubleClick && next.length >= 3) {
-              finishDrawingInternal();
-            }
-            return;
-          }
-
-          const next = [...drawingPointsRef.current, worldPoint];
-          setDrawingPoints(next);
-          if (isDoubleClick && next.length >= 2) {
-            finishDrawingInternal();
-          }
-          return;
         }
       };
 
@@ -897,6 +1548,7 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       const handleKeyUp = (event: KeyboardEvent) => {
         if (event.code === 'Space') {
           spacePressedRef.current = false;
+          updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
         }
       };
       window.addEventListener('keydown', handleKeyDown);
@@ -908,15 +1560,37 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
         const width = Math.max(1, Math.floor(entry.contentRect.width));
         const height = Math.max(1, Math.floor(entry.contentRect.height));
         app.renderer.resize(width, height);
-        viewport.resize(width, height, WORLD_SIZE, WORLD_SIZE);
+        applyingCameraRef.current = true;
+        try {
+          resizeViewportWorld(viewport);
+          const mapSize = backgroundSizeRef.current;
+          if (
+            !userViewAdjustedRef.current
+            && mapSize
+            && isMapScene(sceneRef.current.sceneType)
+          ) {
+            const mapBounds = getMapSceneWorldBounds(mapSize);
+            applyPersistToViewport(
+              viewport,
+              computeFitToBoundsViewport(width, height, mapBounds),
+            );
+            setViewportScale(clampZoom(viewport.scale.x));
+          }
+        } finally {
+          applyingCameraRef.current = false;
+        }
         updateDots(dots, viewport, width, height);
       });
       resizeObserver.observe(host);
 
-      const initial = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
-      applyPersistToViewport(viewport, initial);
+      const deferInitialPersist = isMapScene(sceneRef.current.sceneType)
+        && Boolean(resolveMapBackgroundAssetPath(sceneRef.current));
+      if (!deferInitialPersist) {
+        const initial = sceneViewportPersist(sceneRef.current, viewport.screenWidth, viewport.screenHeight);
+        applyPersistToViewport(viewport, initial);
+      }
       updateDots(dots, viewport, app.renderer.width, app.renderer.height);
-      updateCursor('grab');
+      updateCursor(currentModeRef.current === 'select' ? 'grab' : 'pointer');
 
       sceneIdRef.current = sceneRef.current.id;
       setPixiReady(true);
@@ -945,13 +1619,18 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
       appRef.current = null;
       viewportRef.current = null;
       setPixiReady(false);
-      autoFitSceneRef.current = null;
+      autoFitKeyRef.current = null;
+      userViewAdjustedRef.current = false;
+      backgroundLayerRef.current = null;
+      backgroundSizeRef.current = null;
       rootObjectsRef.current = null;
       dotsRef.current = null;
       dotTextureRef.current?.destroy(true);
       dotTextureRef.current = null;
       draftRef.current = null;
       dragStateRef.current = null;
+      cardResizeStateRef.current = null;
+      cardResizeDraftRef.current = null;
       reconcileStateRef.current = { layerContainers: new Map(), objects: new Map() };
     };
   }, []);
@@ -961,28 +1640,119 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
     if (!viewport) return;
     if (sceneIdRef.current === scene.id) return;
     clearDrawing();
-    autoFitSceneRef.current = null;
-    const persist = sceneViewportPersist(scene, viewport.screenWidth, viewport.screenHeight);
-    applyPersistToViewport(viewport, persist);
+    autoFitKeyRef.current = null;
+    userViewAdjustedRef.current = false;
+    backgroundSizeRef.current = null;
     sceneIdRef.current = scene.id;
+
+    const deferPersist = isMapScene(scene.sceneType) && Boolean(resolveMapBackgroundAssetPath(scene));
+    if (!deferPersist) {
+      const persist = sceneViewportPersist(scene, viewport.screenWidth, viewport.screenHeight);
+      applyCamera(viewport, persist);
+      resizeViewportWorld(viewport);
+    }
+
     syncDots();
     setViewportScale(clampZoom(viewport.scale.x));
-    onViewportChange(persistFromViewport(viewport));
+    if (!deferPersist) {
+      onViewportChange(persistFromViewport(viewport));
+    }
   }, [onViewportChange, scene]);
 
   useEffect(() => {
     if (!pixiReady) return;
-    if (autoFitSceneRef.current === scene.id) return;
+    const layer = backgroundLayerRef.current;
+    if (!layer) return;
 
-    const visibleObjects = objects.filter((object) => !object.isHidden);
+    const assetPath = resolveMapBackgroundAssetPath(scene);
+    backgroundSizeRef.current = null;
+    layer.removeChildren();
+
+    if (!assetPath) {
+      if (dotsRef.current) dotsRef.current.visible = shouldUseInfiniteCanvas(scene.sceneType);
+      const viewport = viewportRef.current;
+      if (viewport) resizeViewportWorld(viewport);
+      setBackgroundLoadTick((tick) => tick + 1);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const url = await resolveUploadAssetUrl(assetPath);
+      if (cancelled || !url || layer.destroyed) return;
+      try {
+        const texture = await Assets.load(url);
+        if (cancelled || layer.destroyed) return;
+        const sprite = new Sprite(texture);
+        sprite.position.set(0, 0);
+        sprite.width = texture.width;
+        sprite.height = texture.height;
+        sprite.eventMode = 'none';
+        layer.addChild(sprite);
+        const texWidth = sprite.texture.width;
+        const texHeight = sprite.texture.height;
+        backgroundSizeRef.current = { width: texWidth, height: texHeight };
+        const viewport = viewportRef.current;
+        if (viewport) {
+          const fitKey = buildMapAutoFitKey(scene.id, scene.backgroundPath, backgroundSizeRef.current);
+          if (!fitKey || autoFitKeyRef.current !== fitKey) {
+            const persist = fitMapBackgroundToViewport(viewport, backgroundSizeRef.current);
+            setViewportScale(clampZoom(persist.scale));
+            onViewportChangeRef.current(persist);
+            if (fitKey) autoFitKeyRef.current = fitKey;
+          } else {
+            applyingCameraRef.current = true;
+            try {
+              resizeViewportWorld(viewport);
+            } finally {
+              applyingCameraRef.current = false;
+            }
+          }
+        }
+        if (dotsRef.current) dotsRef.current.visible = false;
+        setBackgroundLoadTick((tick) => tick + 1);
+      } catch (error) {
+        console.error('[Canvas] map background load failed', { sceneId: scene.id, assetPath, error });
+        if (dotsRef.current) dotsRef.current.visible = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pixiReady, scene.id, scene.sceneType, scene.backgroundPath]);
+
+  useEffect(() => {
+    if (!pixiReady) return;
+
     const viewport = viewportRef.current;
     if (!viewport) return;
+
+    const isMap = isMapScene(scene.sceneType);
+    const waitingForBackground = isMap
+      && Boolean(resolveMapBackgroundAssetPath(scene))
+      && !backgroundSizeRef.current;
+    if (waitingForBackground) return;
+
+    const visibleObjects = objects.filter((object) => !object.isHidden);
+    const mapBounds = isMap && backgroundSizeRef.current
+      ? getMapSceneWorldBounds(backgroundSizeRef.current)
+      : null;
+    const fitKey = isMap
+      ? buildMapAutoFitKey(scene.id, scene.backgroundPath, backgroundSizeRef.current)
+      : `scene:${scene.id}`;
+    const needsMapInitialFit = Boolean(mapBounds && fitKey && autoFitKeyRef.current !== fitKey);
+
+    if (!needsMapInitialFit && userViewAdjustedRef.current) return;
+    if (!needsMapInitialFit && fitKey && autoFitKeyRef.current === fitKey) return;
+
+    const bounds = mapBounds ?? computeObjectsBounds(visibleObjects);
     const savedViewport = sceneViewportPersist(scene, viewport.screenWidth, viewport.screenHeight);
-    const bounds = computeObjectsBounds(visibleObjects);
-    const camera = snapshotFromViewport(viewport);
 
     console.debug('[Canvas] scene load camera', {
       sceneId: scene.id,
+      fitKey,
+      needsMapInitialFit,
       objectCount: visibleObjects.length,
       bbox: bounds
         ? {
@@ -992,48 +1762,99 @@ export const PixiMapCanvas = forwardRef<PixiMapCanvasHandle, Props>(function Pix
             maxY: bounds.maxY,
           }
         : null,
-      camera,
       savedViewport,
-      boundsVisible: bounds
-        ? isBoundsVisibleInViewport(bounds, savedViewport, viewport.screenWidth, viewport.screenHeight)
-        : null,
     });
 
-    autoFitSceneRef.current = scene.id;
+    if (needsMapInitialFit && backgroundSizeRef.current) {
+      const persist = fitMapBackgroundToViewport(viewport, backgroundSizeRef.current);
+      setViewportScale(clampZoom(persist.scale));
+      onViewportChangeRef.current(persist);
+      if (fitKey) autoFitKeyRef.current = fitKey;
+      return;
+    }
 
-    if (!shouldAutoFitOnLoad(
-      visibleObjects.length,
-      bounds,
-      savedViewport,
-      viewport.screenWidth,
-      viewport.screenHeight,
-    )) return;
+    const shouldFit = mapBounds
+      ? shouldAutoFitMapBackgroundOnLoad(mapBounds, savedViewport, viewport.screenWidth, viewport.screenHeight)
+      : shouldAutoFitOnLoad(
+        visibleObjects.length,
+        bounds,
+        savedViewport,
+        viewport.screenWidth,
+        viewport.screenHeight,
+      );
+    if (!shouldFit) {
+      if (mapBounds && !isDefaultPersist(savedViewport) && !isMapViewportMisaligned(savedViewport, mapBounds)) {
+        applyCamera(viewport, savedViewport);
+        setViewportScale(clampZoom(viewport.scale.x));
+        onViewportChangeRef.current(persistFromViewport(viewport));
+      }
+      if (fitKey) autoFitKeyRef.current = fitKey;
+      return;
+    }
 
     fitToContentInternal('auto');
-  }, [pixiReady, scene, objects]);
+    if (fitKey) autoFitKeyRef.current = fitKey;
+  }, [pixiReady, scene, objects, backgroundLoadTick]);
 
   useEffect(() => {
+    syncPendingObjectDragPosition(objects);
+    syncPendingCardResizeDraft(objects);
+
     if (!pixiReady) return;
+    if (isInteractiveObjectDragActive()) return;
     const root = rootObjectsRef.current;
     if (!root) return;
 
+    const effectiveObjects = resolveEffectiveObjects(objects);
+    liveObjectsRef.current = effectiveObjects;
     reconcilePixiObjects(
       root,
       reconcileStateRef.current,
       layers,
-      objects,
+      effectiveObjects,
       selectedObjectId,
       (object, resourcePath) => {
         onImageLoadErrorRef.current(object, resourcePath);
       },
-      { viewportScale },
+      {
+        viewportScale,
+        linkedSceneNames,
+        linkedSceneBackgroundPaths,
+        sceneContainerLabels,
+        imageCardLabels,
+        editingTextObjectId,
+      },
     );
     forceRender();
-  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale]);
+  }, [pixiReady, layers, objects, selectedObjectId, scene.id, viewportScale, linkedSceneNames, linkedSceneBackgroundPaths, sceneContainerLabels, imageCardLabels, editingTextObjectId]);
+
+  useEffect(() => {
+    const draft = curveTextGeometryDraftRef.current;
+    if (!draft || curveHandleDragRef.current) return;
+    const committed = objects.find((item) => item.id === draft.id);
+    if (committed && curveTextGeometryJsonEquals(committed, draft)) {
+      curveTextGeometryDraftRef.current = null;
+      liveObjectsRef.current = resolveEffectiveObjects(objects);
+    }
+  }, [objects]);
 
   useEffect(() => {
     redrawDraft();
+    updateCursor(mode === 'select' ? 'grab' : 'pointer');
   }, [mode]);
+
+  useEffect(() => {
+    curveHandleDragRef.current = null;
+    curveTextGeometryDraftRef.current = null;
+    objectDragPositionRef.current = null;
+    cardResizeStateRef.current = null;
+    cardResizeDraftRef.current = null;
+    redrawDraft();
+  }, [selectedObjectId]);
+
+  useEffect(() => {
+    redrawDraft();
+  }, [objects]);
 
   useEffect(() => {
     if (territoryEditRings) clearDrawing();

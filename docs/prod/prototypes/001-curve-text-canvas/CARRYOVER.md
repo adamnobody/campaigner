@@ -54,6 +54,6 @@ This file lists work that was deferred from [prototype 001](./REPORT.md) and mus
 
 | # | Item | Status | Mainline ticket | Resolved in |
 | --- | --- | --- | --- | --- |
-| 1 | Curve text click selection | open | TBD | — |
-| 2 | Real 16k PNG on min-spec | open | TBD | — |
-| 3 | Incremental reconciliation | open | TBD | — |
+| 1 | Curve text click selection | **partial** | — | 0.3.5 text parity: select, handle edit, glyph bbox hit-test; arc-precision → `DEBT-012` |
+| 2 | Real 16k PNG on min-spec | open | — | `DEBT-011` |
+| 3 | Incremental reconciliation | open | — | `DEBT-C1` (`image` only partial) |

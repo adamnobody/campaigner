@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box, Typography, TextField, IconButton,
   Button, Chip, Select, MenuItem, FormControl,
-  InputAdornment, Tooltip, Avatar, useTheme, alpha,
+  InputAdornment, Tooltip, useTheme, alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -10,10 +10,15 @@ import SearchIcon from '@mui/icons-material/Search';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import PeopleIcon from '@mui/icons-material/People';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import MilitaryTechIcon from '@mui/icons-material/MilitaryTech';
+import Diversity3Icon from '@mui/icons-material/Diversity3';
+import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDynastyStore } from '@/store/useDynastyStore';
 import { useBranchStore } from '@/store/useBranchStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useCharacterStore } from '@/store/useCharacterStore';
+import { useFactionStore } from '@/store/useFactionStore';
 import { DndButton } from '@/components/ui/DndButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssetAvatar } from '@/components/ui/AssetAvatar';
@@ -22,12 +27,18 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { routes } from '@/utils/routes';
 import { useTranslation } from 'react-i18next';
 import {
+  CampaignerPage,
+  CampaignerPageHeader,
+  CampaignerSurface,
+} from '@/components/ui/CampaignerPrimitives';
+import { CatalogAside, CatalogColumns } from '@/components/catalog/CatalogLayout';
+import {
   DYNASTY_STATUSES,
   DYNASTY_STATUS_ICONS,
 } from '@campaigner/shared';
 
 export const DynastiesPage: React.FC = () => {
-  const { t } = useTranslation(['dynasties', 'common']);
+  const { t } = useTranslation(['dynasties', 'common', 'navigation']);
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
@@ -35,6 +46,10 @@ export const DynastiesPage: React.FC = () => {
   const { dynasties, total, loading, fetchDynasties, deleteDynasty } = useDynastyStore();
   const { showSnackbar, showConfirmDialog } = useUIStore();
   const activeBranchId = useBranchStore((s) => s.activeBranchId);
+  const fetchCharacters = useCharacterStore((s) => s.fetchCharacters);
+  const characters = useCharacterStore((s) => s.characters);
+  const fetchFactions = useFactionStore((s) => s.fetchFactions);
+  const factions = useFactionStore((s) => s.factions);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
@@ -61,6 +76,11 @@ export const DynastiesPage: React.FC = () => {
     setInitialized(false);
     loadDynasties();
   }, [loadDynasties]);
+
+  useEffect(() => {
+    void fetchCharacters(pid, { limit: 500 });
+    void fetchFactions(pid, { limit: 500 });
+  }, [pid, fetchCharacters, fetchFactions, activeBranchId]);
 
   const hasFilters = !!(debouncedSearch || filterStatus);
 
@@ -92,25 +112,53 @@ export const DynastiesPage: React.FC = () => {
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography sx={{ fontFamily: '"Cinzel", serif', fontWeight: 700, fontSize: '1.8rem', color: 'text.primary' }}>
-            {t('dynasties:list.title')}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {t('dynasties:list.subtitle')}
-          </Typography>
-        </Box>
-        <DndButton variant="contained" startIcon={<AddIcon />} onClick={() => navigate(routes.dynastyDetail(pid, 'new'))}>
-          {t('dynasties:list.create')}
-        </DndButton>
-      </Box>
+    <CampaignerPage>
+      <CatalogColumns
+        aside={(
+          <CatalogAside
+            summaryTitle={t('common:catalog.summary')}
+            summary={[
+              { label: t('dynasties:list.aside.summaryTotal'), value: total },
+              { label: t('dynasties:list.aside.summaryActive'), value: dynasties.filter((item) => item.status === 'active').length },
+              { label: t('dynasties:list.aside.summaryFounder'), value: dynasties.filter((item) => item.founderId).length },
+              { label: t('dynasties:list.aside.summaryLinked'), value: dynasties.filter((item) => item.linkedFactionId).length },
+            ]}
+            storedTitle={t('common:catalog.storedTitle')}
+            storedBody={t('dynasties:list.aside.storedBody')}
+            linkedTitle={t('common:catalog.linkedTitle')}
+            linked={[
+              { label: t('navigation:menu.characters'), value: characters.length },
+              { label: t('navigation:menu.states'), value: factions.filter((item) => item.kind === 'state').length },
+              { label: t('navigation:menu.factions'), value: factions.filter((item) => item.kind === 'faction').length },
+            ]}
+          />
+        )}
+      >
+      <CampaignerPageHeader
+        eyebrow={t('dynasties:list.eyebrow', { count: total })}
+        title={t('dynasties:list.title')}
+        description={t('dynasties:list.subtitle')}
+        actions={(
+          <DndButton
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate(routes.dynastyDetail(pid, 'new'))}
+          >
+            {t('dynasties:list.create')}
+          </DndButton>
+        )}
+      />
 
-      {/* Filters */}
-      {(dynasties.length > 0 || hasFilters) && (
-        <GlassCard sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+      <CampaignerSurface
+          sx={{
+            p: 1.25,
+            mb: dynasties.length === 0 ? 0 : 3,
+            display: 'flex',
+            gap: 1.25,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <TextField
             placeholder={t('dynasties:list.searchPlaceholder')}
             value={search} onChange={e => setSearch(e.target.value)}
@@ -146,10 +194,8 @@ export const DynastiesPage: React.FC = () => {
           <Typography variant="body2" sx={{ color: 'text.secondary', ml: 'auto' }}>
             {t('dynasties:list.count', { shown: dynasties.length, total })}
           </Typography>
-        </GlassCard>
-      )}
+      </CampaignerSurface>
 
-      {/* Content */}
       {dynasties.length === 0 && !loading ? (
         hasFilters ? (
           <EmptyState
@@ -166,13 +212,34 @@ export const DynastiesPage: React.FC = () => {
             description={t('dynasties:list.emptyNoDynastiesDescription')}
             actionLabel={t('dynasties:list.emptyNoDynastiesAction')}
             onAction={() => navigate(routes.dynastyDetail(pid, 'new'))}
+            templatesTitle={t('dynasties:list.templates.title')}
+            templates={[
+              {
+                icon: <MilitaryTechIcon />,
+                title: t('dynasties:list.templates.ruling.title'),
+                description: t('dynasties:list.templates.ruling.description'),
+                onClick: () => navigate(routes.dynastyDetail(pid, 'new')),
+              },
+              {
+                icon: <Diversity3Icon />,
+                title: t('dynasties:list.templates.noble.title'),
+                description: t('dynasties:list.templates.noble.description'),
+                onClick: () => navigate(routes.dynastyDetail(pid, 'new')),
+              },
+              {
+                icon: <HistoryEduIcon />,
+                title: t('dynasties:list.templates.ancient.title'),
+                description: t('dynasties:list.templates.ancient.description'),
+                onClick: () => navigate(routes.dynastyDetail(pid, 'new')),
+              },
+            ]}
           />
         )
       ) : (
         <Box sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-          gap: 2.5,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
+          gap: 2.25,
         }}>
           {dynasties.map((dynasty) => {
             const statusColor = STATUS_COLORS[dynasty.status] || theme.palette.primary.main;
@@ -185,8 +252,17 @@ export const DynastiesPage: React.FC = () => {
                 onClick={() => navigate(routes.dynastyDetail(pid, dynasty.id))}
                 sx={{
                   p: 0,
+                  minHeight: 260,
+                  overflow: 'hidden',
+                  borderRadius: 3,
+                  border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                  background: `radial-gradient(circle at 50% 0%, ${alpha(dynastyColor, 0.13)}, transparent 48%), ${alpha(
+                    theme.palette.background.paper,
+                    0.35
+                  )}`,
                   '&:hover': {
                     '& .dynasty-actions': { opacity: 1 },
+                    '& .dynasty-crest': { transform: 'translateY(-3px) scale(1.04)' },
                   },
                 }}
               >
@@ -198,7 +274,6 @@ export const DynastiesPage: React.FC = () => {
                     : `linear-gradient(90deg, ${statusColor}, transparent)`,
                 }} />
 
-                {/* Centered crest + name */}
                 <Box sx={{ pt: 3, pb: 2, textAlign: 'center', position: 'relative' }}>
                   {/* Actions top-right */}
                   <Box className="dynasty-actions" sx={{
@@ -222,14 +297,17 @@ export const DynastiesPage: React.FC = () => {
 
                   {/* Crest */}
                   <AssetAvatar
+                    className="dynasty-crest"
                     assetPath={dynasty.imagePath}
                     sx={{
-                      width: 72, height: 72, mx: 'auto', mb: 1.5,
+                      width: 82, height: 82, mx: 'auto', mb: 1.75,
                       borderRadius: '50%',
                       bgcolor: alpha(dynastyColor, 0.1),
                       border: `2px solid ${alpha(dynastyColor, 0.3)}`,
+                      boxShadow: `0 12px 32px ${alpha(dynastyColor, 0.12)}`,
                       color: dynastyColor,
                       fontSize: '2rem',
+                      transition: 'transform 180ms ease',
                     }}
                   >
                     👑
@@ -237,8 +315,8 @@ export const DynastiesPage: React.FC = () => {
 
                   {/* Name */}
                   <Typography sx={{
-                    fontFamily: '"Cinzel", serif', fontWeight: 700,
-                    fontSize: '1.15rem', color: 'text.primary',
+                    fontFamily: theme.campaigner.typography.display, fontWeight: 600,
+                    fontSize: '1.55rem', lineHeight: 1.1, color: 'text.primary',
                     px: 2,
                   }}>
                     {dynasty.name}
@@ -248,14 +326,14 @@ export const DynastiesPage: React.FC = () => {
                   {dynasty.motto && (
                     <Typography sx={{
                       color: theme.palette.primary.main, fontStyle: 'italic',
-                      fontSize: '0.8rem', mt: 0.5, px: 2,
+                      fontFamily: theme.campaigner.typography.display,
+                      fontSize: '1rem', mt: 0.65, px: 2,
                     }}>
                       «{dynasty.motto}»
                     </Typography>
                   )}
                 </Box>
 
-                {/* Info row */}
                 <Box sx={{
                   display: 'flex', justifyContent: 'center', gap: 1,
                   px: 2, pb: 2, flexWrap: 'wrap',
@@ -293,11 +371,11 @@ export const DynastiesPage: React.FC = () => {
                   )}
                 </Box>
 
-                {/* Description preview */}
                 {dynasty.description && (
-                  <Box sx={{ px: 2, pb: 2 }}>
+                  <Box sx={{ px: 2.5, pb: 2 }}>
                     <Typography variant="body2" sx={{
-                      color: 'text.secondary', fontSize: '0.8rem',
+                      color: 'text.secondary', fontSize: '0.8rem', lineHeight: 1.65,
+                      pt: 1.5, borderTop: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
                       overflow: 'hidden', textOverflow: 'ellipsis',
                       display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                       textAlign: 'center',
@@ -331,6 +409,7 @@ export const DynastiesPage: React.FC = () => {
           })}
         </Box>
       )}
-    </Box>
+      </CatalogColumns>
+    </CampaignerPage>
   );
 };

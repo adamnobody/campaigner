@@ -18,6 +18,10 @@ import {
   type CanvasPoint,
 } from './canvasModel';
 import { territoryLabelPlacement } from './territoryLabel';
+import { resolveTerritoryStyleFields, traceSmoothedClosedRing } from './territoryRender';
+import { resolveTextContent } from './textObjectForm';
+import { isShapeKind } from './shapeObjectForm';
+import { shapeLabelPlacement } from './shapeLabel';
 
 type HitTest = (point: CanvasPoint) => boolean;
 type ImageLoadErrorHandler = (object: CanvasObject, resourcePath: string) => void;
@@ -35,9 +39,28 @@ export type ReconcileState = {
   objects: Map<number, DisplayEntry>;
 };
 
+export type SceneContainerDisplayLabels = {
+  defaultTitle: string;
+  openHint: string;
+  kindLabel: string;
+};
+
+export type ImageCardDisplayLabels = {
+  defaultTitle: string;
+  kindLabel: string;
+};
+
 export type ReconcileOptions = {
   /** Viewport scale (world → screen) for territory label sizing. */
   viewportScale?: number;
+  /** Linked child scene names for scene_container cards. */
+  linkedSceneNames?: ReadonlyMap<number, string>;
+  /** Linked child map scene backgrounds for scene_container thumbnails. */
+  linkedSceneBackgroundPaths?: ReadonlyMap<number, string>;
+  sceneContainerLabels?: SceneContainerDisplayLabels;
+  imageCardLabels?: ImageCardDisplayLabels;
+  /** Hide glyphs while inline text editor is open. */
+  editingTextObjectId?: number | null;
 };
 
 const loadedImageTextures = new Map<string, ImageTexture>();
@@ -173,11 +196,17 @@ const drawRingList = (
   stroke: number,
   alpha: number,
   strokeWidth: number,
+  smoothing = 0,
 ): void => {
   for (const points of ringList) {
     if (points.length >= 3) {
-      const flat = points.flatMap((point) => [point.x, point.y]);
-      graphics.poly(flat).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+      if (smoothing > 0) {
+        traceSmoothedClosedRing(graphics, points, smoothing);
+        graphics.fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+      } else {
+        const flat = points.flatMap((point) => [point.x, point.y]);
+        graphics.poly(flat).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+      }
       continue;
     }
     if (points.length === 2) {
@@ -229,13 +258,30 @@ const curveSamples = (geometry: Record<string, unknown>): CanvasPoint[] => {
   return samples;
 };
 
-const drawCurveText = (container: Container, object: CanvasObject): HitTest => {
+const drawCurveText = (
+  container: Container,
+  object: CanvasObject,
+  options?: ReconcileOptions,
+): HitTest => {
+  if (options?.editingTextObjectId === object.id) {
+    const geometry = asRecord(object.geometryJson);
+    const style = asRecord(object.styleJson);
+    const fontSize = asNumber(style.fontSize, 24);
+    const text = resolveTextContent(object);
+    const points = curveSamples(geometry);
+    const width = Math.max(160, text.length * fontSize * 0.55);
+    const height = fontSize * 1.2;
+    const anchor = points[0] ?? { x: 0, y: 0 };
+    return boundsHit(anchor.x, anchor.y, width, height);
+  }
+
   const geometry = asRecord(object.geometryJson);
   const style = asRecord(object.styleJson);
   const content = asRecord(object.contentJson);
-  const text = asString(content.text, object.name ?? 'Curve text');
+  const text = resolveTextContent(object);
   const fontSize = asNumber(style.fontSize, 24);
   const color = toColor(style.fill ?? style.color, 0xf8d7a4);
+  const opacity = asNumber(style.opacity, 1);
   const points = curveSamples(geometry);
   const hitBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
   const total = Math.max(1, text.length - 1);
@@ -256,6 +302,7 @@ const drawCurveText = (container: Container, object: CanvasObject): HitTest => {
     glyph.anchor.set(0.5);
     glyph.position.set(x, y);
     glyph.rotation = Math.atan2(b.y - a.y, b.x - a.x);
+    glyph.alpha = opacity;
     container.addChild(glyph);
     hitBoxes.push({ x: x - fontSize * 0.35, y: y - fontSize * 0.55, width: fontSize * 0.7, height: fontSize * 1.1 });
   }
@@ -264,33 +311,225 @@ const drawCurveText = (container: Container, object: CanvasObject): HitTest => {
     hitBoxes.some((box) => point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y && point.y <= box.y + box.height);
 };
 
-const drawImagePlaceholder = (graphics: Graphics, width: number, height: number, stroke: number, strokeWidth: number): void => {
-  graphics
-    .rect(0, 0, width, height)
-    .fill({ color: 0x5f6872, alpha: 0.42 })
-    .stroke({ color: stroke, width: strokeWidth });
-  graphics
-    .moveTo(width * 0.25, height * 0.35)
-    .lineTo(width * 0.45, height * 0.55)
-    .lineTo(width * 0.58, height * 0.42)
-    .lineTo(width * 0.78, height * 0.68)
-    .stroke({ color: 0xd8dee8, width: Math.max(2, strokeWidth), alpha: 0.75 });
-  graphics
-    .circle(width * 0.72, height * 0.28, Math.max(4, Math.min(width, height) * 0.05))
-    .fill({ color: 0xd8dee8, alpha: 0.72 });
-};
-
 const clearDisplay = (container: Container): void => {
   container.removeChildren().forEach((child) => child.destroy({ children: true }));
 };
 
-const imageFingerprint = (object: CanvasObject): string => {
-  return JSON.stringify({
-    kind: object.kind,
-    resourcePath: object.resourcePath,
-  });
+type MediaCardLabels = {
+  kindLabel: string;
+  defaultTitle: string;
+  footerHint?: string;
+  previewIcon?: string;
 };
 
+const resolveCardTitle = (
+  object: CanvasObject,
+  linkedSceneNames?: ReadonlyMap<number, string>,
+  defaultTitle = 'Карта',
+): string => {
+  const content = asRecord(object.contentJson);
+  const override = asString(content.titleOverride, '').trim();
+  if (override) return override;
+  if (object.linkedSceneId != null) {
+    const linkedName = linkedSceneNames?.get(object.linkedSceneId)?.trim();
+    if (linkedName) return linkedName;
+  }
+  const objectName = object.name?.trim();
+  if (objectName) return objectName;
+  return defaultTitle;
+};
+
+const drawCardPreview = (
+  container: Container,
+  object: CanvasObject,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  backgroundPath: string | undefined,
+  previewIcon: string,
+  onImageLoadError?: ImageLoadErrorHandler,
+): void => {
+  const mask = new Graphics();
+  mask.roundRect(x, y, width, height, 6).fill({ color: 0xffffff });
+  container.addChild(mask);
+
+  const previewLayer = new Container();
+  previewLayer.mask = mask;
+  container.addChild(previewLayer);
+
+  const placeholder = new Graphics();
+  placeholder.roundRect(x, y, width, height, 6).fill({ color: 0x0a1018, alpha: 1 });
+  previewLayer.addChild(placeholder);
+
+  const iconText = new Text({
+    text: previewIcon,
+    resolution: TEXT_RESOLUTION,
+    style: { fontSize: 28 },
+  });
+  iconText.x = x + (width - iconText.width) / 2;
+  iconText.y = y + (height - iconText.height) / 2;
+  previewLayer.addChild(iconText);
+
+  if (!backgroundPath) return;
+
+  void resolveUploadAssetUrl(backgroundPath)
+    .then(async (url) => {
+      if (!url || container.destroyed) return;
+      try {
+        const texture = await loadImageTexture(url);
+        if (!texture || container.destroyed) return;
+        previewLayer.removeChildren();
+        const sprite = new Sprite(texture);
+        const texWidth = sprite.texture.width;
+        const texHeight = sprite.texture.height;
+        const scale = Math.max(width / texWidth, height / texHeight);
+        sprite.width = texWidth * scale;
+        sprite.height = texHeight * scale;
+        sprite.x = x + (width - sprite.width) / 2;
+        sprite.y = y + (height - sprite.height) / 2;
+        sprite.eventMode = 'none';
+        previewLayer.addChild(sprite);
+      } catch {
+        onImageLoadError?.(object, backgroundPath);
+      }
+    })
+    .catch(() => {
+      onImageLoadError?.(object, backgroundPath);
+    });
+};
+
+const drawMediaCard = (
+  container: Container,
+  object: CanvasObject,
+  selected: boolean,
+  labels: MediaCardLabels,
+  backgroundPath: string | undefined,
+  linkedSceneNames?: ReadonlyMap<number, string>,
+  onImageLoadError?: ImageLoadErrorHandler,
+): HitTest => {
+  const geometry = asRecord(object.geometryJson);
+  const style = asRecord(object.styleJson);
+
+  const width = asNumber(geometry.width, 240);
+  const height = asNumber(geometry.height, 160);
+  const footerHeight = 54;
+  const previewX = 8;
+  const previewY = 26;
+  const previewWidth = width - 16;
+  const previewHeight = Math.max(48, height - previewY - footerHeight);
+
+  const graphics = new Graphics();
+  container.addChild(graphics);
+
+  const fill = toColor(style.fill, 0x16202a);
+  const stroke = toColor(style.stroke, selected ? 0xf8d7a4 : 0x5ecfff);
+  const alpha = asNumber(style.opacity, selected ? 0.98 : 0.92);
+  const strokeWidth = selected ? 3 : 2;
+  const radius = 10;
+
+  graphics
+    .roundRect(0, 0, width, height, radius)
+    .fill({ color: fill, alpha })
+    .stroke({ color: stroke, width: strokeWidth, alpha: selected ? 1 : 0.85 });
+
+  if (selected) {
+    graphics
+      .roundRect(-2, -2, width + 4, height + 4, radius + 2)
+      .stroke({ color: 0xf8d7a4, width: 1, alpha: 0.45 });
+  }
+
+  drawCardPreview(
+    container,
+    object,
+    previewX,
+    previewY,
+    previewWidth,
+    previewHeight,
+    backgroundPath,
+    labels.previewIcon ?? '🗺',
+    onImageLoadError,
+  );
+
+  const kindBadge = new Text({
+    text: labels.kindLabel,
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fill: 0x9ec9e8,
+      fontFamily: 'Crimson Text, serif',
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 1,
+    },
+  });
+  kindBadge.x = 12;
+  kindBadge.y = 10;
+  container.addChild(kindBadge);
+
+  const title = resolveCardTitle(object, linkedSceneNames, labels.defaultTitle);
+  const titleText = new Text({
+    text: title,
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fill: 0xffffff,
+      fontFamily: 'Crimson Text, serif',
+      fontSize: 17,
+      fontWeight: 'bold',
+      wordWrap: true,
+      wordWrapWidth: width - 24,
+      align: 'center',
+    },
+  });
+  titleText.x = (width - titleText.width) / 2;
+  titleText.y = height - footerHeight + 4;
+  container.addChild(titleText);
+
+  const footerHint = labels.footerHint?.trim();
+  if (footerHint) {
+    const subText = new Text({
+      text: footerHint,
+      resolution: TEXT_RESOLUTION,
+      style: {
+        fill: selected ? 0xc8dce8 : 0x7a8f9c,
+        fontFamily: 'Crimson Text, serif',
+        fontSize: 12,
+      },
+    });
+    subText.x = (width - subText.width) / 2;
+    subText.y = titleText.y + titleText.height + 4;
+    container.addChild(subText);
+  }
+
+  return boundsHit(0, 0, width, height);
+};
+
+const drawSceneContainer = (
+  container: Container,
+  object: CanvasObject,
+  selected: boolean,
+  labels: SceneContainerDisplayLabels,
+  linkedSceneNames?: ReadonlyMap<number, string>,
+  linkedSceneBackgroundPaths?: ReadonlyMap<number, string>,
+  onImageLoadError?: ImageLoadErrorHandler,
+): HitTest => {
+  const backgroundPath = object.linkedSceneId != null
+    ? linkedSceneBackgroundPaths?.get(object.linkedSceneId)
+    : undefined;
+  return drawMediaCard(
+    container,
+    object,
+    selected,
+    {
+      kindLabel: labels.kindLabel,
+      defaultTitle: labels.defaultTitle,
+      footerHint: labels.openHint,
+      previewIcon: '🗺',
+    },
+    backgroundPath,
+    linkedSceneNames,
+    onImageLoadError,
+  );
+};
 const loadImageTexture = async (url: string): Promise<ImageTexture> => {
   const knownTexture = loadedImageTextures.get(url);
   if (knownTexture) return Assets.get(url) ?? knownTexture;
@@ -300,22 +539,23 @@ const loadImageTexture = async (url: string): Promise<ImageTexture> => {
   return cachedTexture;
 };
 
-const syncImageDisplay = (container: Container, object: CanvasObject, selected: boolean): HitTest => {
-  const geometry = asRecord(object.geometryJson);
-  const style = asRecord(object.styleJson);
-  const width = asNumber(geometry.width, 120);
-  const height = asNumber(geometry.height, 80);
-  const stroke = toColor(style.stroke, selected ? 0xf8d7a4 : 0x20303a);
-  const strokeWidth = asNumber(style.strokeWidth, selected ? 4 : 2);
-  const child = container.children[0];
-  if (child instanceof Sprite) {
-    child.width = width;
-    child.height = height;
-  } else if (child instanceof Graphics) {
-    child.clear();
-    drawImagePlaceholder(child, width, height, stroke, strokeWidth);
-  }
-  return boundsHit(0, 0, width, height);
+const drawShapeLabel = (container: Container, object: CanvasObject): void => {
+  const placement = shapeLabelPlacement(object);
+  if (!placement) return;
+  const label = new Text({
+    text: placement.text,
+    resolution: TEXT_RESOLUTION,
+    style: {
+      fill: toColor(placement.color, 0xf8f4ec),
+      fontFamily: 'Crimson Text, serif',
+      fontSize: placement.fontSize,
+      fontWeight: placement.fontWeight === 'bold' ? '700' : '400',
+    },
+  });
+  label.anchor.set(0.5);
+  label.position.set(placement.x, placement.y);
+  label.eventMode = 'none';
+  container.addChild(label);
 };
 
 const drawTerritoryLabel = (
@@ -350,6 +590,7 @@ const drawObject = (
   selected: boolean,
   viewportScale: number,
   onImageLoadError?: ImageLoadErrorHandler,
+  options?: ReconcileOptions,
 ): HitTest => {
   const geometry = asRecord(object.geometryJson);
   const style = asRecord(object.styleJson);
@@ -359,20 +600,65 @@ const drawObject = (
   const alpha = asNumber(style.opacity, object.kind === 'territory' ? 0.25 : 0.9);
   const strokeWidth = asNumber(style.strokeWidth, selected ? 4 : 2);
 
-  if (object.kind === 'curve_text') return drawCurveText(container, object);
+  if (object.kind === 'curve_text') return drawCurveText(container, object, options);
+
+  if (object.kind === 'scene_container') {
+    const labels = options?.sceneContainerLabels ?? {
+      defaultTitle: 'Карта',
+      openHint: 'Двойной клик — открыть',
+      kindLabel: 'Карта',
+    };
+    return drawSceneContainer(
+      container,
+      object,
+      selected,
+      labels,
+      options?.linkedSceneNames,
+      options?.linkedSceneBackgroundPaths,
+      onImageLoadError,
+    );
+  }
+
+  if (object.kind === 'image') {
+    const labels = options?.imageCardLabels ?? {
+      defaultTitle: 'Image',
+      kindLabel: 'Image',
+    };
+    return drawMediaCard(
+      container,
+      object,
+      selected,
+      {
+        kindLabel: labels.kindLabel,
+        defaultTitle: labels.defaultTitle,
+        previewIcon: '🖼',
+      },
+      object.resourcePath ?? undefined,
+      undefined,
+      onImageLoadError,
+    );
+  }
 
   if (object.kind === 'text') {
-    const text = new Text({
-      text: asString(content.text, object.name ?? 'Text'),
-      resolution: TEXT_RESOLUTION,
-      style: {
-        fill,
-        fontFamily: 'Crimson Text, serif',
-        fontSize: asNumber(style.fontSize, 28),
-      },
-    });
-    container.addChild(text);
-    return boundsHit(0, 0, text.width, text.height);
+    const fontSize = asNumber(style.fontSize, 28);
+    const text = resolveTextContent(object);
+    const width = Math.max(160, text.length * fontSize * 0.55);
+    const height = fontSize * 1.2;
+    if (options?.editingTextObjectId !== object.id) {
+      const label = new Text({
+        text,
+        resolution: TEXT_RESOLUTION,
+        style: {
+          fill,
+          fontFamily: 'Crimson Text, serif',
+          fontSize,
+        },
+      });
+      label.alpha = asNumber(style.opacity, 1);
+      container.addChild(label);
+      return boundsHit(0, 0, label.width, label.height);
+    }
+    return boundsHit(0, 0, width, height);
   }
 
   if (object.kind === 'marker') {
@@ -388,40 +674,11 @@ const drawObject = (
     return circleHit(radius + strokeWidth);
   }
 
-  if (object.kind === 'image') {
-    const width = asNumber(geometry.width, 120);
-    const height = asNumber(geometry.height, 80);
-    drawImagePlaceholder(graphics, width, height, stroke, strokeWidth);
-    if (object.resourcePath) {
-      void resolveUploadAssetUrl(object.resourcePath)
-        .then(async (url) => {
-          if (!url || container.destroyed) return;
-          try {
-            const texture = await loadImageTexture(url);
-            if (!texture || container.destroyed) {
-              throw new Error('Image texture did not load');
-            }
-            const sprite = new Sprite(texture);
-            sprite.width = width;
-            sprite.height = height;
-            clearDisplay(container);
-            container.addChild(sprite);
-          } catch {
-            onImageLoadError?.(object, object.resourcePath ?? '');
-          }
-        })
-        .catch(() => {
-          onImageLoadError?.(object, object.resourcePath ?? '');
-        });
-      return boundsHit(0, 0, width, height);
-    }
-    return boundsHit(0, 0, width, height);
-  }
-
   if (object.kind === 'rectangle' || object.kind === 'group') {
     const width = asNumber(geometry.width, 120);
     const height = asNumber(geometry.height, 80);
     graphics.rect(0, 0, width, height).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+    if (isShapeKind(object.kind)) drawShapeLabel(container, object);
     return boundsHit(0, 0, width, height);
   }
 
@@ -429,6 +686,7 @@ const drawObject = (
     const radiusX = asNumber(geometry.radiusX, 60);
     const radiusY = asNumber(geometry.radiusY, 36);
     graphics.ellipse(0, 0, radiusX, radiusY).fill({ color: fill, alpha }).stroke({ color: stroke, width: strokeWidth });
+    drawShapeLabel(container, object);
     return (point) => (point.x / radiusX) ** 2 + (point.y / radiusY) ** 2 <= 1;
   }
 
@@ -440,6 +698,7 @@ const drawObject = (
         graphics.lineTo(points[index].x, points[index].y);
       }
       graphics.stroke({ color: stroke, width: strokeWidth || 4, alpha: 1 });
+      drawShapeLabel(container, object);
       return nearPolyline(points, Math.max(6, strokeWidth + 4));
     }
   }
@@ -447,16 +706,50 @@ const drawObject = (
   if (object.kind === 'territory' || object.kind === 'polygon') {
     const ringList = territoryRingsFromObject(object);
     if (ringList.length > 0) {
-      drawRingList(graphics, ringList, fill, stroke, alpha, strokeWidth);
+      const territoryStyle = object.kind === 'territory'
+        ? resolveTerritoryStyleFields(object, {
+            fill: '#4ecdc4',
+            opacity: 0.25,
+            borderColor: '#9ff3df',
+            borderWidth: 2,
+            smoothing: 0,
+          })
+        : null;
+      const ringFill = territoryStyle ? toColor(territoryStyle.fill, fill) : fill;
+      const ringStroke = territoryStyle ? toColor(territoryStyle.borderColor, stroke) : stroke;
+      const ringAlpha = territoryStyle ? territoryStyle.opacity : alpha;
+      const ringStrokeWidth = territoryStyle ? territoryStyle.borderWidth : strokeWidth;
+      const ringSmoothing = territoryStyle?.smoothing ?? 0;
+      drawRingList(graphics, ringList, ringFill, ringStroke, ringAlpha, ringStrokeWidth, ringSmoothing);
       if (object.kind === 'territory') {
         drawTerritoryLabel(container, ringList, object.name ?? '', viewportScale);
+      } else {
+        drawShapeLabel(container, object);
       }
-      return hitTestRingList(ringList, strokeWidth);
+      return hitTestRingList(ringList, ringStrokeWidth);
     }
   }
 
   graphics.rect(-20, -20, 40, 40).fill({ color: fill, alpha: 0.4 }).stroke({ color: stroke, width: 1 });
   return boundsHit(-20, -20, 40, 40);
+};
+
+const getObjectKindPriority = (kind: string): number => {
+  if (kind === 'territory') return 0;
+  if (kind === 'marker') return 2;
+  return 1;
+};
+
+const compareObjects = (a: CanvasObject, b: CanvasObject): number => {
+  if (a.zIndex !== b.zIndex) {
+    return a.zIndex - b.zIndex;
+  }
+  const pA = getObjectKindPriority(a.kind);
+  const pB = getObjectKindPriority(b.kind);
+  if (pA !== pB) {
+    return pA - pB;
+  }
+  return a.id - b.id;
 };
 
 export const reconcilePixiObjects = (
@@ -500,19 +793,30 @@ export const reconcilePixiObjects = (
     }
   }
 
-  const sortedObjects = [...objects].sort((a, b) => a.zIndex - b.zIndex || a.id - b.id);
+  const sortedObjects = [...objects].sort(compareObjects);
   for (const object of sortedObjects) {
     const layerContainer = state.layerContainers.get(object.layerId);
     if (!layerContainer || object.isHidden) continue;
 
     const transform = objectTransform(object);
-    const fingerprint = object.kind === 'image'
-      ? imageFingerprint(object)
-      : JSON.stringify({
-          object,
-          selected: selectedObjectId === object.id,
-          viewportScale: Math.round(viewportScale * 1000) / 1000,
-        });
+    const fingerprint = JSON.stringify({
+      object,
+      selected: selectedObjectId === object.id,
+      viewportScale: Math.round(viewportScale * 1000) / 1000,
+      linkedSceneName: object.kind === 'scene_container' && object.linkedSceneId != null
+        ? options?.linkedSceneNames?.get(object.linkedSceneId)
+        : undefined,
+      linkedSceneBackground: object.kind === 'scene_container' && object.linkedSceneId != null
+        ? options?.linkedSceneBackgroundPaths?.get(object.linkedSceneId)
+        : undefined,
+      sceneContainerLabels: object.kind === 'scene_container'
+        ? options?.sceneContainerLabels
+        : undefined,
+      imageCardLabels: object.kind === 'image'
+        ? options?.imageCardLabels
+        : undefined,
+      editingTextObjectId: options?.editingTextObjectId ?? null,
+    });
     let entry = state.objects.get(object.id);
     if (!entry) {
       entry = {
@@ -541,10 +845,9 @@ export const reconcilePixiObjects = (
         selectedObjectId === object.id,
         viewportScale,
         onImageLoadError,
+        options,
       );
       entry.fingerprint = fingerprint;
-    } else if (object.kind === 'image') {
-      entry.hitTest = syncImageDisplay(entry.display, object, selectedObjectId === object.id);
     }
   }
 };
@@ -554,7 +857,7 @@ export const hitTestObjects = (
   objects: CanvasObject[],
   point: CanvasPoint,
 ): CanvasObject | null => {
-  const sorted = [...objects].sort((a, b) => b.zIndex - a.zIndex || b.id - a.id);
+  const sorted = [...objects].sort((a, b) => compareObjects(b, a));
   for (const object of sorted) {
     const entry = state.objects.get(object.id);
     if (!entry || object.isHidden || object.isLocked) continue;

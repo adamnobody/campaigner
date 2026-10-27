@@ -31,7 +31,9 @@ sandbox**, not production code. Its only deliverables are:
   v8, fall back to a hand-written pan/zoom on a root `Container`).
 - **No backend.** Everything in-memory, refresh = reset.
 
-Set up as a separate folder, e.g. `prototypes/001-curve-text-canvas/`,
+Sandbox code lived in `prototypes/001-curve-text-canvas/` (removed 2026-06-07 after
+mainline validation). Historical setup used a separate folder, e.g.
+`prototypes/001-curve-text-canvas/`,
 with its own `package.json`. Do **not** add it to the main app's
 workspaces.
 

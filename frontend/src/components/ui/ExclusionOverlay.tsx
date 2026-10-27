@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Tooltip } from '@mui/material';
+import { Box, Tooltip, alpha, useTheme } from '@mui/material';
 import BlockIcon from '@mui/icons-material/Block';
 
 interface ExclusionOverlayProps {
@@ -8,6 +8,7 @@ interface ExclusionOverlayProps {
 }
 
 export const ExclusionOverlay: React.FC<ExclusionOverlayProps> = ({ tooltip, borderRadius = 2 }) => {
+  const theme = useTheme();
   return (
     <Tooltip title={tooltip}>
       <Box
@@ -16,24 +17,27 @@ export const ExclusionOverlay: React.FC<ExclusionOverlayProps> = ({ tooltip, bor
           inset: 0,
           borderRadius,
           zIndex: 12,
-          bgcolor: 'rgba(220, 38, 38, 0.35)',
+          bgcolor: alpha(theme.palette.error.main, 0.2),
+          backgroundImage: `repeating-linear-gradient(135deg, transparent 0 9px, ${alpha(theme.palette.error.main, 0.12)} 9px 10px)`,
+          border: `1px solid ${alpha(theme.palette.error.main, 0.4)}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           pointerEvents: 'auto',
           '@keyframes exclusionPulse': {
-            '0%': { opacity: 0.25 },
-            '50%': { opacity: 0.5 },
-            '100%': { opacity: 0.25 },
+            '0%': { opacity: 0.72 },
+            '50%': { opacity: 1 },
+            '100%': { opacity: 0.72 },
           },
-          animation: 'exclusionPulse 2s ease-in-out infinite',
+          animation: 'exclusionPulse 2.8s ease-in-out infinite',
+          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
         }}
       >
         <BlockIcon
           sx={{
-            fontSize: 40,
-            color: '#fff',
-            filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))',
+            fontSize: 34,
+            color: theme.palette.error.light,
+            filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.7))',
           }}
         />
       </Box>

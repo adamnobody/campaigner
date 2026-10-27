@@ -77,11 +77,11 @@ const objectToTerritory = (object: CanvasObject): MapTerritory => {
     mapId: object.sceneId,
     name: object.name ?? stringValue(content.name, 'Territory'),
     description: stringValue(content.description),
-    color: stringValue(style.fill, '#4ECDC4'),
-    opacity: numberValue(style.opacity, 0.25),
-    borderColor: stringValue(style.stroke, '#4ECDC4'),
-    borderWidth: numberValue(style.strokeWidth, 2),
-    smoothing: numberValue(style.smoothing),
+    color: stringValue(style.fill, stringValue(content.fill, '#4ECDC4')),
+    opacity: numberValue(style.opacity, numberValue(content.opacity, 0.25)),
+    borderColor: stringValue(style.stroke, stringValue(content.borderColor, '#4ECDC4')),
+    borderWidth: numberValue(style.strokeWidth, numberValue(content.borderWidth, 2)),
+    smoothing: numberValue(content.smoothing, numberValue(style.smoothing, 0)),
     rings: rings.map((ring) =>
       Array.isArray(ring)
         ? ring.map((point) => {
@@ -175,6 +175,7 @@ export const mapApi = {
       parentObjectId: data.parentMarkerId ?? null,
       name: data.name,
       backgroundPath: data.imagePath ?? null,
+      sceneType: 'map',
       viewportJson: null,
       metadataJson: null,
     });
@@ -186,6 +187,7 @@ export const mapApi = {
       id: mapId,
       name: data.name ?? null,
       backgroundPath: data.imagePath ?? null,
+      sceneType: null,
       viewportJson: null,
       metadataJson: null,
     }, projectId);

@@ -1,23 +1,27 @@
 import React from 'react';
-import { Box, Typography, alpha } from '@mui/material';
+import { Box, Typography, alpha, useTheme } from '@mui/material';
 
 export const SectionHeader: React.FC<{
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
-}> = ({ icon, title, subtitle }) => (
+}> = ({ icon, title, subtitle }) => {
+  const theme = useTheme();
+
+  return (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
     <Box
       sx={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 40,
-        height: 40,
-        borderRadius: 2,
-        bgcolor: 'primary.main',
-        color: '#fff',
-        boxShadow: (t: any) => `0 4px 12px ${alpha(t.palette.primary.main, 0.3)}`,
+        width: 34,
+        height: 34,
+        borderRadius: '9px',
+        bgcolor: alpha(theme.palette.primary.main, 0.09),
+        color: 'primary.main',
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+        boxShadow: 'none',
       }}
     >
       {icon}
@@ -26,8 +30,8 @@ export const SectionHeader: React.FC<{
       <Typography
         variant="h6"
         sx={{
-          fontFamily: '"Cinzel", serif',
-          fontWeight: 700,
+          fontFamily: theme.campaigner.typography.display,
+          fontWeight: 600,
           fontSize: '1.15rem',
           lineHeight: 1.2,
         }}
@@ -44,4 +48,5 @@ export const SectionHeader: React.FC<{
       )}
     </Box>
   </Box>
-);
+  );
+};

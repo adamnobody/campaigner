@@ -15,6 +15,11 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
+import {
+  HEX_COLOR_PATTERN,
+  getContrastRatio,
+  normalizeHexColor,
+} from '../paletteHelpers';
 
 type PalettePreset = {
   key: string;
@@ -39,8 +44,6 @@ type Props = {
   mode?: 'create' | 'edit';
 };
 
-const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
-
 const CUSTOM_PALETTE_PRESETS: PalettePreset[] = [
   { key: 'violet', name: 'Royal Violet', background: '#0f1022', accent: '#8b5cf6', text: '#f6f4ff' },
   { key: 'emerald', name: 'Emerald Grove', background: '#0b1a16', accent: '#34d399', text: '#eefdf7' },
@@ -48,46 +51,6 @@ const CUSTOM_PALETTE_PRESETS: PalettePreset[] = [
   { key: 'amber', name: 'Amber Forge', background: '#1b140a', accent: '#f59e0b', text: '#fff7e8' },
   { key: 'slate', name: 'Slate Archive', background: '#111827', accent: '#60a5fa', text: '#f3f7ff' },
 ];
-
-const normalizeHexColor = (value: string) => {
-  const normalized = value.trim();
-  if (!HEX_COLOR_REGEX.test(normalized)) return normalized;
-  const raw = normalized.replace('#', '');
-  if (raw.length === 3) {
-    return `#${raw.split('').map((char) => `${char}${char}`).join('').toLowerCase()}`;
-  }
-  return `#${raw.toLowerCase()}`;
-};
-
-const parseHexToRgb = (hex: string): [number, number, number] | null => {
-  const normalized = normalizeHexColor(hex);
-  if (!HEX_COLOR_REGEX.test(normalized)) return null;
-  const raw = normalized.replace('#', '');
-  const red = Number.parseInt(raw.slice(0, 2), 16);
-  const green = Number.parseInt(raw.slice(2, 4), 16);
-  const blue = Number.parseInt(raw.slice(4, 6), 16);
-  if ([red, green, blue].some((value) => Number.isNaN(value))) return null;
-  return [red, green, blue];
-};
-
-const getRelativeLuminance = ([red, green, blue]: [number, number, number]) => {
-  const transform = (channel: number) => {
-    const value = channel / 255;
-    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * transform(red) + 0.7152 * transform(green) + 0.0722 * transform(blue);
-};
-
-const getContrastRatio = (leftHex: string, rightHex: string) => {
-  const left = parseHexToRgb(leftHex);
-  const right = parseHexToRgb(rightHex);
-  if (!left || !right) return null;
-  const leftLum = getRelativeLuminance(left);
-  const rightLum = getRelativeLuminance(right);
-  const lighter = Math.max(leftLum, rightLum);
-  const darker = Math.min(leftLum, rightLum);
-  return (lighter + 0.05) / (darker + 0.05);
-};
 
 const INITIAL_VALUES: CreateColorThemeValues = {
   name: '',
@@ -122,9 +85,9 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
   const normalizedText = normalizeHexColor(values.text);
   const isNameValid = values.name.trim().length > 0;
   const hasValidHex =
-    HEX_COLOR_REGEX.test(normalizedBackground) &&
-    HEX_COLOR_REGEX.test(normalizedAccent) &&
-    HEX_COLOR_REGEX.test(normalizedText);
+    HEX_COLOR_PATTERN.test(normalizedBackground) &&
+    HEX_COLOR_PATTERN.test(normalizedAccent) &&
+    HEX_COLOR_PATTERN.test(normalizedText);
   const contrast = getContrastRatio(normalizedBackground, normalizedText);
   const isLowContrast = contrast !== null && contrast < 4.5;
 
@@ -236,7 +199,7 @@ export const CreateColorThemeDialog: React.FC<Props> = ({
                 },
               ].map((item) => {
                 const normalizedHex = normalizeHexColor(item.value);
-                const isValid = HEX_COLOR_REGEX.test(normalizedHex);
+                const isValid = HEX_COLOR_PATTERN.test(normalizedHex);
                 return (
                   <Box
                     key={item.key}

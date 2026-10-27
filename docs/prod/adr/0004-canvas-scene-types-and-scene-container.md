@@ -5,3 +5,5 @@ Canonical ADR draft:
 [`../../adr/ADR-0004-canvas-scene-types-and-scene-container.md`](../../adr/ADR-0004-canvas-scene-types-and-scene-container.md)
 
 Status and full text are maintained only in that file (single source of truth).
+
+**Status:** **Accepted** (2026-06-07). See Validation section in canonical ADR.

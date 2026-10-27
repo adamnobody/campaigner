@@ -18,11 +18,16 @@ export const GraphStatusBar: React.FC<Props> = ({ nodeCount, edgeCount, zoomPerc
       justifyContent="space-between"
       gap={1}
       sx={{
-        py: 0.75,
-        px: 0.25,
+        py: 0.7,
+        px: 1,
         mt: 0.5,
-        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-        opacity: 0.72,
+        borderTop: (theme) => `1px solid ${theme.campaigner.surface.border}`,
+        opacity: 0.68,
+        '& .MuiTypography-root': {
+          fontFamily: (theme) => theme.campaigner.typography.mono,
+          fontSize: '0.62rem',
+          letterSpacing: '0.03em',
+        },
       }}
     >
       <Typography variant="caption" color="text.secondary" component="div">

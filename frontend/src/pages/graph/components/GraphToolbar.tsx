@@ -75,7 +75,14 @@ export const GraphToolbar: React.FC<Props> = ({
   const isNarrowToolbar = useMediaQuery(theme.breakpoints.down('lg'));
 
   const cameraRow = (
-    <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1} useFlexGap>
+    <Stack
+      direction="row"
+      alignItems="center"
+      flexWrap="wrap"
+      gap={1}
+      useFlexGap
+      sx={{ pt: 1, borderTop: `1px solid ${theme.campaigner.surface.border}` }}
+    >
       {isNarrowToolbar ? (
         <>
           <Tooltip title={t('graph:toolbar.zoomOut')}>
@@ -189,7 +196,16 @@ export const GraphToolbar: React.FC<Props> = ({
   );
 
   return (
-    <Stack spacing={1.25}>
+    <Stack
+      spacing={1.25}
+      sx={{
+        p: 1.25,
+        mb: 0.5,
+        borderRadius: '14px',
+        border: `1px solid ${theme.campaigner.surface.border}`,
+        backgroundColor: theme.campaigner.surface.subtle,
+      }}
+    >
       <Stack direction="row" alignItems="center" flexWrap="wrap" useFlexGap gap={1}>
         <TextField
           size="small"

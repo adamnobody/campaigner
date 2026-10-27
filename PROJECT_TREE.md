@@ -6,20 +6,51 @@
 campaigner
 ├─ data
 ├─ docs
+│  ├─ adr
+│  │  └─ ADR-0004-canvas-scene-types-and-scene-container.md
 │  ├─ ideas
 │  │  ├─ Campaigner - План развития продукта.xlsx
 │  │  ├─ ideas-backlog.md
 │  │  ├─ ideas-dumb.md
 │  │  └─ ideas-prompt.md
+│  ├─ plans
+│  │  ├─ 0.3.1.x-canvas-parity.md
+│  │  └─ 0.3.2-canvas-architecture.md
 │  ├─ prod
 │  │  ├─ adr
 │  │  │  ├─ 0001-canvas-rendering-technology.md
+│  │  │  ├─ 0002-mappage-migration-strategy.md
+│  │  │  ├─ 0003-canvas-data-model.md
+│  │  │  ├─ 0004-canvas-scene-types-and-scene-container.md
 │  │  │  ├─ README.md
 │  │  │  └─ template.md
-│  │  └─ prototypes
-│  │     └─ 001-curve-text-canvas
-│  │        ├─ REPORT.md
-│  │        └─ SPEC.md
+│  │  ├─ plans
+│  │  │  └─ 0.3.1-canvas
+│  │  │     ├─ 00-repo-audit.md
+│  │  │     └─ 01-implementation-plan.md
+│  │  ├─ prototypes
+│  │  │  └─ 001-curve-text-canvas
+│  │  │     ├─ screenshots
+│  │  │     │  ├─ .gitkeep
+│  │  │     │  ├─ task3-drag.png
+│  │  │     │  ├─ task3-polygon.png
+│  │  │     │  ├─ task3-polyline.png
+│  │  │     │  ├─ task3-text.png
+│  │  │     │  ├─ task4-concave-hit.png
+│  │  │     │  ├─ task4-overlap.png
+│  │  │     │  ├─ task4-polyline-hit.png
+│  │  │     │  ├─ task5-stress-idle.png
+│  │  │     │  ├─ task5-stress-pan.png
+│  │  │     │  ├─ task5-stress-zoomed.png
+│  │  │     │  ├─ task6-export-result.png
+│  │  │     │  └─ task6-export-source.png
+│  │  │     ├─ CARRYOVER.md
+│  │  │     ├─ REPORT.md
+│  │  │     └─ SPEC.md
+│  │  └─ vision
+│  │     └─ canvas.md
+│  ├─ canvas-debt.md
+│  ├─ canvas-functional-gaps.md
 │  └─ legacy-electron-import-manual-test.md
 ├─ frontend
 │  ├─ public
@@ -102,13 +133,13 @@ campaigner
 │  │  │  ├─ ambitions.ts
 │  │  │  ├─ app.ts
 │  │  │  ├─ branches.ts
+│  │  │  ├─ canvas.ts
 │  │  │  ├─ characters.ts
 │  │  │  ├─ characterTraits.ts
 │  │  │  ├─ dogmas.ts
 │  │  │  ├─ dynasties.ts
 │  │  │  ├─ factions.ts
 │  │  │  ├─ graphLayout.ts
-│  │  │  ├─ legacyMigration.ts
 │  │  │  ├─ maps.ts
 │  │  │  ├─ notes.ts
 │  │  │  ├─ politicalScales.ts
@@ -139,29 +170,28 @@ campaigner
 │  │  │  │  ├─ ThemePresetSelector.tsx
 │  │  │  │  ├─ ThemePreviewCard.tsx
 │  │  │  │  └─ ThemeSliderControl.tsx
-│  │  │  ├─ ui
-│  │  │  │  ├─ AssetAvatar.tsx
-│  │  │  │  ├─ BranchEntityMissingDialog.tsx
-│  │  │  │  ├─ ConfirmDialog.tsx
-│  │  │  │  ├─ DndButton.tsx
-│  │  │  │  ├─ EditExclusionsDialog.tsx
-│  │  │  │  ├─ EmptyState.tsx
-│  │  │  │  ├─ EntityHeroLayout.tsx
-│  │  │  │  ├─ EntityTabs.tsx
-│  │  │  │  ├─ ErrorBoundary.tsx
-│  │  │  │  ├─ ExclusionOverlay.tsx
-│  │  │  │  ├─ FlipCard.tsx
-│  │  │  │  ├─ FloatingOrb.tsx
-│  │  │  │  ├─ GlassCard.tsx
-│  │  │  │  ├─ GlobalSnackbar.tsx
-│  │  │  │  ├─ LanguageSwitcher.tsx
-│  │  │  │  ├─ LoadingScreen.tsx
-│  │  │  │  ├─ SearchDialog.tsx
-│  │  │  │  ├─ SectionHeader.tsx
-│  │  │  │  ├─ SplashScreen.tsx
-│  │  │  │  ├─ splashTipKeys.ts
-│  │  │  │  └─ StyleCustomizer.tsx
-│  │  │  └─ LegacyMigrationDialog.tsx
+│  │  │  └─ ui
+│  │  │     ├─ AssetAvatar.tsx
+│  │  │     ├─ BranchEntityMissingDialog.tsx
+│  │  │     ├─ ConfirmDialog.tsx
+│  │  │     ├─ DndButton.tsx
+│  │  │     ├─ EditExclusionsDialog.tsx
+│  │  │     ├─ EmptyState.tsx
+│  │  │     ├─ EntityHeroLayout.tsx
+│  │  │     ├─ EntityTabs.tsx
+│  │  │     ├─ ErrorBoundary.tsx
+│  │  │     ├─ ExclusionOverlay.tsx
+│  │  │     ├─ FlipCard.tsx
+│  │  │     ├─ FloatingOrb.tsx
+│  │  │     ├─ GlassCard.tsx
+│  │  │     ├─ GlobalSnackbar.tsx
+│  │  │     ├─ LanguageSwitcher.tsx
+│  │  │     ├─ LoadingScreen.tsx
+│  │  │     ├─ SearchDialog.tsx
+│  │  │     ├─ SectionHeader.tsx
+│  │  │     ├─ SplashScreen.tsx
+│  │  │     ├─ splashTipKeys.ts
+│  │  │     └─ StyleCustomizer.tsx
 │  │  ├─ hooks
 │  │  │  ├─ useAssetUrl.ts
 │  │  │  ├─ useDebounce.ts
@@ -185,7 +215,6 @@ campaigner
 │  │  │  │  │  ├─ dynasties.json
 │  │  │  │  │  ├─ factions.json
 │  │  │  │  │  ├─ graph.json
-│  │  │  │  │  ├─ legacyMigration.json
 │  │  │  │  │  ├─ map.json
 │  │  │  │  │  ├─ navigation.json
 │  │  │  │  │  ├─ notes.json
@@ -205,7 +234,6 @@ campaigner
 │  │  │  │     ├─ dynasties.json
 │  │  │  │     ├─ factions.json
 │  │  │  │     ├─ graph.json
-│  │  │  │     ├─ legacyMigration.json
 │  │  │  │     ├─ map.json
 │  │  │  │     ├─ navigation.json
 │  │  │  │     ├─ notes.json
@@ -284,24 +312,57 @@ campaigner
 │  │  │  │  │  └─ HomePrimitives.tsx
 │  │  │  │  └─ HomePage.tsx
 │  │  │  ├─ maps
+│  │  │  │  ├─ canvas
+│  │  │  │  │  ├─ canvasBounds.ts
+│  │  │  │  │  ├─ canvasModel.ts
+│  │  │  │  │  ├─ canvasReconciler.ts
+│  │  │  │  │  ├─ canvasTools.test.ts
+│  │  │  │  │  ├─ canvasTools.ts
+│  │  │  │  │  ├─ canvasViewport.test.ts
+│  │  │  │  │  ├─ canvasViewport.ts
+│  │  │  │  │  ├─ canvasWriteQueue.ts
+│  │  │  │  │  ├─ curveTextHandles.test.ts
+│  │  │  │  │  ├─ curveTextHandles.ts
+│  │  │  │  │  ├─ factionNavigation.test.ts
+│  │  │  │  │  ├─ geometryRings.test.ts
+│  │  │  │  │  ├─ mapBackground.test.ts
+│  │  │  │  │  ├─ mapBackground.ts
+│  │  │  │  │  ├─ mapImageCrop.test.ts
+│  │  │  │  │  ├─ mapImageCrop.ts
+│  │  │  │  │  ├─ navigationStack.test.ts
+│  │  │  │  │  ├─ navigationStack.ts
+│  │  │  │  │  ├─ PixiMapCanvas.tsx
+│  │  │  │  │  ├─ shapeLabel.ts
+│  │  │  │  │  ├─ shapeObjectForm.test.ts
+│  │  │  │  │  ├─ shapeObjectForm.ts
+│  │  │  │  │  ├─ territoryDrawing.test.ts
+│  │  │  │  │  ├─ territoryDrawing.ts
+│  │  │  │  │  ├─ territoryForm.test.ts
+│  │  │  │  │  ├─ territoryGeometry.test.ts
+│  │  │  │  │  ├─ territoryGeometry.ts
+│  │  │  │  │  ├─ territoryLabel.test.ts
+│  │  │  │  │  ├─ territoryLabel.ts
+│  │  │  │  │  ├─ territoryRender.test.ts
+│  │  │  │  │  ├─ territoryRender.ts
+│  │  │  │  │  ├─ textEditLayout.ts
+│  │  │  │  │  ├─ textObjectForm.test.ts
+│  │  │  │  │  ├─ textObjectForm.ts
+│  │  │  │  │  ├─ textPresets.test.ts
+│  │  │  │  │  └─ textPresets.ts
 │  │  │  │  ├─ components
+│  │  │  │  │  ├─ MapAddShapeMenu.tsx
+│  │  │  │  │  ├─ MapBackgroundCropDialog.tsx
+│  │  │  │  │  ├─ MapCanvasContextMenu.tsx
+│  │  │  │  │  ├─ MapInlineTextEditor.tsx
 │  │  │  │  │  ├─ MapMarkerDialog.tsx
-│  │  │  │  │  ├─ MapMarkerOnMap.tsx
 │  │  │  │  │  ├─ MapMarkerPanel.tsx
+│  │  │  │  │  ├─ MapSceneContainerDialog.tsx
+│  │  │  │  │  ├─ MapShapePanel.tsx
 │  │  │  │  │  ├─ MapTerritoryDialog.tsx
 │  │  │  │  │  ├─ MapTerritoryPanel.tsx
-│  │  │  │  │  ├─ MapTerritorySvg.tsx
-│  │  │  │  │  ├─ MapToolbar.tsx
-│  │  │  │  │  └─ mapUtils.ts
-│  │  │  │  ├─ hooks
-│  │  │  │  │  ├─ useMapData.ts
-│  │  │  │  │  ├─ useMapInitialFit.ts
-│  │  │  │  │  ├─ useMapInteractions.ts
-│  │  │  │  │  ├─ useMapMarkerCrud.ts
-│  │  │  │  │  ├─ useMapNavigation.ts
-│  │  │  │  │  ├─ useMapTerritoryCrud.ts
-│  │  │  │  │  ├─ useMapTerritoryDrawing.ts
-│  │  │  │  │  └─ useMapViewport.ts
+│  │  │  │  │  ├─ MapTextPanel.tsx
+│  │  │  │  │  ├─ MapTextPresetPicker.tsx
+│  │  │  │  │  └─ MapToolbar.tsx
 │  │  │  │  └─ MapPage.tsx
 │  │  │  ├─ notes
 │  │  │  │  ├─ components
@@ -363,6 +424,7 @@ campaigner
 │  │  │  ├─ exclusions.ts
 │  │  │  ├─ mapGeometry.ts
 │  │  │  ├─ routes.ts
+│  │  │  ├─ uploadAssetUrl.test.ts
 │  │  │  └─ uploadAssetUrl.ts
 │  │  ├─ App.tsx
 │  │  ├─ main.tsx
@@ -371,14 +433,14 @@ campaigner
 │  ├─ index.html
 │  ├─ package.json
 │  ├─ tsconfig.json
-│  └─ vite.config.ts
+│  ├─ vite.config.ts
+│  └─ vitest.config.ts
 ├─ scripts
 │  ├─ en-catalog
 │  │  ├─ ambitions-en.json
 │  │  ├─ political-axes-en.json
 │  │  ├─ political-zones-en-by-ru-label.json
 │  │  └─ traits-en.json
-│  ├─ lib
 │  ├─ _political-rows-from-seed.json
 │  ├─ gen-en-builtins.mjs
 │  ├─ gen-rust-seeds.mjs
@@ -441,7 +503,9 @@ campaigner
 │  │  ├─ 013_graph_layouts.sql
 │  │  ├─ 014_dynasties.sql
 │  │  ├─ 015_maps.sql
-│  │  └─ 016_wiki_links.sql
+│  │  ├─ 016_wiki_links.sql
+│  │  ├─ 017_canvas_replacement.sql
+│  │  └─ 018_canvas_scene_type.sql
 │  ├─ src
 │  │  ├─ bin
 │  │  │  └─ codegen.rs
@@ -449,14 +513,13 @@ campaigner
 │  │  │  ├─ ambitions.rs
 │  │  │  ├─ app.rs
 │  │  │  ├─ branches.rs
+│  │  │  ├─ canvas.rs
 │  │  │  ├─ character_traits.rs
 │  │  │  ├─ characters.rs
 │  │  │  ├─ dogmas.rs
 │  │  │  ├─ dynasties.rs
 │  │  │  ├─ factions.rs
 │  │  │  ├─ graph_layouts.rs
-│  │  │  ├─ legacy_migration.rs
-│  │  │  ├─ maps.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ notes.rs
 │  │  │  ├─ political_scales.rs
@@ -469,21 +532,19 @@ campaigner
 │  │  │  └─ wiki.rs
 │  │  ├─ db
 │  │  │  ├─ connection.rs
-│  │  │  ├─ legacy_migration.rs
 │  │  │  ├─ migrations.rs
 │  │  │  └─ mod.rs
 │  │  ├─ models
 │  │  │  ├─ ambition.rs
 │  │  │  ├─ app.rs
 │  │  │  ├─ branch.rs
+│  │  │  ├─ canvas.rs
 │  │  │  ├─ character_trait.rs
 │  │  │  ├─ character.rs
 │  │  │  ├─ dogma.rs
 │  │  │  ├─ dynasty.rs
 │  │  │  ├─ faction.rs
 │  │  │  ├─ graph_layout.rs
-│  │  │  ├─ legacy_migration.rs
-│  │  │  ├─ map.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ note.rs
 │  │  │  ├─ political_scale.rs
@@ -499,6 +560,7 @@ campaigner
 │  │  │  ├─ ambitions_seed.rs
 │  │  │  ├─ ambitions.rs
 │  │  │  ├─ branches.rs
+│  │  │  ├─ canvas.rs
 │  │  │  ├─ character_traits_seed.rs
 │  │  │  ├─ character_traits.rs
 │  │  │  ├─ characters.rs
@@ -506,7 +568,6 @@ campaigner
 │  │  │  ├─ dynasties.rs
 │  │  │  ├─ factions.rs
 │  │  │  ├─ graph_layouts.rs
-│  │  │  ├─ maps.rs
 │  │  │  ├─ mod.rs
 │  │  │  ├─ notes.rs
 │  │  │  ├─ political_scales_seed.rs

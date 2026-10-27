@@ -96,6 +96,8 @@ fn export_project_inner<R: Runtime>(
 
     let map_image_base64 =
         read_optional_web_path_as_data_url(app, project.map_image_path.as_deref().unwrap_or(""))?;
+    let cover_image_base64 =
+        read_optional_web_path_as_data_url(app, project.cover_image_path.as_deref().unwrap_or(""))?;
 
     Ok(ImportedProjectPayload {
         version: EXPORT_VERSION.to_string(),
@@ -105,6 +107,7 @@ fn export_project_inner<R: Runtime>(
             description: Some(project.description).filter(|s| !s.is_empty()),
             status: Some(project.status).filter(|s| !s.is_empty()),
             map_image_base64,
+            cover_image_base64,
         },
         characters,
         relationships,
@@ -265,6 +268,17 @@ fn import_project_in_transaction<R: Runtime>(
             connection.execute(
                 "UPDATE projects SET map_image_path = ?1 WHERE id = ?2",
                 params![map_path, project_id],
+            )?;
+        }
+    }
+
+    if let Some(ref cover_image_base64) = data.project.cover_image_base64 {
+        if let Some(cover_path) =
+            save_optional_base64_data_url(app, UploadSubdir::ProjectCovers, cover_image_base64)?
+        {
+            connection.execute(
+                "UPDATE projects SET cover_image_path = ?1 WHERE id = ?2",
+                params![cover_path, project_id],
             )?;
         }
     }
@@ -2024,6 +2038,7 @@ mod tests {
                 description: None,
                 status: None,
                 map_image_base64: None,
+                cover_image_base64: None,
             },
             characters: Vec::new(),
             relationships: Vec::new(),
@@ -2064,6 +2079,7 @@ mod tests {
                 description: None,
                 status: None,
                 map_image_base64: None,
+                cover_image_base64: None,
             },
             characters: Vec::new(),
             relationships: Vec::new(),
@@ -2106,6 +2122,7 @@ mod tests {
                 description: None,
                 status: None,
                 map_image_base64: None,
+                cover_image_base64: None,
             },
             characters: Vec::new(),
             relationships: Vec::new(),
@@ -2145,5 +2162,35 @@ mod tests {
 
         assert!(import_for_test(&connection, &payload, "en", false).is_err());
         assert_eq!(project_count(&connection), before);
+    }
+
+    #[test]
+    fn cover_base64_survives_payload_serialization() {
+        let connection = test_connection();
+        let original = create_demo_project(&connection, "en").expect("demo project");
+        let mut exported = export_for_test(&connection, original.id).expect("export");
+        let cover = "data:image/png;base64,AQID";
+        exported.project.cover_image_base64 = Some(cover.to_string());
+
+        let json = serde_json::to_string(&exported).expect("serialize payload");
+        let decoded: ImportedProjectPayload =
+            serde_json::from_str(&json).expect("deserialize payload");
+
+        assert_eq!(decoded.project.cover_image_base64.as_deref(), Some(cover));
+    }
+
+    #[test]
+    fn legacy_2_1_payload_without_cover_remains_compatible() {
+        let json = serde_json::json!({
+            "version": "2.1",
+            "project": {
+                "name": "Legacy project"
+            }
+        });
+
+        let payload: ImportedProjectPayload =
+            serde_json::from_value(json).expect("legacy 2.1 payload");
+        assert!(payload.project.cover_image_base64.is_none());
+        validate_import_payload(&payload).expect("legacy payload validation");
     }
 }

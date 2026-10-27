@@ -6,8 +6,14 @@
 
 ## Status
 
-**Proposed** — 2026-06-03. Awaiting review before migration 018+ and
-backend work (see `docs/plans/0.3.2-canvas-architecture.md`).
+**Accepted** — 2026-06-07.
+
+Core implementation on `testbed-rust`: migration `018_canvas_scene_type.sql`,
+`scene_type` (`root_canvas` | `map`), `scene_container` kind, backend kind
+matrix (`validate_object_kind_for_scene`), atomic
+`canvas_create_map_scene_container`, frontend card + navigation
+`via: 'container'`. **PR9** legacy opt-in migrator remains **deferred**
+(no silent migration).
 
 **Extends:** ADR-0003 (canvas tables and object kinds). Does not replace
 ADR-0003; adds `scene_type`, `scene_container`, and scene-aware validation.
@@ -290,6 +296,15 @@ Territory fields remain in `content_json` / `style_json` / `geometry_json`
 | PR6–7 | `cargo test`: kind matrix, root invariant, no orphan on failed TX |
 | PR8 | Manual: create map from root → card visible → open → breadcrumbs |
 | PR9 | Opt-in migrator tested on fixture «root with background + territories» |
+
+### Validation (2026-06-07, `testbed-rust`)
+
+| Check | Result |
+|-------|--------|
+| PR5–7 code | `018_canvas_scene_type.sql`; `create_map_scene_container`; `test_scene_type_and_scene_container_invariants` and related tests in `repositories/canvas.rs` |
+| PR8 code | `scene_container` reconciler branch; `MapToolbar` tool; `navigationStack` `via: 'container'`; `canvas_create_map_scene_container` in frontend API |
+| PR9 | **Not implemented** — deferred per `docs/plans/0.3.2-canvas-architecture.md` |
+| Marker nested flow | Regression covered in backend tests; not removed by architecture work |
 
 ## References
 

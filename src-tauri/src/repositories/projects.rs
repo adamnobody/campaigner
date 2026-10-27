@@ -17,6 +17,7 @@ pub fn list_projects(connection: &Connection) -> Result<Vec<Project>> {
             description,
             status,
             map_image_path,
+            cover_image_path,
             created_at,
             updated_at
         FROM projects
@@ -41,6 +42,7 @@ pub fn get_project(connection: &Connection, input: &GetProjectInput) -> Result<P
                 description,
                 status,
                 map_image_path,
+                cover_image_path,
                 created_at,
                 updated_at
             FROM projects
@@ -58,8 +60,8 @@ pub fn create_project(connection: &Connection, input: &CreateProjectInput) -> Re
     let status = input.status.as_deref().unwrap_or("active");
 
     connection.execute(
-        "INSERT INTO projects (name, description, status) VALUES (?1, ?2, ?3)",
-        params![input.name, description, status],
+        "INSERT INTO projects (name, description, status, cover_image_path) VALUES (?1, ?2, ?3, ?4)",
+        params![input.name, description, status, input.cover_image_path],
     )?;
 
     let id = i32::try_from(connection.last_insert_rowid()).map_err(|_| {
@@ -109,6 +111,10 @@ pub fn update_project(connection: &Connection, input: &UpdateProjectInput) -> Re
         .map_image_path
         .as_ref()
         .or(existing.map_image_path.as_ref());
+    let cover_image_path = input
+        .cover_image_path
+        .as_ref()
+        .or(existing.cover_image_path.as_ref());
 
     connection.execute(
         r#"
@@ -118,10 +124,18 @@ pub fn update_project(connection: &Connection, input: &UpdateProjectInput) -> Re
             description = ?2,
             status = ?3,
             map_image_path = ?4,
+            cover_image_path = ?5,
             updated_at = datetime('now')
-        WHERE id = ?5
+        WHERE id = ?6
         "#,
-        params![name, description, status, map_image_path, input.id],
+        params![
+            name,
+            description,
+            status,
+            map_image_path,
+            cover_image_path,
+            input.id
+        ],
     )?;
 
     get_project(connection, &GetProjectInput { id: input.id })
@@ -148,6 +162,7 @@ pub fn create_demo_project(connection: &Connection, locale: &str) -> Result<Proj
             } else {
                 "Canonical branch".to_string()
             }),
+            cover_image_path: None,
         },
     )?;
 
@@ -256,6 +271,23 @@ pub fn update_project_map_image_path(
     Ok(())
 }
 
+pub fn update_project_cover_image_path(
+    connection: &Connection,
+    project_id: i32,
+    cover_image_path: &str,
+) -> Result<()> {
+    let updated = connection.execute(
+        "UPDATE projects SET cover_image_path = ?1, updated_at = datetime('now') WHERE id = ?2",
+        params![cover_image_path, project_id],
+    )?;
+
+    if updated == 0 {
+        return Err(AppError::internal("PROJECT_NOT_FOUND", "Project not found"));
+    }
+
+    Ok(())
+}
+
 fn map_project_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Project> {
     Ok(Project {
         id: row.get("id")?,
@@ -263,7 +295,69 @@ fn map_project_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Project> {
         description: row.get("description")?,
         status: row.get("status")?,
         map_image_path: row.get("map_image_path")?,
+        cover_image_path: row.get("cover_image_path")?,
         created_at: row.get("created_at")?,
         updated_at: row.get("updated_at")?,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::migrations::run_migrations;
+
+    #[test]
+    fn create_list_get_and_update_project_cover() {
+        let connection = Connection::open_in_memory().expect("in-memory database");
+        run_migrations(&connection).expect("migrations");
+
+        let created = create_project(
+            &connection,
+            &CreateProjectInput {
+                name: "Covered project".to_string(),
+                description: None,
+                status: None,
+                main_branch_name: None,
+                cover_image_path: Some("/uploads/project-covers/first.png".to_string()),
+            },
+        )
+        .expect("create project");
+        assert_eq!(
+            created.cover_image_path.as_deref(),
+            Some("/uploads/project-covers/first.png")
+        );
+
+        let listed = list_projects(&connection).expect("list projects");
+        assert_eq!(listed[0].cover_image_path, created.cover_image_path);
+
+        let updated = update_project(
+            &connection,
+            &UpdateProjectInput {
+                id: created.id,
+                name: None,
+                description: None,
+                status: None,
+                map_image_path: None,
+                cover_image_path: Some("/uploads/project-covers/replacement.webp".to_string()),
+            },
+        )
+        .expect("update project");
+        assert_eq!(
+            updated.cover_image_path.as_deref(),
+            Some("/uploads/project-covers/replacement.webp")
+        );
+
+        update_project_cover_image_path(
+            &connection,
+            created.id,
+            "/uploads/project-covers/uploaded.jpg",
+        )
+        .expect("update cover");
+        let updated = get_project(&connection, &GetProjectInput { id: created.id })
+            .expect("get updated project");
+        assert_eq!(
+            updated.cover_image_path.as_deref(),
+            Some("/uploads/project-covers/uploaded.jpg")
+        );
+    }
 }

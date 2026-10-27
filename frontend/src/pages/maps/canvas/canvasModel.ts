@@ -14,7 +14,13 @@ export type CanvasMode =
   | 'rectangle'
   | 'ellipse'
   | 'curve_text'
-  | 'image';
+  | 'image'
+  | 'scene_container';
+
+export const CARD_OBJECT_DEFAULT_SIZE = {
+  width: 240,
+  height: 160,
+} as const;
 
 export const MARKER_ICONS: Record<string, string> = {
   castle: '🏰', city: '🏙️', village: '🏘️', tavern: '🍺',
@@ -253,8 +259,8 @@ export const defaultImageObject = (
   layerId: number,
   point: CanvasPoint,
   resourcePath: string,
-  width: number,
-  height: number,
+  naturalWidth: number,
+  naturalHeight: number,
 ) => ({
   sceneId,
   layerId,
@@ -262,9 +268,9 @@ export const defaultImageObject = (
   name: 'Image',
   zIndex: null,
   transformJson: { x: point.x, y: point.y },
-  geometryJson: { width, height },
+  geometryJson: { width: CARD_OBJECT_DEFAULT_SIZE.width, height: CARD_OBJECT_DEFAULT_SIZE.height },
   styleJson: { opacity: 1 },
-  contentJson: {},
+  contentJson: { naturalWidth, naturalHeight },
   resourcePath,
   linkedNoteId: null,
   linkedSceneId: null,
@@ -384,11 +390,11 @@ export const territoryFormFromObject = (object: CanvasObject): TerritoryFormStat
   return {
     name: asString(object.name),
     description: asString(content.description),
-    color: asString(style.fill, DEFAULT_TERRITORY_FORM.color),
-    opacity: asNumber(style.opacity, DEFAULT_TERRITORY_FORM.opacity),
-    borderColor: asString(style.stroke, DEFAULT_TERRITORY_FORM.borderColor),
-    borderWidth: asNumber(style.strokeWidth, DEFAULT_TERRITORY_FORM.borderWidth),
-    smoothing: asNumber(content.smoothing, 0),
+    color: asString(style.fill, asString(content.fill, DEFAULT_TERRITORY_FORM.color)),
+    opacity: asNumber(style.opacity, asNumber(content.opacity, DEFAULT_TERRITORY_FORM.opacity)),
+    borderColor: asString(style.stroke, asString(content.borderColor, DEFAULT_TERRITORY_FORM.borderColor)),
+    borderWidth: asNumber(style.strokeWidth, asNumber(content.borderWidth, DEFAULT_TERRITORY_FORM.borderWidth)),
+    smoothing: asNumber(content.smoothing, asNumber(style.smoothing, DEFAULT_TERRITORY_FORM.smoothing)),
     factionId: typeof factionIdRaw === 'number' ? factionIdRaw : null,
   };
 };
@@ -403,6 +409,10 @@ export const applyTerritoryFormToObject = (object: CanvasObject, form: Territory
       description: form.description,
       factionId: form.factionId,
       smoothing: form.smoothing,
+      fill: form.color,
+      opacity: form.opacity,
+      borderColor: form.borderColor,
+      borderWidth: form.borderWidth,
     },
     styleJson: {
       ...asRecord(object.styleJson),
@@ -439,6 +449,10 @@ export const buildTerritoryCreateInput = (
       description: form.description,
       factionId: form.factionId,
       smoothing: form.smoothing,
+      fill: form.color,
+      opacity: form.opacity,
+      borderColor: form.borderColor,
+      borderWidth: form.borderWidth,
     },
     resourcePath: null,
     linkedNoteId: null,

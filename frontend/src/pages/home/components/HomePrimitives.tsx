@@ -4,14 +4,23 @@ import MapIcon from '@mui/icons-material/Map';
 import ImportContactsIcon from '@mui/icons-material/ImportContacts';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 
+/** Stable sparkle layout — must not use Math.random() in render (HomePage re-renders on panel drag). */
+const SPARKLE_LAYOUT = [
+  { top: 28, left: 34 },
+  { top: 52, left: 68 },
+  { top: 38, left: 22 },
+  { top: 61, left: 48 },
+  { top: 24, left: 58 },
+  { top: 45, left: 76 },
+] as const;
+
 export const EmptyStateIllustration: React.FC = () => (
   <Box
     sx={{
       position: 'relative',
-      width: 280,
-      height: 220,
-      mx: 'auto',
-      mb: 3,
+      width: '100%',
+      height: '100%',
+      m: 0,
     }}
   >
     {/* Central Book */}
@@ -72,7 +81,7 @@ export const EmptyStateIllustration: React.FC = () => (
     </Box>
 
     {/* Sparkles */}
-    {[...Array(6)].map((_, i) => (
+    {SPARKLE_LAYOUT.map((sparkle, i) => (
       <Box
         key={i}
         sx={{
@@ -81,8 +90,8 @@ export const EmptyStateIllustration: React.FC = () => (
           height: 4,
           borderRadius: '50%',
           backgroundColor: 'primary.main',
-          top: `${20 + Math.random() * 60}%`,
-          left: `${20 + Math.random() * 60}%`,
+          top: `${sparkle.top}%`,
+          left: `${sparkle.left}%`,
           opacity: 0.4,
           animation: `sparkle ${2 + i * 0.5}s ease-in-out infinite`,
           animationDelay: `${i * 0.3}s`,

@@ -13,12 +13,9 @@ const DEFAULT_MIME_TYPES: &[&str] = &[
     "image/svg+xml",
 ];
 
-const APPEARANCE_EXTENSIONS: &[&str] = &[".jpg", ".jpeg", ".png", ".webp", ".svg", ".gif", ".avif"];
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UploadProfile {
     Default,
-    Appearance,
 }
 
 pub fn validate_size(bytes_len: usize, max_size: usize) -> Result<()> {
@@ -47,7 +44,6 @@ pub fn validate_upload(
 ) -> Result<()> {
     let allowed_extensions = match profile {
         UploadProfile::Default => DEFAULT_EXTENSIONS,
-        UploadProfile::Appearance => APPEARANCE_EXTENSIONS,
     };
 
     validate_extension(file_name, allowed_extensions)?;
@@ -76,7 +72,6 @@ fn validate_mime(mime: &str, file_name: &str, profile: UploadProfile) -> Result<
 
     let ext_allowed = match profile {
         UploadProfile::Default => DEFAULT_EXTENSIONS.contains(&ext.as_str()),
-        UploadProfile::Appearance => APPEARANCE_EXTENSIONS.contains(&ext.as_str()),
     };
 
     if !ext_allowed {
@@ -84,16 +79,6 @@ fn validate_mime(mime: &str, file_name: &str, profile: UploadProfile) -> Result<
             "VALIDATION_ERROR",
             "Invalid file type for upload profile",
         ));
-    }
-
-    if profile == UploadProfile::Appearance
-        && (mime.is_empty() || mime == "application/octet-stream")
-    {
-        return Ok(());
-    }
-
-    if profile == UploadProfile::Appearance && mime.starts_with("image/") {
-        return Ok(());
     }
 
     let mime_allowed = DEFAULT_MIME_TYPES.iter().any(|allowed| {

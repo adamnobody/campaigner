@@ -9,6 +9,7 @@ pub struct Project {
     pub description: String,
     pub status: String,
     pub map_image_path: Option<String>,
+    pub cover_image_path: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -26,6 +27,7 @@ pub struct CreateProjectInput {
     pub description: Option<String>,
     pub status: Option<String>,
     pub main_branch_name: Option<String>,
+    pub cover_image_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -36,6 +38,7 @@ pub struct UpdateProjectInput {
     pub description: Option<String>,
     pub status: Option<String>,
     pub map_image_path: Option<String>,
+    pub cover_image_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

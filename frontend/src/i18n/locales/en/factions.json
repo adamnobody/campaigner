@@ -6,14 +6,35 @@
     "subtitleFactions": "Organizations, groups, and internal factions",
     "createState": "Create state",
     "createFaction": "Create faction",
-    "searchStates": "Search states...",
-    "searchFactions": "Search factions...",
+    "searchStates": "Name or capital...",
+    "searchFactions": "Name or headquarters...",
     "anyStatus": "Any status",
     "count": "{{shown}} of {{total}}",
     "resetFilters": "Reset filters",
     "loadingMore": "Loading...",
     "tooltipOpen": "Open",
     "tooltipDelete": "Delete",
+    "emptyValue": "—",
+    "sortByName": "By name",
+    "sortByCapital": "By capital",
+    "sortByHeadquarters": "By headquarters",
+    "filters": {
+      "all": "All",
+      "kingdoms": "Kingdoms",
+      "republics": "Republics",
+      "cities": "Cities",
+      "orders": "Orders",
+      "guilds": "Guilds",
+      "cults": "Cults"
+    },
+    "columns": {
+      "state": "State",
+      "faction": "Faction",
+      "capital": "Capital",
+      "ruler": "Ruler",
+      "headquarters": "Headquarters",
+      "status": "Status"
+    },
     "confirmDeleteTitleState": "Delete state",
     "confirmDeleteTitleFaction": "Delete faction",
     "confirmDeleteMessage": "Delete \"{{name}}\"? Related memberships and links will also be removed.",
@@ -22,7 +43,31 @@
     "emptyNoStatesTitle": "No states yet",
     "emptyNoStatesDescription": "Create the first state for your world",
     "emptyNoFactionsTitle": "No factions yet",
-    "emptyNoFactionsDescription": "Create the first faction or inner group"
+    "emptyNoFactionsDescription": "Create the first faction or inner group",
+    "templates": {
+      "title": "Start with a template",
+      "states": {
+        "kingdom": { "title": "Kingdom", "description": "Dynasty, titles, and vassals" },
+        "empire": { "title": "Empire", "description": "Provinces, governors, and tribute" },
+        "city": { "title": "Free city", "description": "Council, trade, and garrison" }
+      },
+      "factions": {
+        "order": { "title": "Order", "description": "Charter, ranks, and vows" },
+        "guild": { "title": "Guild", "description": "Craft, monopoly, and duties" },
+        "cult": { "title": "Cult", "description": "Dogma, rite, and secret" }
+      }
+    },
+    "aside": {
+      "summaryTotal": "Total",
+      "summaryActive": "Active",
+      "summaryRuler": "With a ruler",
+      "summaryDynasty": "With a dynasty",
+      "summaryOnCanvas": "On the canvas",
+      "summaryAlliances": "In alliances",
+      "summaryConflicts": "In conflict",
+      "storedBodyStates": "Nation-states, capitals, and who holds the throne.",
+      "storedBodyFactions": "Orders, guilds, cults, and inner groups of this world."
+    }
   },
   "entityKinds": {
     "state": "State",
@@ -104,7 +149,8 @@
     "baseSection": "Core",
     "customSection": "Custom",
     "compareWithOthers": "Compare with others",
-    "customNone": "No custom metrics added."
+    "customNone": "No custom metrics added.",
+    "readabilityHint": "Keep the world legible at a glance: core figures stay together, while project-specific measures remain separate."
   },
   "politicalScaleGroups": {
     "state": {
@@ -128,6 +174,7 @@
     "createError": "Could not create scale",
     "loading": "Loading political scales…",
     "sectionTitle": "Political scales",
+    "readabilityHint": "Read each axis from left to right. The highlighted zone names the current position; comments preserve the reasoning behind it.",
     "addCustom": "Add custom scale",
     "manage": "Manage scales",
     "valueLabel": "Value: {{value}}",
@@ -181,8 +228,15 @@
     "backToListFaction": "Back to factions list",
     "newTitleState": "New state",
     "newTitleFaction": "New faction",
+    "namePlaceholderTitleState": "State name",
+    "namePlaceholderTitleFaction": "Faction name",
     "fallbackNameState": "State",
     "fallbackNameFaction": "Faction",
+    "draft": "Draft",
+    "eyebrowDraftState": "States · Draft",
+    "eyebrowDraftFaction": "Factions · Draft",
+    "createHintState": "Only the name is required. Ruler, dynasty, territories, and heraldry can be linked later.",
+    "createHintFaction": "Only the name is required. Structure, relations, ambitions, and policy can be added after saving.",
     "tabs": {
       "overview": "Overview",
       "structure": "Structure",
@@ -193,8 +247,12 @@
     "summary": {
       "title": "Summary",
       "coatOfArms": "Coat of arms",
+      "coatPlaceholder": "Coat of arms or banner",
+      "coatPlaceholderState": "State coat of arms",
+      "coatPlaceholderFaction": "Faction emblem",
       "banner": "Banner",
       "entityKind": "Entity",
+      "name": "Name",
       "type": "Type",
       "status": "Status",
       "ruler": "Ruler",
@@ -204,15 +262,23 @@
       "territory": "Territory",
       "founded": "Founded",
       "disbanded": "Disbanded",
-      "tags": "Tags"
+      "tags": "Tags",
+      "empty": "Not filled",
+      "notSpecified": "Not specified",
+      "noneSelected": "None selected",
+      "territoriesCount": "{{count}} regions",
+      "draftFooter": "Draft. Branch: {{branch}}",
+      "savedFooter": "Branch: {{branch}}"
     },
     "sections": {
-      "basics": "Main info",
-      "history": "Description & history",
+      "basics": "Basics",
+      "lands": "Lands and time",
+      "identity": "Identity",
+      "history": "Description and history",
       "ranks": "Ranks",
       "members": "Members",
       "decrees": "Decrees",
-      "relations": "Relations"
+      "relations": "Connections"
     },
     "fields": {
       "name": "Name *",
@@ -235,17 +301,45 @@
       "relationDescriptionField": "Description"
     },
     "placeholders": {
-      "motto": "e.g. Winter is coming",
+      "nameState": "What is the state called",
+      "nameFaction": "What is the faction called",
+      "motto": "A line carved on the gates",
+      "type": "Kingdom, republic, theocracy…",
+      "typeState": "Kingdom, republic, theocracy…",
+      "typeFaction": "Guild, order, cult…",
+      "capital": "City or a point on the map",
+      "headquarters": "Hall or gathering place",
+      "description": "Describe its place in the world. @ links an entity, / inserts a heading, list, or quote.",
       "descriptionFaction": "General description of the faction...",
       "history": "How it was founded, key events...",
       "goals": "What the faction is after...",
-      "rulerSearch": "Search or new name...",
-      "territoryMap": "Select regions...",
+      "rulerSearch": "A character from the project",
+      "dynasty": "Choose a dynasty from the project",
+      "parentState": "Independent or a vassal",
+      "parentFaction": "No parent faction",
+      "territoryMap": "Select regions on the canvas",
       "policyTitleSearch": "Enter title"
     },
     "typeNotSet": "Not set",
     "dynastyNotChosen": "Not chosen",
     "parentNone": "None",
+    "parentIndependent": "Independent",
+    "noOptions": {
+      "charactersEmpty": "No characters in this project yet",
+      "charactersNone": "No matches",
+      "dynasties": "No dynasties in this project yet",
+      "territoriesEmpty": "No regions on the canvas yet",
+      "territoriesNone": "No matches",
+      "statesEmpty": "No other states in this project yet",
+      "factionsEmpty": "No other factions in this project yet"
+    },
+    "connectionKinds": {
+      "character": "Character",
+      "dynasty": "Dynasty",
+      "state": "State",
+      "faction": "Faction",
+      "wiki": "Wiki"
+    },
     "territoryOccupied": "{{name}} ({{mapName}}) — held by: {{occupant}}",
     "territoryOccupantStateKind": "state",
     "territoryRebindTitle": "Reassign territory",
@@ -358,7 +452,8 @@
   "customMetrics": {
     "name": "Name",
     "value": "Value",
-    "unit": "Unit"
+    "unit": "Unit",
+    "add": "Add custom metric"
   },
   "snackbar": {
     "loadError": "Failed to load",

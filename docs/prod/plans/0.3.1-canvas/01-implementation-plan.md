@@ -1,6 +1,6 @@
 # 0.3.1 Canvas — Implementation Plan
 
-Status: Accepted
+Status: Accepted (historical — **implementation closed**; см. `docs/prod/vision/canvas.md` §6)  
 Accepted: 2026-05-24
 
 ## Scope and inputs

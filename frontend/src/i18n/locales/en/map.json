@@ -38,6 +38,7 @@
     "hintDrawTerritory": "Click — polygon vertices · Close: hover the first point (ring) and click, or R / «Complete ring» · «Save» — name and create",
     "hintSelectMode": "Left-drag to pan map · Middle-drag to pan · Wheel to zoom",
     "hintMarkerMode": "Left-click to add marker · Ctrl + left-drag or middle-drag to pan · Wheel to zoom",
+    "hintSceneContainerMode": "Left-click to place a map card · Middle-drag to pan · Shift+click adds a marker over territory",
     "modeShortcutsHint": "Ctrl+1 — pan · Ctrl+2 — markers · Ctrl+3 — territories"
   },
   "canvas": {
@@ -46,8 +47,26 @@
       "sceneName": "Scene 1"
     },
     "breadcrumbs": {
-      "back": "Back to parent map",
-      "navigateTo": "Open {{name}}"
+      "back": "Back to canvas",
+      "navigateTo": "Open {{name}}",
+      "rootCanvas": "Canvas",
+      "mapFallback": "Map"
+    },
+    "sceneType": {
+      "root": "Canvas",
+      "map": "Map"
+    },
+    "layers": {
+      "title": "Layers",
+      "show": "Show layer {{name}}",
+      "hide": "Hide layer {{name}}",
+      "updateError": "Could not update layer visibility"
+    },
+    "legend": {
+      "title": "Legend",
+      "territories": "Territories",
+      "routes": "Routes and lines",
+      "markers": "Place markers"
     },
     "toolbar": {
       "sceneStats": "Canvas scene · {{count}} objects{{selected}}",
@@ -71,7 +90,19 @@
       "tooltipMarker": "Marker mode (Ctrl+2)",
       "tooltipDrawTerritory": "Draw territory (Ctrl+3)",
       "save": "Save",
-      "addImage": "Add image"
+      "addImage": "Add image",
+      "toolSceneContainer": "Add map to canvas",
+      "sceneStatsRoot": "Canvas · {{count}} objects{{selected}}"
+    },
+    "sceneContainer": {
+      "kindLabel": "Map",
+      "openHint": "Double-click to open",
+      "openAction": "Open map",
+      "selectionType": "Map on canvas"
+    },
+    "imageCard": {
+      "kindLabel": "Image",
+      "defaultTitle": "Image"
     },
     "selection": {
       "title": "Selected object",
@@ -141,6 +172,87 @@
     "uploadImage": "Upload image",
     "createChildMap": "Create nested map"
   },
+  "cardPanel": {
+    "imageTitle": "Image on canvas",
+    "subtitle": "Card size and caption",
+    "sectionTitle": "Caption",
+    "titleLabel": "Title",
+    "sectionSize": "Size",
+    "sectionPosition": "Position",
+    "width": "Width",
+    "height": "Height"
+  },
+  "shapePanel": {
+    "title": "Shape",
+    "addShape": "Add shape",
+    "addShapeTooltip": "Add a shape to the canvas",
+    "addShapeTitle": "Choose a shape",
+    "sectionShape": "Shape",
+    "sectionStyle": "Shape style",
+    "sectionText": "Text",
+    "sectionPosition": "Position",
+    "width": "Width",
+    "height": "Height",
+    "fill": "Fill",
+    "fillHex": "Fill (#)",
+    "stroke": "Stroke",
+    "strokeHex": "Stroke (#)",
+    "strokeWidth": "Stroke width · {{value}}",
+    "opacity": "Opacity · {{value}}%",
+    "labelPosition": "Label position",
+    "labelText": "Label text",
+    "labelFontSize": "Label size",
+    "labelColor": "Label color",
+    "labelBold": "Bold",
+    "variants": {
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "triangle": "Triangle",
+      "diamond": "Diamond",
+      "line": "Line"
+    },
+    "labelPositions": {
+      "none": "No label",
+      "inside": "Inside",
+      "above": "Above",
+      "below": "Below"
+    }
+  },
+  "textPanel": {
+    "titleText": "Text",
+    "titleCurve": "Curve text",
+    "positionLabel": "X: {{x}} · Y: {{y}}",
+    "sectionContent": "Content",
+    "sectionStyle": "Style",
+    "sectionTransform": "Position",
+    "sectionCurve": "Curve path",
+    "fontSize": "Font size",
+    "fillColor": "Color",
+    "opacity": "Opacity · {{value}}%",
+    "fieldX": "X",
+    "fieldY": "Y",
+    "fieldRotation": "Rotation",
+    "curveStartX": "Start X",
+    "curveStartY": "Start Y",
+    "curveControlX": "Control X",
+    "curveControlY": "Control Y",
+    "curveEndX": "End X",
+    "curveEndY": "End Y",
+    "pointPathHint": "This curve uses a point path in geometry_json. Edit text and style here; path points are preserved.",
+    "curveHandlesHint": "Edit the curve shape using handles on the canvas.",
+    "convertToCurveText": "Convert to curve text",
+    "inlineEditHint": "Double-click text on the canvas to edit, or select it and start typing.",
+    "sectionPresets": "Presets",
+    "preset": "Style preset",
+    "presetStandard": "Standard text",
+    "presetCustom": "Custom style",
+    "presetPreviewSample": "Map title",
+    "presetName": "Preset name",
+    "presetNamePlaceholder": "My title style",
+    "presetDefaultName": "Preset {{index}}",
+    "savePreset": "Save preset",
+    "deletePreset": "Delete"
+  },
   "territoryPanel": {
     "subtitle": "Territory · rings: {{rings}}, points: {{points}}",
     "sectionDescription": "Description",
@@ -196,6 +308,28 @@
   },
   "childMap": {
     "autoName": "Map: {{title}}"
+  },
+  "mapBackground": {
+    "missingTitle": "This map has no base image",
+    "missingHint": "Add a map image to continue. It will be used as the map foundation.",
+    "addButton": "Add map background"
+  },
+  "sceneContainerDialog": {
+    "title": "New map on canvas",
+    "hint": "The map appears on the canvas as a card. Open it with a double-click or from the selection panel.",
+    "nameLabel": "Map name",
+    "nameRequired": "Enter a map name",
+    "pickBackground": "Choose background image",
+    "replaceBackground": "Replace image",
+    "removeBackground": "Remove image",
+    "previewAlt": "Map background preview",
+    "crop": "Crop",
+    "cropTitle": "Crop map image",
+    "cropHint": "Drag the frame to move it. Drag corners to resize the crop area.",
+    "cropApply": "Apply crop",
+    "backgroundRequired": "Background image is required",
+    "backgroundNote": "This image becomes the geographic map background. You can replace it later.",
+    "create": "Create map"
   },
   "noteTypes": {
     "wiki": "Wiki",

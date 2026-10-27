@@ -35,6 +35,7 @@ const toProject = (project: TauriProject): Project => ({
   description: project.description,
   status: normalizeProjectStatus(project.status),
   mapImagePath: project.mapImagePath ?? null,
+  coverImagePath: project.coverImagePath ?? null,
   createdAt: project.createdAt,
   updatedAt: project.updatedAt,
 });
@@ -85,6 +86,7 @@ export const projectsApi = {
       description: data.description ?? null,
       status: data.status ?? null,
       mainBranchName: data.mainBranchName ?? null,
+      coverImagePath: data.coverImagePath ?? null,
     };
 
     const response = await transport.request<TauriProject>({
@@ -102,6 +104,7 @@ export const projectsApi = {
       description: data.description ?? null,
       status: data.status ?? null,
       mapImagePath: data.mapImagePath ?? null,
+      coverImagePath: data.coverImagePath ?? null,
     };
 
     const response = await transport.request<TauriProject>({
@@ -125,6 +128,13 @@ export const projectsApi = {
 
   uploadMap: async (id: number, file: File) => {
     const response = await uploadFileViaTransport<TauriProject>('projects_upload_map_image', file, {
+      projectId: id,
+    });
+    return toProjectResponse(response);
+  },
+
+  uploadCover: async (id: number, file: File) => {
+    const response = await uploadFileViaTransport<TauriProject>('projects_upload_cover', file, {
       projectId: id,
     });
     return toProjectResponse(response);

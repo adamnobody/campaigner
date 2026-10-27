@@ -16,7 +16,7 @@ pub enum UploadSubdir {
     Dynasties,
     Traits,
     Ambitions,
-    Appearance,
+    ProjectCovers,
 }
 
 impl UploadSubdir {
@@ -28,7 +28,7 @@ impl UploadSubdir {
             Self::Dynasties => "dynasties",
             Self::Traits => "traits",
             Self::Ambitions => "ambitions",
-            Self::Appearance => "appearance",
+            Self::ProjectCovers => "project-covers",
         }
     }
 
@@ -40,7 +40,7 @@ impl UploadSubdir {
             "dynasties" => Ok(Self::Dynasties),
             "traits" => Ok(Self::Traits),
             "ambitions" => Ok(Self::Ambitions),
-            "appearance" => Ok(Self::Appearance),
+            "project-covers" => Ok(Self::ProjectCovers),
             _ => Err(AppError::internal(
                 "ASSET_PATH_FORBIDDEN",
                 format!("Unknown uploads subdir: {value}"),
