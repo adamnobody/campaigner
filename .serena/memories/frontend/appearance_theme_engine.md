@@ -1,1 +1,0 @@
-UI/reading type scale (2026-08-14): `readingFontSize` is 16–24 px (steps 16/18/20/22/24), not 14–18. `createCampaignerTheme` sets `html { fontSize }` from that value so rem UI scales with the appearance size control. Style defaults are 18–22. Persist `version: 3` remaps legacy 14–18 → 18/18/20/22/24. Clamp helper: `clampReadingFontSize` in `appearanceTokens.ts`.
